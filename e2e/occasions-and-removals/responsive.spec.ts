@@ -171,8 +171,16 @@ test("controlled queue failed thumbnail remains readable with live request contr
   const card = adminPage.getByRole("region", {
     name: "Request from Prima Inés",
   });
-  await expect(card.getByText("Unavailable", { exact: true })).toBeVisible();
+  await expect(
+    card.getByText("Preview unavailable", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    card.getByRole("img", { name: "Family at home", exact: true }),
+  ).toBeVisible();
   await expect(card.locator("img")).toHaveCount(0);
+  await expect(
+    card.getByRole("button", { name: "Delete it", exact: true }),
+  ).toBeVisible();
   await expect(
     card.getByRole("link", { name: "Open the photograph" }),
   ).toBeVisible();

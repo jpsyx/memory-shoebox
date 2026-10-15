@@ -1,3 +1,7 @@
+import { CompiledQuery } from "kysely";
+import { readTimelinePage } from "../../../src/archive/readTimelinePage.ts";
+import { makeTimelineFilterFromQuery } from "../../../src/archive/selectionFilterHelpers.ts";
+import { EVERYONE_VISIBILITY_RULE_ID } from "../../../src/visibility/everyoneRule.ts";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../../src/db/client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../../helpers/makeQueryCountingDatabaseFromDatabase.ts";
@@ -70,4 +74,77 @@ describe("the query plan", () => {
     await smallApp.close();
     await largeApp.close();
   });
+});
+
+it("bounds the uploader arm of the actual viewer timeline by capture day", async () => {
+  const fixture = await makeApp();
+  try {
+    const member = await insertSignedInMember({ database: fixture.database });
+    await insertDrawableItem(fixture.database, {
+      uploadedBy: member.memberId,
+      seq: 1,
+      capturedOn: "2026-09-14",
+    });
+    await insertDrawableItem(fixture.database, {
+      uploadedBy: member.memberId,
+      seq: 2,
+      capturedOn: "2025-01-01",
+    });
+    const executed: CompiledQuery[] = [];
+    const database = fixture.database.withPlugin({
+      transformQuery: ({ node, queryId }) => {
+        executed.push(
+          fixture.database.getExecutor().compileQuery(node, queryId),
+        );
+        return node;
+      },
+      transformResult: async ({ result }) => {
+        return result;
+      },
+    });
+    const result = await readTimelinePage({
+      database,
+      b2: fixture.b2,
+      filter: makeTimelineFilterFromQuery({
+        from: "2026-09-13",
+        until: "2026-09-14",
+      }),
+      limit: 20,
+      cursor: undefined,
+      now: new Date("2026-09-27T10:00:00Z"),
+      viewer: {
+        memberId: member.memberId,
+        sessionId: member.sessionId,
+        role: "viewer",
+        isAdmin: false,
+        visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
+      },
+    });
+    expect(
+      result.days.map((day) => {
+        return day.capturedOn;
+      }),
+    ).toEqual(["2026-09-14"]);
+    expect(result.days[0]!.items).toHaveLength(1);
+    const query = executed.find((entry) => {
+      return entry.sql.includes('group by "items"."captured_on"');
+    })!;
+    expect(query).toBeDefined();
+    const plan = await fixture.database.executeQuery<{ detail: string }>(
+      CompiledQuery.raw(`EXPLAIN QUERY PLAN ${query.sql}`, [
+        ...query.parameters,
+      ]),
+    );
+    expect(
+      plan.rows.map((row) => {
+        return row.detail;
+      }),
+    ).toContainEqual(
+      expect.stringMatching(
+        /items_uploaded_by_captured_on.*uploaded_by=\?.*captured_on>\?.*captured_on<\?/,
+      ),
+    );
+  } finally {
+    await fixture.close();
+  }
 });

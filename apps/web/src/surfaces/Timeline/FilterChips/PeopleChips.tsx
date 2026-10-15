@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { Chip } from "@/system/Chip/Chip";
 
 type Props = {
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 };
 
 /** A person's name, falling back to their id while the facets are in flight. */
@@ -36,11 +39,13 @@ export function PeopleChips({
         onPanel
         removeLabel={`Stop filtering by ${name}`}
         onRemove={() => {
-          onChange({
-            ...selection,
-            people: selection.people.filter((entry) => {
-              return entry !== personId;
-            }),
+          onChange((current) => {
+            return {
+              ...current,
+              people: current.people.filter((entry) => {
+                return entry !== personId;
+              }),
+            };
           });
         }}
       >

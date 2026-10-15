@@ -10,7 +10,7 @@
 
 **Spec:** [Approved design](../specs/2026-10-14-media-loading-design.md).
 
-Status: implementation plan awaiting review and execution-method selection. The existing worktree is `feat/media-loading`; the baseline code is `1ec228b0`, with 4,359 passing tests recorded before product changes.
+Status: M1 and Tasks A1–A6, B1–B5 and C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete on `feat/media-loading`; independent M2 and whole-branch reviews remain pending. The historical pre-product baseline is `1ec228b0`, with 4,359 passing tests. See [operating evidence and limits](../../media-loading-performance.md) for measured outcomes and unverified deployment prerequisites.
 
 ## Global Constraints
 
@@ -63,11 +63,11 @@ An executor may add focused helper/test files beside the named unit when require
 
 **Interfaces:** Extend the fake bucket factory with injected clock and configurable signature-date/expiry enforcement; preserve its current upload behavior. `createMediaAcceptanceCatalog(): Promise<{ origin: string; database: Kysely<Database>; memberId: string; itemIds: readonly string[]; getTransfers(): readonly { objectId: string; status: number; bodyBytes: number }[]; close(): Promise<void> }>` owns an ephemeral catalog and bucket, uses the real signer, and exposes sanitized transfer records. Define it in the new support file, using existing acceptance catalog/session seeding helpers. `measureMediaNavigation(page: Page): Promise<{ firstImageMs: number; navigationMs: readonly number[]; videoStartupMs: number; longTasksMs: readonly number[]; maxMediaNodes: number }>` lives in `measurements.ts`.
 
-- [ ] **Red:** Add `"serves validators and ranges without excess bytes"`: `expect(range.status).toBe(206)`, `expect(range.body.byteLength).toBe(1024)`, `expect(invalid.status).toBe(416)`, `expect(conditional.status).toBe(304)`, `expect(conditional.body.byteLength).toBe(0)`. Also test suffix/open ranges, HEAD, If-Range, expiry, response-cache overrides, and multipart list/abort isolation.
-- [ ] **Verify red:** `pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery.test.ts`; expect assertion failures against current full-200 behavior, not missing test discovery.
-- [ ] **Implement:** Add actual ETags, `Accept-Ranges`, conditional/range semantics and body-byte counting. Use separate app and bucket origins to reflect B2. Create Chromium/WebKit projects, one worker, per-test catalogs, no browser routing/interception, fake email, and no real keys. Firefox is an explicit optional project when installed. At this stage the browser harness records reload bytes without asserting the product improvement; A1 adds the zero-byte regression before fixing it. Ordinary reload and hard reload are separate measurements.
-- [ ] **Verify green/harness baseline:** Run the Vitest command, then `pnpm build` and `pnpm exec playwright test -c playwright.media.config.ts`. Record current byte/latency results in ignored `tmp/media-loading/baseline.json`; require successful harness assertions and retain the measured redundant transfers as the baseline. Include 30 repeated neighbor transitions, small/large photos, burst boundaries, a video, 5,000 timeline items, and a 1,000-item day. Local loopback throttling belongs in the bucket, not a browser route. Preserve raw results for M2.
-- [ ] **Commit:** Stage only the named harness/docs files; commit `test: measure media cache and range transfers`.
+- [x] **Red:** Add `"serves validators and ranges without excess bytes"`: `expect(range.status).toBe(206)`, `expect(range.body.byteLength).toBe(1024)`, `expect(invalid.status).toBe(416)`, `expect(conditional.status).toBe(304)`, `expect(conditional.body.byteLength).toBe(0)`. Also test suffix/open ranges, HEAD, If-Range, expiry, response-cache overrides, and multipart list/abort isolation.
+- [x] **Verify red:** `pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery.test.ts`; expect assertion failures against current full-200 behavior, not missing test discovery.
+- [x] **Implement:** Add actual ETags, `Accept-Ranges`, conditional/range semantics and body-byte counting. Use separate app and bucket origins to reflect B2. Create Chromium/WebKit projects, one worker, per-test catalogs, no browser routing/interception, fake email, and no real keys. Firefox is an explicit optional project when installed. At this stage the browser harness records reload bytes without asserting the product improvement; A1 adds the zero-byte regression before fixing it. Ordinary reload and hard reload are separate measurements.
+- [x] **Verify green/harness baseline:** Run the Vitest command, then `pnpm build` and `pnpm exec playwright test -c playwright.media.config.ts`. Record current byte/latency results in ignored `tmp/media-loading/baseline.json`; require successful harness assertions and retain the measured redundant transfers as the baseline. Include 30 repeated neighbor transitions, small/large photos, burst boundaries, a video, 5,000 timeline items, and a 1,000-item day. Local loopback throttling belongs in the bucket, not a browser route. Preserve raw results for M2.
+- [x] **Commit:** Stage only the named harness/docs files; commit `test: measure media cache and range transfers`.
 
 ## Task M2: Integrated Acceptance and Operating Evidence
 
@@ -75,11 +75,18 @@ An executor may add focused helper/test files beside the named unit when require
 
 **Interfaces:** Consume M1's fixture/measurement API, A's media contract, B's job runtime, and C's window/bootstrap behavior. Produce a reproducible report with fixture identity, environment, raw-result paths, p50/p95, body bytes, API/signing counts, and worker memory. No runtime analytics service or personal event logging is added.
 
-- [ ] **Red:** Add whole-flow regressions before correcting any integration gaps: `expect(prefetchedSelectionBodyBytes).toBe(0)`, `expect(speculativeOriginalVideoBytes).toBe(0)`, `expect(openDelta).toBe(actualSelections)`, `expect(maxRetainedPages).toBeLessThanOrEqual(5)`, `expect(overscanSeenDelta).toBe(0)`. Test expired playback renewal, visibility revocation after warming, metadata-only video loading, source replacement, offline return, and all internal entry points.
-- [ ] **Verify failures:** Run `pnpm exec playwright test -c playwright.media.config.ts`; classify genuine integration failures separately from intentionally disabled experimental behavior. Fix only within the owning tasks' boundaries, with a local failing regression first.
-- [ ] **Measure:** Reuse M1's fixtures/throttling and 30-transition samples. Compare cold/warm first image, p50/p95 next-photo readiness, video startup/rebuffering, consumed/wasted prefetch bytes, maximum DOM/long tasks, signing CPU, and processing peak memory. Target zero redundant reload bodies within a reusable lease and zero new bytes for consumed prefetched photos; report required authorization/metadata traffic separately. Keep first-segment video prefetch disabled unless a separate native-player reuse experiment passes in Chromium and WebKit within budget. Enable metadata prefetch only for browser/profile combinations that pass the byte-budget check.
+- [x] **Red:** Add whole-flow regressions before correcting any integration gaps: `expect(prefetchedSelectionBodyBytes).toBe(0)`, `expect(speculativeOriginalVideoBytes).toBe(0)`, `expect(openDelta).toBe(actualSelections)`, `expect(maxRetainedPages).toBeLessThanOrEqual(5)`, `expect(overscanSeenDelta).toBe(0)`. Test expired playback renewal, visibility revocation after warming, metadata-only video loading, source replacement, offline return, and all internal entry points.
+- [x] **Verify failures:** Run `pnpm exec playwright test -c playwright.media.config.ts`; classify genuine integration failures separately from intentionally disabled experimental behavior. Fix only within the owning tasks' boundaries, with a local failing regression first.
+- [x] **Measure:** Reuse M1's fixtures/throttling and 30-transition samples. Compare cold/warm first image, p50/p95 next-photo readiness, video startup/rebuffering, consumed/wasted prefetch bytes, maximum DOM/long tasks, signing CPU, and processing peak memory. Target zero redundant reload bodies within a reusable lease and zero new bytes for consumed prefetched photos; report required authorization/metadata traffic separately. Keep first-segment video prefetch disabled unless a separate native-player reuse experiment passes in Chromium and WebKit within budget. Enable metadata prefetch only for browser/profile combinations that pass the byte-budget check.
 - [ ] **Verify:** `pnpm check`, `pnpm exec playwright test -c playwright.media.config.ts`, `pnpm test:e2e:video`, `pnpm test:e2e:admin`, and the upload browser suites selected by C4. Run the full ordinary E2E suite once after those targeted checks. Require successful exits; document any unavailable engine/container as unverified. Review branch-wide spec compliance and code after tests; correct material findings and rerun affected checks.
-- [ ] **Document and commit:** Record outcomes, limitations, disabled resource prerequisites, browser-cache eviction/signature-renewal limits, and manual actual-iPhone/B2 Range checks. Document optional `FLY_MIN_MACHINES_RUNNING=1` and a cold-start comparison without changing deployment settings. Evaluate Start only for a remaining cold-deep-link discovery waterfall, CDN only for measured geography/renewal misses, and HLS only for remaining video startup/rebuffering problems. Commit `docs: record media loading performance evidence` with the acceptance tests. Do not claim production timings from local measurements.
+- [x] **Document and commit:** Record outcomes, limitations, disabled resource prerequisites, browser-cache eviction/signature-renewal limits, and manual actual-iPhone/B2 Range checks. Document optional `FLY_MIN_MACHINES_RUNNING=1` and a cold-start comparison without changing deployment settings. Evaluate Start only for a remaining cold-deep-link discovery waterfall, CDN only for measured geography/renewal misses, and HLS only for remaining video startup/rebuffering problems. Commit `docs: record media loading performance evidence` with the acceptance tests. Do not claim production timings from local measurements.
+
+Local M2 verification is complete: `pnpm check` passed 5,025 tests, current media
+76/76, video40/40, built static28/28 and full ordinary370 cases with one existing
+fixme skipped. Earlier full admin118/118 and upload89/89 evidence remains recorded
+with its source provenance. The Verify checkbox and whole-branch review checklist
+remain open solely for the controller's independent reviews and any resulting
+corrections. Requirements and resource limits above are unchanged.
 
 ## Coverage and Completion Checklist
 
@@ -96,11 +103,11 @@ An executor may add focused helper/test files beside the named unit when require
 | 9: Upload-only thumbs, decode coordination, static cache/compression      | C4, C5                       |
 | 10: Real cache/range measurements, complete checks, manual limits         | M1, M2 and each task's tests |
 
-- [ ] All A/B/C tasks implemented and their targeted tests passed.
-- [ ] Metadata authorization, original preservation, and existing view semantics verified.
+- [x] All A/B/C tasks implemented and their targeted tests passed.
+- [x] Metadata authorization, original preservation, and existing view semantics verified.
 - [ ] Whole-branch review findings addressed, complete checks passed, measurements saved.
-- [ ] Conditional decisions have measured outcomes or explicit unsupported prerequisites.
-- [ ] Work remains on the reviewed worktree branch; no publication action is implied.
+- [x] Conditional decisions have measured outcomes or explicit unsupported prerequisites.
+- [x] Work remains on the reviewed worktree branch; no publication action is implied.
 
 ## Execution Handoff
 

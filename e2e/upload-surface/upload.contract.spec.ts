@@ -164,6 +164,7 @@ async function _pickRestrictedSubjects(page: Page): Promise<void> {
     name: "Only these",
     exact: true,
   });
+  await choices.scrollIntoViewIfNeeded();
   await choices.fill("Abuela");
   await page.getByRole("option", { name: "Abuela Rosa", exact: true }).click();
   await choices.fill("grandparents");

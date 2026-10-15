@@ -87,6 +87,25 @@ function _chargeOneMintToTheRun(email: string): void {
   }
 }
 
+/** Report a positive form submission failure before waiting for a field it cannot draw. */
+async function _expectCodeAccepted(
+  page: Page,
+  submit: () => Promise<unknown>,
+): Promise<void> {
+  const responsePromise = page.waitForResponse((response) => {
+    return (
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/api/auth/sign-in-codes"
+    );
+  });
+  await submit();
+  const response = await responsePromise;
+  expect(
+    response.status(),
+    `Sign-in code request returned ${response.status()} (Retry-After: ${response.headers()["retry-after"] ?? "absent"}).`,
+  ).toBe(202);
+}
+
 /**
  * Types the address and asks for a code, and returns once the server has
  * answered.
@@ -108,7 +127,9 @@ export async function askForACode(options: {
   const { page, email } = options;
   _chargeOneMintToTheRun(email);
   await page.getByLabel(EMAIL_LABEL).fill(email);
-  await page.getByRole("button", { name: ASK_FOR_A_CODE }).click();
+  await _expectCodeAccepted(page, () => {
+    return page.getByRole("button", { name: ASK_FOR_A_CODE }).click();
+  });
   await expect(page.getByLabel(CODE_LABEL)).toBeVisible();
 }
 
@@ -139,7 +160,9 @@ export async function askForACodeWithTheKeyboard(options: {
   _chargeOneMintToTheRun(email);
   await expect(page.getByLabel(EMAIL_LABEL)).toBeFocused();
   await page.keyboard.type(email);
-  await page.keyboard.press("Enter");
+  await _expectCodeAccepted(page, () => {
+    return page.keyboard.press("Enter");
+  });
   await expect(page.getByLabel(CODE_LABEL)).toBeVisible();
 }
 

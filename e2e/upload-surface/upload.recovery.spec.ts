@@ -25,7 +25,15 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
   uploaderContext,
 }, testInfo) => {
   test.setTimeout(180_000);
-  const { paths, detail } = await _prepareLabelledBatch({
+  const storageCapability = await _getNativeOriginalStorageCapability(page);
+  await testInfo.attach("native-original-storage-capability", {
+    body: JSON.stringify({
+      browserVersion: page.context().browser()!.version(),
+      ...storageCapability,
+    }),
+    contentType: "application/json",
+  });
+  const { detail, paths } = await _prepareLabelledBatch({
     page,
     directory: testInfo.outputPath("resume"),
     fileCount: 18,
@@ -45,10 +53,31 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
     return file.state === "done";
   });
   expect(landed).toHaveLength(2);
+  const beforeClose = await _getStoredOriginalEvidence(page);
+  await testInfo.attach("original-storage-before-close", {
+    body: JSON.stringify(beforeClose),
+    contentType: "application/json",
+  });
+  if (!storageCapability.canStoreOriginalBlob) {
+    expect(beforeClose).toEqual([]);
+    await expect(
+      page.getByText(/This browser could not save all the originals/),
+    ).toBeVisible();
+  }
   await held.abort();
   await page.close();
-  const logLength = (await readFakeS3Requests()).length;
+  const reopenLogOffset = (await readFakeS3Requests()).length;
   const reopened = await uploaderContext.newPage();
+  const landedTransferReads: string[] = [];
+  reopened.on("request", (request) => {
+    if (
+      landed.some((file) => {
+        return request.url().includes(file.fileId);
+      }) &&
+      /\/(presign|complete)(?:\?|$)/.test(request.url())
+    )
+      landedTransferReads.push(request.url());
+  });
   await reopened.goto("/upload");
   await expect(
     reopened.getByRole("heading", { name: "You were in the middle of this." }),
@@ -60,10 +89,134 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
     reopened.getByText(/Who can see these: Everyone\./),
   ).toBeVisible();
   await _expectCompleteMissingList(reopened);
-  await pickFilesInUploadSurface({ page: reopened, paths });
+  const afterReopen = await _getStoredOriginalEvidence(reopened);
+  await testInfo.attach("original-storage-after-reopen", {
+    body: JSON.stringify(afterReopen),
+    contentType: "application/json",
+  });
+  if (!storageCapability.canStoreOriginalBlob) {
+    expect(afterReopen).toEqual([]);
+    await expect(
+      reopened.getByText("16 originals need to be chosen again.", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(
+      reopened.getByRole("button", {
+        name: "Choose files to resume",
+        exact: true,
+      }),
+    ).toBeEnabled();
+  } else {
+    await expect(
+      reopened.getByRole("button", { name: "Resume upload", exact: true }),
+    ).toBeEnabled();
+    const storedIds = await reopened.evaluate(async (sessionId) => {
+      const database = await new Promise<IDBDatabase>((fulfill, reject) => {
+        const opening = indexedDB.open("memory-shoebox-upload-originals", 1);
+        opening.onsuccess = () => {
+          return fulfill(opening.result);
+        };
+        opening.onerror = () => {
+          return reject(opening.error);
+        };
+      });
+      try {
+        return await new Promise<string[]>((fulfill, reject) => {
+          const reading = database
+            .transaction("originals")
+            .objectStore("originals")
+            .getAll();
+          reading.onsuccess = () => {
+            return fulfill(
+              reading.result
+                .filter((record: { sessionId: string }) => {
+                  return record.sessionId === sessionId;
+                })
+                .map((record: { fileId: string }) => {
+                  return record.fileId;
+                }),
+            );
+          };
+          reading.onerror = () => {
+            return reject(reading.error);
+          };
+        });
+      } finally {
+        database.close();
+      }
+    }, detail.sessionId);
+    expect(storedIds.sort()).toEqual(
+      detail.files
+        .filter((file) => {
+          return !landed.some((done) => {
+            return done.fileId === file.fileId;
+          });
+        })
+        .map((file) => {
+          return file.fileId;
+        })
+        .sort(),
+    );
+    await testInfo.attach("persisted-original-identities", {
+      body: JSON.stringify(storedIds),
+      contentType: "application/json",
+    });
+  }
+  for (const file of landed) {
+    const preview = reopened.getByRole("img", {
+      name: file.originalFilename,
+      exact: true,
+    });
+    await expect(preview).toHaveCount(1);
+    await preview.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => {
+        return preview.evaluate((image: HTMLImageElement) => {
+          return image.complete && image.naturalWidth > 0;
+        });
+      })
+      .toBe(true);
+    expect(
+      decodeURIComponent((await preview.getAttribute("src")) ?? ""),
+    ).toContain(file.fileId);
+  }
+  const hydratedLog = await readFakeS3Requests();
+  const reopeningLanded = hydratedLog
+    .slice(reopenLogOffset)
+    .filter((request) => {
+      return landed.some((file) => {
+        return request.key.includes(file.fileId);
+      });
+    });
+  expect(
+    reopeningLanded.every((request) => {
+      return request.method === "GET" && request.operation === "GetObject";
+    }),
+  ).toBe(true);
+  const logLength = hydratedLog.length;
+  if (!storageCapability.canStoreOriginalBlob) {
+    await pickFilesInUploadSurface({ page: reopened, paths });
+  } else {
+    await reopened
+      .getByRole("button", { name: "Resume upload", exact: true })
+      .click();
+  }
   await expect(
     reopened.getByRole("heading", { name: /18 up, across/ }),
   ).toBeVisible({ timeout: 120_000 });
+  expect(landedTransferReads).toEqual([]);
+  for (const file of landed) {
+    expect(
+      (await readFakeS3Requests()).filter((request) => {
+        return (
+          request.key.includes(`${file.fileId}/original.`) &&
+          request.operation === "PutObject" &&
+          request.status === 200
+        );
+      }),
+    ).toHaveLength(1);
+  }
   await _expectResumedCatalogAndStorage({
     sessionId: detail.sessionId,
     logLength,
@@ -72,6 +225,132 @@ test("surface 8 tab close preserves edits and the complete missing list, and nev
     }),
   });
 });
+
+/** Independent native capability, established before any upload or recovery UI. */
+async function _getNativeOriginalStorageCapability(page: Page): Promise<{
+  canStoreOriginalBlob: boolean;
+  failure?: { name: string; message: string };
+}> {
+  return page.evaluate(async () => {
+    const name = `task18-native-originals-${crypto.randomUUID()}`;
+    const database = await new Promise<IDBDatabase>((fulfill, reject) => {
+      const opening = indexedDB.open(name, 1);
+      const timer = setTimeout(() => {
+        return reject(new Error("Native storage probe open timed out"));
+      }, 10000);
+      opening.onupgradeneeded = () => {
+        return opening.result.createObjectStore("probe");
+      };
+      opening.onsuccess = () => {
+        clearTimeout(timer);
+        fulfill(opening.result);
+      };
+      opening.onerror = () => {
+        clearTimeout(timer);
+        reject(opening.error);
+      };
+    });
+    const commit = (value: string | Blob): Promise<void> => {
+      return new Promise((fulfill, reject) => {
+        const transaction = database.transaction("probe", "readwrite");
+        const timer = setTimeout(() => {
+          return transaction.abort();
+        }, 10000);
+        transaction.oncomplete = () => {
+          clearTimeout(timer);
+          fulfill();
+        };
+        transaction.onabort = () => {
+          clearTimeout(timer);
+          reject(
+            transaction.error ?? new Error("Native storage probe aborted"),
+          );
+        };
+        try {
+          transaction.objectStore("probe").put(value, "control");
+        } catch (error) {
+          clearTimeout(timer);
+          transaction.abort();
+          reject(error);
+        }
+      });
+    };
+    try {
+      await commit("owned native storage control");
+      try {
+        // Production saves file.slice(), which is a Blob, in its original record.
+        await commit(new File(["owned native original"], "probe.bin").slice());
+        return { canStoreOriginalBlob: true };
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+        return {
+          canStoreOriginalBlob: false,
+          failure: { name: error.name, message: error.message },
+        };
+      }
+    } finally {
+      database.close();
+      await new Promise<void>((fulfill, reject) => {
+        const deletion = indexedDB.deleteDatabase(name);
+        const timer = setTimeout(() => {
+          return reject(new Error("Native storage probe cleanup timed out"));
+        }, 10000);
+        deletion.onsuccess = () => {
+          clearTimeout(timer);
+          fulfill();
+        };
+        deletion.onerror = () => {
+          clearTimeout(timer);
+          reject(deletion.error);
+        };
+        deletion.onblocked = () => {
+          clearTimeout(timer);
+          reject(new Error("Native storage probe cleanup blocked"));
+        };
+      });
+    }
+  });
+}
+
+async function _getStoredOriginalEvidence(page: Page): Promise<unknown> {
+  return page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((fulfill, reject) => {
+      const opening = indexedDB.open("memory-shoebox-upload-originals", 1);
+      opening.onsuccess = () => {
+        return fulfill(opening.result);
+      };
+      opening.onerror = () => {
+        return reject(opening.error);
+      };
+    });
+    try {
+      return await new Promise((fulfill, reject) => {
+        const reading = database
+          .transaction("originals")
+          .objectStore("originals")
+          .getAll();
+        reading.onsuccess = () => {
+          return fulfill(
+            reading.result.map((record) => {
+              return {
+                sessionId: record.sessionId,
+                fileId: record.fileId,
+                size: record.blob?.size,
+                isBlob: record.blob instanceof Blob,
+                savedAt: record.savedAt,
+              };
+            }),
+          );
+        };
+        reading.onerror = () => {
+          return reject(reading.error);
+        };
+      });
+    } finally {
+      database.close();
+    }
+  });
+}
 
 async function _holdAfterTwoCompletions(
   page: Page,
@@ -196,9 +475,11 @@ test("surface 8 completion network loss never claims an unconfirmed original is 
     },
   );
   await page.getByRole("button", { name: "Put 1 up", exact: true }).click();
-  await expect(page.getByText("Not confirmed up", { exact: true })).toBeVisible(
-    { timeout: 100_000 },
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "What did not arrive", exact: true })
+      .getByText("Not confirmed up", { exact: true }),
+  ).toBeVisible({ timeout: 100_000 });
   await expect(
     page.getByRole("heading", { name: "You were in the middle of this." }),
   ).toBeVisible();
@@ -209,7 +490,9 @@ test("surface 8 completion network loss never claims an unconfirmed original is 
     page.getByRole("heading", { name: /1 up, across/ }),
   ).toBeHidden();
   await page.unroute("**/api/upload-sessions/*/files/*/complete");
-  await pickFilesInUploadSurface({ page, paths });
+  await page
+    .getByRole("button", { name: "Resume upload", exact: true })
+    .click();
   await expect(page.getByRole("heading", { name: /1 up, across/ })).toBeVisible(
     { timeout: 90_000 },
   );
@@ -226,7 +509,9 @@ async function _expectCompleteMissingList(page: Page): Promise<void> {
   await Promise.all(
     missing.map((file) => {
       return expect(
-        page.getByText(file.originalFilename, { exact: true }),
+        page
+          .getByRole("region", { name: "What did not arrive", exact: true })
+          .getByText(file.originalFilename, { exact: true }),
       ).toBeVisible();
     }),
   );

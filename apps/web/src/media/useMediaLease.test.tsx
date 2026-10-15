@@ -605,3 +605,91 @@ it("rechecks automatic visibility at queue flush but permits an invisible explic
   });
   expect(setup.requests).toHaveLength(1);
 });
+
+it("retains a failed network source without a timer loop, then retries once on reconnect and retires that listener", async () => {
+  const setup = _setup();
+  setup.fetcher.mockRejectedValueOnce(new TypeError("Network is offline"));
+  const view = renderHook(() => {
+    return useMediaLease({
+      itemId: detail.itemId,
+      initialMedia: _media(),
+      purpose: "selected-view",
+      isVisible: true,
+    });
+  }, setup);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_001);
+  });
+  expect(view.result.current.media?.playback?.url).toContain("old.mp4");
+  expect(view.result.current.hasError).toBe(true);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(500_000);
+  });
+  expect(setup.fetcher).toHaveBeenCalledOnce();
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(setup.fetcher).toHaveBeenCalledTimes(2);
+  expect(view.result.current.media?.playback?.url).toContain("renewed.mp4");
+  expect(view.result.current.hasError).toBe(false);
+  view.unmount();
+  setup.resources.dispose();
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(3_600_000);
+  });
+  expect(setup.fetcher).toHaveBeenCalledTimes(2);
+});
+
+it("does not retry denied media when connectivity returns", async () => {
+  const setup = _setup();
+  setup.fetcher.mockResolvedValueOnce(
+    new Response(JSON.stringify({ items: [] })),
+  );
+  const view = renderHook(() => {
+    return useMediaLease({
+      itemId: detail.itemId,
+      initialMedia: _media(),
+      purpose: "selected-view",
+      isVisible: true,
+    });
+  }, setup);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_001);
+  });
+  expect(view.result.current.media).toBeUndefined();
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(3_600_000);
+  });
+  expect(setup.fetcher).toHaveBeenCalledOnce();
+  view.unmount();
+  setup.resources.dispose();
+});
+
+it("cannot restart a failed transient renewal after its owner retires", async () => {
+  const setup = _setup();
+  setup.fetcher.mockRejectedValueOnce(new TypeError("Network is offline"));
+  const view = renderHook(() => {
+    return useMediaLease({
+      itemId: detail.itemId,
+      initialMedia: _media(),
+      purpose: "selected-view",
+      isVisible: true,
+    });
+  }, setup);
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_001);
+  });
+  expect(view.result.current.hasError).toBe(true);
+  view.unmount();
+  setup.resources.dispose();
+  await act(async () => {
+    window.dispatchEvent(new Event("online"));
+    window.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(3_600_000);
+  });
+  expect(setup.fetcher).toHaveBeenCalledOnce();
+});

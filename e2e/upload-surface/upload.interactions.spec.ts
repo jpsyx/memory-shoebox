@@ -1,3 +1,5 @@
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
+import { makeSurfaceMatrixDetailFromState } from "./uploadSurfaceTestHelpers/makeSurfaceMatrixDetailFromState.ts";
 import type { MilestoneDetailResponse } from "../../apps/web/src/api/milestoneHelpers/milestoneHelpers.types.ts";
 import type {
   MilestoneRef,
@@ -12,6 +14,7 @@ import {
 } from "./uploadSurfaceLayoutHelpers.ts";
 import {
   installSurfaceContractDetail,
+  getSurfaceSessionFromRequest,
   test,
 } from "./uploadSurfaceTestHelpers/uploadSurfaceTestHelpers.ts";
 
@@ -116,13 +119,26 @@ async function _createOccasion(page: Page): Promise<void> {
     .click();
 }
 
-test("surface 8 delayed creation survives actual route reentry with original targets", async ({
+test("surface 8 discarded draft cannot attach a late creation to a distinct batch after actual route reentry", async ({
   uploaderPage: page,
-}) => {
-  const detail = _makePairDetail();
-  await installSurfaceContractDetail({ page, detail });
+}, testInfo) => {
   await page.getByRole("link", { name: "Back to the timeline" }).click();
   await page.getByRole("link", { name: "Add", exact: true }).click();
+  const initialPaths = makeUploadSurfaceFixturePaths({
+    directory: testInfo.outputPath("initial-draft"),
+    fileCount: 2,
+  });
+  await page.locator("input[type=file]").setInputFiles(initialPaths);
+  await expect(
+    page.getByRole("button", { name: "Put 2 up", exact: true }),
+  ).toBeEnabled();
+  const detail = await getSurfaceSessionFromRequest({ request: page.request });
+  const cancelled: string[] = [];
+  await page.route("**/api/upload-sessions/**", async (route) => {
+    if (route.request().method() === "DELETE")
+      cancelled.push(new URL(route.request().url()).pathname);
+    await route.continue();
+  });
   const writes: CreateUploadEditRequest[] = [];
   const held = Promise.withResolvers<Route>();
   const release = Promise.withResolvers<void>();
@@ -136,14 +152,97 @@ test("surface 8 delayed creation survives actual route reentry with original tar
       await route.fulfill({ status: 201, json: OCCASION_DETAIL });
     },
   });
-  await page.getByRole("button", { name: /Family-1\.jpg/ }).click();
+  await page
+    .getByRole("button", { name: /portrait-orientation-6-0\.jpg/ })
+    .and(page.locator("[aria-pressed]"))
+    .click();
   await _createOccasion(page);
   await held.promise;
+  await expect(
+    page.getByRole("button", { name: "Close milestone picker" }),
+  ).toBeDisabled();
   await page.goBack();
   await expect(page).toHaveURL(/\/$/);
+  await expect
+    .poll(() => {
+      return cancelled;
+    })
+    .toEqual([`/api/upload-sessions/${detail.sessionId}`]);
   await page.getByRole("link", { name: "Add", exact: true }).click();
-  await page.getByRole("button", { name: "Untick", exact: true }).click();
-  await page.getByRole("button", { name: /Family-2\.jpg/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Put it all up." }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Choose photographs and videos")).toBeAttached();
+  await expect(
+    page.getByRole("button", { name: /portrait-orientation-6-0\.jpg/ }),
+  ).toHaveCount(0);
+  await page.unroute("**/api/upload-sessions/**");
+  const paths = makeUploadSurfaceFixturePaths({
+    directory: testInfo.outputPath("replacement-draft"),
+    fileCount: 2,
+  });
+  await page.locator("input[type=file]").setInputFiles(paths);
+  await expect(
+    page.getByRole("button", { name: "Put 2 up", exact: true }),
+  ).toBeEnabled();
+  const replacement = await getSurfaceSessionFromRequest({
+    request: page.request,
+  });
+  expect(replacement.sessionId).not.toBe(detail.sessionId);
+  expect(
+    replacement.files.every((file) => {
+      return !detail.files.some((original) => {
+        return original.fileId === file.fileId;
+      });
+    }),
+  ).toBe(true);
+  const replacementChoice = page
+    .getByRole("button", { name: /heic-rotated-1\.heic/ })
+    .and(page.locator("[aria-pressed]"));
+  await replacementChoice.click();
+  const completed = page.waitForResponse((response) => {
+    return (
+      new URL(response.url()).pathname === "/api/milestones" &&
+      response.request().method() === "POST"
+    );
+  });
+  release.resolve();
+  expect((await completed).status()).toBe(201);
+  await expect(replacementChoice).toHaveAttribute("aria-pressed", "true");
+  // Observe a bounded quiet interval after the delivered creation response.
+  await page.waitForTimeout(300);
+  expect(writes).toEqual([]);
+  await expect(page.getByText(OCCASION.name, { exact: true })).toHaveCount(0);
+});
+
+test("surface 8 delayed creation locks its live picker and attaches its originally submitted targets", async ({
+  uploaderPage: page,
+}) => {
+  const detail = _makePairDetail();
+  await installSurfaceContractDetail({ page, detail });
+  const writes: CreateUploadEditRequest[] = [];
+  const held = Promise.withResolvers<Route>();
+  const release = Promise.withResolvers<void>();
+  await _installOccasionContract({
+    page,
+    detail,
+    writes,
+    onCreate: async (route) => {
+      held.resolve(route);
+      await release.promise;
+      await route.fulfill({ status: 201, json: OCCASION_DETAIL });
+    },
+  });
+  await page
+    .getByRole("button", { name: /Family-1\.jpg/ })
+    .and(page.locator("[aria-pressed]"))
+    .click();
+  await _createOccasion(page);
+  await held.promise;
+  await expect(
+    page.getByRole("button", { name: "Close milestone picker" }),
+  ).toBeDisabled();
+  expect(writes).toEqual([]);
   release.resolve();
   await expect
     .poll(() => {
@@ -151,9 +250,7 @@ test("surface 8 delayed creation survives actual route reentry with original tar
     })
     .toBe(1);
   expect(writes[0]!.targetFileIds).toEqual([detail.files[0]!.fileId]);
-  await expect(
-    page.getByRole("button", { name: /Family-2\.jpg/ }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("dialog")).toBeHidden();
 });
 
 test("surface 8 closed failed attachment retains submitted targets on reopen", async ({
@@ -168,14 +265,20 @@ test("surface 8 closed failed attachment retains submitted targets on reopen", a
     writes,
     shouldRejectFirst: true,
   });
-  await page.getByRole("button", { name: /Family-1\.jpg/ }).click();
+  await page
+    .getByRole("button", { name: /Family-1\.jpg/ })
+    .and(page.locator("[aria-pressed]"))
+    .click();
   await _createOccasion(page);
   await expect(
     page.getByRole("button", { name: "Retry attachment" }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "Close milestone picker" }).click();
   await page.getByRole("button", { name: "Untick", exact: true }).click();
-  await page.getByRole("button", { name: /Family-2\.jpg/ }).click();
+  await page
+    .getByRole("button", { name: /Family-2\.jpg/ })
+    .and(page.locator("[aria-pressed]"))
+    .click();
   await page
     .getByRole("button", { name: "Put under a milestone", exact: true })
     .click();
@@ -274,6 +377,7 @@ async function _expectIncomingColor({
     expect(buffers[0]!.equals(buffers[1]!)).toBe(false);
     expect(buffers[0]!.length).toBe(buffers[1]!.length);
     const detail = _makePairDetail();
+    detail.state = "uploading";
     detail.files = detail.files.map((file, position) => {
       return {
         ...file,
@@ -338,4 +442,66 @@ async function _expectIncomingColor({
       page.getByRole("button", { name: "Choose the files again" }),
     ).toBeVisible();
   });
+});
+
+test("surface 8 canonical settled refresh preserves the already focused receipt action", async ({
+  uploaderPage: page,
+}) => {
+  const detail = makeSurfaceMatrixDetailFromState("done");
+  const canonicalNavigation = Promise.withResolvers<void>();
+  const allowNavigation = Promise.withResolvers<void>();
+  const refreshStarted = Promise.withResolvers<void>();
+  const allowRefresh = Promise.withResolvers<void>();
+  let bootstraps = 0;
+  let addressedReads = 0;
+  await page.route("**/api/bootstrap", async (route) => {
+    bootstraps += 1;
+    if (bootstraps === 2) {
+      canonicalNavigation.resolve();
+      await allowNavigation.promise;
+    }
+    await route.continue();
+  });
+  await page.route("**/api/upload-sessions/**", async (route) => {
+    if (new URL(route.request().url()).pathname.endsWith(detail.sessionId)) {
+      addressedReads += 1;
+      if (addressedReads === 2) {
+        refreshStarted.resolve();
+        await allowRefresh.promise;
+      }
+    }
+    await route.fulfill({ json: detail });
+  });
+  try {
+    await page.goto("/upload");
+    const action = page.getByRole("link", {
+      name: "See them on the timeline",
+      exact: true,
+    });
+    await action.focus();
+    await expect(action).toBeFocused();
+    const original = await action.elementHandle();
+    await canonicalNavigation.promise;
+    allowNavigation.resolve();
+    await refreshStarted.promise;
+    expect(
+      await original!.evaluate((node) => {
+        return node.isConnected;
+      }),
+    ).toBe(true);
+    await expect(action).toBeFocused();
+    allowRefresh.resolve();
+    await expect(
+      page.getByRole("button", { name: "Upload more", exact: true }),
+    ).toBeEnabled();
+    await expect(action).toBeFocused();
+    expect(
+      await original!.evaluate((node) => {
+        return node.isConnected;
+      }),
+    ).toBe(true);
+  } finally {
+    allowNavigation.resolve();
+    allowRefresh.resolve();
+  }
 });

@@ -539,6 +539,13 @@ only after committed navigation. Speculative preload and pending navigation do
 not reset that budget. Automatic queued lease renewal rechecks actual and
 document visibility before flushing; explicit invisible retry remains allowed.
 
+Timeline seen buffering keeps at most 500 unique unseen sightings. It drains a
+full batch immediately and starts a 500 ms deadline on the first pending entry;
+continued intersections never postpone that deadline. Familiar prints allocate
+no pending work. Changing the member-bound view or detaching its archive clears
+the buffer, and retired observers reject callbacks already queued for delivery.
+An already-started valid request is not retractable.
+
 **The two empty states are told apart by `me.role` and by nothing else.**
 `timeline.md` transformation 9 makes a brand-new archive and a fully
 restricted viewer return byte-identical bodies, on purpose, so nothing in the
@@ -746,6 +753,8 @@ capability checks for either kind. It fills the phone width, lets nested dialogs
 handle Escape first, and returns focus to More without replacing the media.
 The item app bar retains its full-height back-link target with no extra vertical
 padding. A shared spacing-token gap separates that bar from the photo or video container.
+At desktop widths of at least 1100px and heights up to 800px, that top gap is
+16px so the viewer fits vertically while retaining the same media height.
 The shared container header and media spacing are compact, recovering
 vertical room without lowering the photo's existing 70vh size limit. Reaction
 counts sit beside the emoji bar. On wide desktop layouts, burst thumbnails share
@@ -989,6 +998,10 @@ and cancels its uncommitted server draft with a keepalive DELETE. A late draft-o
 answer is cancelled too, and a new read waits for cancellation to finish. A fresh
 page discards an unstarted draft found on the server, covering interrupted page-exit
 cleanup; addressed cancelled drafts return to the empty picker.
+
+A same-session settled refresh retains the receipt while the authoritative read
+is pending. Its existing action nodes and keyboard focus survive canonical URL
+updates; reading another session still shows the loading state.
 
 After Put arms the batch, navigating between Upload and the pile keeps the
 controller, browser file handles and transfer alive. An arm request already in
@@ -1346,7 +1359,8 @@ confirms its correction. Failed saves keep the row and edited day for retry;
 other rows retain their unsaved edits.
 
 The browser's received file order survives header-reading concurrency and
-manifest chunking in the server's `position` field. Suggestions use that order,
+manifest chunking in the server's one-based `position` field. Date-review
+labels use that ordinal directly. Suggestions use that order,
 not filenames or capture-day sorting. A missing date uses the preceding known
 day; a leading run of missing dates uses the following known day. Matching
 neighbors are identified as supporting the same suggestion. Removed, refused
@@ -1865,6 +1879,9 @@ which replaces the old directory rows without a refusal or account recheck.
 That 200 response does not assert an administrator role: cached navigation identity
 can remain until the normal account refresh, navigation or a refused read reconciles
 it. The client does not infer authority from the number of returned rows.
+When reconnect also refreshes the current account as a viewer, the presence
+surface hides the table and shows its admin-only refusal even if the self-only
+presence request itself succeeded.
 
 ### Authorized step 9 follow-up
 
@@ -1875,3 +1892,12 @@ acceptance gate without claiming additional screen-reader or native checks.
 Provider delivery, email-client transformations, health-only mail diagnosis and
 the earlier family/phone trial qualifications remain as recorded in
 [step 9 verification](prds/2026-09-27-memory-shoebox/plan/step-9-verification.md).
+
+Filter controls express pure edits to the latest pending Router selection. A tag,
+person or date edit made while bootstrap is still resolving preserves other pending
+edits. Selection edits drop the jump, clear-all keeps the current jump, and a rail
+restart preserves current filters; each action retains the current Find state.
+
+Video reaction hints and the whole-video comment toggle use the standard print
+text color on the sunken print surface, retaining readable small-text contrast
+in both themes.

@@ -110,6 +110,7 @@ type DomCounters = {
 };
 type MemorySample = Awaited<ReturnType<typeof readReadiness>> & {
   responses: number;
+  sampleAnchor: { day: string; expectedTop: number; actualTop: number };
   pages: Array<number | undefined>;
   pendingRequests: number;
   seenStarted: number;
@@ -119,8 +120,29 @@ type MemorySample = Awaited<ReturnType<typeof readReadiness>> & {
 };
 
 function assertSampledConvergence(samples: MemorySample[]): void {
+  expect(
+    samples.map((sample) => {
+      return sample.responses;
+    }),
+  ).toEqual(
+    Array.from({ length: 17 }, (_, index) => {
+      return index + 6;
+    }),
+  );
   const stable = samples.slice(-8);
   expect(stable).toHaveLength(8);
+  expect(
+    new Set(
+      stable.map((sample) => {
+        return sample.sampleAnchor.expectedTop;
+      }),
+    ).size,
+  ).toBe(1);
+  expect(
+    stable.map((sample) => {
+      return sample.responses;
+    }),
+  ).toEqual([15, 16, 17, 18, 19, 20, 21, 22]);
   expect(
     new Set(
       stable.map((sample) => {
@@ -182,6 +204,8 @@ for (const viewport of [
   { width: 390, height: 844 },
 ]) {
   test.describe(`${viewport.width}px settled memory`, () => {
+    // The complete 22-response settlement protocol also runs in the ordinary suite.
+    test.setTimeout(180000);
     test.use({ viewport, catalogSize: 10000 });
     test("measures equivalent retained windows after image, seen, request and animation settlement", async ({
       page,
@@ -203,6 +227,7 @@ for (const viewport of [
       page.on("requestfinished", finish);
       page.on("requestfailed", finish);
       const pageByDay = new Map<string, number>();
+      const firstDayByResponse = new Map<number, string>();
       let responses = 0;
       await page.route(
         (url) => {
@@ -214,6 +239,7 @@ for (const viewport of [
             days: Array<{ capturedOn: string }>;
           };
           responses += 1;
+          firstDayByResponse.set(responses, body.days[0]!.capturedOn);
           body.days.forEach((day) => {
             pageByDay.set(day.capturedOn, responses);
           });
@@ -239,6 +265,23 @@ for (const viewport of [
           });
         });
         if (responses <= sampled) continue;
+        const sampledResponse = responses;
+        const anchorDay = firstDayByResponse.get(sampledResponse)!;
+        const anchor = page.locator(`[id="day-${anchorDay}"]`);
+        await expect(anchor).toBeAttached();
+        const expectedTop = await anchor.evaluate((element) => {
+          const documentTop = scrollY + element.getBoundingClientRect().top;
+          const targetScrollY = Math.round(documentTop - 100);
+          scrollTo({ top: targetScrollY, behavior: "instant" });
+          return documentTop - targetScrollY;
+        });
+        await expect
+          .poll(() => {
+            return anchor.evaluate((element) => {
+              return element.getBoundingClientRect().top;
+            });
+          })
+          .toBe(expectedTop);
         await expect
           .poll(
             async () => {
@@ -260,7 +303,12 @@ for (const viewport of [
             { timeout: 15000 },
           )
           .toBe(true);
+        expect(responses).toBe(sampledResponse);
         const readiness = await readReadiness(page);
+        const actualTop = await anchor.evaluate((element) => {
+          return element.getBoundingClientRect().top;
+        });
+        expect(actualTop).toBe(expectedTop);
         const pages = [
           ...new Set(
             readiness.days.map((day) => {
@@ -273,6 +321,7 @@ for (const viewport of [
         if (cdp) await cdp.send("HeapProfiler.collectGarbage");
         samples.push({
           responses,
+          sampleAnchor: { day: anchorDay, expectedTop, actualTop },
           ...readiness,
           pages,
           pendingRequests: pending.size,
@@ -304,6 +353,7 @@ for (const viewport of [
         test.info().outputPath("settled-memory.json"),
         JSON.stringify(samples, null, 2),
       );
+      expect(sampled).toBe(22);
       assertSampledConvergence(samples);
     });
   });

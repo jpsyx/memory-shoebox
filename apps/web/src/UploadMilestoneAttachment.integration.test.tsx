@@ -13,34 +13,39 @@ import {
 } from "./testing/uploadMilestoneModalTestHelpers";
 
 describe("inline upload milestones", () => {
-  it("a delayed creation keeps submitted targets across surface unmount and selection change", async () => {
-    const harness = await renderUploadMilestoneModal({});
-    const submitted = [...harness.controller.getSnapshot().selectedFileIds];
-    const response = makeDeferredAnswer<Response>();
-    const fetchMock = vi.mocked(fetch);
-    const originalFetch = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation((...args) => {
-      return args[1]?.method === "POST"
-        ? response.promise
-        : originalFetch(...args);
-    });
-    createUploadMilestoneThroughForm(2);
-    harness.rendered.unmount();
-    harness.controller.clearSelection();
-    harness.controller.toggleFile(submitted[1]!);
-    await act(async () => {
-      response.answer(
-        Response.json(makeUploadMilestoneDetail(), { status: 201 }),
-      );
-      await response.promise;
-    });
-    await waitFor(() => {
-      return expect(harness.api.createUploadEdit).toHaveBeenCalled();
-    });
-    expect(
-      harness.api.createUploadEdit.mock.calls[0]![0].body.targetFileIds,
-    ).toEqual(submitted);
-  });
+  it.each([false, true])(
+    "a delayed creation keeps submitted targets across selection change (surface unmounted: %s)",
+    async (shouldUnmount) => {
+      const harness = await renderUploadMilestoneModal({});
+      const submitted = [...harness.controller.getSnapshot().selectedFileIds];
+      const response = makeDeferredAnswer<Response>();
+      const fetchMock = vi.mocked(fetch);
+      const originalFetch = fetchMock.getMockImplementation()!;
+      fetchMock.mockImplementation((...args) => {
+        return args[1]?.method === "POST"
+          ? response.promise
+          : originalFetch(...args);
+      });
+      createUploadMilestoneThroughForm(2);
+      if (shouldUnmount) {
+        harness.rendered.unmount();
+      }
+      harness.controller.clearSelection();
+      harness.controller.toggleFile(submitted[1]!);
+      await act(async () => {
+        response.answer(
+          Response.json(makeUploadMilestoneDetail(), { status: 201 }),
+        );
+        await response.promise;
+      });
+      await waitFor(() => {
+        return expect(harness.api.createUploadEdit).toHaveBeenCalled();
+      });
+      expect(
+        harness.api.createUploadEdit.mock.calls[0]![0].body.targetFileIds,
+      ).toEqual(submitted);
+    },
+  );
   it("a delayed creation answer cannot attach to a replacement session", async () => {
     const harness = await renderUploadMilestoneModal({});
     const response = makeDeferredAnswer<Response>();

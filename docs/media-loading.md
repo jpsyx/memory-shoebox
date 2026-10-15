@@ -158,11 +158,11 @@ load/error and any already-started decode settle. Only then can the scheduler
 release its operation and byte reservations. This can waste an already-started
 transfer; it does not pretend a signal cancelled those bytes.
 
-`const releaseForeground = scheduler.promote(id)` acquires a foreground lease
+`scheduler.promote({ itemId, source })` acquires a foreground lease
 before selection/route cleanup. `clear()` preserves that ownership so the
 adopting transition does not cancel a shared in-flight load. The caller must
 release the lease when adoption fails or its foreground source/view exits.
-Each call returns an idempotent release bound to that particular operation;
+Each promotion supplies an idempotent release bound to that particular operation;
 multiple owners release independently, and an old release cannot affect a later
 load of the same rendition. Releasing the final owner cancels queued starts and
 suppresses pending explicit decode. Already-started native work still reserves
@@ -184,8 +184,33 @@ transitions:
    releases every pending lease. A missing destination mount must never leave
    ownership waiting indefinitely.
 
-The provider's route cleanup cannot infer that handoff and does not implement it.
-Regression coverage includes failed and interrupted navigation as well as successful adoption.
+Pending location publication cancels obsolete speculation immediately. Unadopted
+navigation ownership is reconciled against the committed surface instead, after
+its children can adopt it. This distinction preserves the destination lease while
+Router awaits bootstrap/authorization. Promise settlement still cleans up
+rejected, redirected or never-mounted destinations. Regression coverage includes
+a delayed pending-to-committed transition, failed/interrupted navigation and
+successful adoption.
+
+When the immediate neighbor's native image has already completed explicit decode,
+the same promotion can transfer that exact image into a temporary viewer host.
+The first render reads a pure ownership snapshot, so it never starts a redundant
+thumbnail request for an eligible handoff. An unknown viewport first measures
+without requesting the fallback. The ordinary selected picture still loads and
+decodes its own current node before reporting ready; temporary pixels never count
+as current-node readiness. A preview may display the handoff, but only the
+matching authorized detail's decode releases it. Fast preview/detail replacement
+and StrictMode replay preserve the current owner.
+
+Eligibility requires the exact item, rendition, URL, live lease with the existing
+60-second margin, member/store epoch, DPR and retry generation. Denial, source
+invalidation, member retirement and exit release owned pixels. A stale decode
+cannot release a newer view's claim. The transferred image remains charged to
+the existing 8 MiB encoded and 32 MiB decoded reservations until release, and
+blocks another speculative decode during that time. In-flight decode results
+are never adopted later. This is a single-owner transfer, not a decoded-image
+pool or an offline-cache promise; a reversal can choose a cached source whose
+native pixels are no longer retained.
 
 Member replacement retires private metadata immediately, then uses a barrier
 containing only operation settlement to delay the next member's speculation
@@ -198,8 +223,8 @@ The budgets bound work and references owned by this app, not total browser RAM.
 Optimized-video metadata transport is not active. The default-off
 `media.prefetch.videoMetadataEnabled` records the M2 acceptance gate; flipping
 that policy value alone does not establish support. Both the scheduler and
-load primitive currently reject video-metadata candidates. M2 must implement
-and measure an actual optimized-source path before enabling it, with at most
+load primitive currently reject video-metadata candidates. Any future enabling
+change must implement and measure an actual optimized-source path, with at most
 one video metadata operation inside the two-operation total. There is no
 speculative original-video or first-segment transport.
 
@@ -221,8 +246,9 @@ pnpm exec playwright test -c playwright.media.config.ts e2e/media/prefetch.spec.
 
 These tests use isolated catalog data, test signatures, fake email and no
 request interception. They do not change the frozen pre-product baseline or
-claim actual-iPhone, production-B2, source-selection or automatic-viewer
-prefetch acceptance; A5 and M2 own the remaining integrated evidence.
+claim actual-iPhone or production-B2 acceptance. Current source-selection and
+automatic-viewer acceptance are recorded separately in
+[the integrated performance evidence](media-loading-performance.md).
 
 ## Visible lease renewal
 
@@ -682,3 +708,37 @@ wall-time samples varied, including a WebKit regression; they do not establish
 a universal latency or total-CPU improvement. Main-thread task duration excludes
 worker CPU, and aggregate worker/WASM heap remains unmeasured. See the C4 task
 report and raw local artifacts for the measurement boundaries.
+
+## Integrated acceptance boundaries
+
+A retained decoded photo survives a transient failed lease renewal. Returning
+focus or an actual `online` event lets the current visible owner retry through
+the existing bounded preview scheduler. A denial remains terminal for that
+owner; retired owners and sources cannot schedule later work. No timer retries
+continuously, and this is not a persistent offline cache.
+
+Timeline seen observations flush after the first pending observation or at the
+500-identity retention bound. Already familiar entries add neither pending work
+nor timers. Member/view replacement, ref detachment and unmount retire pending
+observations and callbacks. An already-started request remains a real request;
+the fence prevents callbacks from scheduling new requests after retirement.
+
+The final acceptance measurements and their provenance are described in
+[media-loading-performance.md](media-loading-performance.md). Local native
+engines do not establish physical iPhone behavior or remote B2 performance.
+
+A fresh burst opening keeps its collapsed cover while its owned frame read is
+pending. Accepted frames and expansion publish together, so the normal reading
+anchor survives the transition. Pending reads share the existing twenty-owner
+bound and cannot publish after collapse, clear, page/view retirement or unmount.
+A failed fresh read leaves the cover available for another real activation.
+Previously measured expansion placeholders keep their restoration behavior.
+Fan rows pack using the displayed thumbnail's aspect ratio, with original
+layout dimensions only when the thumbnail is absent, matching each Print's box.
+The structural anchor waits until its row's rendered logical position matches
+Virtual's current public position before applying its one correction. This
+prevents a ref measurement from compensating scroll and then being overwritten
+by a correction against older DOM coordinates. Existing preceding-size
+compensation remains active. View replacement and actual wheel, touch or
+navigation-key intent retire pending corrections; ordinary programmatic scroll
+readback does not.

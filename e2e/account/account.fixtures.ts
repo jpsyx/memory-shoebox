@@ -2,6 +2,10 @@ import { expect, type Page } from "@playwright/test";
 import { seedMemberAtAddress } from "../support/database.ts";
 import { E2E_BASE_URL } from "../support/e2eEnvironment.constants.ts";
 import { signInAs } from "../support/signIn.ts";
+import {
+  getSignedInContextFromBrowser,
+  test as base,
+} from "../support/signedIn.ts";
 
 /**
  * Surface 9 against the real server: the name the family sees, the four
@@ -18,7 +22,7 @@ import { signInAs } from "../support/signIn.ts";
  * a test that signs devices in and out cannot be reading or revoking rows
  * another test is relying on, and the order they run in stays a detail.
  *
- * **A test that does neither takes the run's shared admin instead**, from
+ * **Keyboard and responsive tests that do neither take the shared admin**, from
  * `e2e/support/signedIn.ts`, through the `adminPage` fixture: the two widths
  * in `account.responsive.spec.ts`, and the name and switch cases in
  * `account.keyboard.spec.ts`. Those only read the surface or correct the
@@ -28,13 +32,36 @@ import { signInAs } from "../support/signIn.ts";
  * session row it is reading on, and doing that to the shared admin would sign
  * out every later spec in the run.
  *
- * **Sign-in codes are rationed.** The whole suite shares one per-IP bucket. No
- * number is written down in these files on purpose: `e2e/support/signIn.ts`
- * counts the mints as they happen and refuses the one that would go over,
- * against the rule the server actually applies. A count in a comment here
- * would be wrong the moment somebody added a test, and a wrong comment is
- * worse than none.
+ * The name, notification switches and admin doors in `account.spec.ts` share
+ * a separate `my-name` account. They change independent fields or only read,
+ * so the name and notification defaults remain real first-use assertions.
+ * Each gets a fresh validated context; none revokes this dedicated session.
+ *
+ * **Sign-in codes are rationed.** The whole suite shares one per-IP bucket.
+ * `e2e/support/signIn.ts` checks each worker's count against the actual rule
+ * and requires every real form submission to receive 202. Separate projects
+ * and replacement workers have separate local counters, so docs/e2e.md also
+ * records the complete cross-project request ownership and its zero headroom.
  */
+
+/** Three non-revoking account flows reuse one dedicated real UI sign-in. */
+export const test = base.extend<{ accountPage: Page }>({
+  accountPage: async ({ browser }, provide) => {
+    const context = await getSignedInContextFromBrowser({
+      browser,
+      email: "my-name@example.com",
+      role: "admin",
+    });
+    try {
+      const page = await context.newPage();
+      await page.goto("/account");
+      await expect(page.getByLabel(NAME_LABEL)).toBeVisible();
+      await provide(page);
+    } finally {
+      await context.close();
+    }
+  },
+});
 
 /** The name field on surface 9, and the button that commits it. */
 export const NAME_LABEL = "Your name";

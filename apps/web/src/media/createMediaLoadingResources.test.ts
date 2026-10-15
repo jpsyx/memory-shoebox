@@ -103,7 +103,10 @@ describe("member media resources", () => {
     resources.scheduler.schedule([_candidate("adopted")], ENVIRONMENT);
     await vi.advanceTimersByTimeAsync(250);
     expect(images).toHaveLength(1);
-    const release = resources.scheduler.promote("adopted");
+    const release = resources.scheduler.promote({
+      itemId: "adopted",
+      source: _candidate("adopted").source,
+    }).release;
     resources.clearWork();
     expect(images[0]!.hasAttribute("src")).toBe(true);
     release();
@@ -138,7 +141,10 @@ describe("member media resources", () => {
     await vi.advanceTimersByTimeAsync(250);
     expect(requests).toHaveLength(2);
     expect(images).toHaveLength(0);
-    const release = resources.scheduler.promote("adopted");
+    const release = resources.scheduler.promote({
+      itemId: "adopted",
+      source: _candidate("adopted").source,
+    }).release;
     resources.clearWork();
     release();
     resources.clearWork();
@@ -167,7 +173,10 @@ describe("member media resources", () => {
     resources.scheduler.schedule([_candidate("adopted")], ENVIRONMENT);
     await vi.advanceTimersByTimeAsync(250);
     expect(images).toHaveLength(0);
-    const release = resources.scheduler.promote("adopted");
+    const release = resources.scheduler.promote({
+      itemId: "adopted",
+      source: _candidate("adopted").source,
+    }).release;
     resources.clearWork();
     requests.forEach((request) => {
       request.finish({ items: [] });

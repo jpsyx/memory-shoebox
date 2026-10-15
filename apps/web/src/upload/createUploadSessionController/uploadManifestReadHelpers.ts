@@ -109,7 +109,13 @@ export async function loadUploadSession(
   }>,
 ): Promise<void> {
   const { context, generation, sessionId } = options;
-  context.publish({ ...context.state.snapshot, phase: "loading" });
+  const snapshot = context.state.snapshot;
+  const isRefreshingSettled =
+    sessionId === snapshot.detail?.sessionId &&
+    snapshot.detail?.state === "settled";
+  if (!isRefreshingSettled) {
+    context.publish({ ...snapshot, phase: "loading" });
+  }
   if (sessionId) {
     await readAndPublishUploadSession({ context, generation, sessionId });
     return;

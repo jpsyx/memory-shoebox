@@ -67,7 +67,17 @@ export async function expectCurrentPhotoDecoded(page: Page): Promise<void> {
   await expect
     .poll(() => {
       return image.evaluate((element: HTMLImageElement) => {
-        return element.complete && element.naturalWidth > 0;
+        const candidate = element
+          .closest("picture")
+          ?.querySelector("source")
+          ?.getAttribute("srcset")
+          ?.split(" ")[0];
+        return (
+          element.complete &&
+          element.naturalWidth > 0 &&
+          element.currentSrc === element.src &&
+          element.currentSrc === candidate
+        );
       });
     })
     .toBe(true);

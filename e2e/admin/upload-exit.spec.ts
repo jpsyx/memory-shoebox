@@ -1,4 +1,6 @@
 import type { Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import { test, expect } from "./admin.fixtures.ts";
 
 async function _pickLocalBatch(page: Page): Promise<string> {
@@ -8,12 +10,28 @@ async function _pickLocalBatch(page: Page): Promise<string> {
     exact: true,
   });
   await expect(picker).toBeEnabled();
+  const sourceNames = [
+    "portrait-orientation-6.jpg",
+    "heic-rotated.heic",
+  ] as const;
+  const paths = makeUploadSurfaceFixturePaths({
+    directory: test.info().outputPath("distinct-batch"),
+    fileCount: 2,
+    sourceNames,
+  });
   await page
     .getByLabel("Choose photographs and videos", { exact: true })
-    .setInputFiles([
-      "e2e/fixtures/upload/portrait-orientation-6.jpg",
-      "e2e/fixtures/upload/heic-rotated.heic",
-    ]);
+    .setInputFiles(
+      await Promise.all(
+        paths.map(async (path, index) => {
+          return {
+            name: sourceNames[index]!,
+            mimeType: index === 0 ? "image/jpeg" : "image/heic",
+            buffer: await readFile(path),
+          };
+        }),
+      ),
+    );
   await expect(page.getByRole("button", { name: "Put 2 up" })).toBeEnabled();
   return new URL(page.url()).searchParams.get("session")!;
 }

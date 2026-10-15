@@ -26,7 +26,11 @@ test.describe("the pile", () => {
     // every member in this suite signs in after the archive is already
     // seeded, so nothing in the run ever carries an unseen marker.
     // `seenLatch.spec.ts` is where the unseen state is put back deliberately.
-    await expect(adminPage.getByText("340 photos")).toBeVisible();
+    await expect(
+      adminPage
+        .locator("#day-2026-09-27")
+        .getByText("340 photos", { exact: true }),
+    ).toBeVisible();
   });
 
   test("collapses a run of frames into one stack", async ({ adminPage }) => {

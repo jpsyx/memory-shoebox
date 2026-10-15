@@ -119,6 +119,9 @@ function useBurstActions(
     onOpenBurst,
     restoreBurst,
     onCollapseBurst: (burstId: string) => {
+      pending.current.delete(burstId);
+      state.owned.current.delete(burstId);
+      _retireFrameQuery(queryClient, burstId);
       options?.memory.get(options.viewKey).expanded.delete(burstId);
       setRevision((value) => {
         return value + 1;
@@ -127,6 +130,10 @@ function useBurstActions(
     onClearBursts: () => {
       generation.current += 1;
       pending.current.clear();
+      state.owned.current.forEach((id) => {
+        _retireFrameQuery(queryClient, id);
+      });
+      state.owned.current.clear();
       options?.memory.get(options.viewKey).expanded.clear();
       setFramesByBurstId(new Map());
       setRevision((value) => {
@@ -165,7 +172,9 @@ function useRetainedFrames(options: {
       ":" +
       [
         ...options.options.memory.get(options.options.viewKey).expanded.keys(),
-      ].join(",")
+      ].join(",") +
+      ":" +
+      [...options.pending.keys()].join(",")
     : undefined;
   const latest = useRef(options);
   latest.current = options;
@@ -174,9 +183,10 @@ function useRetainedFrames(options: {
     if (!current.options) return;
     const retained = new Set(
       [...current.options.retainedBurstIds].filter((id) => {
-        return current
-          .options!.memory.get(current.options!.viewKey)
-          .expanded.has(id);
+        return (
+          current.pending.has(id) ||
+          current.options!.memory.get(current.options!.viewKey).expanded.has(id)
+        );
       }),
     );
     current.owned.forEach((id) => {
@@ -256,17 +266,16 @@ function _openBurst(options: {
   if (current && !current.retainedBurstIds.has(burstId)) {
     return Promise.resolve(undefined);
   }
-  current?.memory.expand(
-    current.viewKey,
-    burstId,
-    current.memory.get(current.viewKey).expanded.get(burstId)?.height ?? 0,
-  );
   const epoch = generation.current;
 
   owned.current.add(burstId);
-  setRevision((value) => {
-    return value + 1;
-  });
+  if (owned.current.size > 20) {
+    const oldest = owned.current.values().next().value!;
+    pending.current.delete(oldest);
+    owned.current.delete(oldest);
+    current?.memory.get(current.viewKey).expanded.delete(oldest);
+    _retireFrameQuery(queryClient, oldest);
+  }
   const request = queryClient
     .fetchQuery(burstFramesQueryOptions(burstId))
     .catch((error: unknown) => {
@@ -279,19 +288,35 @@ function _openBurst(options: {
       if (
         epoch !== generation.current ||
         pending.current.get(burstId) !== request ||
-        !_isRetainedBurst(latest.current, burstId)
+        latest.current?.viewKey !== current?.viewKey ||
+        (latest.current && !latest.current.retainedBurstIds.has(burstId))
       )
         return;
+      current?.memory.expand(
+        current.viewKey,
+        burstId,
+        current.memory.get(current.viewKey).expanded.get(burstId)?.height ?? 0,
+      );
       setFramesByBurstId((previous) => {
         return new Map(previous).set(burstId, response.frames);
+      });
+      setRevision((value) => {
+        return value + 1;
       });
       return response.frames;
     })
     .finally(() => {
-      if (pending.current.get(burstId) === request)
+      if (pending.current.get(burstId) === request) {
         pending.current.delete(burstId);
+        setRevision((value) => {
+          return value + 1;
+        });
+      }
     });
   pending.current.set(burstId, request);
+  setRevision((value) => {
+    return value + 1;
+  });
   return request;
 }
 
@@ -331,15 +356,4 @@ function useOpenBurst(
     ],
   );
   return onOpenBurst;
-}
-
-function _isRetainedBurst(
-  options: Options | undefined,
-  burstId: string,
-): boolean {
-  return (
-    !options ||
-    (options.retainedBurstIds.has(burstId) &&
-      options.memory.get(options.viewKey).expanded.has(burstId))
-  );
 }

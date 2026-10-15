@@ -18,6 +18,7 @@ import { seedAcceptanceMembers } from "../admin/support/seedAcceptanceMembers.ts
 import { createFakeS3Server } from "./createFakeS3Server/createFakeS3Server.ts";
 import type {
   FakeS3Transfer,
+  FakeS3LedgerSnapshot,
   StoredObject,
 } from "./createFakeS3Server/createFakeS3Server.types.ts";
 import { makeEtagFromBytes } from "./createFakeS3Server/fakeS3ProtocolHelpers.ts";
@@ -29,6 +30,10 @@ export type MediaAcceptanceCatalog = {
   memberId: string;
   itemIds: readonly string[];
   getTransfers: () => readonly FakeS3Transfer[];
+  /** Includes starts, pending responses and queued body events, without URLs. */
+  getLedger: () => FakeS3LedgerSnapshot;
+  /** Exact fixture ownership, including thumbnails, variants and originals. */
+  getObjectIdsForItem: (itemId: string) => readonly string[];
   /** Advances only this isolated catalog and bucket clock for lease acceptance. */
   advanceClock: (milliseconds: number) => void;
   close: () => Promise<void>;
@@ -339,6 +344,12 @@ export async function createMediaAcceptanceCatalog(
       getTransfers: () => {
         return transfers.map((transfer) => {
           return { ...transfer };
+        });
+      },
+      getLedger: ownedBucket.getLedger,
+      getObjectIdsForItem: (itemId) => {
+        return [...objects.keys()].filter((key) => {
+          return key.split("/").includes(itemId);
         });
       },
       close: async () => {

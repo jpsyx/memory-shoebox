@@ -2,6 +2,11 @@ import type { TimelineSelection } from "@memory-shoebox/shared";
 
 export type { TimelineSelection } from "@memory-shoebox/shared";
 
+/** A pure edit applied to the router's latest pending selection. */
+export type TimelineSelectionUpdate = (
+  selection: Readonly<TimelineSelection>,
+) => TimelineSelection;
+
 /**
  * The selection, plus where the stream starts.
  *

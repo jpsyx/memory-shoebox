@@ -13,3 +13,7 @@
 .reviewRows {
   display: grid;
 }
+
+.reviewProse {
+  color: var(--on-print);
+}

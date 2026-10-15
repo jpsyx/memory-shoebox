@@ -1,13 +1,26 @@
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
+import {
+  makeUploadSurfaceDetail,
+  makeUploadFileFromPosition,
+} from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
+import type {
+  UploadSessionDetail,
+  ShellSettings,
+} from "@memory-shoebox/shared";
 import * as controllerModule from "@/upload/createUploadSessionController/createUploadSessionController";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import { MantineProvider } from "@mantine/core";
-import type { ShellSettings } from "@memory-shoebox/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { useNavigate } from "@tanstack/react-router";
 import type { RenderResult } from "@testing-library/react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadSurface } from "./surfaces/Upload/UploadSurface/UploadSurface";
@@ -163,4 +176,34 @@ describe("the upload surface", () => {
       screen.getByRole("heading", { name: "Put it all up." }),
     ).toHaveFocus();
   });
+});
+
+it("keeps the focused receipt action usable throughout a delayed same-session settled refresh", async () => {
+  const detail = makeUploadSurfaceDetail({
+    state: "settled",
+    files: [{ ...makeUploadFileFromPosition(0), state: "done" }],
+  });
+  const harness = makeUploadControllerHarness(detail);
+  _render({ harness, sessionId: detail.sessionId });
+  const action = await screen.findByRole("link", {
+    name: "See them on the timeline",
+  });
+  action.focus();
+  expect(action).toHaveFocus();
+  const delayedRead = Promise.withResolvers<UploadSessionDetail>();
+  harness.api.getUploadSession.mockReturnValueOnce(delayedRead.promise);
+  let refreshed: Promise<void>;
+  act(() => {
+    refreshed = harness.controller.loadSession(detail.sessionId);
+  });
+  expect(action.isConnected).toBe(true);
+  expect(action).toHaveFocus();
+  expect(screen.getByRole("link", { name: "See them on the timeline" })).toBe(
+    action,
+  );
+  await act(async () => {
+    delayedRead.resolve(detail);
+    await refreshed!;
+  });
+  expect(action).toHaveFocus();
 });

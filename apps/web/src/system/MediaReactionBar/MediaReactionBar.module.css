@@ -62,7 +62,7 @@
 }
 .reactionHint {
   margin: 0;
-  color: var(--on-print-quiet);
+  color: var(--on-print);
   font-size: var(--micro);
   font-variant-numeric: tabular-nums;
 }

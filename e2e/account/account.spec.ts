@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { seedMemberAtAddress } from "../support/database.ts";
 import { E2E_BASE_URL } from "../support/e2eEnvironment.constants.ts";
 import {
@@ -10,6 +10,7 @@ import {
   SIGN_OUT_ANY_DEVICE,
   signInOnThisPage,
   THIS_ONE,
+  test,
   TURN_THEM_ALL_OFF,
   TURN_THEM_BACK_ON,
   writeAndWaitForTheAnswer,
@@ -19,13 +20,12 @@ import {
  * What surface 9 is for: the name, the switches, the doors, and the devices.
  *
  * `account.fixtures.ts` holds this suite's docstring, including why every test
- * owns its own address and how the sign-in codes are rationed.
+ * that revokes a session owns its own address and how codes are rationed.
  */
 
-test("a name typed here is the name the family sees", async ({ page }) => {
-  const email = "my-name@example.com";
-  await openMyAccount({ page, email });
-
+test("a name typed here is the name the family sees", async ({
+  accountPage: page,
+}) => {
   // Empty, with the email's local part as the hint: the fallback shows as a
   // placeholder rather than as text the member appears to have typed.
   const nameField = page.getByLabel(NAME_LABEL);
@@ -47,11 +47,8 @@ test("a name typed here is the name the family sees", async ({ page }) => {
 });
 
 test("a switch stays where it was left, and all four can go at once", async ({
-  page,
+  accountPage: page,
 }) => {
-  const email = "my-switches@example.com";
-  await openMyAccount({ page, email });
-
   const firstSwitch = page.getByLabel(NOTIFY_LABELS[0]);
   await expect(firstSwitch).toBeChecked();
   await writeAndWaitForTheAnswer({
@@ -93,11 +90,8 @@ test("a switch stays where it was left, and all four can go at once", async ({
 });
 
 test("an admin is offered all five doors, and every one of them opens", async ({
-  page,
+  accountPage: page,
 }) => {
-  const email = "my-doors@example.com";
-  await openMyAccount({ page, email });
-
   for (const door of ADMIN_DOORS) {
     await expect(page.getByRole("link", { name: door.name })).toBeVisible();
   }

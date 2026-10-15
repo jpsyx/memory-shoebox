@@ -1,10 +1,12 @@
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import { test, expect } from "./admin.fixtures.ts";
 import type { createAcceptanceCatalog } from "./support/createAcceptanceCatalog.ts";
 import { createColdViteServer } from "./support/createColdViteServer.ts";
 import { isGoogleChromeInstalled } from "../support/uploadHarnessHelpers.ts";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 
 // The bundled headless Chromium cannot decode phone-recorded HEVC video.
 test.use({
@@ -16,12 +18,28 @@ test.skip(({ browserName }) => {
   return browserName === "chromium" && !isGoogleChromeInstalled();
 }, "Install Google Chrome to verify HEVC MOV previews.");
 
-/** Valid originals exercise native image, WASM HEIC and video decoding. */
+/** Distinct fixtures retain native formats and capture metadata. */
 const PREVIEW_FIXTURES = [
-  { filename: "portrait-orientation-6.jpg", capturedOn: "2026-05-01" },
-  { filename: "heic-rotated.heic", capturedOn: "2026-05-02" },
-  { filename: "h264-clip.mp4", capturedOn: "2026-05-04" },
-  { filename: "hevc-clip.mov", capturedOn: "2026-05-05" },
+  {
+    filename: "portrait-orientation-6.jpg",
+    capturedOn: "2026-05-01",
+    mimeType: "image/jpeg",
+  },
+  {
+    filename: "heic-rotated.heic",
+    capturedOn: "2026-05-02",
+    mimeType: "image/heic",
+  },
+  {
+    filename: "h264-clip.mp4",
+    capturedOn: "2026-05-04",
+    mimeType: "video/mp4",
+  },
+  {
+    filename: "hevc-clip.mov",
+    capturedOn: "2026-05-05",
+    mimeType: "video/quicktime",
+  },
 ] as const;
 
 async function _expectDecodedPreviews(page: Page): Promise<void> {
@@ -52,12 +70,23 @@ async function _expectDecodedPreviews(page: Page): Promise<void> {
 }
 
 async function _pickPreviewFixtures(page: Page): Promise<void> {
-  await page.locator('input[type="file"]').setInputFiles(
-    PREVIEW_FIXTURES.map(({ filename }) => {
-      return fileURLToPath(
-        new URL(`../fixtures/upload/${filename}`, import.meta.url),
-      );
+  const paths = makeUploadSurfaceFixturePaths({
+    directory: test.info().outputPath("distinct-previews"),
+    fileCount: PREVIEW_FIXTURES.length,
+    sourceNames: PREVIEW_FIXTURES.map(({ filename }) => {
+      return filename;
     }),
+  });
+  await page.locator('input[type="file"]').setInputFiles(
+    await Promise.all(
+      PREVIEW_FIXTURES.map(async ({ filename, mimeType }, index) => {
+        return {
+          name: filename,
+          mimeType,
+          buffer: await readFile(paths[index]!),
+        };
+      }),
+    ),
   );
 }
 
@@ -164,7 +193,9 @@ test("production draft renders JPEG, HEIC, MP4 and MOV previews", async ({
       .selectFrom("upload_files")
       .selectAll()
       .executeTakeFirstOrThrow();
-    expect(savedRow.content_hash).toBeNull();
+    expect(savedRow.content_hash).toBe(
+      createHash("sha256").update(original.buffer).digest("hex"),
+    );
 
     await page.reload();
     await expect(
@@ -199,10 +230,18 @@ test("a JPEG smaller than the thumbnail target still has a decoded preview", asy
     mimeType: "image/jpeg",
     buffer: Buffer.from(jpeg, "base64"),
   });
-  await expect(page.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Put 1 up", exact: true }),
+  ).toBeDisabled();
   await expect(
     page.getByRole("heading", { name: "Put it all up." }),
   ).toBeFocused();
+  await page.getByLabel("Capture date", { exact: true }).fill("2026-05-01");
+  await page.getByRole("button", { name: "Confirm date", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Review capture dates" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Put 1 up" })).toBeEnabled();
   await page
     .getByRole("region", { name: "The days in this batch" })
     .getByRole("region")

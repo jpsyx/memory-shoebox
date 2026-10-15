@@ -79,6 +79,44 @@ afterEach(async () => {
 });
 
 describe("fake media delivery", () => {
+  test("records started and active media before delayed completion and preserves immutable checkpoints", async () => {
+    const origin = await _startBucket({ latencyMs: 100 });
+    const url = `${origin}/media/checkpoint.jpg`;
+    await _send({ url, method: "PUT", body: BODY });
+    const server = servers.at(-1)!;
+    const before = server.getLedger();
+    const pending = _send({ url });
+    await expect
+      .poll(() => {
+        return server.getLedger().activeRequests;
+      })
+      .toBe(1);
+    const started = server.getLedger();
+    const entry = started.requests.at(-1)!;
+    expect(entry.requestId).toBe(before.nextRequestId);
+    expect(entry.terminal).toBeNull();
+    expect(entry.bodyBytes).toBe(0);
+    await pending;
+    await expect
+      .poll(() => {
+        return server.getLedger().activeRequests;
+      })
+      .toBe(0);
+    const finished = server.getLedger().requests.at(-1)!;
+    expect(finished.terminal).toBe("finished");
+    expect(finished.bodyBytes).toBe(BODY.length);
+    expect(finished.terminalSequence).toBeGreaterThan(finished.startSequence);
+    expect(finished.closedAtMs).toBeGreaterThanOrEqual(
+      finished.terminatedAtMs!,
+    );
+    expect(
+      finished.chunks.reduce((total, chunk) => {
+        return total + chunk.bodyBytes;
+      }, 0),
+    ).toBe(BODY.length);
+    expect(entry.terminal).toBeNull();
+    expect(entry.bodyBytes).toBe(0);
+  });
   test("serves validators and ranges without excess bytes", async () => {
     const origin = await _startBucket();
     const url = `${origin}/media/photo.jpg`;
@@ -304,6 +342,57 @@ describe("fake media delivery", () => {
     expect(transfer.bodyBytes).toBeGreaterThanOrEqual(received);
     expect(transfer.bodyBytes).toBeLessThan(4096);
     expect(transfer.objectId).toBe("photo.jpg");
+    const ledger = servers.at(-1)!.getLedger();
+    expect(ledger.activeRequests).toBe(0);
+    expect(ledger.requests.at(-1)).toMatchObject({
+      terminal: "closed-before-finish",
+      bodyBytes: transfer.bodyBytes,
+    });
+  });
+
+  test("records pre-body disconnect and zero-body HEAD/304 separately", async () => {
+    const origin = await _startBucket({ latencyMs: 100 });
+    const url = `${origin}/media/aborted.jpg`;
+    const uploaded = await _send({ url, method: "PUT", body: BODY });
+    const server = servers.at(-1)!;
+    const outgoing = request(url);
+    outgoing.on("error", () => {});
+    outgoing.end();
+    await expect
+      .poll(() => {
+        return server.getLedger().activeRequests;
+      })
+      .toBe(1);
+    outgoing.destroy();
+    await expect
+      .poll(() => {
+        return server.getLedger().activeRequests;
+      })
+      .toBe(0);
+    expect(server.getLedger().requests.at(-1)).toMatchObject({
+      terminal: "closed-before-finish",
+      bodyBytes: 0,
+    });
+    await _send({ url, method: "HEAD" });
+    await _send({
+      url,
+      headers: { "If-None-Match": String(uploaded.headers.etag) },
+    });
+    expect(
+      server
+        .getLedger()
+        .requests.slice(-2)
+        .map(({ terminal, status, bodyBytes }) => {
+          return {
+            terminal,
+            status,
+            bodyBytes,
+          };
+        }),
+    ).toEqual([
+      { terminal: "finished", status: 200, bodyBytes: 0 },
+      { terminal: "finished", status: 304, bodyBytes: 0 },
+    ]);
   });
 
   test("retains signed response cache overrides on full, partial and conditional responses", async () => {

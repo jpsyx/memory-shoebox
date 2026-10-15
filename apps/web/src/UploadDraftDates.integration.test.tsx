@@ -26,6 +26,7 @@ async function _renderDateReview() {
     (day, position) => {
       return {
         ...makeUploadFileFromPosition(position),
+        position: position + 1,
         capturedOn: day ?? "2026-10-10",
         captureSource: day ? ("exif" as const) : ("file_mtime" as const),
       };

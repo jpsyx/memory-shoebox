@@ -2,7 +2,10 @@ import type {
   MilestoneDetail,
   SetMilestoneItemsRequest,
 } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { MilestoneAttachmentEntry } from "../milestoneAttachmentHelpers/milestoneAttachmentHelpers";
 /** Picker identity and optional current selected-detail authority. */
@@ -23,7 +26,9 @@ export type MilestoneAttachment = {
   isPending: boolean;
   error: string | undefined;
   selection: TimelineSelection;
-  onSelectionChange: (selection: TimelineSelection) => void;
+  onSelectionChange: (
+    selection: TimelineSelection | TimelineSelectionUpdate,
+  ) => void;
   isReading: boolean;
   retryReads: () => void;
   hasMore: boolean;

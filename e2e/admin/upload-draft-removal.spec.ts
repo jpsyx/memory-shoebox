@@ -1,22 +1,27 @@
 import { readFile } from "node:fs/promises";
 import type { Locator, Page } from "@playwright/test";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import { test, expect } from "./admin.fixtures.ts";
 
 async function _pickEightFiles(page: Page): Promise<void> {
-  const photo = await readFile(
-    new URL("../fixtures/upload/portrait-orientation-6.jpg", import.meta.url),
-  );
+  const photos = makeUploadSurfaceFixturePaths({
+    directory: test.info().outputPath("distinct-photos"),
+    fileCount: 7,
+    sourceNames: ["portrait-orientation-6.jpg"],
+  });
   const video = await readFile(
     new URL("../fixtures/upload/h264-clip.mp4", import.meta.url),
   );
   await page.locator('input[type="file"]').setInputFiles([
-    ...Array.from({ length: 7 }, (_, position) => {
-      return {
-        name: `photo-${position + 1}.jpg`,
-        mimeType: "image/jpeg",
-        buffer: photo,
-      };
-    }),
+    ...(await Promise.all(
+      photos.map(async (path, position) => {
+        return {
+          name: `photo-${position + 1}.jpg`,
+          mimeType: "image/jpeg",
+          buffer: await readFile(path),
+        };
+      }),
+    )),
     { name: "h264-clip.mp4", mimeType: "video/mp4", buffer: video },
   ]);
   await expect(page.getByRole("button", { name: "Put 8 up" })).toBeEnabled();

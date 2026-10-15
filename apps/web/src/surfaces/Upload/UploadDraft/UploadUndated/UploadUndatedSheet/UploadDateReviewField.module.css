@@ -56,3 +56,7 @@
   margin-block: var(--sp-1) 0;
   font-weight: 700;
 }
+
+.suggestionDescription {
+  color: var(--on-print);
+}

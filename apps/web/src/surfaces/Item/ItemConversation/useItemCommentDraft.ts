@@ -34,7 +34,7 @@ export function useItemCommentDraft(
     }
     hasStarted.current = true;
     transport.videoRef.current?.pause();
-    setAtSeconds(transport.videoRef.current?.currentTime ?? transport.position);
+    setAtSeconds(transport.getAnnotationPosition());
   };
   return {
     body,
@@ -50,7 +50,7 @@ export function useItemCommentDraft(
       transport.videoRef.current?.pause();
       setAtSeconds((current) => {
         return current === undefined
-          ? (transport.videoRef.current?.currentTime ?? transport.position)
+          ? transport.getAnnotationPosition()
           : undefined;
       });
       fieldRef.current?.focus();

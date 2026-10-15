@@ -368,3 +368,20 @@ continue. SQLite source/token/lease fences govern publication across restarts;
 the coordinator is only the in-process serialization layer. The current local
 host cannot prove delegated cgroups or the 512 MiB serving envelope, so automatic
 processing remains disabled there. See [media loading](media-loading.md).
+
+## Media acceptance and timeline date bounds
+
+The timeline retains its batched header/row query structure and visibility
+predicates. Migration 0018 adds `items(uploaded_by, captured_on)` alongside the
+existing indexes. It lets viewer-owned date windows use both uploader and date
+bounds. Fixed statement counts still do not imply bounded row work: dense
+first-page grouping and the admin filtered cursor have separate scan costs.
+See [media-loading-performance.md](media-loading-performance.md) for the
+correctness-checked local sparse/dense measurements and index tradeoffs.
+
+Local browser acceptance compiles the SPA with production React/Vite semantics,
+then serves it through an explicitly development-configured Fastify process,
+fake loopback bucket and injected no-mail services. Compilation mode and runtime
+email policy are separate. The ordinary E2E runner checks the exact owned catalog
+path and fake endpoint before opening resources, and retains real background
+job, outbox and shutdown behavior.

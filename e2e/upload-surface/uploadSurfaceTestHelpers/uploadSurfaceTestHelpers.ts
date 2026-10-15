@@ -79,12 +79,21 @@ export async function installSurfaceContractDetail({
     }
   });
   await page.goto("/upload");
-  await expect(
-    page.getByRole("button", {
-      name: `Put ${detail.fileCount} up`,
-      exact: true,
-    }),
-  ).toBeVisible();
+  if (detail.state === "uploading") {
+    await expect(
+      page.getByRole("heading", { name: "You were in the middle of this." }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Choose the files again" }),
+    ).toBeEnabled();
+  } else {
+    await expect(
+      page.getByRole("button", {
+        name: `Put ${detail.fileCount} up`,
+        exact: true,
+      }),
+    ).toBeVisible();
+  }
 }
 
 /**
@@ -99,7 +108,24 @@ export async function getSurfaceSessionFromRequest(
   const response = await options.request.get(path);
   expect(response.status()).toBe(200);
   const detail = uploadSessionDetailSchema.parse(await response.json());
-  return _readRemainingSurfacePages({ request: options.request, detail });
+  const complete = await _readRemainingSurfacePages({
+    request: options.request,
+    detail,
+  });
+  const generated = complete.files.filter((file) => {
+    return /-\d+\.(jpg|heic|mp4|mov)$/.test(file.originalFilename);
+  });
+  expect(
+    generated.filter((file) => {
+      return file.duplicateReason;
+    }),
+    "Generated originals must remain eligible under real duplicate checks",
+  ).toEqual([]);
+  await test.info().attach(`manifest-${complete.sessionId}`, {
+    body: JSON.stringify(complete, null, 2),
+    contentType: "application/json",
+  });
+  return complete;
 }
 
 async function _readRemainingSurfacePages(
@@ -150,7 +176,20 @@ export async function addSurfaceLabel(
   });
   await field.fill(name);
   await field.press("Enter");
-  await field.press("Tab");
+  if (kind === "person") {
+    const acceptedPerson = page.getByRole("button", {
+      name: `Untag ${name}`,
+      exact: true,
+    });
+    await expect(acceptedPerson).toBeVisible();
+    await expect(field).toBeFocused();
+    await field.press("Escape");
+    await expect(field).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(acceptedPerson).toBeVisible();
+  } else {
+    await field.press("Tab");
+  }
   await page
     .getByRole("button", { name: `Tag all ${selectedFileCount}`, exact: true })
     .click();

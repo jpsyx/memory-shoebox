@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, type RefCallback } from "react";
-import type { ItemsSeenRequest } from "@memory-shoebox/shared";
+import { useCallback, useEffect, useMemo, type RefCallback } from "react";
+import { LIMITS, type ItemsSeenRequest } from "@memory-shoebox/shared";
 import { getSeenRequestFromSightings, type Sighting } from "@/api/seen/seen";
 
 /** How long sightings collect before they are sent, in milliseconds. */
@@ -100,13 +100,19 @@ function _watchPrints(options: {
   onEntries: (entries: readonly IntersectionObserverEntry[]) => void;
 }): () => void {
   const { element, onEntries } = options;
-  const observer = new IntersectionObserver(onEntries);
+  let isActive = true;
+  const observer = new IntersectionObserver((entries) => {
+    if (isActive) {
+      onEntries(entries);
+    }
+  });
   _observePrints({ root: element, observer });
 
   const arrivals = _makeArrivalObserver(observer);
   arrivals.observe(element, { childList: true, subtree: true });
 
   return () => {
+    isActive = false;
     arrivals.disconnect();
     observer.disconnect();
   };
@@ -120,47 +126,60 @@ function _watchPrints(options: {
  * `isUnseen` and `hasUnseenFrames` without asking, so a familiar archive
  * generates no traffic on this route at all.
  *
- * @returns What to hand each batch of intersection entries to. Its identity
- *   is stable, so the observer is never rebuilt by a render.
+ * @returns The callback and cancellation owned by this member/view. Their
+ *   identities remain stable until that owner changes.
  */
 function useSightingBuffer(options: {
+  ownerKey: string;
   unseenById: ReadonlyMap<string, boolean>;
   onLatch: (body: ItemsSeenRequest) => void;
-}): (entries: readonly IntersectionObserverEntry[]) => void {
-  const pending = useRef<Sighting[]>([]);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Both change on most renders, and neither should rebuild the observer.
-  const latest = useRef(options);
-  latest.current = options;
-
-  const flush = useCallback(() => {
-    const batch = pending.current;
-    pending.current = [];
-    const body = getSeenRequestFromSightings(batch);
-    if (body !== undefined) {
-      latest.current.onLatch(body);
-    }
-  }, []);
-
-  useEffect(function dropThePendingFlushOnUnmount() {
-    return () => {
-      clearTimeout(timer.current);
+}): {
+  onEntries: (entries: readonly IntersectionObserverEntry[]) => void;
+  cancel: () => void;
+} {
+  const buffer = useMemo(() => {
+    return {
+      ownerKey: options.ownerKey,
+      pending: new Map<string, Sighting>(),
+      timer: undefined as ReturnType<typeof setTimeout> | undefined,
+      latest: undefined as typeof options | undefined,
     };
-  }, []);
-
-  return useCallback(
-    (entries) => {
-      pending.current.push(
-        ..._sightingsFromEntries({
-          entries,
-          unseenById: latest.current.unseenById,
-        }),
-      );
-      clearTimeout(timer.current);
-      timer.current = setTimeout(flush, FLUSH_DELAY_MS);
+  }, [options.ownerKey]);
+  buffer.latest = options;
+  const cancel = useCallback(() => {
+    clearTimeout(buffer.timer);
+    buffer.timer = undefined;
+    buffer.pending.clear();
+  }, [buffer]);
+  const flush = useCallback(() => {
+    const body = getSeenRequestFromSightings([...buffer.pending.values()]);
+    cancel();
+    if (body !== undefined) {
+      buffer.latest!.onLatch(body);
+    }
+  }, [buffer, cancel]);
+  useEffect(() => {
+    return cancel;
+  }, [cancel]);
+  const onEntries = useCallback(
+    (entries: readonly IntersectionObserverEntry[]) => {
+      _sightingsFromEntries({ entries, unseenById: buffer.latest!.unseenById })
+        .filter((sighting) => {
+          return sighting.hasUnseen;
+        })
+        .forEach((sighting) => {
+          buffer.pending.set(`${sighting.kind}:${sighting.id}`, sighting);
+          if (buffer.pending.size === LIMITS.seenMaxIds) {
+            flush();
+          }
+        });
+      if (buffer.pending.size > 0 && buffer.timer === undefined) {
+        buffer.timer = setTimeout(flush, FLUSH_DELAY_MS);
+      }
     },
-    [flush],
+    [buffer, flush],
   );
+  return { onEntries, cancel };
 }
 
 /**
@@ -185,18 +204,23 @@ function useSightingBuffer(options: {
  * @returns A ref for the element containing the prints.
  */
 export function useSeenLatch(options: {
+  ownerKey: string;
   unseenById: ReadonlyMap<string, boolean>;
   onLatch: (body: ItemsSeenRequest) => void;
 }): RefCallback<HTMLElement> {
-  const onEntries = useSightingBuffer(options);
+  const { onEntries, cancel } = useSightingBuffer(options);
 
   return useCallback(
     (element: HTMLElement | null) => {
       if (element === null) {
         return;
       }
-      return _watchPrints({ element, onEntries });
+      const stopWatching = _watchPrints({ element, onEntries });
+      return () => {
+        stopWatching();
+        cancel();
+      };
     },
-    [onEntries],
+    [onEntries, cancel],
   );
 }

@@ -35,7 +35,7 @@ export function UploadDateReviewHeader({
           Confirm all
         </Button>
       </Group>
-      <Prose>
+      <Prose className={classes.reviewProse}>
         These files have no reliable capture date. Check each suggested day or
         change it, then confirm to continue.
       </Prose>

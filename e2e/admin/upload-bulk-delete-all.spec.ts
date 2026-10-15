@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { makeUploadSurfaceFixturePaths } from "../support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts";
 import { test, expect } from "./admin.fixtures.ts";
 
 [1440, 390].forEach((width) => {
@@ -8,12 +9,22 @@ import { test, expect } from "./admin.fixtures.ts";
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/api/evidence/session/admin?to=/upload");
-    const buffer = await readFile(
-      new URL("../fixtures/upload/portrait-orientation-6.jpg", import.meta.url),
-    );
+    const paths = makeUploadSurfaceFixturePaths({
+      directory: test.info().outputPath("distinct-photos"),
+      fileCount: 2,
+      sourceNames: ["portrait-orientation-6.jpg"],
+    });
     await page.locator('input[type="file"]').setInputFiles([
-      { name: "first.jpg", mimeType: "image/jpeg", buffer },
-      { name: "second.jpg", mimeType: "image/jpeg", buffer },
+      {
+        name: "first.jpg",
+        mimeType: "image/jpeg",
+        buffer: await readFile(paths[0]!),
+      },
+      {
+        name: "second.jpg",
+        mimeType: "image/jpeg",
+        buffer: await readFile(paths[1]!),
+      },
     ]);
     await expect(
       page.getByRole("button", { name: "Put 2 up", exact: true }),

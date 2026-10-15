@@ -28,6 +28,8 @@ function _createAcceptanceApp(
 ): Promise<AcceptanceContext> {
   return createTestApp({
     config: createTestConfig({
+      NODE_ENV: "development",
+      ENABLE_FAKE_EMAIL: "true",
       WEB_DIST_PATH: fileURLToPath(
         new URL(`../../../apps/web/${webDistDirectory}`, import.meta.url),
       ),

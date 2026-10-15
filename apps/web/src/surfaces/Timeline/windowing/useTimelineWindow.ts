@@ -42,16 +42,19 @@ export function useTimelineWindow(options: Readonly<TimelineWindowOptions>): {
     cache,
     isRetiringMeasurements,
   );
-  useTimelineAnchorEffects(options, virtualizer, anchor, scroll.correctOffset);
-  const actions = useTimelineAnchorActions(
-    virtualizer,
-    anchor,
-    scroll.correctOffset,
-  );
   const measurements = getMeasurementsFromTimelineWindow(
     options,
     virtualizer,
     cache,
+  );
+  useTimelineAnchorEffects(options, virtualizer, anchor, scroll.correctOffset, {
+    measurements,
+    scrollMargin: virtualizer.options.scrollMargin,
+  });
+  const actions = useTimelineAnchorActions(
+    virtualizer,
+    anchor,
+    scroll.correctOffset,
   );
   return {
     virtualizer,

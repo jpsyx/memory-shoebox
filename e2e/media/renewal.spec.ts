@@ -212,3 +212,96 @@ test("checks an expired lease before a play gesture and continues playing", asyn
     }),
   ).toEqual([]);
 });
+
+test("offline return retains the decoded photo and renews safely after reconnect", async ({
+  page,
+  catalog,
+}) => {
+  const itemId = catalog.itemIds[1]!;
+  await page.goto("/api/media-evidence/session");
+  await page.goto(`/items/${itemId}`);
+  await expectCurrentPhotoDecoded(page);
+  const photo = page.locator('[data-photo-surface="viewer"] picture img');
+  const originalSource = await photo.getAttribute("src");
+  const initialOpens = await catalog.database
+    .selectFrom("item_views")
+    .select("open_count")
+    .where("item_id", "=", itemId)
+    .where("member_id", "=", catalog.memberId)
+    .executeTakeFirstOrThrow();
+  const failedRenewal = page.waitForEvent("requestfailed", (request) => {
+    return (
+      new URL(request.url()).pathname === "/api/media/preview" &&
+      request.postDataJSON()?.purpose === "selected-view"
+    );
+  });
+  await page.context().setOffline(true);
+  catalog.advanceClock(3_601_000);
+  await page.clock.setFixedTime(new Date(Date.now() + 3_601_000));
+  await page.evaluate(() => {
+    return window.dispatchEvent(new Event("focus"));
+  });
+  await expect(photo).toHaveAttribute("src", originalSource!);
+  await expectCurrentPhotoDecoded(page);
+  await failedRenewal;
+  await page.context().setOffline(false);
+  await page.evaluate(() => {
+    return window.dispatchEvent(new Event("online"));
+  });
+  await expect
+    .poll(() => {
+      return photo.last().getAttribute("src");
+    })
+    .not.toBe(originalSource);
+  await expect(photo).toHaveCount(1);
+  await expectCurrentPhotoDecoded(page);
+  const finalOpens = await catalog.database
+    .selectFrom("item_views")
+    .select("open_count")
+    .where("item_id", "=", itemId)
+    .where("member_id", "=", catalog.memberId)
+    .executeTakeFirstOrThrow();
+  expect(finalOpens).toEqual(initialOpens);
+});
+
+test("source replacement renews the selected immutable rendition without another open", async ({
+  page,
+  catalog,
+}) => {
+  const itemId = catalog.itemIds[1]!;
+  const replacementId = catalog.itemIds[3]!;
+  await page.goto("/api/media-evidence/session");
+  await page.goto(`/items/${itemId}`);
+  await expectCurrentPhotoDecoded(page);
+  await catalog.database
+    .deleteFrom("item_renditions")
+    .where("item_id", "=", replacementId)
+    .where("purpose", "=", "display")
+    .execute();
+  await catalog.database
+    .updateTable("item_renditions")
+    .set({ storage_key: `media/${replacementId}/display` })
+    .where("item_id", "=", itemId)
+    .where("purpose", "=", "display")
+    .execute();
+  catalog.advanceClock(3_601_000);
+  await page.clock.setFixedTime(new Date(Date.now() + 3_601_000));
+  await page.evaluate(() => {
+    return window.dispatchEvent(new Event("focus"));
+  });
+  const photo = page.locator('[data-photo-surface="viewer"] picture img');
+  await expect(
+    page.locator(
+      `[data-photo-surface="viewer"] picture img[src*="/${replacementId}/display"]`,
+    ),
+  ).toBeAttached();
+  await expect(photo).toHaveCount(1);
+  await expectCurrentPhotoDecoded(page);
+  const opened = await catalog.database
+    .selectFrom("item_views")
+    .select("open_count")
+    .where("item_id", "=", itemId)
+    .where("member_id", "=", catalog.memberId)
+    .executeTakeFirstOrThrow();
+  expect(opened.open_count).toBe(1);
+});

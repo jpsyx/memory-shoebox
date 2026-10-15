@@ -1,4 +1,7 @@
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { isSelectionActive } from "@/api/timeline/selection/selection";
 import {
   makePeopleQueryOptionsFromSearchScope,
@@ -23,7 +26,7 @@ type Props = {
   memberId?: string;
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 };
 
 /** What the type-ahead needs: the typed text, its debounced form, and both
@@ -72,19 +75,20 @@ function useTypeahead(memberId?: string): TypeaheadState {
  * toggle the exact same way: add the id if it is missing, drop it if not.
  */
 function _makeToggleSelection(options: {
-  selection: Readonly<TimelineSelection>;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 }): (dimension: "tags" | "people", id: string) => void {
-  const { selection, onChange } = options;
+  const { onChange } = options;
   return (dimension, id) => {
-    const current = selection[dimension];
-    onChange({
-      ...selection,
-      [dimension]: current.includes(id)
-        ? current.filter((entry) => {
-            return entry !== id;
-          })
-        : [...current, id],
+    onChange((selection) => {
+      const current = selection[dimension];
+      return {
+        ...selection,
+        [dimension]: current.includes(id)
+          ? current.filter((entry) => {
+              return entry !== id;
+            })
+          : [...current, id],
+      };
     });
   };
 }
@@ -105,7 +109,7 @@ export function FilterSheet({
 }: Readonly<Props>): ReactNode {
   const { typed, onTyped, search, tags, people } = useTypeahead(memberId);
   const isActive = isSelectionActive(selection);
-  const toggleSelection = _makeToggleSelection({ selection, onChange });
+  const toggleSelection = _makeToggleSelection({ onChange });
 
   return (
     <Sheet wide label="Find something">

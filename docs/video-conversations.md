@@ -177,7 +177,16 @@ The player seeds its media lease from authorized detail, then uses the safe
 `selected-view` preview API to renew an expiring source. Focus and expiry do not
 reopen the item. Play gestures check the lease before starting playback; app
 seeks wait for renewal readiness, and native play/seek events also guard browser
-controls. Original-only playback keeps its explicit original purpose.
+controls. A selected annotation moment updates immediately while that native seek
+is pending. The transport retains only the latest target for the current item and
+native node; the renewal gate also rejects a replaced rendition. Repeated keyboard
+steps therefore accumulate without writing `currentTime` or starting playback
+before readiness. A failed source keeps the selected annotation moment and the
+visible error. Source-reset events cannot erase an unacknowledged target. Once the
+matching native seek is acknowledged, the precise native clock again owns position
+and comment capture. A new comment captures the selected target while it is pending;
+an already-started draft does not move. Explicit retry resets the target with the
+player, and retiring the owner prevents later seek or play callbacks. Original-only playback keeps its explicit original purpose.
 
 Unrelated metadata and poster edits keep the working video node and source.
 When playback's URL changes, the source-renewal hook captures position,

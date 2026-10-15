@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { Chip } from "@/system/Chip/Chip";
 import { dateRangeLabel, dayLabel } from "@/system/labelHelpers/labelHelpers";
 
 type Props = {
   selection: TimelineSelection;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 };
 
 /** What one date chip reads, whether one end is set or both. */
@@ -32,7 +35,9 @@ export function DateChip({ selection, onChange }: Readonly<Props>): ReactNode {
       onPanel
       removeLabel="Clear the dates"
       onRemove={() => {
-        onChange({ ...selection, from: undefined, until: undefined });
+        onChange((current) => {
+          return { ...current, from: undefined, until: undefined };
+        });
       }}
     >
       {_dateChipLabel(selection)}

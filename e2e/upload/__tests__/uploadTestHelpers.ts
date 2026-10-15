@@ -1,5 +1,5 @@
-import { join } from "node:path";
 import {
+  request as playwrightRequest,
   expect,
   test as base,
   type APIRequestContext,
@@ -7,6 +7,17 @@ import {
   type Page,
   type Route,
 } from "@playwright/test";
+import {
+  E2E_BASE_URL,
+  E2E_DATABASE_PATH,
+} from "../../support/e2eEnvironment.constants.ts";
+import {
+  getUploadCaseOwnershipFromDatabase,
+  openUploadCaseDatabase,
+  retireUploadCase,
+  type UploadCaseOwnership,
+} from "../../support/retireUploadCase/retireUploadCase.ts";
+import { join } from "node:path";
 import { type UploadSessionDetail } from "@memory-shoebox/shared";
 
 import type { FakeS3Request } from "../../support/createFakeS3Server/createFakeS3Server.types.ts";
@@ -23,6 +34,7 @@ import {
   MEDIA_FIXTURE_NAMES,
   readUploadProofState,
   UPLOAD_FIXTURE_DIRECTORY,
+  UPLOADER_EMAIL,
   UPLOAD_PROOF_PATH,
   waitForUploadProofPhase,
   type UploadProofState,
@@ -78,6 +90,19 @@ export const MEDIA_FIXTURE_PATHS = MEDIA_FIXTURE_NAMES.map((name) => {
   return join(UPLOAD_FIXTURE_DIRECTORY, name);
 });
 
+async function closeOwnedUploadSession(
+  request: APIRequestContext,
+  ownership: UploadCaseOwnership,
+): Promise<void> {
+  const current = await request.get("/api/upload-sessions/current");
+  if (current.status() === 204) return;
+  const detail = (await current.json()) as UploadSessionDetail;
+  if (ownership.sessionIds.has(detail.sessionId)) {
+    throw new Error("Cleanup refused a pre-existing upload batch");
+  }
+  await closeOpenUploadSession(request);
+}
+
 /**
  * Playwright test with a signed-in uploader browser context.
  */
@@ -87,8 +112,32 @@ export const test = base.extend<{ uploaderContext: BrowserContext }>({
       storageState: getUploaderStorageStateFromBrowserName(browserName),
     });
     await closeOpenUploadSession(context.request);
-    await provide(context);
-    await context.close();
+    const database = openUploadCaseDatabase(E2E_DATABASE_PATH);
+    try {
+      const ownership = await getUploadCaseOwnershipFromDatabase(
+        database,
+        UPLOADER_EMAIL,
+      );
+      try {
+        await provide(context);
+      } finally {
+        const storageState = await context.storageState();
+        await context.close();
+        const cleanup = await playwrightRequest.newContext({
+          baseURL: E2E_BASE_URL,
+          storageState,
+        });
+        try {
+          await closeOwnedUploadSession(cleanup, ownership);
+        } finally {
+          await cleanup.dispose();
+        }
+        await retireUploadCase(database, ownership);
+      }
+    } finally {
+      await database.destroy();
+      await context.close();
+    }
   },
 });
 

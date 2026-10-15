@@ -29,10 +29,11 @@ import { test, expect } from "./admin.fixtures.ts";
     });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/api/evidence/session/admin?to=/settings");
-    await expect(
-      page.getByText(`Version: ${SHOEBOX_VERSION}`, { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByRole("status")).toHaveText(message);
+    const version = page.getByText(`Version: ${SHOEBOX_VERSION}`, {
+      exact: true,
+    });
+    await expect(version).toBeVisible();
+    await expect(version.locator("..").getByRole("status")).toHaveText(message);
     await expect(
       page.getByLabel("Shoebox name", { exact: true }),
     ).toBeEnabled();

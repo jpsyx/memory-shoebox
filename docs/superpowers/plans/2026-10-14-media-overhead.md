@@ -1,5 +1,7 @@
 # Media Navigation and Delivery Overhead Implementation Plan
 
+Status: Tasks C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews remain pending. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reduce startup requests, long-session work, redundant upload decoding, and repeat static asset transfers.

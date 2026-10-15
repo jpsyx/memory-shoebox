@@ -149,7 +149,9 @@ async function _expectReadyPrintReentry(page: Page): Promise<void> {
   });
   await scrollSurfaceControlByWheel({
     page: page,
-    target: page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
+    target: page
+      .getByRole("button", { name: /portrait-orientation-6-0.jpg/ })
+      .and(page.locator("[aria-pressed]")),
     deltaY: 450,
   });
   await expect(image).toBeVisible({ timeout: 30_000 });
@@ -172,7 +174,9 @@ async function _expectReadyPrintReentry(page: Page): Promise<void> {
   await _scrollToHeadingBeforeReentry({ page, image });
   await scrollSurfaceControlByWheel({
     page: page,
-    target: page.getByRole("button", { name: /portrait-orientation-6-0.jpg/ }),
+    target: page
+      .getByRole("button", { name: /portrait-orientation-6-0.jpg/ })
+      .and(page.locator("[aria-pressed]")),
     deltaY: -450,
   });
   await expect(image).toBeVisible({ timeout: 30_000 });

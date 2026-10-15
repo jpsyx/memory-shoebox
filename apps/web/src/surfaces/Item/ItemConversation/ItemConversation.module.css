@@ -144,7 +144,7 @@
   border-radius: 0;
   min-height: 36px;
   background: var(--print-sunk);
-  color: var(--on-print-quiet);
+  color: var(--on-print);
   padding: 3px 7px;
   font-size: var(--micro) !important;
   font-variant-numeric: tabular-nums;
@@ -358,6 +358,12 @@
   .photoFooter > nav a {
     width: var(--tap);
     height: var(--tap);
+  }
+}
+
+@media (min-width: 1100px) and (max-height: 800px) {
+  .itemPage {
+    padding-block-start: var(--sp-2);
   }
 }
 

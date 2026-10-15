@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
-import { waitForVisualMedia } from "../admin/support/waitForVisualMedia.ts";
+import {
+  waitForControlledVisualMedia,
+  type ControlledVisualImage,
+} from "./support/waitForControlledVisualMedia.ts";
 import { mkdir, writeFile } from "node:fs/promises";
 import { ACCEPTANCE_DIRECTORY } from "./asking-occasions.constants.ts";
 import { expect, test } from "./asking-occasions.fixtures.ts";
@@ -18,6 +21,7 @@ type ControlledVisualEvidence = {
   url: string;
   metrics: Awaited<ReturnType<typeof getDocumentMetricsFromPage>>;
   evidence: string;
+  images: ControlledVisualImage[];
 };
 
 async function _captureControlledVisual({
@@ -36,16 +40,25 @@ async function _captureControlledVisual({
   });
   await page.getByRole("heading").first().waitFor();
   await expect(page.locator("main")).not.toContainText("Reading the occasion");
-  await waitForVisualMedia(page);
+  const imageCount =
+    surface === "removal"
+      ? state === "ask"
+        ? 1
+        : 2
+      : surface === "removal-requests"
+        ? state === "none"
+          ? 0
+          : 2
+        : state === "fix"
+          ? 4
+          : state === "attach"
+            ? 1
+            : state === "created"
+              ? 2
+              : 0;
+  const images = await waitForControlledVisualMedia(page, imageCount);
   const metrics = await getDocumentMetricsFromPage(page);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
-  expect(
-    await page.evaluate(() => {
-      return Array.from(document.images).every((image) => {
-        return image.complete && image.naturalWidth > 0;
-      });
-    }),
-  ).toBe(true);
   const stem = `${surface}-${state}-${width}-${scheme}`;
   await page.screenshot({
     path: `${ACCEPTANCE_DIRECTORY}/matrix/${stem}-production.png`,
@@ -55,8 +68,9 @@ async function _captureControlledVisual({
     stem,
     url,
     metrics,
+    images,
     evidence:
-      "controlled production layout assertion; retained generated media",
+      "controlled production layout; intersecting/admitted media decoded; native nonintersecting sources may remain withheld",
   };
 }
 Object.entries(VISUAL_STATES).forEach(([surface, states]) => {

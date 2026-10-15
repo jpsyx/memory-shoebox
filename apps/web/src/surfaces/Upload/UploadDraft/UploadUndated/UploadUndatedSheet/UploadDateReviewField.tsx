@@ -35,7 +35,10 @@ export function UploadDateReviewField({
           type="date"
           label="Capture date"
           description={SUGGESTION_COPY[basis]}
-          classNames={{ input: classes.uploadUndatedSheetPrintDateInput }}
+          classNames={{
+            input: classes.uploadUndatedSheetPrintDateInput,
+            description: classes.suggestionDescription,
+          }}
           value={form.capturedOn}
           onChange={(event) => {
             return form.setChosenDay(event.currentTarget.value);

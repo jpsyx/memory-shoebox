@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { FilterChips } from "@/surfaces/Timeline/FilterChips/FilterChips";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 
@@ -8,7 +11,7 @@ type Props = {
   selection: TimelineSelection;
   count: number;
   facets: FilterFacetsResponse | undefined;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
   onClear: () => void;
 };
 

@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { isSelectionActive } from "@/api/timeline/selection/selection";
 import type { ArchiveTotals } from "@/api/timeline/timeline";
 import { FilterSheet } from "@/surfaces/Timeline/FilterSheet/FilterSheet";
@@ -14,7 +17,7 @@ type Props = {
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
   totals: ArchiveTotals;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
   onClear: () => void;
 };
 

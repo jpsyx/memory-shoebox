@@ -1,5 +1,8 @@
 import { seedArchiveForSpec } from "../support/archive.ts";
-import { openFirstPhotographOn } from "../support/itemHelpers.ts";
+import {
+  openFirstPhotographOn,
+  openPhotoDetails,
+} from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
 
 /**
@@ -19,6 +22,7 @@ test("tags it, and the tag is a way into the pile", async ({ adminPage }) => {
     page: adminPage,
     capturedOn: "2026-09-23",
   });
+  await openPhotoDetails(adminPage);
 
   await adminPage.getByRole("button", { name: "+ Add a tag" }).click();
   const field = adminPage.getByRole("combobox", { name: "Tags" });
@@ -36,6 +40,7 @@ test("changes who can see it, and changes it back", async ({ adminPage }) => {
     page: adminPage,
     capturedOn: "2026-09-23",
   });
+  await openPhotoDetails(adminPage);
   const sheet = adminPage.getByRole("region", { name: "Who can see this" });
   // The shared admin answers to whatever the run last called it, which is
   // "abuela" until `account.keyboard.spec.ts` renames it, so its name is read
@@ -76,6 +81,7 @@ test.fixme("offers the Shoebox's other members to choose from", async ({
     page: adminPage,
     capturedOn: "2026-09-23",
   });
+  await openPhotoDetails(adminPage);
   const sheet = adminPage.getByRole("region", { name: "Who can see this" });
   await sheet.getByRole("button", { name: "Change who can see it" }).click();
   await sheet.getByText("Only", { exact: true }).click();
@@ -91,6 +97,7 @@ test("deletes it, and it is not there afterwards", async ({ adminPage }) => {
     capturedOn: "2026-09-10",
   });
   const itemUrl = adminPage.url();
+  await openPhotoDetails(adminPage);
 
   await adminPage
     .getByRole("button", { name: "Delete this photograph" })
@@ -114,6 +121,7 @@ test("puts the date right, and the way back names the new day", async ({
     page: adminPage,
     capturedOn: "2026-09-23",
   });
+  await openPhotoDetails(adminPage);
   const sheet = adminPage.getByRole("region", { name: "When this was taken" });
 
   await sheet.getByRole("button", { name: "Put the date right" }).click();

@@ -29,17 +29,29 @@ test("pins a comment to a moment and puts its mark on the scrubber", async ({
   await expect(slider).toHaveAttribute("aria-valuetext", "0:04 of 0:10");
 
   await adminPage
-    .getByRole("button", { name: "Pin a comment to this moment" })
+    .getByRole("button", { name: "Comment on this moment" })
     .click();
   await adminPage
-    .getByRole("textbox", { name: "Say something at 0:04" })
+    .getByRole("textbox", { name: "Write a comment" })
     .fill("There. That little sigh.");
-  await adminPage.getByRole("button", { name: "Send" }).click();
+  await expect(
+    adminPage.getByRole("button", {
+      name: "Comment at 0:04; switch to whole video",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await adminPage.getByRole("button", { name: "Post comment" }).click();
 
   await expect(
-    adminPage.getByRole("button", { name: /comment at 0:04$/u }),
+    adminPage.getByRole("button", { name: /^Seek to 0:04:/u }),
   ).toBeVisible();
   await expect(
-    adminPage.getByRole("heading", { name: "1 comment, 1 pinned to a moment" }),
+    adminPage.getByRole("heading", { name: "Comments 1" }),
+  ).toBeVisible();
+  await expect(
+    adminPage
+      .getByRole("article")
+      .filter({ hasText: "There. That little sigh." })
+      .getByRole("button", { name: "0:04 Go to this moment", exact: true }),
   ).toBeVisible();
 });

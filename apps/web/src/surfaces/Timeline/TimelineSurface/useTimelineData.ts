@@ -19,6 +19,7 @@ import {
   makeSearchFromSelection,
   type TimelineSearch,
   type TimelineSelection,
+  type TimelineSelectionUpdate,
   type TimelineView,
 } from "@/api/timeline/selection/selection";
 import {
@@ -80,7 +81,7 @@ export type TimelineData = {
   recoverPage: (anchor: TimelineAnchor) => Promise<void>;
   expanded: ReadonlyMap<string, TimelineExpansion>;
   onCollapseBurst: (burstId: string) => void;
-  onSelectionChange: (next: TimelineSelection) => void;
+  onSelectionChange: (update: TimelineSelectionUpdate) => void;
   /** Either "show everything" button, both of which keep the jump. */
   onClearFilters: () => void;
   onReachEnd: () => void;
@@ -124,9 +125,9 @@ function _toRouteSearch(search: Readonly<TimelineSearch>) {
  * closures are the boundary, and everything past them deals in plain
  * callbacks.
  *
- * **`navigate`'s `search` replaces rather than merges** when it is given an
- * object, which is why `find` is re-added by hand below and why `at` has to
- * be too wherever it is meant to survive.
+ * Selection intents read Router's current pending search, so another edit
+ * during bootstrap cannot restore stale committed filters. Each updater is
+ * pure because Router may evaluate it more than once.
  */
 function _makeTimelineHandlers(options: {
   navigate: ReturnType<typeof useNavigate>;
@@ -139,13 +140,17 @@ function _makeTimelineHandlers(options: {
   return {
     // The jump is dropped whenever the selection changes, and only then: `at`
     // has no chip, so carried into a narrowed selection it can fake a dead end.
-    onSelectionChange: (next) => {
+    onSelectionChange: (update) => {
       void navigate({
         to: "/",
-        search: _toRouteSearch({
-          ...makeSearchFromSelection(next),
-          ...(search.find === true ? { find: true } : {}),
-        }),
+        search: (current) => {
+          return _toRouteSearch({
+            ...makeSearchFromSelection(
+              update(getViewFromSearch(current).selection),
+            ),
+            ...(current.find === true ? { find: true } : {}),
+          });
+        },
       });
     },
     // Clear-all keeps the jump: it is where the reader stands in a 948-day
@@ -154,15 +159,22 @@ function _makeTimelineHandlers(options: {
     onClearFilters: () => {
       void navigate({
         to: "/",
-        search: _toRouteSearch({
-          ...makeSearchFromSelection(EMPTY_SELECTION),
-          ...(search.find === true ? { find: true } : {}),
-          ...(search.at === undefined ? {} : { at: search.at }),
-        }),
+        search: (current) => {
+          return _toRouteSearch({
+            ...makeSearchFromSelection(EMPTY_SELECTION),
+            ...(current.find === true ? { find: true } : {}),
+            ...(current.at === undefined ? {} : { at: current.at }),
+          });
+        },
       });
     },
     onRestart: (at) => {
-      void navigate({ to: "/", search: _toRouteSearch({ ...search, at }) });
+      void navigate({
+        to: "/",
+        search: (current) => {
+          return _toRouteSearch({ ...current, at });
+        },
+      });
     },
     // A print is a button that navigates, so intent preloading never sees it,
     // and the item route has no loader: a hover is not an open.
@@ -275,6 +287,7 @@ function usePileControls(options: {
     ),
   });
   const archiveRef = useSeenLatch({
+    ownerKey: options.viewKey,
     unseenById: _unseenByIdFromDays(options.days),
     onLatch: _onSeenLatch,
   });
@@ -311,7 +324,7 @@ type MakeTimelineDataOptions = {
   hasNextPage: boolean;
   onReachEnd: () => void;
   onReachStart: () => void;
-  onSelectionChange: (next: TimelineSelection) => void;
+  onSelectionChange: (update: TimelineSelectionUpdate) => void;
   onClearFilters: () => void;
   onRestart: (at: string) => void;
 };

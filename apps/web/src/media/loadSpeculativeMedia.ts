@@ -1,4 +1,5 @@
 import type {
+  DecodedPhoto,
   PrefetchCandidate,
   SpeculativeMedia,
 } from "./mediaPrefetch.types";
@@ -6,7 +7,29 @@ import type {
 function _releaseImage(image: HTMLImageElement): void {
   image.onload = null;
   image.onerror = null;
+  image.remove();
   image.removeAttribute("src");
+}
+
+function _getDecodedPhoto(
+  candidate: Readonly<PrefetchCandidate>,
+  getOwnedImage: () => HTMLImageElement | undefined,
+): DecodedPhoto | undefined {
+  if (candidate.kind !== "photo" || !candidate.decode) return undefined;
+  return {
+    itemId: candidate.itemId,
+    source: candidate.source,
+    getImage: () => {
+      const image = getOwnedImage();
+      return image !== undefined &&
+        Date.parse(candidate.source.expiresAt) > Date.now() &&
+        (image.currentSrc || image.src) === candidate.source.url &&
+        image.naturalWidth > 0 &&
+        image.naturalHeight > 0
+        ? image
+        : undefined;
+    },
+  };
 }
 
 function _loadImage(
@@ -35,7 +58,10 @@ function _loadImage(
         signal.throwIfAborted();
         image.onload = null;
         image.onerror = null;
-        resolve({ release });
+        const decodedPhoto = _getDecodedPhoto(candidate, () => {
+          return ownedImage;
+        });
+        resolve({ release, decodedPhoto });
       } catch (failure) {
         release();
         reject(failure);

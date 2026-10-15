@@ -108,8 +108,10 @@ export default defineConfig({
       // open. `deleteE2eCatalog.ts` says what goes wrong when it does, and it
       // takes a lock first so that a second run started over a live one is
       // refused rather than quietly corrupting both.
+      // Only the compiler uses production React/Vite. The guarded API keeps
+      // explicit development/fake-email configuration and no-mail injection.
       command:
-        "node e2e/support/deleteE2eCatalog.ts && pnpm build && pnpm --filter @memory-shoebox/server start",
+        "node e2e/support/deleteE2eCatalog.ts && NODE_ENV=production pnpm build && node e2e/support/runE2eServer.ts",
       url: `${E2E_BASE_URL}/api/health`,
       reuseExistingServer: false,
       timeout: 180_000,

@@ -26,14 +26,14 @@ export function UploadDateThumbnail({
     <figure
       ref={holder}
       className={classes.thumbnail}
-      aria-label={`Photo ${file.position + 1}`}
+      aria-label={`Photo ${file.position}`}
     >
       {preview?.kind === "ready" ? (
         <img
           src={preview.url}
           width={preview.width}
           height={preview.height}
-          alt={`Photo ${file.position + 1} to date`}
+          alt={`Photo ${file.position} to date`}
         />
       ) : (
         <span className={classes.previewFallback}>

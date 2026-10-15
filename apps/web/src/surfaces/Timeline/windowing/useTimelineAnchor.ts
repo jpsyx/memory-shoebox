@@ -6,7 +6,7 @@ import {
   useRef,
   type RefObject,
 } from "react";
-import type { Virtualizer } from "@tanstack/react-virtual";
+import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import {
   getAnchorFromTimelineWindow,
   getAnchorNodeFromTimelineWindow,
@@ -44,6 +44,7 @@ export function useTimelineAnchorState(
   )
     isResizing.current = true;
   if (
+    latest.current.viewKey === options.viewKey &&
     latest.current.rows !== options.rows &&
     options.element.current &&
     latest.current.viewportWidth !== 0
@@ -67,6 +68,7 @@ export function useTimelineAnchorEffects(
   virtualizer: WindowVirtualizer,
   state: AnchorState,
   correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void,
+  rendered: { measurements: readonly VirtualItem[]; scrollMargin: number },
 ): void {
   useLayoutEffect(() => {
     if (state.isRetiringMeasurements.current) {
@@ -74,6 +76,16 @@ export function useTimelineAnchorEffects(
       return;
     }
     const anchor = state.pendingAnchor.current;
+    if (
+      anchor?.itemId &&
+      !_hasCommittedAnchorPosition(
+        options,
+        virtualizer,
+        rendered,
+        anchor.itemId,
+      )
+    )
+      return;
     state.pendingAnchor.current = undefined;
     if (options.viewportWidth === window.innerWidth)
       state.isResizing.current = false;
@@ -94,7 +106,28 @@ export function useTimelineAnchorEffects(
         state.latest.current,
       );
   });
+  useTimelineAnchorObservation(state);
+}
+
+function _isReadingKey(key: string): boolean {
+  return [
+    "ArrowUp",
+    "ArrowDown",
+    "PageUp",
+    "PageDown",
+    "Home",
+    "End",
+    " ",
+    "Tab",
+  ].includes(key);
+}
+
+function useTimelineAnchorObservation(state: AnchorState): void {
   useEffect(() => {
+    const onReadingIntent = (event: Event) => {
+      if (event instanceof KeyboardEvent && !_isReadingKey(event.key)) return;
+      state.pendingAnchor.current = undefined;
+    };
     const onScroll = () => {
       if (!state.pendingAnchor.current && !state.isResizing.current)
         state.settledAnchor.current = getAnchorFromTimelineWindow(
@@ -102,8 +135,14 @@ export function useTimelineAnchorEffects(
         );
     };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onReadingIntent, { passive: true });
+    window.addEventListener("touchstart", onReadingIntent, { passive: true });
+    window.addEventListener("keydown", onReadingIntent);
     return () => {
-      return window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onReadingIntent);
+      window.removeEventListener("touchstart", onReadingIntent);
+      window.removeEventListener("keydown", onReadingIntent);
     };
   }, [
     state.latest,
@@ -111,6 +150,40 @@ export function useTimelineAnchorEffects(
     state.settledAnchor,
     state.isResizing,
   ]);
+}
+
+/** Ref measurements may update Virtual before React has painted their row starts. */
+function _hasCommittedAnchorPosition(
+  options: Readonly<TimelineWindowOptions>,
+  virtualizer: WindowVirtualizer,
+  rendered: { measurements: readonly VirtualItem[]; scrollMargin: number },
+  itemId: string,
+): boolean {
+  const row = options.rows.find((candidate) => {
+    return candidate.itemIds.includes(itemId);
+  });
+  // Removed or unmounted reading rows retire the old correction normally.
+  if (!row) return true;
+  if (
+    options.viewportWidth !== undefined &&
+    options.viewportWidth !== window.innerWidth
+  )
+    return false;
+  const painted = rendered.measurements.find((position) => {
+    return position.key === row.key;
+  });
+  // The public visible list also includes estimated entries after measure().
+  const current = virtualizer.getVirtualItems().find((position) => {
+    return position.key === row.key;
+  });
+  if (!painted || !current) return true;
+  return (
+    Math.abs(
+      painted.start -
+        rendered.scrollMargin -
+        (current.start - virtualizer.options.scrollMargin),
+    ) <= 0.1
+  );
 }
 
 /** Stable navigation callbacks read current rows and fence retired DOM/view owners. */

@@ -18,7 +18,7 @@ SCENARIOS.forEach((scenario) => {
   const { surface, transition } = scenario;
   const isSelfScope = surface === "presence" && transition === "demoted";
   const label = isSelfScope
-    ? "presence replaces privileged records with the real demoted self-only response"
+    ? "presence accepts the real self-only response then hides records after account demotion refresh"
     : `${surface} reconciles an actual ${transition} refusal after reconnect`;
   test(label, async ({ page, context, catalog, otherAdminPage }) => {
     const { record, endpoint } = await _openObservation({
@@ -43,10 +43,12 @@ SCENARIOS.forEach((scenario) => {
       const body = await response.json();
       expect(body.presence).toHaveLength(1);
       expect(body.presence[0].member.memberId).toBe(catalog.admin.memberId);
-      await expect(page.getByRole("row")).toHaveCount(2);
+      await expect(record).toHaveCount(0);
+      await expect(page.getByRole("row")).toHaveCount(0);
       await expect(
         page.getByRole("cell", { name: "Abuela Rosa", exact: true }),
       ).toHaveCount(0);
+      await _expectAuthorityDestination({ page, scenario });
       return;
     }
     await expect(record).toHaveCount(0);

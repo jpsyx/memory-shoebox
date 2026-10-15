@@ -1,13 +1,16 @@
 import { Stack, TextInput } from "@mantine/core";
 import type { ReactNode } from "react";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { LabelText } from "@/system/typography/LabelText";
 import { Prose } from "@/system/typography/Prose";
 
 type Props = {
   selection: TimelineSelection;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 };
 
 /**
@@ -30,12 +33,9 @@ export function DateFields({
           label="From"
           value={selection.from ?? ""}
           onChange={(event) => {
-            onChange({
-              ...selection,
-              from:
-                event.currentTarget.value === ""
-                  ? undefined
-                  : event.currentTarget.value,
+            const value = event.currentTarget.value || undefined;
+            onChange((current) => {
+              return { ...current, from: value };
             });
           }}
         />
@@ -44,12 +44,9 @@ export function DateFields({
           label="Until"
           value={selection.until ?? ""}
           onChange={(event) => {
-            onChange({
-              ...selection,
-              until:
-                event.currentTarget.value === ""
-                  ? undefined
-                  : event.currentTarget.value,
+            const value = event.currentTarget.value || undefined;
+            onChange((current) => {
+              return { ...current, until: value };
             });
           }}
         />

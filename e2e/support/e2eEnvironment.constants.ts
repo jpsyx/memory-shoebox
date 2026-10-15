@@ -11,12 +11,9 @@ import { fileURLToPath } from "node:url";
 /**
  * The repository root, found from this file rather than from `process.cwd()`.
  *
- * **The two halves of this run have different working directories.** Playwright
- * runs the specs from the repository root, while the server under test starts
- * through `pnpm --filter @memory-shoebox/server start`, which runs the script
- * in `apps/server`. A relative `DATABASE_PATH` would therefore name two
- * different files: the test would read an empty catalog while the server wrote
- * a full one. Every path below is absolute for that reason.
+ * The test helpers and guarded local server share this exact absolute path.
+ * The server now starts from the repository root; absolute coordinates also
+ * keep imported helpers independent of a caller's working directory.
  */
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -62,15 +59,10 @@ export const E2E_B2_KEY_PREFIX = "test";
 /**
  * The environment the server under test runs in.
  *
- * **`RESEND_API_KEY` and `ENABLE_FAKE_EMAIL` are emptied on purpose.** With no
- * service configured the mail worker defers every message back to `queued`
- * without scrubbing it, which is what leaves a sign-in code readable.
- * Playwright hands the command `process.env` with this map layered over it, so
- * both are named and set to the empty string rather than merely left out: a key
- * exported in the developer's shell, or one that reaches the run some other
- * way, would otherwise send real mail and scrub the digits the specs read.
- * `config.ts` reads an empty optional variable as absent, so the empty string
- * is the way to say "no key" rather than a malformed one.
+ * The actual app uses development/fake-email configuration and a no-mail
+ * service injection in runE2eServer.ts. The real outbox stays readable for
+ * sign-in and notification assertions without sending any message. Explicit
+ * empty external credentials prevent inherited shell values reaching services.
  *
  * The Upstash pair is emptied for the same reason: an inherited credential
  * would put this run's rate limit counters in somebody's shared Redis.
@@ -80,7 +72,7 @@ export const E2E_B2_KEY_PREFIX = "test";
  * stand-in checks no signature, which is why any key will do.
  */
 export const E2E_SERVER_ENVIRONMENT = {
-  NODE_ENV: "test",
+  NODE_ENV: "development",
   PORT: String(E2E_PORT),
   HOST: "127.0.0.1",
   DATABASE_PATH: E2E_DATABASE_PATH,
@@ -95,7 +87,7 @@ export const E2E_SERVER_ENVIRONMENT = {
   B2_REGION: "us-west-004",
   B2_KEY_PREFIX: E2E_B2_KEY_PREFIX,
   RESEND_API_KEY: "",
-  ENABLE_FAKE_EMAIL: "",
+  ENABLE_FAKE_EMAIL: "true",
   UPSTASH_REDIS_REST_URL: "",
   UPSTASH_REDIS_REST_TOKEN: "",
 };

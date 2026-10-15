@@ -17,9 +17,13 @@ export async function prepareSettingsVisual({
       .click();
   }
   if (state === "timezone") {
-    await page
-      .getByRole("combobox", { name: "This Shoebox's timezone", exact: true })
-      .fill("America/New_York");
+    const timezone = page.getByRole("combobox", {
+      name: "This Shoebox's timezone",
+      exact: true,
+    });
+    await timezone.fill("America/New_York");
+    await timezone.scrollIntoViewIfNeeded();
+    await expect(timezone).toBeInViewport();
     await page
       .getByRole("option", { name: "America/New_York", exact: true })
       .click();

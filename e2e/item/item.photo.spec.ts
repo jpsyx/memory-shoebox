@@ -56,28 +56,123 @@ test("reacts and comments, and both are still there after a reload", async ({
 }) => {
   await openFirstFrameOfBurst(adminPage);
 
-  await adminPage.getByRole("button", { name: "React", exact: true }).click();
-  const picker = adminPage.getByRole("dialog");
-  await picker.getByRole("button", { name: "Love" }).click();
-  // The picker closes on a choice, and its own "Love" stays in the page for
-  // the length of its exit transition, so the row is read once it has gone.
-  await expect(picker).toHaveCount(0);
-  await expect(
-    adminPage.getByRole("button", { name: "Love", exact: true }),
-  ).toBeVisible();
+  const love = adminPage.getByRole("button", {
+    name: "React: Love",
+    exact: true,
+  });
+  await love.click();
+  await expect(love).toHaveAttribute("aria-pressed", "true");
 
   await adminPage
-    .getByRole("textbox", { name: "Say something" })
+    .getByRole("textbox", { name: "Write a comment" })
     .fill("He has his mother's chin.");
-  await adminPage.getByRole("button", { name: "Send" }).click();
+  await adminPage.getByRole("button", { name: "Post comment" }).click();
   await expect(adminPage.getByText("He has his mother's chin.")).toBeVisible();
   await expect(
-    adminPage.getByRole("heading", { name: "1 comment" }),
+    adminPage.getByRole("heading", { name: "Comments 1" }),
   ).toBeVisible();
 
   await adminPage.reload();
   await expect(adminPage.getByText("He has his mother's chin.")).toBeVisible();
-  await expect(
-    adminPage.getByRole("button", { name: "Love", exact: true }),
-  ).toBeVisible();
+  await expect(love).toHaveAttribute("aria-pressed", "true");
 });
+
+for (const movesWhilePending of [false, true]) {
+  test(`keeps the ${movesWhilePending ? "current reading print after scrolling" : "activated cover position"} through a held burst opening`, async ({
+    adminPage: page,
+  }) => {
+    await page.goto("/?at=2026-09-26");
+    const stack = page
+      .locator("[data-burst-id]")
+      .filter({ has: page.getByRole("button", { name: /\b45 photos$/ }) });
+    await expect(stack).toHaveCount(1);
+    const burstId = await stack.getAttribute("data-burst-id");
+    const cover = stack.getByRole("button").first();
+    let release!: () => void;
+    let arrived!: () => void;
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    const requested = new Promise<void>((done) => {
+      arrived = done;
+    });
+    let firstId = "";
+    await page.route(`**/api/bursts/${burstId}/frames`, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      expect(body.frames).toHaveLength(45);
+      firstId = body.frames.find((frame: { position: number }) => {
+        return frame.position === 1;
+      }).itemId;
+      arrived();
+      await held;
+      await route.fulfill({ response });
+    });
+    await cover.click();
+    await requested;
+    await expect(cover).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Collapse", exact: true }),
+    ).toHaveCount(0);
+    await page.mouse.move(0, 0);
+    await cover.evaluate(async (node) => {
+      await Promise.all(
+        node.getAnimations().map((animation) => {
+          return animation.finished.catch(() => {});
+        }),
+      );
+    });
+    let readingId = "";
+    let readingTop = (await cover.boundingBox())!.y;
+    if (movesWhilePending) {
+      const beforeScroll = await page.evaluate(() => {
+        return scrollY;
+      });
+      await page.mouse.wheel(0, 600);
+      await expect
+        .poll(() => {
+          return page.evaluate(() => {
+            return scrollY;
+          });
+        })
+        .toBeGreaterThan(beforeScroll + 300);
+      const reading = await page
+        .locator("button[data-item-id]")
+        .evaluateAll((nodes) => {
+          const node = nodes.find((candidate) => {
+            const box = candidate.getBoundingClientRect();
+            return box.top > 100 && box.top < innerHeight - 100;
+          });
+          if (!node)
+            throw new Error(
+              "No actual reading print reached after native wheel input",
+            );
+          return {
+            id: node.getAttribute("data-item-id")!,
+            top: node.getBoundingClientRect().top,
+          };
+        });
+      readingId = reading.id;
+      readingTop = reading.top;
+    }
+    release();
+    await expect(
+      page
+        .locator(`[data-fan-row="${burstId}"]`)
+        .getByRole("button", { name: "Collapse", exact: true }),
+    ).toHaveCount(1);
+    const target = page.locator(
+      `button[data-item-id="${readingId || firstId}"]`,
+    );
+    await expect(target).toHaveCount(1);
+    await expect
+      .poll(async () => {
+        return Math.abs((await target.boundingBox())!.y - readingTop);
+      })
+      .toBeLessThanOrEqual(2);
+    if (!movesWhilePending) {
+      await expect(target).toBeInViewport();
+      await expect(target).toHaveAccessibleName(/26 September 2026/);
+    }
+  });
+}

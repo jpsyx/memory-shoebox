@@ -6,8 +6,13 @@ import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import { useSelectedPhoto, type SelectedPhoto } from "@/media/useSelectedPhoto";
 import classes from "@/system/system.module.css";
 import photoClasses from "./PhotoFrame.module.css";
+import { DecodedPhotoHandoff } from "./DecodedPhotoHandoff";
 
-type Props = { media: MediaRef; itemId: string };
+type Props = {
+  media: MediaRef;
+  itemId: string;
+  presentation?: "preview" | "selected";
+};
 
 function _renderThumbnail(media: Readonly<MediaRef>): ReactNode {
   return media.thumb !== null ? (
@@ -56,6 +61,7 @@ function _renderPicture(
         sizes={`${fittedWidth}px`}
       />
       <img
+        ref={photo.image}
         src={source.url}
         alt={media.altText}
         width={media.width}
@@ -69,10 +75,11 @@ function _renderPicture(
   );
 }
 
-/** Shows this item's thumbnail until its exact responsive source decodes. */
+/** Shows owned pixels or a thumbnail until the current responsive image decodes. */
 export function PhotoFrame({
   media: initialMedia,
   itemId,
+  presentation = "selected",
 }: Readonly<Props>): ReactNode {
   const lease = useMediaLease({
     itemId,
@@ -97,6 +104,7 @@ export function PhotoFrame({
     media,
     itemId,
     sourceEpoch: failure.version,
+    presentation,
   });
   const previous = useRef<{
     itemId: string;
@@ -121,12 +129,25 @@ export function PhotoFrame({
       data-photo-ready={photo.isReady}
     >
       <div className={photoClasses.pixels}>
-        {photo.isReady
-          ? null
-          : retained === undefined
-            ? _renderThumbnail(media)
-            : _renderPicture(retained)}
-        {_renderPicture({ media, photo, onError: failure.onError })}
+        {photo.isReady ? null : photo.handoff !== undefined ? (
+          <DecodedPhotoHandoff
+            snapshot={photo.handoff}
+            media={media}
+            onUnavailable={photo.recheckHandoff}
+          />
+        ) : retained !== undefined ? (
+          _renderPicture(retained)
+        ) : photo.viewport === undefined ? null : (
+          _renderThumbnail(media)
+        )}
+        {_renderPicture({
+          media,
+          photo,
+          onError: () => {
+            photo.discardHandoff();
+            failure.onError();
+          },
+        })}
         {failure.hasError ? (
           <button type="button" onClick={failure.retry}>
             Try loading photo again

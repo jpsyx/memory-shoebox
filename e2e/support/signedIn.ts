@@ -1,3 +1,9 @@
+import { meResponseSchema } from "@memory-shoebox/shared";
+import { getSharedSessionStoreOptionsFromCatalogLock } from "./deleteE2eCatalog.ts";
+import {
+  createSharedSessionStore,
+  type SharedSessionState,
+} from "./sharedSessionState.ts";
 import {
   expect,
   test as base,
@@ -47,40 +53,74 @@ export const ADMIN_EMAIL = "abuela@example.com";
  */
 export const VIEWER_EMAIL = "prima@example.com";
 
-/** One storage state per address, captured once and reused for the run. */
-type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
+/** A cached cookie is never authority: validate the current account on every context. */
+async function _validateAccount(
+  context: BrowserContext,
+  state: SharedSessionState,
+): Promise<void> {
+  const response = await context.request.get(`${E2E_BASE_URL}/api/me`);
+  if (response.status() !== 200) {
+    throw new Error(
+      `Shared E2E session account read returned ${response.status()}; refusing to mint a replacement.`,
+    );
+  }
+  const { me } = meResponseSchema.parse(await response.json());
+  if (
+    me.member.memberId !== state.memberId ||
+    me.email !== state.email ||
+    me.role !== state.role
+  ) {
+    throw new Error(
+      "Shared E2E session account identity or role changed; refusing to reseed or mint a replacement.",
+    );
+  }
+}
 
-const stateByEmail = new Map<string, StorageState>();
+/** Mint only a missing entry through the real UI, retaining its exact member identity. */
+async function _mintState(
+  context: BrowserContext,
+  email: string,
+  role: SharedSessionState["role"],
+): Promise<SharedSessionState> {
+  const { memberId } = await seedMemberAtAddress({ email, role });
+  const page = await context.newPage();
+  try {
+    await page.goto("/sign-in");
+    await signInAs({ page, email });
+    await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
+    return {
+      email,
+      role,
+      memberId,
+      storageState: await context.storageState(),
+    };
+  } finally {
+    await page.close();
+  }
+}
 
-/**
- * Signs one address in, once, and hands back its storage state.
- *
- * The body is the same sequence `contrast.spec.ts` and the account keyboard
- * spec already ran in their own `beforeAll`: seed the member, drive surface 1
- * through `signInAs`, wait for the pile, take the state. The only new thing is
- * the cache, which is what turns one sign-in per file into one per run.
- */
-async function _stateFor(options: {
+/** A fresh validated context from the browser and exact run-owned account identity. */
+export async function getSignedInContextFromBrowser(options: {
   browser: Browser;
   email: string;
   role: "admin" | "viewer";
-}): Promise<StorageState> {
-  const cached = stateByEmail.get(options.email);
-  if (cached !== undefined) {
-    return cached;
-  }
-  await seedMemberAtAddress({ email: options.email, role: options.role });
-  const context = await options.browser.newContext();
+}): Promise<BrowserContext> {
+  const store = createSharedSessionStore(
+    getSharedSessionStoreOptionsFromCatalogLock(),
+  );
+  const email = options.email.trim().toLowerCase();
+  const cached = store.read(email, options.role);
+  const context = await options.browser.newContext({
+    storageState: cached?.storageState,
+  });
   try {
-    const page = await context.newPage();
-    await page.goto("/sign-in");
-    await signInAs({ page, email: options.email });
-    await expect(page).toHaveURL(`${E2E_BASE_URL}/`);
-    const state = await context.storageState();
-    stateByEmail.set(options.email, state);
-    return state;
-  } finally {
+    const state = cached ?? (await _mintState(context, email, options.role));
+    await _validateAccount(context, state);
+    if (!cached) store.write(state);
+    return context;
+  } catch (error) {
     await context.close();
+    throw error;
   }
 }
 
@@ -96,28 +136,28 @@ async function _stateFor(options: {
  */
 export const test = base.extend<{ adminPage: Page; viewerPage: Page }>({
   adminPage: async ({ browser }, provide) => {
-    const context = await browser.newContext({
-      storageState: await _stateFor({
-        browser,
-        email: ADMIN_EMAIL,
-        role: "admin",
-      }),
+    const context = await getSignedInContextFromBrowser({
+      browser,
+      email: ADMIN_EMAIL,
+      role: "admin",
     });
-    const page = await context.newPage();
-    await provide(page);
-    await context.close();
+    try {
+      await provide(await context.newPage());
+    } finally {
+      await context.close();
+    }
   },
   viewerPage: async ({ browser }, provide) => {
-    const context = await browser.newContext({
-      storageState: await _stateFor({
-        browser,
-        email: VIEWER_EMAIL,
-        role: "viewer",
-      }),
+    const context = await getSignedInContextFromBrowser({
+      browser,
+      email: VIEWER_EMAIL,
+      role: "viewer",
     });
-    const page = await context.newPage();
-    await provide(page);
-    await context.close();
+    try {
+      await provide(await context.newPage());
+    } finally {
+      await context.close();
+    }
   },
 });
 

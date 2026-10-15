@@ -301,8 +301,11 @@ and a restricted item is only restricted from somebody who is not one.
 It is deterministic and idempotent: one fixed seed, and it clears the tables
 it owns before writing, so running it twice leaves the same catalog. It
 **empties** `items`, `bursts`, `milestones`, `people`, `tags`, their link
-tables and `upload_sessions` rather than deleting only the rows it wrote, so
-point it at a development catalog and nothing else.
+tables, `removal_requests` and `upload_sessions` rather than deleting only the rows
+it wrote, so point it at a development catalog and nothing else. Open and settled
+removal history is cleared before items; otherwise an open request cannot survive
+the item's deletion constraint. Item comments and reactions follow their existing
+cascades. Members, sessions and frozen outbound-email rows are preserved.
 `--no-objects` skips the bucket, which is what the end-to-end run uses and
 what to use locally when Backblaze is not configured; the URLs still sign and
 the pictures simply do not load. With objects, it uploads one cartoon file per
@@ -415,3 +418,17 @@ output, disk, candidate-image and playback budgets. See
 [media-loading.md](media-loading.md#isolated-decoding-runtime) for their scope
 and [deployment.md](deployment.md#background-media-runtime-prerequisites) for
 the checks required before enabling work.
+
+## Local browser verification configuration
+
+Use `NODE_ENV=production pnpm build` for the compiler when measuring the shipped
+React/Vite bundle. Keep the local API process explicitly
+`NODE_ENV=development ENABLE_FAKE_EMAIL=true`, with the acceptance runner's
+injected no-mail services. Vite's `--mode production` banner alone does not
+prove production React compilation if the parent environment sets
+`NODE_ENV=development`. No production API startup is needed for these checks.
+
+The bounded viewer cache, one-hour signatures, 60-second renewal margin and
+seven-day immutable private HTTP freshness retain their existing limits.
+Reconnect retries only current transient failed leases through the existing
+visible batch queue. There is no new polling or offline persistence setting.

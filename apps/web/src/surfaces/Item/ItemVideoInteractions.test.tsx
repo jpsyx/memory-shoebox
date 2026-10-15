@@ -24,6 +24,113 @@ afterEach(() => {
 });
 
 describe("video conversation interactions", () => {
+  it.each(["error", "loadedmetadata"])(
+    "retains three keyboard seek steps and the captured comment through renewal %s",
+    async (completion) => {
+      vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+      const detail = makeVideoDetail();
+      const renewed = {
+        ...detail.media,
+        playback: {
+          ...detail.media.playback!,
+          url: "https://example.invalid/held-renewal.mp4",
+        },
+      };
+      respondWithItem({
+        detail,
+        routes: {
+          "POST /api/media/preview": {
+            status: 200,
+            body: {
+              items: [
+                {
+                  itemId: ITEM_ID,
+                  kind: "video",
+                  width: detail.media.width,
+                  height: detail.media.height,
+                  media: renewed,
+                },
+              ],
+            },
+          },
+          [`POST /api/items/${ITEM_ID}/comments`]: {
+            status: 201,
+            body: makeComment({
+              author: SIGNED_IN,
+              body: "That moment.",
+              atSeconds: 3,
+            }),
+          },
+        },
+      });
+      const { container } = renderItem(ITEM_ID);
+      const field = await screen.findByRole("textbox", {
+        name: "Write a comment",
+      });
+      const video = container.querySelector("video")!;
+      Object.defineProperty(video, "currentSrc", {
+        configurable: true,
+        get: () => {
+          return video.src;
+        },
+      });
+      fireEvent.error(video);
+      await waitFor(() => {
+        expect(video).toHaveAttribute("src", renewed.playback.url);
+      });
+      const slider = screen.getByRole("slider", { name: "Where in the video" });
+      await userEvent.click(slider);
+      await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+      expect(video.currentTime).toBe(0);
+      expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+      fireEvent.timeUpdate(video);
+      expect(slider).toHaveAttribute("aria-valuetext", "0:03 of 0:22");
+      fireEvent(video, new Event(completion));
+      if (completion === "error") {
+        await screen.findByText("This video couldn’t play");
+      } else {
+        await waitFor(() => {
+          expect(video.currentTime).toBe(3);
+        });
+      }
+      fireEvent.timeUpdate(video);
+      expect(slider).toHaveAttribute("aria-valuetext", "0:03 of 0:22");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Comment on this moment" }),
+      );
+      await userEvent.type(field, "That moment.");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Post comment" }),
+      );
+      await screen.findByText("That moment.");
+      expect(
+        getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
+      ).toEqual({
+        body: "That moment.",
+        atSeconds: 3,
+      });
+      expect(
+        screen.getByRole("button", { name: /Seek to 0:03:/ }),
+      ).toBeVisible();
+      expect(video.currentTime).toBe(completion === "error" ? 0 : 3);
+      expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+      expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
+      expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(1);
+      if (completion === "error") {
+        await userEvent.click(
+          screen.getByRole("button", { name: "Try again" }),
+        );
+        await waitFor(() => {
+          expect(container.querySelector("video")).not.toBe(video);
+        });
+        fireEvent.timeUpdate(video);
+        expect(
+          screen.getByRole("slider", { name: "Where in the video" }),
+        ).toHaveAttribute("aria-valuetext", "0:00 of 0:22");
+      }
+    },
+  );
+
   it.each(["Meta", "Control"])(
     "sends the captured comment with %s+Enter",
     async (modifier) => {

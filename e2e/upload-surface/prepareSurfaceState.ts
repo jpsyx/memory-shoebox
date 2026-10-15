@@ -132,10 +132,10 @@ async function _installMatrixReads({
   });
   await _installMatrixDirectories(page);
   if (state === "denied") {
-    await page.route("**/api/me", async (route) => {
+    await page.route("**/api/bootstrap", async (route) => {
       const response = await route.fetch();
       const me = await response.json();
-      me.me.role = "viewer";
+      me.account.me.role = "viewer";
       await route.fulfill({ json: me });
     });
   }
@@ -258,6 +258,16 @@ export async function prepareSurfaceState({
     )
   ) {
     await expectSurfaceDraftReady({ page: page, sessionId: detail.sessionId });
+  }
+  if (state === "done" || state === "partial") {
+    await expect(page).toHaveURL(new RegExp(`session=${detail.sessionId}`));
+    // The addressed refresh must settle before static keyboard enumeration.
+    await expect(
+      page.getByRole("button", { name: "Upload more", exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("heading", { name: "Reading saved batch" }),
+    ).toHaveCount(0);
   }
   await _applyMatrixAction({ page, state });
 }

@@ -1,7 +1,10 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { Explanation } from "@/surfaces/Timeline/NoResults/Explanation";
 import { WaysOut } from "@/surfaces/Timeline/NoResults/WaysOut";
 import { Ghosts } from "@/system/Pile/Ghosts";
@@ -10,7 +13,7 @@ import { Lede } from "@/system/typography/Lede";
 type Props = {
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
   /** Clearing the lot, which keeps the jump the same way the strip does. */
   onClear: () => void;
 };

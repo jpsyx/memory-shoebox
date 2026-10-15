@@ -221,6 +221,7 @@ function _makeSchedulerFromState(
       );
     },
     clock: Date.now,
+    getEpoch: state.previews.captureEpoch,
   });
 }
 
@@ -232,8 +233,21 @@ export function createMediaLoadingResources(
     load?: SpeculativeMediaLoader;
   }>,
 ): MediaLoadingResources {
+  const previews = createMediaPreviewStore(options.memberId);
   const state: ResourceState = {
-    previews: createMediaPreviewStore(options.memberId),
+    previews: {
+      ...previews,
+      remove: (itemId) => {
+        previews.remove(itemId);
+        state.navigation?.clear();
+        scheduler.clear();
+      },
+      clear: () => {
+        previews.clear();
+        state.navigation?.clear();
+        scheduler.clear();
+      },
+    },
     lifetime: options.lifetime,
     requests: new Set(),
     work: new Set(),

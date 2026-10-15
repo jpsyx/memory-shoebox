@@ -368,9 +368,11 @@ function _listen(onReturn: () => void, enabled: boolean): void {
   if (enabled) {
     document.addEventListener("visibilitychange", onReturn);
     window.addEventListener("focus", onReturn);
+    window.addEventListener("online", onReturn);
   } else {
     document.removeEventListener("visibilitychange", onReturn);
     window.removeEventListener("focus", onReturn);
+    window.removeEventListener("online", onReturn);
   }
 }
 function _clear(state: State): void {
@@ -404,6 +406,11 @@ export function createMediaLeaseCoordinator(
     timer: undefined,
     flushTimer: undefined,
     onReturn: () => {
+      state.entries.forEach((entry) => {
+        if (!entry.denied && entry.snapshot.hasError && !entry.pending) {
+          entry.attemptedUrl = undefined;
+        }
+      });
       _schedule(state);
     },
   };

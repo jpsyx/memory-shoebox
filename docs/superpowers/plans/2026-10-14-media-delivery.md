@@ -1,5 +1,7 @@
 # Media Delivery and Viewer Implementation Plan
 
+Status: Tasks A1–A6 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews remain pending. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Reuse downloaded media and make nearby viewer navigation ready without speculative product events.

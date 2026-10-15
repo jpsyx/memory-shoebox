@@ -1,4 +1,5 @@
 import { type IncomingMessage, type ServerResponse } from "node:http";
+import type { createFakeS3Ledger } from "./createFakeS3Ledger.ts";
 
 import type { BucketCorsRule } from "../../../apps/server/src/b2/createB2Client/createB2Client.types.ts";
 
@@ -22,6 +23,32 @@ export type FakeS3Transfer = {
   objectId: string;
   status: number;
   bodyBytes: number;
+};
+
+/** Sanitized request lifecycle and payload events, including unfinished work. */
+export type FakeS3RequestEvidence = {
+  requestId: number;
+  objectId: string;
+  method: string;
+  startSequence: number;
+  startedAtMs: number;
+  terminalSequence: number | null;
+  terminatedAtMs: number | null;
+  closedAtMs: number | null;
+  terminal: "finished" | "closed-before-finish" | null;
+  status: number | null;
+  bodyBytes: number;
+  chunks: Array<{ sequence: number; atMs: number; bodyBytes: number }>;
+};
+
+/** Immutable observation boundary; nextRequestId is the next start watermark. */
+export type FakeS3LedgerSnapshot = {
+  capturedAtMs: number;
+  nextRequestId: number;
+  sequence: number;
+  activeRequests: number;
+  bodyBytes: number;
+  requests: FakeS3RequestEvidence[];
 };
 
 /** Optional local transport controls; uploads keep their existing behavior. */
@@ -103,6 +130,7 @@ export type OpenUpload = {
  * Mutable bucket, object and multipart state owned by the fake S3 server.
  */
 export type FakeS3State = {
+  ledger: ReturnType<typeof createFakeS3Ledger>;
   bucketName: string;
   corsRule: BucketCorsRule;
   objects: Map<string, StoredObject>;

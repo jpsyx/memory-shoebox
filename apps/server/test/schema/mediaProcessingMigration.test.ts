@@ -117,10 +117,26 @@ it("backs up the populated catalog before rebuilding and keeps existing checksum
     results.map((result) => {
       return result.migrationName;
     }),
-  ).toEqual(["0017_media_processing"]);
-  const backupName = readdirSync(join(directory, "backups")).find((name) => {
-    return !existingBackups.includes(name);
-  })!;
+  ).toEqual(["0017_media_processing", "0018_timeline_uploader_capture"]);
+  const backupNames = readdirSync(join(directory, "backups")).filter((name) => {
+    if (existingBackups.includes(name)) return false;
+    const backup = new SQLite(join(directory, "backups", name), {
+      readonly: true,
+    });
+    try {
+      return (
+        backup
+          .prepare(
+            "select name from sqlite_master where name = 'media_processing_jobs'",
+          )
+          .all().length === 0
+      );
+    } finally {
+      backup.close();
+    }
+  });
+  expect(backupNames).toHaveLength(1);
+  const backupName = backupNames[0]!;
   const restoredPath = join(directory, "restored.db");
   await backupDatabase(join(directory, "backups", backupName), restoredPath);
   const restored = new SQLite(restoredPath);

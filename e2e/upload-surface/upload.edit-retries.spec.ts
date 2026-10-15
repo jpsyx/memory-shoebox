@@ -136,7 +136,10 @@ test("surface 8 client contract changed existing occasion is a new submitted act
     detail.edits.push(edit);
     await route.fulfill({ status: 201, json: edit });
   });
-  await page.getByRole("button", { name: /Family-1\.jpg/ }).click();
+  await page
+    .getByRole("button", { name: /Family-1\.jpg/ })
+    .and(page.locator("[aria-pressed]"))
+    .click();
   await page
     .getByRole("button", { name: "Put under a milestone", exact: true })
     .click();
@@ -225,7 +228,9 @@ async function _expectSavedLabelsAndUndo(page: Page): Promise<void> {
     savedPlan.getByRole("button", { name: "Undo sleeping", exact: true }),
   ).toHaveCount(2);
   await expect(
-    page.getByRole("button", { name: /Family-1\.jpg/ }),
+    page
+      .getByRole("button", { name: /Family-1\.jpg/ })
+      .and(page.locator("[aria-pressed]")),
   ).toContainText("2 saved labels");
   await savedPlan
     .getByRole("button", { name: "Undo hospital", exact: true })
@@ -238,7 +243,9 @@ async function _expectSavedLabelsAndUndo(page: Page): Promise<void> {
     .getByRole("button", { name: "Undo hospital", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: /Family-1\.jpg/ }),
+    page
+      .getByRole("button", { name: /Family-1\.jpg/ })
+      .and(page.locator("[aria-pressed]")),
   ).toContainText("1 saved label");
   await savedPlan
     .getByRole("button", { name: "Undo sleeping", exact: true })
@@ -252,7 +259,9 @@ async function _expectSavedLabelsAndUndo(page: Page): Promise<void> {
     .click();
   await expect(savedPlan).toBeHidden();
   await expect(
-    page.getByRole("button", { name: /Family-1\.jpg/ }),
+    page
+      .getByRole("button", { name: /Family-1\.jpg/ })
+      .and(page.locator("[aria-pressed]")),
   ).not.toContainText("1 saved label");
 }
 

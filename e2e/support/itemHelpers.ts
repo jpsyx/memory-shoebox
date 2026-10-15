@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import { burstFramesResponseSchema } from "@memory-shoebox/shared";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "./signedIn.ts";
 
 /**
@@ -7,19 +8,54 @@ import { expect } from "./signedIn.ts";
  * archivePlan.ts`).
  */
 
-/** Opens 26 September, fans its burst, and opens the burst's first frame. */
+/** Read the exact first frame from the response caused by opening its owned burst. */
+export async function getFirstFrameFromBurstOpening(options: {
+  page: Page;
+  activate: (cover: Locator) => Promise<void>;
+}): Promise<{ frame: Locator; itemId: string }> {
+  const { page, activate } = options;
+  const stack = page
+    .locator("[data-burst-id]")
+    .filter({ has: page.getByRole("button", { name: /\b45 photos$/ }) });
+  await expect(stack).toHaveCount(1);
+  const burstId = await stack.getAttribute("data-burst-id");
+  expect(burstId).toBeTruthy();
+  const answer = page.waitForResponse((response) => {
+    return new URL(response.url()).pathname === `/api/bursts/${burstId}/frames`;
+  });
+  await activate(stack.getByRole("button").first());
+  const response = await answer;
+  expect(response.status()).toBe(200);
+  const { frames } = burstFramesResponseSchema.parse(await response.json());
+  expect(frames).toHaveLength(45);
+  const firstFrames = frames.filter((frame) => {
+    return frame.position === 1;
+  });
+  expect(firstFrames).toHaveLength(1);
+  const itemId = firstFrames[0]!.itemId;
+  const fan = page.locator(`[data-fan-row="${burstId}"]`);
+  await expect(
+    fan.getByRole("button", { name: "Collapse", exact: true }),
+  ).toBeVisible();
+  const frame = fan.locator(`button[data-item-id="${itemId}"]`);
+  await expect(frame).toHaveCount(1);
+  await expect(frame).toBeVisible();
+  await expect(frame).toBeInViewport();
+  await expect(frame).toHaveAccessibleName(/26 September 2026/);
+  return { frame, itemId };
+}
+
+/** Opens 26 September's actual position-one frame without another detail read. */
 export async function openFirstFrameOfBurst(page: Page): Promise<void> {
   await page.goto("/?at=2026-09-26");
-  const stack = page.locator("[data-burst-id]").first();
-  await stack.getByRole("button").first().click();
-  // Until the frames arrive the cover is the stack's one print, and it
-  // matches the frame below, so the fan has to be open first.
-  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
-  await stack
-    .getByRole("button", { name: /26 September 2026/ })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
+  const { frame, itemId } = await getFirstFrameFromBurstOpening({
+    page,
+    activate: (cover) => {
+      return cover.click();
+    },
+  });
+  await frame.click();
+  await expect(page).toHaveURL(new RegExp(`/items/${itemId}$`, "u"));
 }
 
 /** Opens the first photograph of one day. */
@@ -37,4 +73,26 @@ export async function openSeededVideo(page: Page): Promise<void> {
   await page.goto("/?at=2026-07-04");
   await page.locator("[data-item-id]").filter({ hasText: "0:10" }).click();
   await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
+}
+
+/** Open the ancillary controls through the actual accessible photo details trigger. */
+export async function openPhotoDetails(page: Page): Promise<void> {
+  await page
+    .getByRole("button", { name: "More photo details", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Photo details", exact: true }),
+  ).toBeVisible();
+}
+
+/** Close the photo drawer before interacting with its underlying route. */
+export async function closePhotoDetails(page: Page): Promise<void> {
+  const details = page.getByRole("dialog", {
+    name: "Photo details",
+    exact: true,
+  });
+  await details
+    .getByRole("button", { name: "Close photo details", exact: true })
+    .click();
+  await expect(details).toBeHidden();
 }

@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
+import type { SharedSessionStoreOptions } from "./sharedSessionState.ts";
+import { E2E_BASE_URL, E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
 
 /**
  * Throws the last run's catalog away, so every run begins with an empty
@@ -27,6 +28,21 @@ import { E2E_DATABASE_PATH } from "./e2eEnvironment.constants.ts";
 
 /** The lock file, beside the catalog it guards. */
 const E2E_LOCK_PATH = `${E2E_DATABASE_PATH}.lock`;
+const E2E_SESSION_DIRECTORY = `${E2E_DATABASE_PATH}.sessions`;
+
+/** The exact owned catalog lock identifies state reusable by replacement workers. */
+export function getSharedSessionStoreOptionsFromCatalogLock(): SharedSessionStoreOptions {
+  const holder = _getHolderFromLockFile();
+  if (!holder || !_isTheHolderStillRunning(holder))
+    throw new Error(
+      "No live owned E2E catalog run exists for shared sessions.",
+    );
+  return {
+    directory: E2E_SESSION_DIRECTORY,
+    runId: `${holder.pid}:${holder.startedAt}`,
+    baseUrl: E2E_BASE_URL,
+  };
+}
 
 /** Who holds the lock, as it is written to disk. */
 type CatalogLockHolder = {
@@ -180,6 +196,7 @@ function _takeTheCatalogLock(): void {
  * a file that looks like it means something when it does not.
  */
 export default function releaseTheCatalogLock(): void {
+  rmSync(E2E_SESSION_DIRECTORY, { recursive: true, force: true });
   rmSync(E2E_LOCK_PATH, { force: true });
 }
 
@@ -192,6 +209,7 @@ export default function releaseTheCatalogLock(): void {
  */
 function _deleteTheCatalog(): void {
   _takeTheCatalogLock();
+  rmSync(E2E_SESSION_DIRECTORY, { recursive: true, force: true });
   ["", "-wal", "-shm"].forEach((suffix) => {
     rmSync(`${E2E_DATABASE_PATH}${suffix}`, { force: true });
   });

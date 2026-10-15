@@ -1,3 +1,4 @@
+import { createFakeS3Ledger } from "./createFakeS3Ledger.ts";
 import {
   createServer,
   type IncomingMessage,
@@ -133,13 +134,21 @@ async function _answerRequest(options: {
     bucketName: state.bucketName,
   });
   const query = url.searchParams;
-  const body = await getBodyFromRequest(request);
-  const exchange = { request, response, state, key: key ?? "", query, body };
-  const operation = _registerFakeS3Exchange({
+  const exchange: FakeS3Exchange = {
+    request,
+    response,
+    state,
+    key: key ?? "",
+    query,
+    body: Buffer.alloc(0),
+  };
+  const { operation, logged } = _registerFakeS3Exchange({
     exchange,
     pathname: url.pathname,
     hasBucketKey: key !== undefined,
   });
+  exchange.body = await getBodyFromRequest(request);
+  logged.byteLength = exchange.body.length;
   if (key === undefined) {
     sendFakeS3Error({
       response,
@@ -159,7 +168,7 @@ function _registerFakeS3Exchange(
     pathname: string;
     hasBucketKey: boolean;
   }>,
-): FakeS3Operation {
+): { operation: FakeS3Operation; logged: FakeS3Request } {
   const { exchange, pathname } = options;
   const { request, response, state, key, query } = exchange;
   const requestedOperation =
@@ -181,7 +190,12 @@ function _registerFakeS3Exchange(
     pathname,
   });
   state.requests.push(logged);
-  _recordResponseBytes({ response, logged });
+  const recordBody = state.ledger.start({
+    objectId: key,
+    method: request.method ?? "GET",
+    response,
+  });
+  _recordResponseBytes({ response, logged, recordBody });
   response.once("close", () => {
     logged.status = response.statusCode;
     if (["GetObject", "HeadObject"].includes(operation)) {
@@ -193,27 +207,31 @@ function _registerFakeS3Exchange(
     }
   });
   setFakeS3CorsHeaders(exchange);
-  return operation;
+  return { operation, logged };
 }
 
 /** Count actual write/end payloads without retaining response buffers. */
 function _recordResponseBytes(options: {
   response: ServerResponse;
   logged: FakeS3Request;
+  recordBody: (bytes: number) => void;
 }): void {
-  const { response, logged } = options;
+  const { response, logged, recordBody } = options;
   const count = (chunk: unknown, encoding: unknown): void => {
     if (response.req.method === "HEAD" || response.statusCode === 304) {
       return;
     }
+    let bytes = 0;
     if (typeof chunk === "string") {
-      logged.bodyBytes += Buffer.byteLength(
+      bytes = Buffer.byteLength(
         chunk,
         typeof encoding === "string" ? (encoding as BufferEncoding) : "utf8",
       );
     } else if (chunk instanceof Uint8Array) {
-      logged.bodyBytes += chunk.byteLength;
+      bytes = chunk.byteLength;
     }
+    logged.bodyBytes += bytes;
+    recordBody(bytes);
   };
   const originalWrite = response.write;
   const originalEnd = response.end;
@@ -237,8 +255,10 @@ function _recordResponseBytes(options: {
  */
 export function createFakeS3Server(
   options: Readonly<FakeS3ServerOptions>,
-): Server {
+): Server & { getLedger: ReturnType<typeof createFakeS3Ledger>["snapshot"] } {
+  const ledger = createFakeS3Ledger();
   const state: FakeS3State = {
+    ledger,
     bucketName: options.bucketName,
     corsRule: makeBucketCorsRuleFromOrigins(options.allowedOrigins),
     objects: new Map(options.objects),
@@ -254,7 +274,7 @@ export function createFakeS3Server(
     bytesPerSecond: options.bytesPerSecond,
     onTransfer: options.onTransfer,
   };
-  return createServer((request, response) => {
+  const server = createServer((request, response) => {
     _answerRequest({ request, response, state }).catch((error: unknown) => {
       process.stderr.write(`fake S3: ${String(error)}\n`);
       sendFakeS3Error({
@@ -265,6 +285,7 @@ export function createFakeS3Server(
       });
     });
   });
+  return Object.assign(server, { getLedger: ledger.snapshot });
 }
 
 // Only when Node was pointed at this file, which is how Playwright's

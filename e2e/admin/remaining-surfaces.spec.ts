@@ -36,6 +36,9 @@ async function _prepareRemainingSurface({
   await page.goto(target);
   if (state === "removal-ask") {
     await page
+      .getByRole("button", { name: "More video details", exact: true })
+      .click();
+    await page
       .getByRole("link", {
         name: "Ask for this to come down",
         exact: true,

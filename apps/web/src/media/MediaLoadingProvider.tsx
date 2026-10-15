@@ -31,6 +31,8 @@ export function MediaLoadingProvider({
   }, [resources, revision]);
   useEffect(() => {
     resources.navigation.finishRoute();
+  }, [resources, committedSurfaceKey]);
+  useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState !== "visible") {
         resources.clearWork();

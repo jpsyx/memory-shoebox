@@ -51,6 +51,17 @@ async function _getClippedEdgesFromPrint(print: Locator): Promise<string[]> {
         'button[data-item-id="00000000-0000-4000-8000-000000000011"]',
       );
       await expect(print).toBeVisible();
+      await expect
+        .poll(() => {
+          return print.locator("img").evaluate((image: HTMLImageElement) => {
+            return (
+              Boolean(image.getAttribute("src")) &&
+              image.complete &&
+              image.naturalWidth > 0
+            );
+          });
+        })
+        .toBe(true);
       await print.locator("img").evaluate(async (image: HTMLImageElement) => {
         await image.decode();
       });

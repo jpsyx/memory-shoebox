@@ -18,6 +18,11 @@ export function SelectedMediaPreview({ preview }: Readonly<Props>): ReactNode {
             preview.media.poster === null ? [] : [preview.media.poster],
         };
   return (
-    <PhotoFrame key={preview.itemId} itemId={preview.itemId} media={media} />
+    <PhotoFrame
+      key={preview.itemId}
+      itemId={preview.itemId}
+      media={media}
+      presentation="preview"
+    />
   );
 }

@@ -95,6 +95,31 @@ function _narrowArchiveSelection(
     });
   });
 }
+it("composes rapid pure filter intents through the existing picker setter", async () => {
+  _installArchiveAnswers();
+  const { result } = renderAttachmentController("archive");
+  await waitFor(() => {
+    expect(result.current.entries).toHaveLength(1);
+  });
+  act(() => {
+    result.current.onSelectionChange((current) => {
+      return { ...current, tags: [...current.tags, "home"] };
+    });
+    result.current.onSelectionChange((current) => {
+      return { ...current, tags: [...current.tags, "beach"] };
+    });
+    result.current.onSelectionChange((current) => {
+      return { ...current, from: "2026-07-01" };
+    });
+  });
+  expect(result.current.selection).toEqual({
+    tags: ["home", "beach"],
+    people: [],
+    from: "2026-07-01",
+    until: undefined,
+  });
+  expect(result.current.chosenCount).toBe(0);
+});
 it("keeps shared burst identities distinct and advances both archive streams through an empty page", async () => {
   const responses = _installArchiveAnswers();
   const { result } = renderAttachmentController("archive");

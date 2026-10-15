@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { getFirstFrameFromBurstOpening } from "../support/itemHelpers.ts";
 import { seedArchiveForSpec } from "../support/archive.ts";
 import { expect, test } from "../support/signedIn.ts";
 
@@ -26,14 +27,11 @@ async function _pressUntilFocused(
   options: Readonly<PressUntilFocusedOptions>,
 ): Promise<void> {
   const { page, locator, key = "Tab", limit = 250 } = options;
+  await expect(locator).toHaveCount(1);
   for (let press = 0; press < limit; press += 1) {
-    const isFocused = await locator
-      .evaluate((element) => {
-        return element === document.activeElement;
-      })
-      .catch(() => {
-        return false;
-      });
+    const isFocused = await locator.evaluateAll((elements) => {
+      return elements.length === 1 && elements[0] === document.activeElement;
+    });
     if (isFocused) {
       return;
     }
@@ -49,20 +47,18 @@ async function _pressUntilFocused(
  */
 async function _openSecondFrameByKeyboard(page: Page): Promise<void> {
   await page.goto("/?at=2026-09-26");
-  const stack = page.locator("[data-burst-id]").first();
-  await _pressUntilFocused({
+  const { frame, itemId } = await getFirstFrameFromBurstOpening({
     page,
-    locator: stack.getByRole("button").first(),
+    activate: async (cover) => {
+      await _pressUntilFocused({ page, locator: cover });
+      await expect(cover).toBeFocused();
+      await page.keyboard.press("Enter");
+    },
   });
+  await _pressUntilFocused({ page, locator: frame });
+  await expect(frame).toBeFocused();
   await page.keyboard.press("Enter");
-  // The fan opens once its frames arrive. Until then the cover is the only
-  // print in the stack, it still has focus, and it matches the frame below.
-  await expect(page.getByRole("button", { name: "Collapse" })).toBeVisible();
-  const firstFrame = stack
-    .getByRole("button", { name: /26 September 2026/ })
-    .first();
-  await _pressUntilFocused({ page, locator: firstFrame });
-  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/items/${itemId}$`, "u"));
   await expect(page.getByText("Photo 1 of 45", { exact: true })).toBeVisible();
 
   const strip = page.getByRole("navigation", { name: /^45 photos/ });
@@ -87,40 +83,29 @@ test("moves along a burst with the arrow keys, keeping the strip's focus", async
   ).toBeFocused();
 });
 
-test("keeps Shift+Tab inside the portalled reactions picker", async ({
+test("reaches inline photo reactions with Shift+Tab and keeps focus after choosing", async ({
   adminPage,
 }) => {
   await _openSecondFrameByKeyboard(adminPage);
-
+  const love = adminPage.getByRole("button", {
+    name: "React: Love",
+    exact: true,
+  });
   await _pressUntilFocused({
     page: adminPage,
-    locator: adminPage.getByRole("button", { name: "React", exact: true }),
+    locator: love,
     key: "Shift+Tab",
   });
+  await expect(love).toBeFocused();
   await adminPage.keyboard.press("Enter");
-  const picker = adminPage.getByRole("dialog");
-  const like = picker.getByRole("button", { name: "Like" });
-  await expect(like).toBeFocused();
-  // Trapped, not just moved in: back from the first choice wraps inside the
-  // picker rather than escaping to the page it was portalled out of.
-  await adminPage.keyboard.press("Shift+Tab");
-  await expect
-    .poll(() => {
-      return picker.evaluate((dialog) => {
-        return dialog.contains(document.activeElement);
-      });
-    })
-    .toBe(true);
+  await expect(love).toHaveAttribute("aria-pressed", "true");
+  await expect(love).toBeFocused();
   await adminPage.keyboard.press("Tab");
-  await expect(like).toBeFocused();
-  await adminPage.keyboard.press("Tab");
-  await adminPage.keyboard.press("Enter");
-  // The picker's own "Love" stays in the page for the length of its exit
-  // transition, so the row is read once the picker has gone.
-  await expect(picker).toHaveCount(0);
   await expect(
-    adminPage.getByRole("button", { name: "Love", exact: true }),
-  ).toBeVisible();
+    adminPage.getByRole("button", { name: "React: Like", exact: true }),
+  ).toBeFocused();
+  await adminPage.keyboard.press("Shift+Tab");
+  await expect(love).toBeFocused();
 });
 
 test("hands focus back to the comment field once a keyboard-sent comment lands", async ({
@@ -128,11 +113,13 @@ test("hands focus back to the comment field once a keyboard-sent comment lands",
 }) => {
   await _openSecondFrameByKeyboard(adminPage);
 
-  const field = adminPage.getByRole("textbox", { name: "Say something" });
+  const field = adminPage.getByRole("textbox", { name: "Write a comment" });
   await _pressUntilFocused({ page: adminPage, locator: field });
   await adminPage.keyboard.type("Typed without a mouse.");
   await adminPage.keyboard.press("Tab");
-  await expect(adminPage.getByRole("button", { name: "Send" })).toBeFocused();
+  await expect(
+    adminPage.getByRole("button", { name: "Post comment" }),
+  ).toBeFocused();
   await adminPage.keyboard.press("Enter");
   await expect(adminPage.getByText("Typed without a mouse.")).toBeVisible();
   // Send kept focus while it sent, and hands it to the field once the comment
@@ -158,20 +145,38 @@ test("pins a comment to a moment of a video", async ({ adminPage }) => {
   await _pressUntilFocused({
     page: adminPage,
     locator: adminPage.getByRole("button", {
-      name: "Pin a comment to this moment",
+      name: "Comment on this moment",
     }),
   });
   await adminPage.keyboard.press("Enter");
 
   await _pressUntilFocused({
     page: adminPage,
-    locator: adminPage.getByRole("textbox", { name: "Say something at 0:03" }),
+    locator: adminPage.getByRole("textbox", { name: "Write a comment" }),
   });
+  await expect(
+    adminPage.getByRole("button", {
+      name: "Comment at 0:03; switch to whole video",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
   await adminPage.keyboard.type("Watch his hand here.");
-  await adminPage.keyboard.press("Tab");
+  await _pressUntilFocused({
+    page: adminPage,
+    locator: adminPage.getByRole("button", {
+      name: "Post comment",
+      exact: true,
+    }),
+  });
   await adminPage.keyboard.press("Enter");
 
   await expect(
-    adminPage.getByRole("button", { name: /comment at 0:03$/u }),
+    adminPage
+      .getByRole("article")
+      .filter({ hasText: "Watch his hand here." })
+      .getByRole("button", { name: "0:03 Go to this moment", exact: true }),
+  ).toBeVisible();
+  await expect(
+    adminPage.getByRole("button", { name: /^Seek to 0:03:/u }),
   ).toBeVisible();
 });

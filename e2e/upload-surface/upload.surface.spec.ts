@@ -36,10 +36,21 @@ test("surface 8 sends 264 distinct mixed files independently of ticks and queues
   ).toBeEnabled({ timeout: 30_000 });
   const before = await getSurfaceSessionFromRequest({ request: page.request });
   expect(before.files).toHaveLength(265);
+  const overview = page.getByRole("region", {
+    name: "What is going up",
+    exact: true,
+  });
+  await expect(overview.getByText("159", { exact: true })).toBeVisible();
+  await expect(overview.getByText("Photos", { exact: true })).toBeVisible();
+  await expect(overview.getByText("105", { exact: true })).toBeVisible();
+  await expect(overview.getByText("Videos", { exact: true })).toBeVisible();
+  expect(
+    before.files.filter((file) => {
+      return file.state === "refused";
+    }),
+  ).toHaveLength(1);
   await expect(
-    page
-      .getByRole("region", { name: "What is going up", exact: true })
-      .getByText("265", { exact: true }),
+    page.getByRole("button", { name: "Remove not-media.pdf", exact: true }),
   ).toBeVisible();
   await _applyMixedBatchLabels(page);
   const { reads, visibilityWrites } = _observeMixedBatchRequests({

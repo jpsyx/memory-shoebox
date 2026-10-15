@@ -164,3 +164,146 @@ it("preserves the reading item when a preceding measurement arrives before struc
     vi.unstubAllGlobals();
   }
 });
+
+it("waits for a newly measured header position to reach the DOM before consuming its structural anchor", async () => {
+  const cover = makeItem({ itemId: "cover" });
+  const day = makeDay({ items: [cover] });
+  const ordinary: TimelineRenderRow[] = [
+    { key: "day", kind: "header", day, items: [], itemIds: [], seedBase: 0 },
+    {
+      key: "cover",
+      kind: "media",
+      day,
+      items: [cover],
+      itemIds: ["cover"],
+      seedBase: 0,
+    },
+    ...Array.from({ length: 12 }, (_, index) => {
+      return {
+        key: `tail-${index}`,
+        kind: "media" as const,
+        day,
+        items: [makeItem({ itemId: `tail-${index}` })],
+        itemIds: [`tail-${index}`],
+        seedBase: index + 1,
+      };
+    }),
+  ];
+  const expanded: TimelineRenderRow[] = [
+    ordinary[0]!,
+    {
+      key: "fan-header",
+      kind: "header",
+      day,
+      items: [cover],
+      itemIds: [],
+      seedBase: 0,
+      isFanHeader: true,
+      burstId: "burst",
+    },
+    { ...ordinary[1]!, burstId: "burst" },
+    ...ordinary.slice(2),
+  ];
+  const heights = new Map([
+    ["day", 180],
+    ["cover", 160],
+    ["fan-header", 102],
+    ["fan-first", 148],
+  ]);
+  vi.stubGlobal("innerWidth", 300);
+  vi.stubGlobal("innerHeight", 300);
+  vi.stubGlobal("scrollY", 100);
+  vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+    4000,
+  );
+  vi.spyOn(window, "scrollTo").mockImplementation(
+    (options: number | ScrollToOptions) => {
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: typeof options === "object" ? (options.top ?? 0) : options,
+      });
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      const row = this.closest<HTMLElement>("[data-timeline-row]");
+      const top = Number.parseFloat(row?.style.top ?? "0") - window.scrollY;
+      const height = row
+        ? (heights.get(row.dataset.timelineRow!) ?? 100)
+        : 4000;
+      return {
+        x: 0,
+        y: top,
+        top,
+        bottom: top + height,
+        left: 0,
+        right: 300,
+        width: 300,
+        height,
+        toJSON() {
+          return {};
+        },
+      };
+    },
+  );
+  function Harness({ rows }: { rows: TimelineRenderRow[] }) {
+    const element = useRef<HTMLDivElement>(null);
+    const current = useTimelineWindow({
+      rows,
+      viewKey: "view",
+      element,
+      tileWidth: 200,
+      viewportWidth: 300,
+      isMobile: false,
+    });
+    return (
+      <div ref={element}>
+        {current.positions.map((position) => {
+          const row = rows[position.index]!;
+          return (
+            <div
+              key={row.key}
+              data-index={position.index}
+              data-timeline-row={row.key}
+              ref={current.virtualizer.measureElement}
+              style={{
+                top:
+                  current.measurements[position.index]!.start -
+                  current.virtualizer.options.scrollMargin,
+              }}
+            >
+              {row.itemIds.map((id) => {
+                return <button key={id} data-item-id={id} />;
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  try {
+    const rendered = render(<Harness rows={ordinary} />);
+    const initial = rendered.container
+      .querySelector<HTMLElement>('[data-item-id="cover"]')!
+      .getBoundingClientRect().top;
+    rendered.rerender(<Harness rows={expanded} />);
+    await act(async () => {
+      await new Promise<void>((done) => {
+        return requestAnimationFrame(() => {
+          return requestAnimationFrame(() => {
+            return done();
+          });
+        });
+      });
+    });
+    rendered.rerender(<Harness rows={expanded} />);
+    const current = rendered.container
+      .querySelector<HTMLElement>('[data-item-id="cover"]')!
+      .getBoundingClientRect().top;
+    expect(Math.abs(current - initial)).toBeLessThanOrEqual(2);
+    rendered.unmount();
+  } finally {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  }
+});

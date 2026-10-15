@@ -4,6 +4,8 @@ import type { Database } from "../../../src/db/types/db.types.ts";
 
 /**
  * Every table the seed owns, cleared before it writes, in deletion order.
+ * Removal history goes before items: open requests require a live item.
+ * Identity/session rows and frozen outbound mail remain outside this reset.
  *
  * `upload_sessions` is last and has to be: `bursts.upload_session_id`
  * restricts deleting a session a burst still points at, and while
@@ -17,6 +19,7 @@ const OWNED_TABLES = [
   "item_people",
   "item_tags",
   "item_renditions",
+  "removal_requests",
   "items",
   "bursts",
   "milestones",

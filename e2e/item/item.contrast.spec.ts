@@ -4,6 +4,8 @@ import { getContrastFailuresFromPage } from "../support/getContrastFailuresFromP
 import { makeReportFromContrastFailures } from "../support/makeReportFromContrastFailures.ts";
 import {
   openFirstPhotographOn,
+  openPhotoDetails,
+  closePhotoDetails,
   openSeededVideo,
 } from "../support/itemHelpers.ts";
 import { expect, test } from "../support/signedIn.ts";
@@ -69,6 +71,7 @@ async function _sweepItemSurfaces(
 ): Promise<void> {
   const { page, condition } = options;
   await openFirstPhotographOn({ page, capturedOn: "2026-09-23" });
+  await openPhotoDetails(page);
   await expect(
     page.getByRole("region", { name: "Who can see this" }),
   ).toBeVisible();
@@ -83,6 +86,7 @@ async function _sweepItemSurfaces(
     where: `one photo, two editors open (${condition})`,
   });
 
+  await closePhotoDetails(page);
   await openSeededVideo(page);
   await expect(
     page.getByRole("slider", { name: "Where in the video" }),

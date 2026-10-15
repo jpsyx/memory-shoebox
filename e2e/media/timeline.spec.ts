@@ -554,6 +554,151 @@ for (const viewport of [
 ]) {
   test.describe(`${viewport.width}px expanded fan`, () => {
     test.use({ viewport });
+    test("packs mismatched original and thumbnail aspects into one physical line through loading and failure", async ({
+      page,
+      catalog,
+    }) => {
+      const cover = await catalog.database
+        .selectFrom("items")
+        .select("burst_id")
+        .where("id", "=", catalog.itemIds[3]!)
+        .executeTakeFirstOrThrow();
+      for (let index = 100; index < 115; index++)
+        await catalog.database
+          .updateTable("items")
+          .set({ burst_id: cover.burst_id, burst_index: index - 95 })
+          .where("id", "=", catalog.itemIds[index]!)
+          .execute();
+      await catalog.database
+        .updateTable("items")
+        .set({ width: 4032, height: 3024 })
+        .where("burst_id", "=", cover.burst_id)
+        .execute();
+      let release!: () => void;
+      let started!: () => void;
+      const held = new Promise<void>((done) => {
+        release = done;
+      });
+      const requested = new Promise<void>((done) => {
+        started = done;
+      });
+      let itemId = "";
+      await page.route(
+        `**/api/bursts/${cover.burst_id}/frames`,
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          expect(body.frames).toHaveLength(20);
+          const frame = body.frames.find((entry: { position: number }) => {
+            return entry.position === 2;
+          });
+          expect([
+            frame.width,
+            frame.height,
+            frame.thumb.width,
+            frame.thumb.height,
+          ]).toEqual([4032, 3024, 400, 267]);
+          itemId = frame.itemId;
+          await page.route(frame.thumb.url, async (imageRoute) => {
+            started();
+            await held;
+            await imageRoute.continue();
+          });
+          await route.fulfill({ response });
+        },
+      );
+      await page.goto("/api/media-evidence/session");
+      await page
+        .locator(`[data-burst-id="${cover.burst_id}"] button`)
+        .first()
+        .click();
+      await requested;
+      const image = page.locator(`button[data-item-id="${itemId}"] img`);
+      const geometry = async () => {
+        return page
+          .locator(`[data-fan-row="${cover.burst_id}"]`)
+          .evaluateAll((rows, targetId) => {
+            return {
+              lines: rows.flatMap((row) => {
+                const buttons = [
+                  ...row.querySelectorAll<HTMLElement>("button[data-item-id]"),
+                ];
+                if (!buttons.length) return [];
+                return [
+                  {
+                    key: (row as HTMLElement).dataset.timelineRow,
+                    tops: buttons.map((button) => {
+                      let child: HTMLElement = button;
+                      while (child.parentElement !== row) {
+                        if (!child.parentElement)
+                          throw new Error("Frame escaped its owning row");
+                        child = child.parentElement;
+                      }
+                      return child.offsetTop;
+                    }),
+                    ids: buttons.map((button) => {
+                      return button.dataset.itemId;
+                    }),
+                  },
+                ];
+              }),
+              image: (() => {
+                const currentImage = document.querySelector<HTMLImageElement>(
+                  `button[data-item-id="${targetId}"] img`,
+                )!;
+                const rectangle = currentImage.getBoundingClientRect();
+                return {
+                  height: rectangle.height,
+                  width: rectangle.width,
+                  rowHeight: currentImage
+                    .closest("[data-timeline-row]")!
+                    .getBoundingClientRect().height,
+                  complete: currentImage.complete,
+                  naturalWidth: currentImage.naturalWidth,
+                };
+              })(),
+            };
+          }, itemId);
+      };
+      const pending = await geometry();
+      expect(pending.image.complete).toBe(false);
+      release();
+      await expect
+        .poll(() => {
+          return image.evaluate((node) => {
+            return (node as HTMLImageElement).naturalWidth;
+          });
+        })
+        .toBeGreaterThan(0);
+      const loaded = await geometry();
+      await image.evaluate((node) => {
+        (node as HTMLImageElement).src = "/api/media-evidence/missing-image";
+      });
+      await expect
+        .poll(() => {
+          return image.evaluate((node) => {
+            return (
+              (node as HTMLImageElement).complete &&
+              (node as HTMLImageElement).naturalWidth === 0
+            );
+          });
+        })
+        .toBe(true);
+      const failed = await geometry();
+      await writeFile(
+        test.info().outputPath("fan-line-geometry.json"),
+        JSON.stringify({ pending, loaded, failed }, null, 2),
+      );
+      for (const sample of [pending, loaded, failed]) {
+        expect(sample.lines.length).toBeGreaterThan(1);
+        for (const line of sample.lines)
+          expect(new Set(line.tops).size).toBe(1);
+        for (const key of ["height", "width", "rowHeight"] as const)
+          expect(
+            Math.abs(sample.image[key] - pending.image[key]),
+          ).toBeLessThanOrEqual(0.5);
+      }
+    });
     test("bounds 200 frames and preserves the focused DOM node through resize and selection", async ({
       page,
       catalog,

@@ -1,9 +1,33 @@
-import type { MemberRole, ItemSummary } from "@memory-shoebox/shared";
+import {
+  bootstrapResponseSchema,
+  type BootstrapResponse,
+  type MeResponse,
+  type MemberRole,
+  type ItemSummary,
+} from "@memory-shoebox/shared";
 import { routeLocalVisualMedia } from "../routeLocalVisualMedia.ts";
 import type { Page } from "@playwright/test";
 import { makeItemSummaryFromOverrides } from "../../../../apps/web/src/testing/askingAndOccasionsFixtureHelpers.ts";
 import { prepareVisualOccasion } from "./prepareVisualOccasion.ts";
 import { prepareVisualRemoval } from "./prepareVisualRemoval.ts";
+type SignedInBaseline = BootstrapResponse & { account: MeResponse };
+// A controlled page owns one actual baseline; separate pages validate independently.
+const baselines = new WeakMap<Page, SignedInBaseline>();
+
+async function _getBootstrapFromPage(page: Page): Promise<SignedInBaseline> {
+  const cached = baselines.get(page);
+  if (cached) return cached;
+  const response = await page.request.get("/api/bootstrap");
+  if (response.status() !== 200)
+    throw new Error(`Controlled baseline returned ${response.status()}`);
+  const bootstrap = bootstrapResponseSchema.parse(await response.json());
+  if (bootstrap.setup.isRequired || bootstrap.account === null)
+    throw new Error("Controlled visuals require a complete signed-in baseline");
+  const baseline = { ...bootstrap, account: bootstrap.account };
+  baselines.set(page, baseline);
+  return baseline;
+}
+
 type ControlledVisualOptions = {
   page: Page;
   surface: string;
@@ -96,15 +120,26 @@ export async function showControlledVisualState(
   const { page, surface, state, scheme } = options;
   await page.unrouteAll({ behavior: "wait" });
   await routeLocalVisualMedia(page);
-  const me = await (await page.request.get("/api/me")).json();
+  const baseline = await _getBootstrapFromPage(page);
+  const me = baseline.account;
   const member = me.me.member;
   const { actorRole, item } = _makeVisualActorAndItem({
     member,
     surface,
     state,
   });
+  const account = { ...me, me: { ...me.me, role: actorRole } };
   await page.route("**/api/me", async (route) => {
-    await route.fulfill({ json: { ...me, me: { ...me.me, role: actorRole } } });
+    await route.fulfill({ json: account });
+  });
+  await page.route("**/api/bootstrap", async (route) => {
+    await route.fulfill({
+      json: {
+        ...baseline,
+        account,
+        progress: actorRole === "admin" ? baseline.progress : null,
+      },
+    });
   });
   await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
   await page.addInitScript(

@@ -39,7 +39,8 @@ function _getFanRows(
     let usedWidth = 0;
     while (end < frames.length) {
       const frame = frames[end]!;
-      const width = 112 * (frame.width / frame.height) + 8 - 25.6;
+      const presentation = frame.thumb ?? frame;
+      const width = 112 * (presentation.width / presentation.height) + 8 - 25.6;
       if (
         end > frameOffset &&
         (usedWidth + width > (options.fanWidth ?? 600) ||

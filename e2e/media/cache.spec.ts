@@ -142,22 +142,29 @@ async function _measureTimeline(options: {
   const started = performance.now();
   await page.goto("/");
   await expect(page.locator('[id="day-2026-10-13"]')).toBeAttached();
-  await expect(page.locator("[data-item-id], [data-burst-id]")).toHaveCount(
-    992,
-  );
+  await expect
+    .poll(() => {
+      return responses[0]?.items;
+    })
+    .toBe(992);
+  await expect
+    .poll(() => {
+      return page.locator("[data-item-id], [data-burst-id]").count();
+    })
+    .toBeLessThanOrEqual(200);
   const firstDayMs = performance.now() - started;
   const firstDayNodes = await page.locator("img,video,canvas").count();
   await Array.from({ length: 6 }).reduce(async (prior) => {
     await prior;
-    const dayCount = await page.locator('[id^="day-"]').count();
+    const responseCount = responses.length;
     await page.evaluate(() => {
       window.scrollTo(0, document.documentElement.scrollHeight);
     });
     await expect
       .poll(() => {
-        return page.locator('[id^="day-"]').count();
+        return responses.length;
       })
-      .toBeGreaterThan(dayCount);
+      .toBeGreaterThan(responseCount);
   }, Promise.resolve());
   stop();
   return {
@@ -191,7 +198,25 @@ test("reuses signed media on ordinary reload while recording cache, range and na
     .where("captured_on", "=", "2026-10-13")
     .executeTakeFirstOrThrow();
   expect(day.total).toBe(1000);
+  const apiRequests: Array<{ method: string; path: string }> = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.origin === catalog.origin && url.pathname.startsWith("/api/")) {
+      apiRequests.push({ method: request.method(), path: url.pathname });
+    }
+  });
   const navigation = await measureMediaNavigation(page);
+  const navigationApiRequests = [...apiRequests];
+  const actualSelections = 62;
+  const opened = await catalog.database
+    .selectFrom("item_views")
+    .select(({ fn }) => {
+      return fn.sum<number>("open_count").as("total");
+    })
+    .where("member_id", "=", catalog.memberId)
+    .executeTakeFirstOrThrow();
+  const openDelta = Number(opened.total ?? 0);
+  expect(openDelta).toBe(actualSelections);
   expect(navigation.navigationMs).toHaveLength(30);
   expect(navigation.firstImageMs).toBeGreaterThan(0);
   expect(navigation.videoStartupMs).toBeGreaterThan(0);
@@ -253,6 +278,9 @@ test("reuses signed media on ordinary reload while recording cache, range and na
       ],
     },
     navigation,
+    actualSelections,
+    openDelta,
+    navigationApiRequests,
     longTasksApiSupported,
     navigationTransfers,
     ordinaryReload,

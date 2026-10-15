@@ -9,6 +9,8 @@ import type {
   PrefetchEnvironment,
   SpeculativeMedia,
   SpeculativeMediaLoader,
+  MediaDestination,
+  MediaPromotion,
 } from "./mediaPrefetch.types";
 
 type Operation = {
@@ -16,17 +18,24 @@ type Operation = {
   controller: AbortController;
   generation: number;
   foregroundOwners: number;
+  epoch: unknown;
 };
+type RetainedMedia = {
+  candidate: PrefetchCandidate;
+  media: SpeculativeMedia;
+  epoch: unknown;
+};
+type Handoff = RetainedMedia & { owners: number };
 type SchedulerState = {
   load: SpeculativeMediaLoader;
   clock: () => number;
+  getEpoch: () => unknown;
   candidates: PrefetchCandidate[];
   environment: PrefetchEnvironment | undefined;
   active: Map<string, Operation>;
   completed: Set<string>;
-  retained:
-    | { candidate: PrefetchCandidate; media: SpeculativeMedia }
-    | undefined;
+  retained: RetainedMedia | undefined;
+  handoff: Handoff | undefined;
   generation: number;
   readyAt: number;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -63,6 +72,7 @@ function _getReservationsFromState(state: Readonly<SchedulerState>): {
   if (state.retained !== undefined) {
     candidates.push(state.retained.candidate);
   }
+  if (state.handoff !== undefined) candidates.push(state.handoff.candidate);
   return candidates.reduce(
     (total, candidate) => {
       const cost = getPrefetchCostsFromCandidate(candidate);
@@ -90,6 +100,7 @@ function _settle(
     !operation.controller.signal.aborted &&
     operation.foregroundOwners === 0 &&
     operation.generation === state.generation &&
+    operation.epoch === state.getEpoch() &&
     desired !== undefined;
   if (isCurrent) {
     state.completed.add(id);
@@ -101,7 +112,11 @@ function _settle(
     media !== undefined
   ) {
     _dropRetained(state);
-    state.retained = { candidate: operation.candidate, media };
+    state.retained = {
+      candidate: operation.candidate,
+      media,
+      epoch: operation.epoch,
+    };
   } else {
     media?.release();
   }
@@ -117,6 +132,7 @@ function _start(
     controller: new AbortController(),
     generation: state.generation,
     foregroundOwners: 0,
+    epoch: state.getEpoch(),
   };
   state.active.set(candidate.source.renditionId, operation);
   try {
@@ -225,7 +241,38 @@ function _schedule(
   );
 }
 
-function _promote(state: SchedulerState, id: string): () => void {
+function _matchesHandoff(
+  state: SchedulerState,
+  retained: RetainedMedia | undefined,
+  destination: Readonly<MediaDestination>,
+): boolean {
+  return (
+    retained !== undefined &&
+    retained.epoch === state.getEpoch() &&
+    retained.candidate.itemId === destination.itemId &&
+    retained.candidate.source.renditionId === destination.source?.renditionId &&
+    retained.candidate.source.url === destination.source?.url &&
+    Date.parse(retained.candidate.source.expiresAt) > state.clock() + 60_000 &&
+    retained.media.decodedPhoto?.getImage() !== undefined
+  );
+}
+
+function _releaseHandoff(
+  state: SchedulerState,
+  handoff: Handoff | undefined,
+): void {
+  if (handoff !== undefined && state.handoff === handoff) {
+    state.handoff = undefined;
+    handoff.media.release();
+    _pump(state);
+  }
+}
+
+function _promote(
+  state: SchedulerState,
+  destination: Readonly<MediaDestination>,
+): MediaPromotion {
+  const id = destination.source?.renditionId ?? "";
   const operation = state.active.get(id);
   if (operation !== undefined) {
     operation.foregroundOwners += 1;
@@ -233,25 +280,53 @@ function _promote(state: SchedulerState, id: string): () => void {
   state.candidates = state.candidates.filter((candidate) => {
     return candidate.source.renditionId !== id;
   });
-  if (state.retained?.candidate.source.renditionId === id) {
-    _dropRetained(state);
+  if (
+    state.handoff === undefined &&
+    _matchesHandoff(state, state.retained, destination)
+  ) {
+    state.handoff = { ...state.retained!, owners: 0 };
+    state.retained = undefined;
   }
+  const handoff = _matchesHandoff(state, state.handoff, destination)
+    ? state.handoff
+    : undefined;
+  if (handoff !== undefined) handoff.owners += 1;
+  return _makePromotionFromOwners(state, destination, operation, handoff);
+}
+
+function _makePromotionFromOwners(
+  state: SchedulerState,
+  destination: Readonly<MediaDestination>,
+  operation: Operation | undefined,
+  handoff: Handoff | undefined,
+): MediaPromotion {
   let isReleased = false;
-  return () => {
-    if (isReleased || operation === undefined) {
-      return;
-    }
-    isReleased = true;
-    operation.foregroundOwners -= 1;
-    if (operation.foregroundOwners === 0) {
-      operation.controller.abort();
-    }
+  return {
+    get decodedPhoto() {
+      return !isReleased &&
+        state.handoff === handoff &&
+        _matchesHandoff(state, handoff, destination)
+        ? handoff?.media.decodedPhoto
+        : undefined;
+    },
+    finishSelectedDecode: () => {
+      _releaseHandoff(state, handoff);
+    },
+    release: () => {
+      if (isReleased) return;
+      isReleased = true;
+      if (operation !== undefined && --operation.foregroundOwners === 0)
+        operation.controller.abort();
+      if (handoff !== undefined && --handoff.owners === 0)
+        _releaseHandoff(state, handoff);
+    },
   };
 }
 
 function _dispose(state: SchedulerState): void {
   state.disposed = true;
   _clear(state);
+  _releaseHandoff(state, state.handoff);
   // A disposed member has no remaining foreground owner for a decode.
   state.active.forEach((operation) => {
     operation.controller.abort();
@@ -263,15 +338,22 @@ export function createMediaPrefetchScheduler(
   options: Readonly<{
     load: SpeculativeMediaLoader;
     clock: () => number;
+    getEpoch?: () => unknown;
   }>,
 ): MediaPrefetchScheduler {
   const state: SchedulerState = {
     ...options,
+    getEpoch:
+      options.getEpoch ??
+      (() => {
+        return undefined;
+      }),
     candidates: [],
     environment: undefined,
     active: new Map(),
     completed: new Set(),
     retained: undefined,
+    handoff: undefined,
     generation: 0,
     readyAt: 0,
     timer: undefined,

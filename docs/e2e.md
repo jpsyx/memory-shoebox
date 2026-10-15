@@ -128,36 +128,40 @@ suite shares that one bucket**, because every request in a run comes from
 `127.0.0.1`, while the per-address caps are spent two at a time by specs that
 each own their own address.
 
-`e2e/support/signIn.ts` counts the run's mints against the rule the server
-actually applies, read from `RATE_LIMIT_RULES` rather than copied into a
-comment, and throws at the mint that would exceed it. Without that guard the
-budget was enforced by prose: the total was right, but only because somebody
-had added it up by hand across two files. A sign-in added anywhere would spend
-the budget and surface as a bare `toBeVisible` timeout on the code field, in
-whichever spec ran next, with the real cause visible only in the trace.
-
-The count is a floor rather than a mirror, since a worker replaced mid-run
-starts from zero while the server's bucket does not. Under-counting costs
-nothing that was not already being paid: it lands the failure back on the
-`429`.
+`e2e/support/signIn.ts` checks each worker's request count against the actual
+`RATE_LIMIT_RULES` value. It is only a lower bound for the complete run:
+replacement workers and distinct Playwright projects have separate module
+state while the server retains its bucket. The positive form driver also
+requires the actual 202 response and reports any 429 with Retry-After.
 
 **Every way a test asks for a code goes through that file**, including the
 keyboard-only one. A helper that reached past the driver to mint its own code
 put the guard one behind the server, which is exactly the failure it exists to
 prevent.
 
-**The static expected full-suite budget is 20 of 20 sign-in codes, with no
-spare capacity.** This adds two cached Step 8b actors to the documented existing
-18; Task 7 ran focused and impacted commands, not an unfiltered full-suite mint
-count. Only
-`POST /api/auth/sign-in-codes` and its resend twin carry
-`signInCodeRequestPerIp` (`apps/server/src/routes/auth.ts`), and every request
-to either one goes through `support/signIn.ts`. The eighteenth is
-`upload.setup.ts`, which signs the uploader in once for both upload projects:
-a sign-in in each would have cost two. Step 8b spends the remaining two on one
-cached asker and one cached uploader; its admin reuses the existing fixture.
-Step 6b's twenty tests in `e2e/item/` spend none of them: every one takes the
-shared admin.
+**The complete intended suite uses 20 of 20 explicit sign-in requests, with no
+spare capacity.** The earlier calculation omitted the two real expired-browser
+reauthentication flows. A complete run reached the limit before those flows;
+sharing the three non-revoking account cases removes exactly two setup mints.
+
+| Owner                                                   | Explicit requests |
+| ------------------------------------------------------- | ----------------: |
+| Shared admin and viewer                                 |                 2 |
+| Dedicated name, switches and admin-door account         |                 1 |
+| Actual account device/sign-out flows                    |                 4 |
+| Asking/removal asker and uploader                       |                 2 |
+| Dedicated sign-in behavior cases                        |                 8 |
+| Upload setup shared by both engines                     |                 1 |
+| Actual expired-browser reauthentication in both engines |                 2 |
+
+The three account cases use `my-name@example.com`, separate from the mutable
+shared admin. Each receives a fresh validated context. Name changes do not
+change notification defaults, notification changes do not change the empty
+name, and the doors case only reads; all original default, persistence and
+navigation assertions remain. Device revocation cases retain distinct real
+sessions. Only `POST /api/auth/sign-in-codes` and its resend twin carry
+`signInCodeRequestPerIp`; the automatic wrong-code replacement is not one of
+these explicit requests.
 
 **A spec that needs a session asks `e2e/support/signedIn.ts` for one.** It
 exports `test` with two extra fixtures, `adminPage` and `viewerPage`, each a
@@ -491,14 +495,27 @@ The large batch declares 264 distinct valid mixed originals and a refused PDF,
 applies a tag and person through the UI, leaves Everyone untouched and sends all
 accepted files independently of ticks. Assertions read the catalog, eligible
 recipient outbox rows and fake-S3 log. Completion drives progress and one final
-whole-session refresh, with no per-file detail polling. Runtime fixtures insert
-JPEG COM segments or ISO BMFF `free` boxes while retaining capture headers. A new
-nonce per invocation prevents later cases from accidentally testing deduplication.
-Co-named Vitest tests check uniqueness and unchanged parsed capture metadata.
+whole-session refresh, with no per-file detail polling. Runtime surface fixtures
+encode bounded, pixel-distinct photos from the committed sources while retaining
+their formats and capture dates; videos retain their payload with a unique ISO
+BMFF `free` box. Each invocation has a fresh nonce. Unit coverage stubs the
+external encoder and verifies arguments, identities and metadata contracts;
+native eligibility, previews and full-batch acceptance prove actual decoding.
+These smaller surface images do not replace the original codec benchmarks.
+The person-label helper verifies the accepted pill and closes the focused picker
+with Escape before clicking the unchanged bulk submit button. Tab can focus a
+long native scrollable options list and leave it open over that button. The
+helper requires the picker collapsed, the modal open and the pill retained; tag
+entry keeps its existing Tab action.
 
-Recovery closes the real tab after two completions, verifies saved edits and
-visibility plus the complete missing list, and re-picks the whole batch. Landed
-file ids must never appear in later bucket requests. Separate cases distinguish
+Recovery closes the real tab after two completions and verifies saved edits,
+visibility and the complete missing list. An independent native Blob transaction
+probe determines whether originals can persist: supported storage must restore
+all 16 missing originals and Resume; unsupported storage must expose its warning
+and require repicking all 18 paths. Reopened landed previews may issue GETs;
+after their actual decode and request settlement, resumed transfer must make no
+landed-object requests, and each landed original has exactly one PUT across the
+whole case. Separate cases distinguish
 failed PUTs from refused picks, prove settled retries leave the outbox unchanged,
 and abort completion requests through the normal retry budget: bytes in storage
 remain unconfirmed until the server answers. Router navigation during sending
@@ -987,7 +1004,7 @@ After building the SPA, run the isolated media harness:
 
 ```sh
 pnpm exec vitest run e2e/support/createFakeS3Server/mediaDelivery.test.ts
-pnpm build
+NODE_ENV=production pnpm build
 pnpm exec playwright test -c playwright.media.config.ts
 ```
 
@@ -1016,10 +1033,14 @@ forward actual API responses; they do not synthesize Query behavior.
 
 The settled-memory case alone opts into 10,000 items through `catalogSize`;
 other media cases retain the 5,000-item default. It samples distinct five-page
-windows after the newest response is committed, every visible image has an
+windows for every exact response 6 through 22. The deterministic first day of
+each new response is aligned to the same attainable native scroll coordinate
+near 100 px, and its exact expected/actual position is recorded and checked.
+Sampling follows only after the response is committed, every visible image has an
 assigned source and loaded natural width, tracked requests and seen writes have
-finished, intersection activity has been quiet beyond the 500 ms seen debounce,
-and active animations have settled. Its last eight windows compare identical
+finished, intersection activity has been quiet beyond the 500 ms seen deadline,
+and active animations have settled. Its exact final windows 15 through 22
+compare identical
 mounted counts and observer targets, Chromium heap range and fitted slope,
 and DOM/listener counters. WebKit CDP heap and detached-node counters are
 explicitly unavailable. This is sampled convergence, not a hard browser memory
@@ -1043,10 +1064,11 @@ previous photo held during a request cannot satisfy the timing check. Video
 requests can naturally be full 200 responses or 206 ranges depending on engine
 and codec; strict range behavior is independently checked at the HTTP boundary.
 
-Every successful run appends sanitized raw measurements to the ignored
-`tmp/media-loading/baseline.json` for subsequent comparison. These are baseline
-observations: ordinary reload bytes are recorded without asserting the future
-zero-byte caching improvement. Signing timestamps advance before reloads so
+The cache scenario appends sanitized raw measurements to the ignored
+`tmp/media-loading/baseline.json` and requires zero ordinary-reload body bytes
+within the reusable lease. Preserve the frozen pre-product file separately: later
+observations and even a passing cache case inside a failed broader run do not
+replace that baseline. Signing timestamps advance before reloads so
 same-second signatures cannot conceal redundant transfers. Ordinary reload is
 measured in both engines. Chromium also uses a genuine CDP hard reload with
 `ignoreCache: true`. WebKit hard reload remains explicitly unverified; its fresh
@@ -1056,3 +1078,109 @@ measure decoded pixel memory, and the retained 400px/1600px drawings are smaller
 encoded payloads than typical family camera photos. Timeline transfer snapshots
 cover completed or disconnected responses at the sampling point, not a full
 5,000-item media download.
+
+## Integrated media acceptance reproducibility
+
+Compile measurements with `NODE_ENV=production pnpm build`. The ordinary E2E
+configuration scopes that value to its compiler command; its actual API
+configuration remains development/fake-email with explicit no-mail injection.
+The runner rejects any catalog path other than its exact owned E2E catalog or
+any bucket endpoint other than its loopback fake endpoint before opening them.
+
+Upload surface fixtures use ImageMagick with a working HEIC encoder. Precheck
+`magick -list format` for writable HEIC support. A missing encoder fails the
+fixture generator with a diagnostic; there is no decoder stub or runtime `sips`
+dependency. The fixture-only HEIC normalizer rewrites supported local `iloc`
+base/extent offsets without changing encoded image payload or EXIF bytes, so
+`exifr` sees the original capture evidence. Unsupported versions, references,
+widths and bounds fail clearly. Ordinary unit checks mock only the external
+encoding boundary and separately parse a small owned real HEIC fixture. Native
+browser eligibility and full 264-file surface acceptance prove actual decoding.
+These small, pixel-distinct surface fixtures do not replace C4's codec baseline.
+The admin removal, bulk-delete, exit and mixed-preview cases select the committed
+source formats they need through the same generator, preserving their original
+display filenames and capture dates. Identical copied photos would correctly be
+filtered by visual deduplication and cannot establish those exact eligible counts.
+
+Engine cases snapshot existing session/item identities, retire their context and
+requests, close their own batch, then remove only newly owned case catalog items.
+They retain intentional duplicates and recovery behavior within each case and
+never delete stored objects or baseline items.
+
+Recovery first probes a separately owned native IndexedDB database, committing a
+string control and the same Blob value kind used by original persistence. That
+independent result selects a strict expected storage profile before intake; UI
+button availability never selects the path. In the measured environment Chromium
+restores all 16 missing originals and uses Resume upload. Installed WebKit 26.6
+in this environment aborts native IndexedDB Blob transactions with `UnknownError`
+while ordinary string storage works. That case asserts the pre-close warning,
+empty original store before and after reopening, 16 unavailable originals and
+repicks the original selection. Both preserve exactly two landed originals and
+finish all 18 without transferring landed files again. Display rehydration GETs
+settle against actual decoded previews before the resumed-transfer checkpoint.
+This is an environment-specific storage result, not a claim about every Safari
+version or physical iPhone.
+
+The final media prefetch evidence observes native `HTMLImageElement.decode()`
+without changing its promise or behavior. Thirty distinct forward selections
+require a live, completed off-DOM image before each move, in addition to the
+recorded 300 ms dwell. Extra precondition waits are recorded separately. Every
+selected representation must then add zero body bytes. The alternating two-item
+scenario distinguishes its first completed-native consume from later HTTP-cache
+revisits: all displays remain body-free, but a revisit can need an uncached
+thumbnail after the single decoded owner has changed direction.
+
+The fake bucket records request starts, queued body chunks, response finish and
+close independently. Per-selection request-start windows end at the next
+selection; terminal bytes are retained even when completion is later. This avoids
+counting a later request against every earlier visit to the same item. Already
+active requests retain separate post-selection chunk accounting. Final evidence
+waits for current browser requests, native decode promises and bucket responses
+to settle, then requires another full 300 ms quiet dwell. Closing the page and
+settling the bucket establishes cleanup bytes explicitly. These counters describe
+bytes written by the local fake server, not production B2 billing or packet-level
+transport measurements.
+
+Shared ordinary-suite admin and viewer sessions persist across replacement workers
+inside the current owned catalog run. The first session still comes from the real
+sign-in UI. Its storage state is written atomically with private permissions under
+`apps/server/data/e2e.db.sessions`, and is removed with the catalog run lifecycle.
+Every handed-out context reads the current account and verifies its member, email
+and role. Malformed, expired, revoked or mismatched state fails explicitly without
+requesting another code or restoring a member role. Tests that sign out, revoke or
+demote their session must keep their own session. Positive sign-in helpers report
+the actual code-response status and Retry-After instead of timing out on a field
+that a rejected request cannot display.
+
+Controlled removal-queue image failures assert the actual `Preview unavailable`
+placeholder with its accessible image name, no broken native image element, the
+exact item link and both live request actions. This checks the existing fallback
+contract without introducing a second copy variant or changing product behavior.
+
+The development archive reseed clears removal-request history before replacing
+items, including open requests and detached settled snapshots. Its migrated
+regression retains members, sessions and exact frozen outbound-mail rows while
+checking item/comment/reaction cascades. This is local fixture reset behavior;
+application deletion and production data are unchanged.
+
+Controlled visual captures observe each concrete thumbnail owner with native
+IntersectionObserver, including nested clipping. They require the exact fixture
+image count and identity, then actual decode for every intersecting preview and
+every source already admitted. A source-less preview is allowed only when its
+owner is independently nonintersecting; its withheld state is recorded in the
+capture manifest. Full-page captures can therefore contain intentional offscreen
+placeholders. The suite does not scroll through media, assign sources or replace
+observers to prepare screenshots. Direct unit tests simulate intersection only at
+the helper boundary; native cases hold a real image response and reject failed
+admitted media, including an expected image replaced by its unavailable control.
+
+Each controlled occasions/removals page reads and validates one actual signed-in
+bootstrap baseline, including setup, account and onboarding progress. Repeated
+visual states on that page derive their requested actor role from that baseline
+and serve coherent controlled `/api/me` and `/api/bootstrap` responses. Only an
+admin state retains the baseline's onboarding progress. A separate page obtains
+its own real baseline; missing accounts or incomplete setup fail before navigation.
+The shared fixture still validates the real current account for every context.
+This avoids charging each controlled capture's synthetic navigation to the same
+live session and keeps these layout fixtures distinct from real authorization
+flows. Product limits, counters, auth behavior and live-flow helpers are unchanged.

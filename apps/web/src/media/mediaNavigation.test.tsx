@@ -249,6 +249,48 @@ describe("viewer promotion ownership", () => {
     await act(async () => {});
     expect(getSignal().aborted).toBe(true);
   });
+  it("preserves prepared ownership while a pending route awaits its committed destination", async () => {
+    vi.useFakeTimers();
+    const { resources, getSignal } = await _active();
+    resources.previews.put([
+      { itemId: "target", kind: "photo", width: 960, height: 720, media },
+    ]);
+    injected.resources = resources;
+    const navigation = Promise.withResolvers<void>();
+    injected.router.navigate.mockReturnValueOnce(navigation.promise);
+    const tree = (
+      routeKey: string,
+      committedSurfaceKey: string,
+      hasTarget: boolean,
+    ) => {
+      return (
+        <MediaLoadingProvider
+          memberId="member"
+          routeKey={routeKey}
+          committedSurfaceKey={committedSurfaceKey}
+        >
+          {hasTarget ? (
+            <PhotoFrame media={media} itemId="target" />
+          ) : (
+            <Navigation />
+          )}
+        </MediaLoadingProvider>
+      );
+    };
+    const view = render(tree("/items/old", "/items/old", false));
+    fireEvent.click(screen.getByRole("button", { name: "Move" }));
+    view.rerender(tree("/items/target", "/items/old", false));
+    await act(async () => {});
+    expect(getSignal().aborted).toBe(false);
+    view.rerender(tree("/items/target", "/items/target", true));
+    await act(async () => {
+      navigation.resolve();
+    });
+    expect(getSignal().aborted).toBe(false);
+    view.unmount();
+    await act(async () => {});
+    expect(getSignal().aborted).toBe(true);
+  });
   it("settles movement without adoption even when the route key does not change", async () => {
     vi.useFakeTimers();
     const { resources, getSignal } = await _active();

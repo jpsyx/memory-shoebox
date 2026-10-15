@@ -316,6 +316,11 @@ export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
       columns: indexColumns("uploaded_by"),
       isUnique: false,
     },
+    {
+      name: "items_uploaded_by_captured_on",
+      columns: indexColumns("uploaded_by", "captured_on"),
+      isUnique: false,
+    },
     // SQLite omits expression names; upgrade tests prove each indexed probe.
     ...[0, 1, 2, 3].map((band) => {
       return {

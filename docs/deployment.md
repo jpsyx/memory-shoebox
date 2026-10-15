@@ -523,3 +523,21 @@ thumbnail plus an orientation transform; dimensions and two color samples
 verify primary selection and rotation. These checks prove local codec
 availability, not the later recipe quality/performance envelope. Sharp photo
 recipes still need their own isolated validation.
+
+## Measuring a remaining cold-start delay
+
+`FLY_MIN_MACHINES_RUNNING=1` is an optional operator choice to keep the existing
+application warm. This branch does not change that value or any deployment.
+Before changing it, compare the same deep link and browser/cache state after
+verified machine suspension with a subsequent warm request. Record server wake
+time separately from API discovery and media decoding, and repeat enough times
+to report a median and p95. No local warm loopback result supplies that remote
+cold-start comparison.
+
+Consider TanStack Start only if a measured cold deep link still spends material
+time discovering authorized media after the SPA loads. Consider a CDN only for
+measured geographic or signature-renewal cache misses, and HLS only for remaining
+video startup/rebuffering problems. Current local acceptance does not justify
+changing the TanStack Router SPA, direct private B2 delivery or single Fastify
+deployment. Physical iPhone decoding, actual B2 Range/cache behavior and the
+512 MiB processing deployment envelope remain operator verification items.

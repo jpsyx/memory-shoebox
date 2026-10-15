@@ -70,6 +70,9 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       setHasError(false);
     },
     onTimeUpdate: (video: HTMLVideoElement) => {
+      if (!transport.updatePositionFromVideo(video)) {
+        return;
+      }
       const crossed = getCrossedReactions({
         reactions,
         previousTime: previousTime.current,
@@ -81,13 +84,16 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
         showReaction(reaction);
       }
       previousTime.current = video.currentTime;
-      transport.setPosition(video.currentTime);
     },
     onSeeking: () => {
       isSeeking.current = true;
     },
     onSeeked: () => {
-      previousTime.current = transport.videoRef.current?.currentTime ?? 0;
+      const video = transport.videoRef.current;
+      if (video !== null && !transport.updatePositionFromVideo(video, true)) {
+        return;
+      }
+      previousTime.current = video?.currentTime ?? 0;
       isSeeking.current = false;
     },
     seek: (seconds: number, shouldPlay = false) => {
@@ -95,21 +101,9 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       isSeeking.current = transport.videoRef.current?.currentTime !== position;
       previousTime.current = position;
       const video = transport.videoRef.current;
+      const intent = transport.selectPosition(position);
       const applySeek = () => {
-        if (transport.videoRef.current !== video) {
-          return;
-        }
-        if (shouldPlay) {
-          transport.seekAndPlay(position);
-        } else {
-          if (video !== null) {
-            video.currentTime = Math.min(
-              position,
-              Number.isFinite(video.duration) ? video.duration : position,
-            );
-          }
-          transport.setPosition(position);
-        }
+        intent.apply(shouldPlay);
       };
       const renewal =
         video === null ? undefined : getSourceRenewalFromVideo(video);
@@ -120,9 +114,9 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
           .beforeSeek()
           .then(applySeek)
           .catch((error: unknown) => {
-            if (
-              !(error instanceof DOMException && error.name === "AbortError")
-            ) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+              intent.cancel();
+            } else if (intent.isCurrent()) {
               setHasError(true);
             }
           });

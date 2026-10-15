@@ -1,7 +1,10 @@
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PersonFacet, TagFacet } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { DropDatesButton } from "@/surfaces/Timeline/NoResults/DropDatesButton";
 import { DropPeopleButton } from "@/surfaces/Timeline/NoResults/DropPeopleButton";
 import { DropTagButtons } from "@/surfaces/Timeline/NoResults/DropTagButtons";
@@ -12,7 +15,7 @@ type Props = {
   tags: readonly TagFacet[];
   hasDates: boolean;
   selection: TimelineSelection;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
   onClear: () => void;
 };
 

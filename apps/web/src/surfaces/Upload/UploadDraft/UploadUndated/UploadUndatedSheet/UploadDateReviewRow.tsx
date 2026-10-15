@@ -40,7 +40,7 @@ export function UploadDateReviewRow({
     <form
       ref={form.formRef}
       className={classes.reviewRow}
-      aria-label={`Date for photo ${row.file.position + 1}`}
+      aria-label={`Date for photo ${row.file.position}`}
       onSubmit={(event) => {
         event.preventDefault();
         void form.onSubmit();

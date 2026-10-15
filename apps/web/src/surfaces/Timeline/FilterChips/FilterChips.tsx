@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type {
+  TimelineSelection,
+  TimelineSelectionUpdate,
+} from "@/api/timeline/selection/selection";
 import { DateChip } from "@/surfaces/Timeline/FilterChips/DateChip";
 import { PeopleChips } from "@/surfaces/Timeline/FilterChips/PeopleChips";
 import { TagChips } from "@/surfaces/Timeline/FilterChips/TagChips";
@@ -8,7 +11,7 @@ import { TagChips } from "@/surfaces/Timeline/FilterChips/TagChips";
 type Props = {
   selection: TimelineSelection;
   facets: FilterFacetsResponse | undefined;
-  onChange: (selection: TimelineSelection) => void;
+  onChange: (update: TimelineSelectionUpdate) => void;
 };
 
 /**

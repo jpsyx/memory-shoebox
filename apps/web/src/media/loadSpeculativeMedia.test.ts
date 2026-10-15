@@ -38,6 +38,30 @@ afterEach(() => {
 });
 
 describe("native speculative image", () => {
+  it("exposes only the exact successfully decoded native photo until release", async () => {
+    const { image, decode } = _nativeImage();
+    const completion = Promise.withResolvers<void>();
+    decode.mockReturnValue(completion.promise);
+    Object.defineProperty(image, "naturalWidth", { value: 960 });
+    Object.defineProperty(image, "naturalHeight", { value: 640 });
+    const candidate = {
+      ...CANDIDATE,
+      source: { ...CANDIDATE.source, expiresAt: "2099-01-01T00:00:00Z" },
+    };
+    const pending = loadSpeculativeMedia(
+      candidate,
+      new AbortController().signal,
+    );
+    image.dispatchEvent(new Event("load"));
+    completion.resolve();
+    const media = await pending;
+    expect(media.decodedPhoto?.itemId).toBe(candidate.itemId);
+    expect(media.decodedPhoto?.source).toEqual(candidate.source);
+    expect(media.decodedPhoto?.getImage()).toBe(image);
+    media.release();
+    expect(media.decodedPhoto?.getImage()).toBeUndefined();
+    expect(image.hasAttribute("src")).toBe(false);
+  });
   it("uses the exact later-rendered URL and default CORS/referrer mode", async () => {
     const { image, decode } = _nativeImage();
     const pending = loadSpeculativeMedia(
