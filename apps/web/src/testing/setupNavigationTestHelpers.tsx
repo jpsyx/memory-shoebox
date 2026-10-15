@@ -1,3 +1,4 @@
+import { getBootstrapAnswerFromReader } from "./getBootstrapAnswerFromReader";
 import { routeTree } from "@/routeTree.gen";
 import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures";
 import { createMeResponse } from "@/testing/createMeResponse";
@@ -119,7 +120,12 @@ export function makeSetupNavigationHarnessFromOptions(
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
-      const response = await options.answer({ path: url, init });
+      const response =
+        url === "/api/bootstrap"
+          ? await getBootstrapAnswerFromReader((path) => {
+              return options.answer({ path });
+            })
+          : await options.answer({ path: url, init });
       return response.status === 204
         ? new Response(null, { status: 204 })
         : Response.json(response.body, { status: response.status ?? 200 });

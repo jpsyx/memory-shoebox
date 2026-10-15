@@ -34,6 +34,12 @@ function _renderSelfDemotion(): void {
           }),
         );
       }
+      if (path === "/api/bootstrap" && hasDemoted)
+        return Response.json({
+          setup: { isRequired: false },
+          account: createMeResponse({ role: "viewer" }),
+          progress: null,
+        });
       if (path === "/api/me" && hasDemoted) {
         return Response.json(createMeResponse({ role: "viewer" }));
       }
@@ -104,6 +110,18 @@ describe("Members administration", () => {
     await user.click(
       await screen.findByRole("button", { name: "Change role for Mamá" }),
     );
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation((path, init) => {
+      return path === "/api/bootstrap"
+        ? Promise.resolve(
+            Response.json({
+              setup: { isRequired: false },
+              account: createMeResponse({ role: "viewer" }),
+              progress: null,
+            }),
+          )
+        : original(path, init);
+    });
     queryClient.setQueryData(
       meQueryOptions.queryKey,
       createMeResponse({ role: "viewer" }),
@@ -131,13 +149,21 @@ describe("Members administration", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (path: string, init?: RequestInit) => {
+        if (path === "/api/bootstrap") {
+          const account =
+            accountReads === 0
+              ? ADMIN_ACCOUNT
+              : createMeResponse({ role: "viewer" });
+          return Response.json({
+            setup: { isRequired: false },
+            account,
+            progress:
+              account.me.role === "admin" ? { needsInvitations: false } : null,
+          });
+        }
         if (path === "/api/me") {
           accountReads += 1;
-          return Response.json(
-            accountReads === 1
-              ? ADMIN_ACCOUNT
-              : createMeResponse({ role: "viewer" }),
-          );
+          return Response.json(createMeResponse({ role: "viewer" }));
         }
         return originalFetch(path, init);
       }),

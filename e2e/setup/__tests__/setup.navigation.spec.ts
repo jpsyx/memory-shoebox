@@ -5,7 +5,7 @@ test("a failed setup read offers retry before an empty catalog enters creation",
   page,
   catalog,
 }) => {
-  await page.route("**/api/setup", (route) => {
+  await page.route("**/api/bootstrap", (route) => {
     return route.fulfill({
       status: 503,
       contentType: "application/json",
@@ -17,7 +17,7 @@ test("a failed setup read offers retry before an empty catalog enters creation",
     page.getByRole("heading", { name: "Could not open this Shoebox." }),
   ).toBeVisible();
   await expect(page.getByLabel("Your name", { exact: true })).toHaveCount(0);
-  await page.unroute("**/api/setup");
+  await page.unroute("**/api/bootstrap");
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(page).toHaveURL(/\/setup$/);
   await expect(

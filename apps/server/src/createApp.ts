@@ -47,6 +47,7 @@ import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items/items.ts";
 import { registerMilestoneRoutes } from "./routes/registerMilestoneRoutes/registerMilestoneRoutes.ts";
 import { registerRemovalRoutes } from "./routes/removals/registerRemovalRoutes.ts";
+import { bootstrapRoutes } from "./routes/bootstrap.ts";
 import { meRoutes } from "./routes/me.ts";
 import { peopleRoutes } from "./routes/people.ts";
 import { publicSettingsRoutes } from "./routes/publicSettings.ts";
@@ -341,6 +342,7 @@ async function _registerApiRoutes(
       await authRoutes(api);
       await registerSetupRoutes(api);
       await meRoutes(api);
+      await bootstrapRoutes(api);
       await timelineRoutes(api);
       await mediaPreviewRoutes(api);
       await publicSettingsRoutes(api);

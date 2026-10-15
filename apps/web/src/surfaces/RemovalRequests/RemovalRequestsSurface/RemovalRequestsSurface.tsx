@@ -2,7 +2,7 @@ import { Page } from "@/system/Chrome/Page";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { Lede } from "@/system/typography/Lede";
 import { Prose } from "@/system/typography/Prose";
-import { getRouteApi, useRouterState } from "@tanstack/react-router";
+import { getRouteApi, useRouterState, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { RemovalQueue } from "./RemovalQueue";
 const AppRoute = getRouteApi("/_app") satisfies ReturnType<
@@ -32,7 +32,7 @@ export function RemovalRequestsSurface(): ReactNode {
         {viewer.role === "viewer" ? (
           <Prose onPanel>
             Removal requests are available to uploaders and admins.{" "}
-            <a href="/account">Back to my account</a>.
+            <Link to="/account">Back to my account</Link>.
           </Prose>
         ) : (
           <RemovalQueue

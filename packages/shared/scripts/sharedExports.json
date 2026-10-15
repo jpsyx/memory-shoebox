@@ -35,6 +35,11 @@
     ]
   },
   {
+    "module": "./bootstrap.ts",
+    "values": ["bootstrapResponseSchema"],
+    "types": ["BootstrapResponse"]
+  },
+  {
     "module": "./collectionSchema.ts",
     "values": ["collectionSchema", "cursorSchema"],
     "types": ["CollectionShape"]

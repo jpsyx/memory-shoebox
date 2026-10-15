@@ -92,21 +92,28 @@ client uses that same session recovery and reads durable progress after reload.
 
 ## Browser flow
 
-The root navigation guard fetches `/api/setup` with `fetchQuery` and
-`staleTime: 0` at every navigation boundary, including cached and deep loads.
-Speculative route preloads make no HTTP requests and only forward the cached
-account to the app guard. Actual navigation still fetches status and admin
-progress afresh, including navigation after a preload. A failed read shows an
-explicit retry screen. Once initialized it reads the
-normal `/me` cache, and only an active admin reads private setup progress.
-`session/getSetupRedirectFromNavigation/` owns the setup/sign-in/invitation
-decision.
-If the private progress read refuses a cached admin with 401 or 403, the client
-clears stale private/session cache data and fetches current `/me`. A remotely
-demoted member resumes normal routing with their current role; a revoked
-session reaches ordinary sign-in. Only a still-current admin reads progress
-again. Availability, progress and account refresh faults retain the explicit
-retry state rather than assuming setup is complete.
+The root navigation guard fetches `GET /api/bootstrap` once with
+`staleTime: 0` for each actual navigation. The no-store response combines
+anonymous setup availability, the current request's account (or null), and
+admin-only invitation progress (or null). Speculative route preloads make no
+bootstrap requests. Actual navigation after a preload still reads fresh authority.
+A guard redirect starts a fresh read for its destination too: a one-redirect
+chain makes two bootstrap requests.
+The guard seeds the existing account and progress caches, so the mounted
+destination needs no duplicate account or setup read. Existing setup endpoints
+remain available for creation, completion, and uncertain-write recovery.
+`session/getSetupRedirectFromNavigation/` still owns the setup/sign-in/invitation
+decision. Revocation, demotion, or identity replacement discards private query
+state; the signed-in media owner also retires on role changes.
+
+A failed bootstrap displays an explicit retry screen and never grants navigation
+with a cached identity. If a settings or group write already committed, its
+local continuation survives a transient read failure, the screen confirms the
+saved result, and retry performs only a read. A successful current bootstrap
+restores the existing continuation controls; an authority refusal clears private
+state. No saved write is repeated. Synchronous bootstrap cache seeding is marked
+so the settings observer reconciles changed dependents without recursively
+invalidating the navigation already in progress.
 
 `/setup` uses the existing narrow Mantine sheet. The browser supplies a
 validated timezone (UTC when unavailable) and its origin as the editable public

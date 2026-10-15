@@ -81,6 +81,7 @@ The registered route modules include:
 | ------------------------------ | -------------------------------------------------------------------------- |
 | `health.ts`                    | `GET /api/health`, for Fly.io's health check                               |
 | `auth.ts`                      | Sign-in codes and sessions, all four anonymous                             |
+| `bootstrap.ts`                 | Current navigation account and setup in one no-store response              |
 | `me.ts`                        | The signed-in member's own account and their devices                       |
 | `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                         |
 | `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                |
@@ -1287,3 +1288,15 @@ scheduled when decoding is disabled. Missing previews expose current durable
 pending state through one additional batched catalog query. See
 [media loading](media-loading.md#application-lifecycle-and-publication) for
 recipe identity, retry policy, exact budgets and remaining isolation evidence.
+
+### Navigation bootstrap
+
+`GET /api/bootstrap` composes the existing setup-status, self-account, shell
+settings and setup-progress readers under the current request viewer. It makes
+no HTTP calls back to the server. Anonymous responses contain only setup
+availability, with null account and progress; non-admin members receive their
+own account and null progress. Active admins receive their own durable invitation
+progress. The response is always `Cache-Control: no-store`. Existing account and
+setup endpoints keep their contracts, including first-admin creation and
+completion recovery. The web root uses this response as current navigation
+authority, independently of previously cached identity.

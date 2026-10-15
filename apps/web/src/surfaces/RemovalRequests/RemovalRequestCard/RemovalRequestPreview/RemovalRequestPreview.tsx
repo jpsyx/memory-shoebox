@@ -1,15 +1,14 @@
+import { Link } from "@tanstack/react-router";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import { useState, type ReactNode } from "react";
-import { getItemHrefFromRemovalRequest } from "../../removalCopyHelpers/removalCopyHelpers";
 import classes from "./RemovalRequestPreview.module.css";
 type Props = { request: RemovalRequestDto };
 
 /** Null identity means Gone; null media alone does not assert deletion. */
 export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
   const [failedUrl, setFailedUrl] = useState<string>();
-  const href = getItemHrefFromRemovalRequest(request);
-  if (href === undefined || request.media === null) {
+  if (request.itemId === null || request.media === null) {
     return (
       <span className={classes.removalRequestPreviewGhost}>
         {request.itemId === null ? "Gone" : "Unavailable"}
@@ -17,8 +16,9 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
     );
   }
   return (
-    <a
-      href={href}
+    <Link
+      to="/items/$itemId"
+      params={{ itemId: request.itemId }}
       className={classes.removalRequestPreviewPrint}
       aria-label="Open the photograph"
     >
@@ -43,6 +43,6 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
           }}
         />
       )}
-    </a>
+    </Link>
   );
 }

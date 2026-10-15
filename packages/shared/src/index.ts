@@ -34,6 +34,10 @@ export {
   type UpdateMeRequest,
 } from "./auth.ts";
 export {
+  bootstrapResponseSchema,
+  type BootstrapResponse,
+} from "./bootstrap.ts";
+export {
   collectionSchema,
   cursorSchema,
   type CollectionShape,

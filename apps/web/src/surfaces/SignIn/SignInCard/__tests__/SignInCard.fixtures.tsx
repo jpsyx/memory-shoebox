@@ -1,3 +1,4 @@
+import { getBootstrapAnswerFromReader } from "@/testing/getBootstrapAnswerFromReader";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -87,23 +88,36 @@ export function respondWith(
     { body: unknown; status: number; waitFor?: Promise<unknown> }
   >,
 ): void {
+  let signedInAccount: unknown;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
-      const answer = routes[path] ?? {
-        body:
-          path === "/api/setup"
-            ? { isRequired: false }
-            : path === "/api/setup/progress"
-              ? { needsInvitations: false }
-              : path === "/api/me"
-                ? { error: "not_signed_in", message: "No live session." }
-                : PUBLIC_SETTINGS,
-        status: path === "/api/me" ? 401 : 200,
+      const read = (requestPath: string) => {
+        if (requestPath === "/api/me" && signedInAccount)
+          return { body: signedInAccount, status: 200 };
+        return (
+          routes[requestPath] ?? {
+            body:
+              requestPath === "/api/setup"
+                ? { isRequired: false }
+                : requestPath === "/api/setup/progress"
+                  ? { needsInvitations: false }
+                  : requestPath === "/api/me"
+                    ? { error: "not_signed_in", message: "No live session." }
+                    : PUBLIC_SETTINGS,
+            status: requestPath === "/api/me" ? 401 : 200,
+          }
+        );
       };
+      const answer =
+        path === "/api/bootstrap"
+          ? await getBootstrapAnswerFromReader(read)
+          : read(path);
+      if (path === "/api/auth/session" && answer.status === 201)
+        signedInAccount = answer.body;
       // A route may be held open, which is how a case gets to press something
       // twice while the first request is still in flight.
-      await answer.waitFor;
+      await (answer as { waitFor?: Promise<unknown> }).waitFor;
       return new Response(
         answer.status === 204 ? null : JSON.stringify(answer.body),
         {

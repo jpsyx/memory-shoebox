@@ -1,3 +1,4 @@
+import { RouterTestProvider } from "@/testing/RouterTestProvider";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
@@ -15,14 +16,16 @@ function _render(
 ): ReturnType<typeof render> {
   return render(
     <MantineProvider>
-      <RemovalRequestCard
-        timezone="Europe/Madrid"
-        request={makeRemovalRequestFromOverrides(overrides)}
-        viewer={VIEWER}
-        onDelete={vi.fn()}
-        onDecline={vi.fn()}
-        onWithdraw={vi.fn()}
-      />
+      <RouterTestProvider>
+        <RemovalRequestCard
+          timezone="Europe/Madrid"
+          request={makeRemovalRequestFromOverrides(overrides)}
+          viewer={VIEWER}
+          onDelete={vi.fn()}
+          onDecline={vi.fn()}
+          onWithdraw={vi.fn()}
+        />
+      </RouterTestProvider>
     </MantineProvider>,
   );
 }

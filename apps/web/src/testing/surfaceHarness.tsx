@@ -103,7 +103,24 @@ export function respondWith(
   routes: Readonly<Record<string, Answer>> = {},
   extraDefaults: Readonly<Record<string, Answer>> = {},
 ): void {
-  stubFetch({ ..._shellAnswers(), ...extraDefaults, ...routes });
+  const answers = { ..._shellAnswers(), ...extraDefaults, ...routes };
+  const account = answers["GET /api/me"]!;
+  answers["GET /api/bootstrap"] ??=
+    account.status >= 400 && account.status !== 401
+      ? account
+      : {
+          status: 200,
+          body: {
+            setup: answers["GET /api/setup"]!.body,
+            account: account.status === 401 ? null : account.body,
+            progress:
+              (account.body as ReturnType<typeof createMeResponse>)?.me
+                ?.role === "admin"
+                ? answers["GET /api/setup/progress"]!.body
+                : null,
+          },
+        };
+  stubFetch(answers);
 }
 
 /**

@@ -57,7 +57,11 @@ function AppShell() {
           role={viewer.role}
         />
       )}
-      <MediaLoadingProvider memberId={viewer.memberId} routeKey={routeKey}>
+      <MediaLoadingProvider
+        key={`${viewer.memberId}:${viewer.role}`}
+        memberId={viewer.memberId}
+        routeKey={routeKey}
+      >
         <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
           <Outlet />
         </UploadSessionProvider>

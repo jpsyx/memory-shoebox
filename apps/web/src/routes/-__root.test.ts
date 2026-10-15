@@ -1,12 +1,12 @@
+import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
   ADMIN,
   createCachedAdminQueryClient,
-  getSetupAnswerFromRequest,
   MAIL,
   type SetupAnswer,
 } from "@/testing/setupNavigationTestHelpers";
-import { QueryClient } from "@tanstack/react-query";
+import { CancelledError, QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { Route } from "./__root";
 import {
@@ -72,19 +72,61 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function _bootstrap(
+  account: ReturnType<typeof createMeResponse> | null = ADMIN,
+  needsInvitations = false,
+): SetupAnswer {
+  return {
+    body: {
+      setup: { isRequired: false },
+      account,
+      progress: account?.me.role === "admin" ? { needsInvitations } : null,
+    },
+  };
+}
+
+it("actual navigation needs one authority request and preload needs no bootstrap", async () => {
+  const requestPaths: string[] = [];
+  const { router, client } = _makeRootRouterFromOptions({
+    path: "/people",
+    answer: ({ path }) => {
+      requestPaths.push(path);
+      return _bootstrap();
+    },
+  });
+  await router.load();
+  expect(requestPaths).toEqual(["/api/bootstrap"]);
+  expect(client.getQueryData(["me"])).toEqual(ADMIN);
+  expect(client.getQueryData(["setup", "progress"])).toEqual({
+    needsInvitations: false,
+  });
+  requestPaths.length = 0;
+  await router.preloadRoute({
+    to: "/items/$itemId",
+    params: { itemId: "abc" },
+  });
+  expect(requestPaths).toEqual([]);
+  await router.navigate({ to: "/items/$itemId", params: { itemId: "abc" } });
+  expect(requestPaths).toEqual(["/api/bootstrap"]);
+});
+
 it("root read failure retains the attempted route until a successful retry", async () => {
   let failed = true;
   const { router } = _makeRootRouterFromOptions({
     path: "/items/abc",
-    answer: ({ path }) => {
-      return path === "/api/setup"
-        ? failed
-          ? {
-              body: { error: "unavailable", message: "Unavailable" },
-              status: 503,
-            }
-          : { body: { isRequired: true } }
-        : getSetupAnswerFromRequest({ path });
+    answer: () => {
+      return failed
+        ? {
+            body: { error: "unavailable", message: "Unavailable" },
+            status: 503,
+          }
+        : {
+            body: {
+              setup: { isRequired: true },
+              account: null,
+              progress: null,
+            },
+          };
     },
   });
   await router.load();
@@ -94,179 +136,286 @@ it("root read failure retains the attempted route until a successful retry", asy
   await router.invalidate();
   expect(router.state.location.pathname).toBe("/setup");
 });
-it("a cached initialized result is refreshed when the catalog now needs setup", async () => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+
+it("fresh setup replaces cached initialized status and private data", async () => {
+  const client = createCachedAdminQueryClient();
   client.setQueryData(["setup", "status"], { isRequired: false });
   const { router } = _makeRootRouterFromOptions({
     path: "/people",
-    answer: ({ path }) => {
-      return path === "/api/setup"
-        ? { body: { isRequired: true } }
-        : getSetupAnswerFromRequest({ path });
+    client,
+    answer: () => {
+      return {
+        body: { setup: { isRequired: true }, account: null, progress: null },
+      };
     },
-    client: client,
   });
   await router.load();
   expect(router.state.location.pathname).toBe("/setup");
-});
-it("non-admin invitation access goes home without reading private setup progress", async () => {
-  const { router } = _makeRootRouterFromOptions({
-    path: "/setup/invite",
-    answer: ({ path }) => {
-      return path === "/api/me"
-        ? { body: createMeResponse({ role: "viewer" }) }
-        : getSetupAnswerFromRequest({ path });
-    },
-  });
-  await router.load();
-  expect(router.state.location.pathname).toBe("/");
-  expect(
-    vi.mocked(fetch).mock.calls.some(([path]) => {
-      return path === "/api/setup/progress";
-    }),
-  ).toBe(false);
-});
-it("speculative preload makes no setup reads and actual navigation still refreshes status", async () => {
-  let isRequired = false;
-  let statusReads = 0;
-  const { router } = _makeRootRouterFromOptions({
-    path: "/people",
-    answer: ({ path }) => {
-      if (path === "/api/setup") {
-        statusReads++;
-        return { body: { isRequired } };
-      }
-      return getSetupAnswerFromRequest({ path });
-    },
-  });
-  await router.load();
-  expect(router.state.location.pathname).toBe("/people");
-  const readsBefore = statusReads;
-  await router.preloadRoute({
-    to: "/items/$itemId",
-    params: { itemId: "abc" },
-  });
-  expect(statusReads).toBe(readsBefore);
-  isRequired = true;
-  await router.navigate({ to: "/items/$itemId", params: { itemId: "abc" } });
-  expect(router.state.location.pathname).toBe("/setup");
-  expect(statusReads).toBeGreaterThan(readsBefore);
-});
-it("reconciles a cached admin demoted remotely and discards privileged cached data", async () => {
-  const client = createCachedAdminQueryClient();
-  client.setQueryData(["mail-health"], MAIL);
-  client.setQueryData(["setup", "progress"], { needsInvitations: true });
-  const viewer = createMeResponse({
-    email: "owner@example.com",
-    role: "viewer",
-  });
-  let progressReads = 0;
-  let accountReads = 0;
-  const { router } = _makeRootRouterFromOptions({
-    path: "/setup/invite",
-    answer: ({ path }) => {
-      if (path === "/api/setup/progress") {
-        progressReads++;
-        return {
-          body: { error: "setup_forbidden", message: "Admin required." },
-          status: 403,
-        };
-      }
-      if (path === "/api/me") {
-        accountReads++;
-        return { body: viewer };
-      }
-      return getSetupAnswerFromRequest({ path });
-    },
-    client: client,
-  });
-  await router.load();
-  expect(router.state.location.pathname).toBe("/");
-  expect(client.getQueryData(["me"])).toEqual(viewer);
   expect(client.getQueryData(["members", "admin"])).toBeUndefined();
-  expect(client.getQueryData(["mail-health"])).toBeUndefined();
-  expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
-  expect(client.getQueryData(["setup", "progress"])).toBeUndefined();
-  await router.invalidate();
-  expect(accountReads).toBe(1);
-  expect(progressReads).toBe(1);
 });
-it("reconciles a cached admin whose session was revoked and resumes ordinary sign-in", async () => {
-  const client = createCachedAdminQueryClient();
-  client.setQueryData(["timeline"], {
-    days: [],
-    nextCursor: null,
-    resultCount: null,
-  });
-  let progressReads = 0;
-  let accountReads = 0;
+
+it("initialized anonymous entry preserves its intended destination", async () => {
   const { router } = _makeRootRouterFromOptions({
-    path: "/setup/invite",
-    answer: ({ path }) => {
-      if (path === "/api/setup/progress") {
-        progressReads++;
-        return {
-          body: { error: "not_signed_in", message: "Session revoked." },
-          status: 401,
-        };
-      }
-      if (path === "/api/me") {
-        accountReads++;
-        return {
-          body: { error: "not_signed_in", message: "Session revoked." },
-          status: 401,
-        };
-      }
-      return getSetupAnswerFromRequest({ path });
+    path: "/items/abc?tag=family",
+    answer: () => {
+      return _bootstrap(null);
     },
-    client: client,
   });
   await router.load();
   expect(router.state.location.pathname).toBe("/sign-in");
-  expect(router.state.location.search).toEqual({});
-  expect(client.getQueryData(["me"])).toBeNull();
-  expect(client.getQueryData(["members", "admin"])).toBeUndefined();
-  expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
-  expect(client.getQueryData(["timeline"])).toBeUndefined();
-  await router.invalidate();
-  expect(accountReads).toBe(1);
-  expect(progressReads).toBe(1);
-});
-it("a genuine private progress failure preserves the cached account and remains retryable", async () => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  expect(router.state.location.search).toEqual({
+    redirect: "/items/abc?tag=family",
   });
-  client.setQueryData(["me"], ADMIN);
-  let hasFailed = false;
-  let accountReads = 0;
-  let progressReads = 0;
+});
+
+it.each(["demotion", "revocation"])(
+  "%s discards stale private authority without secondary reads",
+  async (change) => {
+    const client = createCachedAdminQueryClient();
+    client.setQueryData(["mail-health"], MAIL);
+    client.setQueryData(["timeline"], { private: true });
+    client.setQueryData(["setup", "progress"], { needsInvitations: true });
+    const account =
+      change === "demotion" ? createMeResponse({ role: "viewer" }) : null;
+    const requestPaths: string[] = [];
+    const { router } = _makeRootRouterFromOptions({
+      path: "/setup/invite",
+      client,
+      answer: ({ path }) => {
+        requestPaths.push(path);
+        return _bootstrap(account);
+      },
+    });
+    await router.load();
+    expect(router.state.location.pathname).toBe(
+      change === "demotion" ? "/" : "/sign-in",
+    );
+    expect(client.getQueryData(["me"])).toEqual(account);
+    for (const key of [
+      ["members", "admin"],
+      ["mail-health"],
+      ["me", "sessions"],
+      ["timeline"],
+      ["setup", "progress"],
+    ]) {
+      expect(client.getQueryData(key)).toBeUndefined();
+    }
+    expect(
+      requestPaths.every((path) => {
+        return path === "/api/bootstrap";
+      }),
+    ).toBe(true);
+  },
+);
+
+it("pending invitation setup and completion races use the new bootstrap each navigation", async () => {
+  let needsInvitations = true;
   const { router } = _makeRootRouterFromOptions({
-    path: "/",
-    answer: ({ path }) => {
-      if (path === "/api/setup/progress") {
-        progressReads++;
-        if (!hasFailed) {
-          hasFailed = true;
-          return {
-            body: { error: "unavailable", message: "Unavailable." },
-            status: 503,
-          };
-        }
-      }
-      if (path === "/api/me") {
-        accountReads++;
-      }
-      return getSetupAnswerFromRequest({ path });
+    path: "/people",
+    answer: () => {
+      return _bootstrap(ADMIN, needsInvitations);
     },
-    client: client,
   });
   await router.load();
-  expect(router.state.matches[0]?.error).toMatchObject({ status: 503 });
-  expect(client.getQueryData(["me"])).toEqual(ADMIN);
-  await router.invalidate();
-  expect(router.state.matches[0]?.status).toBe("success");
-  expect(accountReads).toBe(0);
-  expect(progressReads).toBe(2);
+  expect(router.state.location.pathname).toBe("/setup/invite");
+  needsInvitations = false;
+  await router.navigate({ to: "/people" });
+  expect(router.state.location.pathname).toBe("/people");
+});
+
+it.each(["settings-recovery", "group-continuation"])(
+  "%s survives transient read failure without granting cached authority",
+  async (key) => {
+    const client = createCachedAdminQueryClient();
+    client.setQueryData([key], {
+      hasCommitted: true,
+      message: "Saved",
+      isRefreshing: false,
+    });
+    const { router } = _makeRootRouterFromOptions({
+      path: "/people",
+      client,
+      answer: () => {
+        return {
+          body: { error: "unavailable", message: "Unavailable" },
+          status: 503,
+        };
+      },
+    });
+    await router.load();
+    expect(router.state.matches[0]?.status).toBe("error");
+    expect(client.getQueryData([key])).toMatchObject({ hasCommitted: true });
+  },
+);
+
+it("late private reads cannot restore retired data after current authority loss", async () => {
+  const client = createCachedAdminQueryClient();
+  let finishRead: (value: { private: boolean }) => void = () => {};
+  const pending = new Promise<{ private: boolean }>((settle) => {
+    finishRead = settle;
+  });
+  const read = client
+    .fetchQuery({
+      queryKey: ["items", "private"],
+      queryFn: () => {
+        return pending;
+      },
+    })
+    .catch(() => {
+      return undefined;
+    });
+  const { router } = _makeRootRouterFromOptions({
+    path: "/sign-in",
+    client,
+    answer: () => {
+      return _bootstrap(null);
+    },
+  });
+  await router.load();
+  finishRead({ private: true });
+  await read;
+  expect(client.getQueryData(["items", "private"])).toBeUndefined();
+  expect(client.getQueryData(["me"])).toBeNull();
+});
+
+it.each(["before", "during", "reconciliation", "publication"])(
+  "cancels a navigation read started %s a serialized write before stale publication",
+  async (timing) => {
+    const client = createCachedAdminQueryClient();
+    client.setQueryData(["settings", "admin"], {});
+    const { router } = _makeRootRouterFromOptions({
+      path: "/people",
+      client,
+      answer: () => {
+        return _bootstrap();
+      },
+    });
+    const stop = startSettingsSynchronization({
+      queryClient: client,
+      invalidateRouter: async () => {},
+    });
+    let releaseRead: (response: Response) => void = () => {};
+    const deferredRead = new Promise<Response>((settle) => {
+      releaseRead = settle;
+    });
+    let readCount = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        return ++readCount === 1
+          ? deferredRead
+          : Promise.resolve(Response.json(_bootstrap(saved).body));
+      }),
+    );
+    let finishSave: () => void = () => {};
+    const pendingSave = new Promise<void>((settle) => {
+      finishSave = settle;
+    });
+    const saved = createMeResponse({ displayName: "Saved name" });
+    const save = vi.fn(() => {
+      return pendingSave;
+    });
+    const mutation = client.getMutationCache().build(client, {
+      scope: { id: "me" },
+      mutationFn: save,
+      onSuccess: async () => {
+        client.setQueryData(["me"], saved);
+        if (timing === "reconciliation") await router.invalidate();
+      },
+    });
+    const saving =
+      timing !== "before" ? mutation.execute(undefined) : undefined;
+    const loading = router.load();
+    await vi.waitFor(() => {
+      return expect(fetch).toHaveBeenCalled();
+    });
+    const laterSave =
+      timing === "before" ? mutation.execute(undefined) : undefined;
+    if (timing === "publication") {
+      const stopPublication = client.getQueryCache().subscribe((event) => {
+        if (
+          event.type === "updated" &&
+          event.action.type === "success" &&
+          event.query.queryKey[0] === "bootstrap"
+        )
+          finishSave();
+      });
+      releaseRead(Response.json(_bootstrap().body));
+      await saving;
+      stopPublication();
+    } else {
+      finishSave();
+      await (saving ?? laterSave);
+      releaseRead(Response.json(_bootstrap().body));
+    }
+    await loading;
+    expect(client.getQueryData(["me"])).toEqual(saved);
+    expect(router.state.matches[0]?.status).toBe(
+      timing === "reconciliation" ? "success" : "error",
+    );
+    if (timing !== "reconciliation") {
+      expect(router.state.matches[0]?.error).toBeInstanceOf(CancelledError);
+      await router.invalidate();
+      expect(router.state.matches[0]?.status).toBe("success");
+      expect(client.getQueryData(["me"])).toEqual(saved);
+    }
+    expect(save).toHaveBeenCalledTimes(1);
+    stop();
+    client.clear();
+  },
+);
+
+it("a setup redirect chain performs one fresh bootstrap for each addressed destination", async () => {
+  const paths: string[] = [];
+  const { router } = _makeRootRouterFromOptions({
+    path: "/people",
+    answer: ({ path }) => {
+      paths.push(path);
+      return {
+        body: { setup: { isRequired: true }, account: null, progress: null },
+      };
+    },
+  });
+  await router.load();
+  expect(router.state.location.pathname).toBe("/setup");
+  expect(paths).toEqual(["/api/bootstrap", "/api/bootstrap"]);
+});
+
+it.each([401, 403])(
+  "authority refusal %s discards committed recovery and cached private data",
+  async (status) => {
+    const client = createCachedAdminQueryClient();
+    client.setQueryData(["settings-recovery"], { hasCommitted: true });
+    client.setQueryData(["group-continuation"], { hasCommitted: true });
+    const { router } = _makeRootRouterFromOptions({
+      path: "/people",
+      client,
+      answer: () => {
+        return { status, body: { error: "not_allowed", message: "Refused" } };
+      },
+    });
+    await router.load();
+    expect(router.state.matches[0]?.status).toBe("error");
+    expect(client.getQueryData(["me"])).toBeUndefined();
+    expect(client.getQueryData(["settings-recovery"])).toBeUndefined();
+    expect(client.getQueryData(["group-continuation"])).toBeUndefined();
+  },
+);
+
+it("account replacement discards the prior member's private data", async () => {
+  const client = createCachedAdminQueryClient();
+  const replacement = createMeResponse({
+    memberId: "018f0000-0000-7000-8000-000000000099",
+  });
+  const { router } = _makeRootRouterFromOptions({
+    path: "/people",
+    client,
+    answer: () => {
+      return _bootstrap(replacement);
+    },
+  });
+  await router.load();
+  expect(client.getQueryData(["me"])).toEqual(replacement);
+  expect(client.getQueryData(["members", "admin"])).toBeUndefined();
+  expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
 });

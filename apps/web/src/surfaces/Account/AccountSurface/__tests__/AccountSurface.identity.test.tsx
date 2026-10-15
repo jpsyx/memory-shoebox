@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  countCallsTo,
   ADMIN_DOORS,
   renderAccount,
   respondWith,
@@ -26,6 +27,16 @@ describe("surface 9", () => {
         name: "Papá, in My Shoebox.",
       }),
     ).toBeVisible();
+  });
+
+  it("mounts from one bootstrap without duplicate account or setup reads", async () => {
+    respondWith();
+    renderAccount();
+    await screen.findByRole("heading", { name: "Where you are signed in" });
+    expect(countCallsTo("GET", "/api/bootstrap")).toBe(1);
+    expect(countCallsTo("GET", "/api/me")).toBe(0);
+    expect(countCallsTo("GET", "/api/setup")).toBe(0);
+    expect(countCallsTo("GET", "/api/setup/progress")).toBe(0);
   });
 
   it("opens the five admin doors for an admin", async () => {

@@ -127,6 +127,18 @@ describe("Groups", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "New group" }));
     await user.type(screen.getByLabelText("What to call it"), "Family");
+    const original = vi.mocked(fetch).getMockImplementation()!;
+    vi.mocked(fetch).mockImplementation((path, init) => {
+      return path === "/api/bootstrap"
+        ? Promise.resolve(
+            Response.json({
+              setup: { isRequired: false },
+              account: createMeResponse({ role: "viewer" }),
+              progress: null,
+            }),
+          )
+        : original(path, init);
+    });
     act(() => {
       return queryClient.setQueryData(
         meQueryOptions.queryKey,

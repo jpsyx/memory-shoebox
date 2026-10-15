@@ -208,6 +208,18 @@ it("shows a passive real photo miniature without new navigation controls", async
 it("removes privileged controls when cached authority changes", async () => {
   const { queryClient } = renderSettings();
   await screen.findByLabelText("Shoebox name");
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((path, init) => {
+    return path === "/api/bootstrap"
+      ? Promise.resolve(
+          Response.json({
+            setup: { isRequired: false },
+            account: createMeResponse({ role: "viewer" }),
+            progress: null,
+          }),
+        )
+      : original(path, init);
+  });
   await act(async () => {
     queryClient.setQueryData(
       meQueryOptions.queryKey,
@@ -318,6 +330,46 @@ it("keeps refresh recovery reachable when settings data expires and its reentry 
   );
   await waitFor(() => {
     expect(screen.getByLabelText("Shoebox name")).toBeEnabled();
+  });
+  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+});
+
+it("retains a committed setting through bootstrap failure without mounting writable cached admin controls", async () => {
+  const { router, allowRefresh } = _renderRecoverableSettingsWrite();
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let failBootstrap = false;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (path === "/api/bootstrap" && failBootstrap)
+      return Response.json(
+        { error: "unavailable", message: "Unavailable" },
+        { status: 503 },
+      );
+    return original(path, init);
+  });
+  const user = userEvent.setup();
+  const name = await screen.findByLabelText("Shoebox name");
+  await user.clear(name);
+  await user.type(name, "Family");
+  await user.click(screen.getByRole("button", { name: "Save the new name" }));
+  await screen.findByText("Account refresh unavailable.");
+  failBootstrap = true;
+  await act(async () => {
+    await router.invalidate();
+  });
+  expect(await screen.findByText("The new name has been saved.")).toBeVisible();
+  expect(screen.queryByLabelText("Shoebox name")).not.toBeInTheDocument();
+  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  failBootstrap = false;
+  allowRefresh();
+  await user.click(
+    screen.getByRole("button", { name: "Retry account refresh" }),
+  );
+  await screen.findByLabelText("Shoebox name");
+  await user.click(
+    screen.getByRole("button", { name: "Retry account refresh" }),
+  );
+  await waitFor(() => {
+    return expect(screen.getByLabelText("Shoebox name")).toBeEnabled();
   });
   expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
 });

@@ -1,3 +1,7 @@
+import {
+  cancelNavigationBootstrap,
+  isApplyingNavigationBootstrap,
+} from "@/api/bootstrap/bootstrap";
 import type { QueryClient } from "@tanstack/react-query";
 import { meQueryOptions } from "@/api/me/me";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
@@ -114,18 +118,37 @@ function _readAdminBaseline(queryClient: QueryClient): void {
 }
 
 function _protectAccountWrites(queryClient: QueryClient): () => void {
-  return queryClient.getMutationCache().subscribe((event) => {
+  const stopMutations = queryClient.getMutationCache().subscribe((event) => {
     if (
       event.type === "updated" &&
       event.action.type === "pending" &&
       event.mutation.options.scope?.id === "me"
     ) {
+      cancelNavigationBootstrap(queryClient);
       void queryClient.cancelQueries({
         queryKey: meQueryOptions.queryKey,
         exact: true,
       });
     }
   });
+  const stopAccountPublications = queryClient
+    .getQueryCache()
+    .subscribe((event) => {
+      if (
+        event.type === "updated" &&
+        event.action.type === "success" &&
+        event.query.queryKey.length === 1 &&
+        event.query.queryKey[0] === "me" &&
+        _hasPendingAccountWrite(queryClient) &&
+        !isApplyingNavigationBootstrap(queryClient)
+      ) {
+        cancelNavigationBootstrap(queryClient);
+      }
+    });
+  return () => {
+    stopMutations();
+    stopAccountPublications();
+  };
 }
 
 /** Announces a committed write, never transmitting member or setting values. */

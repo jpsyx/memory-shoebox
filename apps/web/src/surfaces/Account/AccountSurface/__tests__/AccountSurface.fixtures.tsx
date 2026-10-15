@@ -1,3 +1,4 @@
+import { getBootstrapAnswerFromReader } from "@/testing/getBootstrapAnswerFromReader";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -114,11 +115,15 @@ export function respondWith(
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init?: RequestInit) => {
-      const answer = answers[`${init?.method ?? "GET"} ${path}`] ?? {
+      const answer = (path === "/api/bootstrap"
+        ? await getBootstrapAnswerFromReader((readPath) => {
+            return answers[`GET ${readPath}`]!;
+          })
+        : answers[`${init?.method ?? "GET"} ${path}`]) ?? {
         body: { error: "not_found", message: "No such route." },
         status: 404,
       };
-      await answer.waitFor;
+      await (answer as Answer).waitFor;
       return new Response(
         answer.status === 204 ? null : JSON.stringify(answer.body),
         {
@@ -227,6 +232,13 @@ function _answerAnythingElse(
   path: string,
   account: MeResponse,
 ): Response {
+  if (path === "/api/bootstrap")
+    return Response.json({
+      setup: { isRequired: false },
+      account,
+      progress:
+        account.me.role === "admin" ? { needsInvitations: false } : null,
+    });
   const answer =
     path === "/api/me"
       ? { body: account, status: 200 }

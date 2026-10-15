@@ -209,3 +209,52 @@ it("never rereads deleted usage or displays consent recovery after persisted del
   expect(countCallsTo("GET", usagePath)).toBe(1);
   expect(countCallsTo("DELETE", path)).toBe(1);
 });
+
+it("keeps a committed group refresh-only when navigation bootstrap fails", async () => {
+  const { router } = renderGroups({
+    routes: { "POST /api/groups": { status: 201, body: GROUP } },
+  });
+  const recovery = _failAccountAfterWrite({
+    method: "POST",
+    path: "/api/groups",
+  });
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let failBootstrap = false;
+  vi.mocked(fetch).mockImplementation(async (path, init) => {
+    if (path === "/api/bootstrap" && failBootstrap)
+      return Response.json(
+        { error: "unavailable", message: "Unavailable" },
+        { status: 503 },
+      );
+    return original(path, init);
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "New group" }));
+  await user.type(screen.getByLabelText("What to call it"), "Family");
+  await user.click(screen.getByRole("button", { name: "Create the group" }));
+  await screen.findByText("Account refresh unavailable.");
+  failBootstrap = true;
+  await act(async () => {
+    await router.invalidate();
+  });
+  expect(await screen.findByText("The group has been created.")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "New group" }),
+  ).not.toBeInTheDocument();
+  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  failBootstrap = false;
+  recovery.allowRefresh();
+  await user.click(
+    screen.getByRole("button", { name: "Retry account refresh" }),
+  );
+  await screen.findByRole("button", { name: "New group" });
+  await user.click(
+    screen.getByRole("button", { name: "Retry account refresh" }),
+  );
+  await waitFor(() => {
+    return expect(
+      screen.getByRole("button", { name: "New group" }),
+    ).toBeEnabled();
+  });
+  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+});

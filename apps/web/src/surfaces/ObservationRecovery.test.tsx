@@ -174,6 +174,12 @@ it("activity pagination refusal also removes earlier rows and reconciles access"
           { status: 403 },
         );
       }
+      if (path === "/api/bootstrap")
+        return Response.json({
+          setup: { isRequired: false },
+          account: createMeResponse({ role: "viewer" }),
+          progress: null,
+        });
       if (path === "/api/me") {
         return Response.json(createMeResponse({ role: "viewer" }));
       }
@@ -206,6 +212,12 @@ function _refuseObservation({
           { status },
         );
       }
+      if (path === "/api/bootstrap")
+        return Response.json({
+          setup: { isRequired: false },
+          account: status === 401 ? null : createMeResponse({ role: "viewer" }),
+          progress: null,
+        });
       if (path === "/api/me") {
         return status === 401
           ? Response.json(
@@ -231,6 +243,12 @@ function _failAccountRecheck(): () => void {
           { status: 403 },
         );
       }
+      if (path === "/api/bootstrap" && !accountFailed)
+        return Response.json({
+          setup: { isRequired: false },
+          account: createMeResponse({ role: "viewer" }),
+          progress: null,
+        });
       if (path === "/api/me") {
         return accountFailed
           ? Response.json(

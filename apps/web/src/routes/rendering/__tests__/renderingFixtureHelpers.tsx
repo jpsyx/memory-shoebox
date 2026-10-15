@@ -95,6 +95,13 @@ export function signInRenderingFixture(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
+      if (path === "/api/bootstrap") {
+        return Response.json({
+          setup: { isRequired: false },
+          account: ME,
+          progress: { needsInvitations: false },
+        });
+      }
       if (path === "/api/setup" || path === "/api/setup/progress") {
         return Response.json(
           path === "/api/setup"
@@ -126,6 +133,13 @@ export function signOutRenderingFixture(): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => {
+      if (path === "/api/bootstrap") {
+        return Response.json({
+          setup: { isRequired: false },
+          account: null,
+          progress: null,
+        });
+      }
       if (path === "/api/setup") {
         return Response.json({ isRequired: false });
       }

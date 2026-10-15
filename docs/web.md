@@ -112,6 +112,7 @@ apps/web/
     ├── api/
     │   ├── clientHelpers/clientHelpers.ts       apiFetch, jsonInit and ApiRequestError
     │   ├── auth/, me/, publicSettings/   one module per resource
+    │   ├── bootstrap/             current navigation authority in one read
     │   ├── setup/                 availability, creation and durable progress
     │   ├── inviteMember.ts        full private directory and invitation writes
     │   ├── mailHealth.ts          administrative delivery diagnosis
@@ -291,12 +292,11 @@ The empty target takes no space in other pages' headers.
 
 **First-run setup.** `/setup` is an anonymous narrow form only while the
 catalog contains no member rows; `/setup/invite` is a private active-admin
-invitation step. The root fetches fresh setup status at every navigation
-boundary, then reads `/me` and admin-only progress. Initialization errors show a
-retry screen. The shared `getSetupRedirectFromNavigation` decision preserves
-ordinary anonymous deep links after setup and resumes the pending creating
-admin. `/join?address=` is an unvalidated sign-in prefill alias. See
-[setup.md](setup.md) for mutation, recovery and invitation behavior.
+invitation step. Each actual navigation reads one fresh `/api/bootstrap`,
+including navigation after a speculative preload (which performs no bootstrap
+read). The response seeds account and progress caches before the destination
+mounts. Failed authority reads remain explicit retry states, and ordinary
+anonymous deep links preserve their destination. See [setup.md](setup.md).
 
 **The route map is flat.** The routes cover the product's web surfaces;
 there is no `/admin` prefix, because role is an attribute of a destination
@@ -308,7 +308,7 @@ rather than a different page.
 
 **One query answers the guard and My account.** `src/api/me/me.ts` exports
 `meQueryOptions` for `GET /api/me`, and that single cache entry is what
-the root `beforeLoad` awaits and what the account surface reads. The app
+the root `beforeLoad` seeds from the current bootstrap and the account surface reads. The app
 guard narrows the root's account result without fetching a second account.
 There is no separate "session" fetch: the account response already carries the member,
 their role, their four notification switches and the three instance settings
@@ -328,10 +328,13 @@ forms and the global mail diagnosis. Dirty drafts keep their input.
 Reads are serialized and account/settings writes cancel earlier reads, so late
 responses cannot overwrite a saved result. Anonymous clients refresh only their
 public settings after the account read; losing authority removes private caches.
-A transient account-read failure while an existing settings or group save awaits
-reconciliation retains the cached account solely to keep refresh-only recovery
-reachable. A real signed-out
-`401` still becomes `null` and follows the guard redirect. Timezone changes
+A transient navigation bootstrap failure while a settings or group save awaits
+reconciliation retains the committed snapshot in an explicit refresh-only recovery
+screen. An anonymous bootstrap returns a null account and follows the guard redirect.
+Pending account writes and their successful account publications cancel older
+bootstrap reads. A per-client write generation also rejects a response that already
+finished fetching but has not yet seeded the account cache. Cancellation stays
+retryable rather than restoring stale identity. Timezone changes
 invalidate filter and people queries along with the other dated views, and ask
 the member's upload controller to refresh metadata. That action keeps its
 File handles, byte progress and active engine; an older metadata response is

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Button } from "@mantine/core";
 import type { ReactNode } from "react";
@@ -13,6 +14,7 @@ export function DeclineRemovalControls({
   reason,
   href,
 }: Readonly<Props>): ReactNode {
+  const itemId = actions.target?.itemId;
   return (
     <ChipRow>
       <Button
@@ -31,8 +33,13 @@ export function DeclineRemovalControls({
       >
         Cancel
       </Button>
-      {href === undefined || actions.isPending ? null : (
-        <Button component="a" href={href} variant="default">
+      {href === undefined || !itemId || actions.isPending ? null : (
+        <Button
+          renderRoot={(props) => {
+            return <Link {...props} to="/items/$itemId" params={{ itemId }} />;
+          }}
+          variant="default"
+        >
           Change who can see it instead
         </Button>
       )}

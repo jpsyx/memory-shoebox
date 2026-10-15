@@ -1,3 +1,4 @@
+import { isApplyingNavigationBootstrap } from "@/api/bootstrap/bootstrap";
 import type { MeResponse } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
 import { meQueryOptions } from "@/api/me/me";
@@ -70,9 +71,10 @@ function _reconcile({
   const { queryClient, invalidateRouter, dependents } = owner;
   const { hasAuthorityChanged, hasSettingsChanged, hasAdminChanged } =
     _getChanges({ previous, current });
+  const isNavigation = isApplyingNavigationBootstrap(queryClient);
   if (hasAuthorityChanged) {
     dependents.reset();
-    _removePrivateQueries(queryClient);
+    if (!isNavigation) _removePrivateQueries(queryClient);
   }
   const recovery = queryClient.getQueryData<SettingsSnapshot>(
     SETTINGS_RECOVERY_KEY,
@@ -89,7 +91,7 @@ function _reconcile({
     }
     return;
   }
-  if (hasSettingsChanged || hasAuthorityChanged) {
+  if (!isNavigation && (hasSettingsChanged || hasAuthorityChanged)) {
     void invalidateRouter().catch(() => {});
   }
   if (!current.me || hasAuthorityChanged) {

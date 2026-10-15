@@ -1,3 +1,4 @@
+import { RouterTestProvider } from "@/testing/RouterTestProvider";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
@@ -32,33 +33,41 @@ describe("answer dialogs", () => {
     const actions = _actions();
     const view = render(
       <MantineProvider>
-        <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        <RouterTestProvider>
+          <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     await userEvent.type(screen.getByRole("textbox"), "Sí, <b>ours</b>");
     view.rerender(
       <MantineProvider>
-        <RemovalActionDialogs
-          actions={{ ...actions, dialog: undefined, error: "Try again" }}
-          viewer={VIEWER}
-        />
+        <RouterTestProvider>
+          <RemovalActionDialogs
+            actions={{ ...actions, dialog: undefined, error: "Try again" }}
+            viewer={VIEWER}
+          />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     view.rerender(
       <MantineProvider>
-        <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        <RouterTestProvider>
+          <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     expect(screen.getByRole("textbox")).toHaveValue("Sí, <b>ours</b>");
     view.rerender(
       <MantineProvider>
-        <RemovalActionDialogs
-          actions={{
-            ...actions,
-            target: makeRemovalRequestFromOverrides({ requestId: "other" }),
-          }}
-          viewer={VIEWER}
-        />
+        <RouterTestProvider>
+          <RemovalActionDialogs
+            actions={{
+              ...actions,
+              target: makeRemovalRequestFromOverrides({ requestId: "other" }),
+            }}
+            viewer={VIEWER}
+          />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     expect(screen.getByRole("textbox")).toHaveValue("");
@@ -67,7 +76,9 @@ describe("answer dialogs", () => {
     const actions = _actions();
     render(
       <MantineProvider>
-        <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        <RouterTestProvider>
+          <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     const link = screen.getByRole("link", {
@@ -85,7 +96,9 @@ describe("answer dialogs", () => {
     };
     render(
       <MantineProvider>
-        <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        <RouterTestProvider>
+          <RemovalActionDialogs actions={actions} viewer={VIEWER} />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     await waitFor(() => {
@@ -101,7 +114,9 @@ describe("decline dialog entry focus", () => {
   it("places the opening keyboard focus in the responder words", async () => {
     render(
       <MantineProvider>
-        <RemovalActionDialogs actions={_actions()} viewer={VIEWER} />
+        <RouterTestProvider>
+          <RemovalActionDialogs actions={_actions()} viewer={VIEWER} />
+        </RouterTestProvider>
       </MantineProvider>,
     );
     await waitFor(() => {
