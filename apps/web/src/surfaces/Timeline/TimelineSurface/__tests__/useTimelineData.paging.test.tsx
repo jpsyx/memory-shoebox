@@ -128,7 +128,7 @@ describe("the actual timeline paging caller", () => {
       await act(async () => {
         finishRequest!(
           Response.json({
-            days: [],
+            days: [makeDay()],
             nextCursor: null,
             previousCursor: null,
             resultCount: null,

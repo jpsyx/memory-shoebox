@@ -449,6 +449,15 @@ late canceled operations cannot replace the next operation's count. Raw facet
 choices keep their full selection while the strip's count keeps the effective
 jump boundary.
 
+An empty retained refresh head triggers one client retry from the uncursored
+effective selection, then ordinary older traversal resumes. This includes the
+surviving boundary day without changing exclusive server cursors. Web-only
+`requestCursor` provenance atomically normalizes cached `pageParams` through
+Query's public structural-sharing callback, preserving truthful cursor replay
+and the five-page cap. Recovery costs one extra HTTP page request and a second
+filtered count; an empty retry stops with null edges. Server cursor formats,
+date limits and visibility predicates stay the same.
+
 **The latch sends nothing when everything in view is already seen.** One
 intersection observer watches the whole pile, the prints announce themselves
 with `data-item-id` and `data-burst-id`, and the batch goes 500ms after the

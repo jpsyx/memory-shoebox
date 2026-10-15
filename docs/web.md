@@ -471,6 +471,21 @@ then carries that fresh count across the sequential fetch. Ordinary paging
 does not recount. Canceled and replacement refreshes have separate signal-owned
 count state. This scalar does not change any page's metadata timestamp.
 
+If a retained refresh head becomes empty after a deletion or selection edit,
+the query retries that head once without a cursor in the same effective view.
+It then follows the restarted page's ordinary older cursors, including the
+surviving day at the old exclusive boundary. A web-only `requestCursor` records
+each page's actual request. The public `structuralSharing` callback normalizes
+`pageParams` from that provenance before publishing the cache result and keeps
+unchanged references through `replaceEqualDeep`. A saved containing-page cursor
+and subsequent refresh therefore replay the actual page source. Manual cache
+seeds without provenance retain their existing opaque parameter.
+
+The exceptional empty-head recovery costs one extra page request and, for a
+filtered view, a second authoritative count on the uncursored retry. It retries
+only once; an empty or fully restricted effective selection remains empty with
+both cursors null. Canceled restarts cannot publish over a newer operation.
+
 **The two empty states are told apart by `me.role` and by nothing else.**
 `timeline.md` transformation 9 makes a brand-new archive and a fully
 restricted viewer return byte-identical bodies, on purpose, so nothing in the

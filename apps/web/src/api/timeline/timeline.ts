@@ -20,6 +20,7 @@ import {
   queryOptions,
   type InfiniteData,
   type QueryFunction,
+  replaceEqualDeep,
 } from "@tanstack/react-query";
 /** The day stream. Every page of every selection hangs below this key. */
 export const TIMELINE_QUERY_KEY = ["timeline"] as const;
@@ -33,7 +34,60 @@ export type TimelineQueryPage = TimelineResponse & {
   metadataUpdatedAt: number;
   /** Count from this view's uncursored request or latest explicit refresh head. */
   selectionResultCount: number | null;
+  /** Actual page request cursor; absent only in pre-existing manual cache seeds. */
+  requestCursor?: string | null;
 };
+
+/** A fetched page before this operation's count is attached. */
+type TimelineMetadataPage = TimelineResponse & {
+  metadataUpdatedAt: number;
+  requestCursor: string | null;
+};
+
+/** One real request and its optional one-time empty-head recovery. */
+type TimelinePageReadOptions = {
+  view: Readonly<TimelineView>;
+  cursor: string | null;
+  signal: AbortSignal;
+  includeResultCount: boolean;
+  canRestartWhenEmpty: boolean;
+};
+
+/** Reads one actual cursor and stamps that request's own metadata provenance. */
+async function _readTimelinePageFromCursor(
+  options: Readonly<TimelinePageReadOptions>,
+): Promise<TimelineMetadataPage> {
+  const metadataUpdatedAt = Date.now();
+  const page = await apiFetch({
+    path: makeTimelinePathFromView({
+      view: options.view,
+      cursor: options.cursor ?? undefined,
+      includeResultCount: options.includeResultCount,
+    }),
+    schema: timelineResponseSchema,
+    init: { signal: options.signal },
+  });
+  if (options.canRestartWhenEmpty && page.days.length === 0) {
+    return _readTimelinePageFromCursor({
+      ...options,
+      cursor: null,
+      includeResultCount: false,
+      canRestartWhenEmpty: false,
+    });
+  }
+  return { ...page, metadataUpdatedAt, requestCursor: options.cursor };
+}
+
+/** Publishes truthful cursor provenance atomically, preserving unchanged refs. */
+function _shareTimelineQueryData(oldData: unknown, newData: unknown): unknown {
+  const data = newData as InfiniteData<TimelineQueryPage, string | null>;
+  const pageParams = data.pages.map((page, index) => {
+    return page.requestCursor === undefined
+      ? data.pageParams[index]!
+      : page.requestCursor;
+  });
+  return replaceEqualDeep(oldData, { ...data, pageParams });
+}
 
 /** Count ownership is limited to one actual sequential fetch operation. */
 type TimelineCountOperation = {
@@ -63,7 +117,6 @@ function _makeTimelinePageReaderFromView(
 ): QueryFunction<TimelineQueryPage, string[], string | null> {
   let countOperation: TimelineCountOperation | undefined;
   return async ({ pageParam, signal, client, queryKey }) => {
-    const metadataUpdatedAt = Date.now();
     const cached =
       client.getQueryData<InfiniteData<TimelineQueryPage, string | null>>(
         queryKey,
@@ -76,21 +129,18 @@ function _makeTimelinePageReaderFromView(
       pageParam !== null &&
       cached?.pageParams[0] === pageParam &&
       client.getQueryState(queryKey)?.fetchMeta?.fetchMore === undefined;
-    const page = await apiFetch({
-      path: makeTimelinePathFromView({
-        view,
-        cursor: pageParam ?? undefined,
-        includeResultCount: isRefreshHead && makeQueryFromView(view).size > 0,
-      }),
-      schema: timelineResponseSchema,
-      init: { signal },
+    const page = await _readTimelinePageFromCursor({
+      view,
+      cursor: pageParam,
+      signal,
+      includeResultCount: isRefreshHead && makeQueryFromView(view).size > 0,
+      canRestartWhenEmpty: isRefreshHead,
     });
-    if (pageParam === null || isRefreshHead) {
+    if (page.requestCursor === null || isRefreshHead) {
       operation.resultCount = page.resultCount;
     }
     return {
       ...page,
-      metadataUpdatedAt,
       selectionResultCount: operation.resultCount,
     };
   };
@@ -170,6 +220,7 @@ export function makeTimelineQueryOptionsFromView({
       return firstPage.previousCursor;
     },
     maxPages: 5,
+    structuralSharing: _shareTimelineQueryData,
   });
 }
 
