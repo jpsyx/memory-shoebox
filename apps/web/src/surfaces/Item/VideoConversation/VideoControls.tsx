@@ -1,4 +1,4 @@
-import { onVideoPlay } from "./onVideoPlay";
+import { onVideoPlay, onVideoPlayKey } from "./onVideoPlay";
 import { FullscreenButton, MuteButton, PlayButton } from "@videojs/react";
 import {
   IconMaximize,
@@ -7,7 +7,7 @@ import {
   IconVolume,
   IconVolumeOff,
 } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { VideoSpeedSelect } from "./VideoSpeedSelect";
@@ -27,10 +27,15 @@ export function VideoControls({
   hasError,
   onFailure,
 }: Readonly<Props>): ReactNode {
+  const onKeyCapture = (event: KeyboardEvent) => {
+    onVideoPlayKey({ event, video: transport.videoRef.current, onFailure });
+  };
   return (
     <div className={classes.controls}>
       <PlayButton
         disabled={hasError}
+        onKeyDownCapture={onKeyCapture}
+        onKeyUpCapture={onKeyCapture}
         onClickCapture={(event) => {
           return onVideoPlay({
             event,

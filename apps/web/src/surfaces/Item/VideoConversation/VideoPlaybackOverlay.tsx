@@ -1,8 +1,8 @@
-import { onVideoPlay } from "./onVideoPlay";
+import { onVideoPlay, onVideoPlayKey } from "./onVideoPlay";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { PlayButton } from "@videojs/react";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { VideoPlayback } from "./useVideoPlayback";
 import { VideoPlaybackError } from "./VideoPlaybackError";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
@@ -26,6 +26,15 @@ export function VideoPlaybackOverlay({
   onReload,
   renew,
 }: Readonly<Props>): ReactNode {
+  const onKeyCapture = (event: KeyboardEvent) => {
+    onVideoPlayKey({
+      event,
+      video: transport.videoRef.current,
+      onFailure: () => {
+        playback.setHasError(true);
+      },
+    });
+  };
   return (
     <>
       {!hasError ? (
@@ -41,12 +50,8 @@ export function VideoPlaybackOverlay({
           }}
           className={classes.playbackSurface}
           label={playback.isPlaying ? "Pause video" : "Play video"}
-          onKeyUp={(event) => {
-            if (event.key === " ") {
-              // Video.js handles Space; suppress Chromium's extra native click.
-              event.preventDefault();
-            }
-          }}
+          onKeyDownCapture={onKeyCapture}
+          onKeyUpCapture={onKeyCapture}
         >
           {!playback.isPlaying ? (
             <span className={classes.centerPlay} aria-hidden="true">

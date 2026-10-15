@@ -65,9 +65,9 @@ The unbounded timeline observation reached 3,392 media nodes after six
 continuations. These numbers retain their original environment limitations;
 current measurements below are independently controlled observations.
 
-## Controlled current browser results
+## Latest measured browser results (round1)
 
-Current media acceptance passed **76/76** cases in 6.8 minutes after the completed
+Round1 media acceptance passed **76/76** cases in 6.8 minutes after the completed
 native-image handoff, pending-filter, committed-anchor, logical video-seek and
 round1 explicit-pause ownership corrections. The standard browser bundle was explicitly
 compiled with `NODE_ENV=production`; the API remained development/fake-email
@@ -77,6 +77,12 @@ versions and direct production React assertions. The source revision was
 `46a940681ace5f352a7ec931a0e1f01301eef333` plus the recorded round1 diff, on macOS
 arm64, Node 24.19.0, React 19.3.0, Vite 8.3.1, Chromium 153.0.8010.12 and
 WebKit 26.6.
+
+That measured product source was committed as
+`529317f751bc5ce56a529e1de8bb185487619b68`. The subsequent round2 correction routes
+focused Enter/Space activation through the existing playback intent and readiness
+owner. Its affected acceptance is recorded separately below; the timings, bytes,
+memory and compression observations here retain their round1 bundle identity.
 
 Each navigation row contains 30 observations. p50 is the median and p95 the
 nearest rank. Cold/reload/startup values are single observations. Readiness
@@ -174,7 +180,7 @@ poster and neighboring photo bodies bring final totals to 92,266 / 92,268 B.
 This selected-player observation does not qualify speculative metadata or
 first-segment loading; both remain disabled.
 
-Current raw results are under `tmp/media-loading/task18-media-r1-final/`.
+Round1 raw results are under `tmp/media-loading/task18-media-r1-final/`.
 `task18-r1-cache-raw.json` freezes the cache observations at
 16:56:53.437Z and 16:59:58.544Z on October 15, 2026 before ordinary acceptance
 can append other runs. `task18-r1-measurements.json` records derived
@@ -271,9 +277,9 @@ bytecode, response digests and timings live in `task18-sql-final.json` and
 `task18-sql-index-report.md` under `tmp/media-loading/`. Replay the A/B/A benchmark
 at its recorded pre-adoption BASE, not a catalog already migrated to 0018.
 
-## Current static representations
+## Round1 static representations
 
-The current standard build contains 121 eligible HTML, JavaScript, CSS, JSON and
+The measured round1 standard build contains 121 eligible HTML, JavaScript, CSS, JSON and
 SVG files totaling 2,238,397 identity bytes. Their Brotli representations total
 570,256 bytes, a 74.52% reduction; gzip totals 655,759 bytes, a 70.70% reduction.
 The separate upload-harness build has 127 eligible files: 2,267,778 identity bytes,
@@ -284,21 +290,32 @@ files without a smaller sidecar count their identity size.
 
 These are same-content eligible-text savings, not whole-build savings or measured
 latency improvements. The historical C5 74.53% observation remains separately
-recorded. The current built-output static test passed all 28 cases, including
+recorded. The round1 built-output static test passed all 28 cases, including
 entry and worker representation validators. Deployed packaging remains unverified.
 
 ## Final local verification
 
-The round1 product/test tree passed `pnpm check`: **5,033 tests** and all
-formatting, lint, types and build phases. Seven server tests remain explicitly
+The round2 keyboard-control correction passed `pnpm check`: **5,045 tests** and
+all formatting, lint, types and build phases. Seven server tests remain explicitly
 gated: three delegated Linux runtime cases, three Docker HDR codec cases and
-one opt-in built-static case. The latter separately passed in the current
+one opt-in built-static case. The latter separately passed in the round1
 28-case actual built-output check. These gates do not establish cgroup qualification.
 
-Current affected acceptance passed 65 focused unit/integration tests, eight
-native decode/terminal barrier cases across Chromium and WebKit, both actual
-reopen cases plus five prerequisites, and five unchanged keyboard/comment cases.
-The dedicated video suite passed 40/40 and fresh full media passed 76/76.
+Current affected acceptance passed **77 focused unit/integration tests**, six
+native keyboard/surface cases, the complete **40-case video suite**, and all ten
+native media-renewal cases across Chromium and WebKit. Actual focused Enter and
+Space commands now share pointer playback's explicit-intent/readiness owner;
+renewal cannot override a later keyboard pause or cause duplicate play activation.
+The native observer delegates the original play method unchanged and verifies one
+call per play activation, native clock advancement, pause and retained focus.
+
+These round2 results use BASE `529317f751bc5ce56a529e1de8bb185487619b68` plus the
+recorded control-boundary correction. The 76-case media measurements, eight
+native upload-barrier cases, both actual reopen cases plus five prerequisites,
+static representation bytes and 5,033-test round1 check remain tied to that BASE,
+not the new bundle. They were not automatically repeated for keyboard command
+routing. No upload, prefetch, selection or measurement protocol changed.
+
 The complete ordinary run remains **370 passed and one existing fixme** at
 pre-round1 commit `46a940681ace5f352a7ec931a0e1f01301eef333`; it was not rerun
 for these narrow review fixes. Its actual 264-file batches, expiry flows and
@@ -314,17 +331,24 @@ The seek fixture now requires the initial viewer to mount before seeding/reload;
 this is a setup precondition, not a claimed early-refresh product fix. No timeout,
 retry or threshold was relaxed. Independent review must disposition that residual.
 
-Definitive current logs under `tmp/media-loading/` are
-`task18-check-r1-final.log`, `task18-media-r1-final.log`,
-`task18-r1-video-current.log`, `task18-r1-video-focused-green.log`,
+Definitive round2 logs under `tmp/media-loading/` are
+`task18-check-r2-final.log`, `task18-r2-video-focused-green.log`,
+`task18-r2-video-keyboard.log`, `task18-r2-video-current.log` and
+`task18-r2-media-renewal.log`. The separate production inventory is
+`task18-r2-production-inventory.json`; its 361 standard artifacts match the
+post-check `task18-r2-final-production-inventory.json`. The compiler explicitly
+used production React/Vite while actual API configuration stayed development,
+fake-email and no-mail. The round2 final source/preservation inventories record
+exact changed paths and retained historical hashes. There is no round2 timing or
+compression claim.
+
+Retained round1 logs include `task18-media-r1-final.log`,
 `task18-r1-upload-barrier-typed.log`, `task18-r1-reopen-final.log`,
-`task18-r1-video-keyboard.log` and `task18-static-r1-built.log`.
-The prior complete ordinary log is `task18-ordinary-r102-final.log`.
-Current standard/harness identities are in
-`task18-r1-final-production-inventory.json`; all standard artifacts match the
-measured round1 inventory. Final source and preservation inventories record
-subsequent documentation-only edits. Scoped Task18 re-review and whole-branch
-review remain pending.
+`task18-static-r1-built.log` and `task18-check-r1-final.log`. Their measured/final
+bundle identities remain in `task18-r1-production-inventory.json` and
+`task18-r1-final-production-inventory.json`. The prior complete ordinary log is
+`task18-ordinary-r102-final.log`. Scoped round2 and whole-branch review remain
+pending.
 
 ## Operating limits and decisions
 

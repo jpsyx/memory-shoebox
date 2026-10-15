@@ -199,6 +199,12 @@ any queued seek-and-play. The selected annotation target still applies after
 readiness. A later explicit play may start only after readiness; source loading
 pause events do not replace the user’s intent. These intents retire with the
 item, node or rendition. Positions clamp to a shorter duration.
+Both the toolbar and picture button route focused Enter keydown and Space keyup
+through this same explicit-intent and readiness check. Video.js activates those
+keys directly rather than dispatching a click. The keyboard adapter prevents an
+extra native click, while the waiting play command checks whether renewal already
+started playback before calling `play()` again. Native source-load pause events
+remain presentation updates, not new user commands.
 A rejected play promise leaves the player paused and does not become a transport
 error. Readiness remains owned by the actual native node and measured viewport,
 including A5's metadata/poster and first-frame/buffering-or-paused gates.

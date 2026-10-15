@@ -1,4 +1,64 @@
 import { test, expect } from "./admin.fixtures.ts";
+import type { Locator, Page } from "@playwright/test";
+
+async function _observeNativePlay(video: Locator): Promise<void> {
+  await video.evaluate((element: HTMLVideoElement) => {
+    const nativePlay = element.play;
+    element.dataset.keyboardPlayCalls = "0";
+    element.play = function (...args) {
+      element.dataset.keyboardPlayCalls = String(
+        Number(element.dataset.keyboardPlayCalls) + 1,
+      );
+      return Reflect.apply(nativePlay, this, args);
+    };
+  });
+}
+
+async function _expectKeyboardPlayback(
+  page: Page,
+  video: Locator,
+): Promise<void> {
+  await _observeNativePlay(video);
+  let expectedCalls = 0;
+  for (const suffix of ["", " video"]) {
+    for (const key of ["Enter", "Space"]) {
+      const position = await video.evaluate((element: HTMLVideoElement) => {
+        return element.currentTime;
+      });
+      const play = page.getByRole("button", {
+        name: `Play${suffix}`,
+        exact: true,
+      });
+      await play.focus();
+      await expect(play).toBeFocused();
+      await page.keyboard.press(key);
+      await expect(video).toHaveJSProperty("paused", false);
+      await expect
+        .poll(() => {
+          return video.evaluate((element: HTMLVideoElement) => {
+            return element.currentTime;
+          });
+        })
+        .toBeGreaterThan(position);
+      expectedCalls += 1;
+      await expect(video).toHaveAttribute(
+        "data-keyboard-play-calls",
+        String(expectedCalls),
+      );
+      const pause = page.getByRole("button", {
+        name: `Pause${suffix}`,
+        exact: true,
+      });
+      await expect(pause).toBeFocused();
+      await page.keyboard.press(key);
+      await expect(video).toHaveJSProperty("paused", true);
+      await expect(video).toHaveAttribute(
+        "data-keyboard-play-calls",
+        String(expectedCalls),
+      );
+    }
+  }
+}
 
 [
   { name: "mouse", hasTouch: false, viewport: { width: 1280, height: 900 } },
@@ -62,6 +122,7 @@ import { test, expect } from "./admin.fixtures.ts";
       await expect(video).toHaveJSProperty("paused", false);
       await page.getByRole("button", { name: "Pause", exact: true }).click();
       await expect(video).toHaveJSProperty("paused", true);
+      await _expectKeyboardPlayback(page, video);
     });
   });
 });
