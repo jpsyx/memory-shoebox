@@ -33,21 +33,32 @@ function _waitForMediaEvent(
   functionOptions: Readonly<{
     video: HTMLVideoElement;
     eventName: "loadedmetadata" | "seeked";
+    signal: AbortSignal;
   }>,
 ): Promise<void> {
-  const { video, eventName } = functionOptions;
-
+  const { video, eventName, signal } = functionOptions;
+  signal.throwIfAborted();
   return new Promise((settle, fail) => {
-    const onError = (): void => {
+    const cleanup = () => {
       video.removeEventListener(eventName, onEvent);
+      video.removeEventListener("error", onError);
+      signal.removeEventListener("abort", onAbort);
+    };
+    const onError = () => {
+      cleanup();
       fail(new Error(`Video error ${video.error?.code ?? "unknown"}`));
     };
-    const onEvent = (): void => {
-      video.removeEventListener("error", onError);
+    const onEvent = () => {
+      cleanup();
       settle();
+    };
+    const onAbort = () => {
+      cleanup();
+      fail(signal.reason);
     };
     video.addEventListener(eventName, onEvent, { once: true });
     video.addEventListener("error", onError, { once: true });
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -94,23 +105,32 @@ async function _makeDerivativeFromVideo(
  * derivatives when no drawable frame is available.
  */
 export async function capturePoster(
-  functionOptions: Readonly<{ video: HTMLVideoElement; signal: AbortSignal }>,
+  functionOptions: Readonly<{
+    video: HTMLVideoElement;
+    signal: AbortSignal;
+    purposes: ReadonlyArray<"thumb" | "poster">;
+  }>,
 ): Promise<VideoDerivativesResult> {
   // Seek to the poster frame before capturing its derivatives.
 
   const { video, signal } = functionOptions;
 
-  await _waitForMediaEvent({ video: video, eventName: "loadedmetadata" });
+  await _waitForMediaEvent({
+    video: video,
+    eventName: "loadedmetadata",
+    signal,
+  });
   const size = { width: video.videoWidth, height: video.videoHeight };
   if (size.width === 0 || size.height === 0) {
     return makeNoPoster(undefined);
   }
-  const seeked = _waitForMediaEvent({ video, eventName: "seeked" });
+  const seeked = _waitForMediaEvent({ video, eventName: "seeked", signal });
   video.currentTime = getPosterSeekSecondsFromDuration(video.duration);
   await seeked;
   const waitedFor = await waitForPresentedFrame({
     video,
     timeoutMs: FRAME_WAIT_MS,
+    signal,
   });
   const isWebKitEncoder = await isWebKitImageEncoder();
   const readyState = video.readyState;
@@ -119,19 +139,23 @@ export async function capturePoster(
   }
   const sizes = getVideoDerivativeSizesFromSize(size);
   const quality = getJpegQualityFromEncoder(isWebKitEncoder);
-  const poster = await _makeDerivativeFromVideo({
-    purpose: "poster",
-    size: sizes.poster,
-    video,
-    quality,
-    signal,
-  });
-  const thumb = await _makeDerivativeFromVideo({
-    purpose: "thumb",
-    size: sizes.thumb,
-    video,
-    quality,
-    signal,
-  });
+  const poster = functionOptions.purposes.includes("poster")
+    ? await _makeDerivativeFromVideo({
+        purpose: "poster",
+        size: sizes.poster,
+        video,
+        quality,
+        signal,
+      })
+    : [];
+  const thumb = functionOptions.purposes.includes("thumb")
+    ? await _makeDerivativeFromVideo({
+        purpose: "thumb",
+        size: sizes.thumb,
+        video,
+        quality,
+        signal,
+      })
+    : [];
   return { derivatives: [...poster, ...thumb], size };
 }

@@ -63,21 +63,30 @@ export function waitForPresentedFrame(
       >
     >;
     timeoutMs: number;
+    signal?: AbortSignal;
   }>,
 ): Promise<"frame" | "timeout"> {
-  const { video, timeoutMs } = functionOptions;
-
-  return new Promise((settle) => {
-    // The timer is set first so a callback that fires at once can clear it;
-    // `handle` is only read when the timer fires, by which time it is set.
+  const { video, timeoutMs, signal } = functionOptions;
+  signal?.throwIfAborted();
+  return new Promise((settle, fail) => {
+    const pending: { handle: number | undefined } = { handle: undefined };
+    const cleanup = () => {
+      clearTimeout(timer);
+      if (pending.handle !== undefined)
+        video.cancelVideoFrameCallback?.(pending.handle);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => {
+      cleanup();
+      fail(signal?.reason);
+    };
     const timer = setTimeout(() => {
-      if (handle !== undefined) {
-        video.cancelVideoFrameCallback?.(handle);
-      }
+      cleanup();
       settle("timeout");
     }, timeoutMs);
-    const handle = video.requestVideoFrameCallback?.(() => {
-      clearTimeout(timer);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    pending.handle = video.requestVideoFrameCallback?.(() => {
+      cleanup();
       settle("frame");
     });
   });

@@ -19,6 +19,7 @@ type CheckingContext = {
   lanes: CheckingLane[];
   isCurrent: () => boolean;
   takePick: () => UploadPendingPick | undefined;
+  signal: AbortSignal;
 };
 
 type FingerprintEntryOptions = {
@@ -26,6 +27,7 @@ type FingerprintEntryOptions = {
   file: File;
   worker: MediaWorkerClient;
   lane: CheckingLane;
+  checking: CheckingContext;
 };
 
 function _isHashableEntry(entry: Readonly<ManifestEntry>): boolean {
@@ -81,24 +83,35 @@ async function _getCheckedEntryFromPick(
     file: pick.file,
     worker,
     lane,
+    checking,
   });
 }
 
 async function _makeFingerprintedEntryFromFile(
   options: Readonly<FingerprintEntryOptions>,
 ): Promise<ManifestEntry> {
-  const { entry, file, worker, lane } = options;
+  const { entry, file, worker, lane, checking } = options;
   if (!entry.declaredContentType.toLowerCase().startsWith("image/")) {
     return entry;
   }
-  const made = await worker.makeVisualFingerprintFromFile({
-    file,
-    contentType: entry.declaredContentType.toLowerCase(),
-    size:
-      entry.width && entry.height
-        ? { width: entry.width, height: entry.height }
-        : undefined,
+  const made = await checking.context.dependencies.decodeCoordinator.run({
+    priority: "active",
+    signal: checking.signal,
+    work: async () => {
+      if (!checking.isCurrent() || lane.worker !== worker) {
+        throw new DOMException("Upload checking cancelled", "AbortError");
+      }
+      return worker.makeVisualFingerprintFromFile({
+        file,
+        contentType: entry.declaredContentType.toLowerCase(),
+        size:
+          entry.width && entry.height
+            ? { width: entry.width, height: entry.height }
+            : undefined,
+      });
+    },
   });
+  if (!checking.isCurrent()) return entry;
   lane.wasmDecodeCount += Number(made.usedWasmDecoder);
   return {
     ...entry,
@@ -136,6 +149,7 @@ function _makeCheckingContext(
   });
   let position = 0;
   let isChecking = true;
+  const abort = new AbortController();
   const lanes: CheckingLane[] = Array.from({ length: 2 }, () => {
     return { worker: undefined, wasmDecodeCount: 0 };
   });
@@ -144,6 +158,7 @@ function _makeCheckingContext(
     checking: {
       context: options.context,
       lanes,
+      signal: abort.signal,
       isCurrent: () => {
         return isChecking && options.context.isCurrent(options.generation);
       },
@@ -153,6 +168,7 @@ function _makeCheckingContext(
     },
     cancel: () => {
       isChecking = false;
+      abort.abort();
       lanes.forEach((lane) => {
         return lane.worker?.terminate();
       });

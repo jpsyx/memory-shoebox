@@ -17,6 +17,7 @@ export type MediaWorkerClient = {
       file: Blob;
       contentType: string;
       size: PixelSize | undefined;
+      purposes?: ReadonlyArray<"thumb" | "display">;
     }>,
   ) => Promise<ImageDerivativesResult>;
   /** Photo identity evidence, absent when the browser cannot decode it. */

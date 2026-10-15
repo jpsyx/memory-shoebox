@@ -1,3 +1,4 @@
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import type { MediaWorkerClient } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 import type { MediaWorkerPort } from "@/upload/mediaWorker/mediaWorkerProtocol.types";
@@ -18,6 +19,8 @@ export type UploadPreview =
 
 /** Shared decode dependencies and soft limits for completed previews. */
 export type CreateUploadPreviewQueueOptions = {
+  /** The session owner shares this with checking and transfer preparation. */
+  decodeCoordinator?: UploadDecodeCoordinator;
   createMediaWorker?: () => MediaWorkerPort;
   makeVideoDerivativesFromFile?: typeof import("@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile").makeVideoDerivativesFromFile;
   createObjectUrl?: (blob: Blob) => string;
@@ -51,6 +54,7 @@ export type UploadPreviewContext = {
   options: Required<CreateUploadPreviewQueueOptions>;
   values: Map<string, UploadPreview>;
   requests: Map<string, Readonly<UploadPreviewInput>>;
+  abortControllers: Map<string, AbortController>;
   activeFileIds: Set<string>;
   /** LRU request order, storing each completed preview's retained bytes. */
   cachedByteSizes: Map<string, number>;

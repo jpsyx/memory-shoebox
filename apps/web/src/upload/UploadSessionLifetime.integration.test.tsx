@@ -1,3 +1,4 @@
+import * as previewModule from "./createUploadPreviewQueue/createUploadPreviewQueue";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
 import { createMeResponse } from "@/testing/createMeResponse";
@@ -62,6 +63,44 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 describe("upload shell lifetime", () => {
+  it("shares one coordinator through the StrictMode lease and disposes only on owner retirement", async () => {
+    const harness = makeUploadControllerHarness();
+    const controllerFactory = vi
+      .spyOn(controllerModule, "createUploadSessionController")
+      .mockReturnValue(harness.controller);
+    const previewFactory = vi.spyOn(previewModule, "createUploadPreviewQueue");
+    let retainedPreviews:
+      | ReturnType<typeof useUploadSessionResources>["previews"]
+      | undefined;
+    const Probe = () => {
+      retainedPreviews = useUploadSessionResources().previews;
+      return null;
+    };
+    const view = _renderWithQueryClient(
+      <StrictMode>
+        <UploadSessionProvider viewer={viewer}>
+          <Probe />
+        </UploadSessionProvider>
+      </StrictMode>,
+    );
+    const retainedIndex = previewFactory.mock.results.findIndex((result) => {
+      return result.type === "return" && result.value === retainedPreviews;
+    });
+    const coordinator =
+      controllerFactory.mock.calls[retainedIndex]![0].decodeCoordinator!;
+    expect(coordinator).toBeDefined();
+    expect(
+      previewFactory.mock.calls[retainedIndex]![0]?.decodeCoordinator,
+    ).toBe(coordinator);
+    const dispose = vi.spyOn(coordinator, "dispose");
+    await act(async () => {});
+    expect(dispose).not.toHaveBeenCalled();
+    view.unmount();
+    await waitFor(() => {
+      return expect(dispose).toHaveBeenCalledOnce();
+    });
+  });
+
   it("StrictMode keeps a local draft until leaving the upload screen", async () => {
     const harness = makeUploadControllerHarness();
     vi.spyOn(controllerModule, "createUploadSessionController").mockReturnValue(

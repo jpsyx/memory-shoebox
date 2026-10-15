@@ -1,3 +1,4 @@
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import type {
   CreateUploadEditRequest,
   SetUploadVisibilityRequest,
@@ -159,6 +160,8 @@ export type UploadSessionApi = Pick<
 
 /** Controller dependencies default to the existing upload implementations. */
 export type CreateUploadSessionControllerOptions = {
+  /** Shared decoder owner; the shell injects the same dependency into previews. */
+  decodeCoordinator?: UploadDecodeCoordinator;
   memberId: string;
   api?: UploadSessionApi;
   getManifestEntryFromFile?: typeof import("@/upload/getManifestEntryFromFile/getManifestEntryFromFile").getManifestEntryFromFile;

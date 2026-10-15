@@ -9,6 +9,43 @@ afterEach(() => {
   return vi.restoreAllMocks();
 });
 describe("upload preview ownership", () => {
+  it("requests only the thumbnail from the worker", () => {
+    const harness = makePreviewHarnessFromOptions();
+    harness.request("thumb-only");
+    expect(harness.requests[0]?.request).toMatchObject({ purposes: ["thumb"] });
+    harness.queue.destroy();
+  });
+  it("never reuses an oversized small JPEG as an original preview", async () => {
+    const harness = makePreviewHarnessFromOptions();
+    harness.queue.requestPreview({
+      fileId: "heavy",
+      file: new File([new Uint8Array(129 * 1024)], "heavy.jpg", {
+        type: "image/jpeg",
+      }),
+      contentType: "image/jpeg",
+      size: { width: 320, height: 240 },
+    });
+    const pending = harness.requests[0]!;
+    pending.worker.onmessage?.(
+      new MessageEvent("message", {
+        data: {
+          kind: "image-derivatives-made",
+          requestId: pending.request.requestId,
+          derivatives: [],
+          usedWasmDecoder: false,
+          originalSize: { width: 320, height: 240 },
+        } satisfies MediaWorkerResponse,
+      }),
+    );
+    await waitFor(() => {
+      return expect(harness.queue.getPreview("heavy")?.kind).toBe(
+        "unavailable",
+      );
+    });
+    expect(harness.createObjectUrl).not.toHaveBeenCalled();
+    harness.queue.destroy();
+  });
+
   it("previews a small JPEG from its original when no thumbnail needs encoding", async () => {
     const harness = makePreviewHarnessFromOptions();
     harness.request("small");

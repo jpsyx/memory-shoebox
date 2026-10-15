@@ -220,6 +220,7 @@ export async function runUploadTransfer(
     sessionId,
     api: makeUploadEngineApiFromContext({ ...options, flush: events.flush }),
     createMediaWorker: context.dependencies.createMediaWorker,
+    decodeCoordinator: context.dependencies.decodeCoordinator,
     onEvent: events.onEvent,
   });
   context.state.engine = engine;

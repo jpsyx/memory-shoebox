@@ -15,7 +15,7 @@ export type DecodeImageOptions = {
 
 /** One derivative still to make, and the long edge it is made at. */
 export type DerivativeTarget = {
-  purpose: DerivativePurpose;
+  purpose: "thumb" | "display";
   longEdgePx: number;
 };
 

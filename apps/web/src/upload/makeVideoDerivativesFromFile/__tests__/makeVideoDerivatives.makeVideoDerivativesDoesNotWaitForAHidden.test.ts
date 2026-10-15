@@ -181,9 +181,11 @@ describe("makeVideoDerivatives", () => {
     await _deliverSeekedFrame({ hasFrameCallback: false });
     await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
     await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
-    await expect(made).resolves.toEqual({ derivatives: [], size: undefined });
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL);
+    expect(document.querySelector("video")).toBeNull();
 
     finishPoster(_makeJpegBlob());
+    await expect(made).resolves.toEqual({ derivatives: [], size: undefined });
     await _settle();
 
     expect(makeJpegFromSource).toHaveBeenCalledTimes(1);

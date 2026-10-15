@@ -1134,8 +1134,8 @@ handles, pending picks, activity and counts before another pick can open a draft
 An explicit pick opens a draft, reads
 headers and SHA-256 checksums of accepted originals in two lanes, then declares
 every picked file in sequential chunks of 500. Each lane owns a media worker:
-checksums stream through bounded slices, and photos also produce optional visual
-fingerprints before declaration. The worker reuses orientation-aware native
+checksums stream through bounded slices outside the shared decoder slot, and
+photos also produce optional visual fingerprints before declaration. The worker reuses orientation-aware native
 decoding and the HEIC fallback, normalizes the full image to a small sRGB canvas
 over white, and reads pixels without encoding or replacing the original. HEIC
 attempts recycle each lane's worker at the existing bounded threshold, including
@@ -1448,9 +1448,10 @@ shared design-system assets. The session provider exposes separate controller
 and preview hooks over the same owned resources.
 
 `upload/createUploadPreviewQueue` owns a small sequential preview queue. It starts
-one image worker lazily, reuses the engine's worker protocol and video poster
-helper, and creates an object URL only for the thumbnail. Display and poster
-blobs fall out of scope immediately. HEIC recycling follows
+one image worker lazily and requests only `thumb` through the worker protocol
+and video poster helper. Display images and video posters are encoded only by
+transfer preparation, never by the preview queue. It creates an object URL only
+for the thumbnail. HEIC recycling follows
 `appConfig.upload.heicWorkerRecycleCount`, including failed WASM attempts;
 worker errors discard that worker before another image is prepared.
 
@@ -1458,8 +1459,10 @@ Development prebundles the worker-only `hash-wasm` and libheif glue dependencies
 at startup. Discovering them on the first preview would otherwise let Vite reload
 the page, losing every selected original's in-memory File handle. The worker and
 HEIC decoder still load lazily in the browser. A JPEG already smaller than the
-thumbnail target reuses its original URL after successful decoding: the upload
-derivative policy deliberately skips an unnecessary re-encode at that size.
+thumbnail target and at most 128 KiB reuses its original URL. JPEG display
+reuse also requires at most 2048 px and 1.5 MiB. An oversized JPEG is encoded
+even when its dimensions fit, and the encoder's returned Blob must actually be
+JPEG. Both the producer and the preview fallback apply the same eligibility.
 
 `getPreview(fileId)` returns a stable preparing, ready, or unavailable object
 until that file changes, and undefined before request or after release or cache eviction.
@@ -1467,15 +1470,36 @@ until that file changes, and undefined before request or after release or cache 
 `useSyncExternalStore`. The signed-in Upload provider owns the queue.
 Its `setPaused` method remains available for explicit suspension. Transfer progress keeps preview work
 enabled so newly visible originals can be recognized while sending; decoding
-remains serial and cache-limited. Pausing holds subsequent decodes; an active
-decode finishes.
+shares the session's single decoder slot across duplicate fingerprinting,
+previews and transfer preparation. Waiting active preparation overtakes queued
+previews; it never preempts a running decode. Streaming hashes and the two
+network transfer lanes remain independent. Pausing holds subsequent previews;
+an active decode finishes.
 Offscreen deactivation cancels unfinished interest but retains completed previews.
 An inactive least-recently-used cache holds up to 100 entries and 24 MiB of
 thumbnail bytes; active previews remain pinned. Reentry reuses the same URL
 without decoding. Explicit release, removal, batch replacement and teardown
-revoke thumbnails and invalidate late answers. Destroy returns synchronously; an already-started video's temporary
+revoke thumbnails and invalidate late answers. Queued cancellation removes the
+decode before it can invoke a retired worker. Cancelling an already-running
+noncancellable decode stops awaiting its result but retains the slot through
+actual settlement. Destroy returns synchronously; an already-started video's temporary
 URL and hidden element are cleaned by the existing helper's poster timeout and
-bounded hidden-tab wait, without holding provider teardown open.
+bounded hidden-tab wait, without holding provider teardown open. The 20-second
+capture deadline retires the video/source/URL and aborts media/frame waits. It
+prevents later encodes, but an already-started native encode keeps the shared
+slot until actual settlement; a stalled platform encoder can delay later decoder
+jobs beyond that deadline. Timed-out output is discarded.
+
+`useUploadResources` creates and injects the one coordinator into the controller,
+preview queue and transfer engines. Its existing microtask lease protects this
+owner from StrictMode's cleanup probe; actual member replacement or teardown
+cancels consumers and disposes the coordinator. Checking workers end after the
+checking generation, transfer workers end after the run, and abandoned preview
+workers end on cancellation/error or queue destruction. A still-owned preview
+worker may remain idle, and the existing eight-use HEIC recycling policy applies
+per worker. One active decode bounds concurrent work, not the sum of retained
+WASM heaps. Browser transfer preparation still makes no 960 px candidate; the
+server processing queue adds responsive upgrades asynchronously.
 
 `UploadDayGroup` renders capture days from the complete server manifest, twelve
 prints initially and an explicit Show all control for the remaining prints.

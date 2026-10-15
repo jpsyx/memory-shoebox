@@ -1,3 +1,4 @@
+import type { UploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import {
   type TransferUploadFileOptions,
   type TransferApi,
@@ -94,6 +95,8 @@ export type UploadEngine = {
 /** What `createUploadEngine` takes. Everything but two has a default. */
 export type CreateUploadEngineOptions = {
   sessionId: string;
+  /** Session-owned costly decoder slot; hashing and transfers stay independent. */
+  decodeCoordinator?: UploadDecodeCoordinator;
   /** Files in flight at once. `appConfig.upload.maxParallelTransfers`. */
   concurrency?: number;
   /** The three routes. Defaults to `src/api/uploads`; injectable for tests. */

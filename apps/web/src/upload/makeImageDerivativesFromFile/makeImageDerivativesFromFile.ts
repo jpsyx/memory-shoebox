@@ -24,12 +24,14 @@ import { decodeImage, encodeEach } from "./makeImageDerivativesSupportHelpers";
  * @param options.file The picked image.
  * @param options.contentType Its declared type.
  * @param options.size Its post-orientation size from the header, if known.
+ * @param options.purposes The requested sizes; defaults to display and thumb.
  */
 export async function makeImageDerivativesFromFile(
   options: Readonly<{
     file: Blob;
     contentType: string;
     size: PixelSize | undefined;
+    purposes?: ReadonlyArray<"thumb" | "display">;
   }>,
 ): Promise<ImageDerivativesResult> {
   // Decode once at the largest needed derivative size when the header supplies
@@ -82,7 +84,7 @@ async function _makeDerivativesFromDecodedBitmap(
   const decodedPlan =
     options.size === undefined
       ? getDerivativePlanFromSize({
-          contentType: options.contentType,
+          ...options,
           size: originalSize,
         })
       : plan;

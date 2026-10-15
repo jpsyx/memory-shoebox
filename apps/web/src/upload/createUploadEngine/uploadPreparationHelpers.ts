@@ -11,8 +11,6 @@ import {
   type MediaWorkerClient,
 } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 
-import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
-
 import type {
   EngineContext,
   WorkerSlot,
@@ -61,26 +59,27 @@ async function _prepareImage(
     header.width === undefined || header.height === undefined
       ? undefined
       : { width: header.width, height: header.height };
-  const made = await _getClient({
-    context: options.context,
-    slot: slot,
-  }).makeImageDerivativesFromFile({
-    file: options.file,
-    contentType: options.contentType,
-    size,
+  const made = await options.context.decodeCoordinator.run({
+    priority: "active",
+    signal: options.context.controller.signal,
+    work: () => {
+      return _getClient({
+        context: options.context,
+        slot: slot,
+      }).makeImageDerivativesFromFile({
+        file: options.file,
+        contentType: options.contentType,
+        size,
+        purposes: ["display", "thumb"],
+      });
+    },
   });
   if (made.usedWasmDecoder) {
     slot.wasmDecodeCount += 1;
   }
   if (
     slot.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount ||
-    ((
-      sourceMade: Readonly<
-        Pick<ImageDerivativesResult, "usedWasmDecoder" | "dropDetail">
-      >,
-    ): boolean => {
-      return sourceMade.usedWasmDecoder && sourceMade.dropDetail !== undefined;
-    })(made)
+    (made.usedWasmDecoder && made.dropDetail !== undefined)
   ) {
     recycleMediaWorker(slot);
   }
@@ -104,7 +103,13 @@ async function _prepareVideo(
   const { context, file } = functionOptions;
 
   const [made, movie] = await Promise.all([
-    context.makeVideoDerivativesFromFile(file),
+    context.decodeCoordinator.run({
+      priority: "active",
+      signal: context.controller.signal,
+      work: () => {
+        return context.makeVideoDerivativesFromFile(file);
+      },
+    }),
     getQuickTimeHeaderFromBlob(file),
   ]);
   const trackSize =

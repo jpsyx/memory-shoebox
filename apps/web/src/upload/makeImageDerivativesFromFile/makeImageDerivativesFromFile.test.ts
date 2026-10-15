@@ -152,6 +152,48 @@ describe("getDecodeSizeFromPlan", () => {
 });
 
 describe("makeImageDerivatives", () => {
+  it("preview encodes only a thumbnail", async () => {
+    const bitmap = _makeBitmapStub({ width: 480, height: 360 });
+    const decode = vi.fn(async () => {
+      return bitmap;
+    });
+    vi.stubGlobal("createImageBitmap", decode);
+    vi.stubGlobal("OffscreenCanvas", EncodingCanvas);
+    const made = await makeImageDerivativesFromFile({
+      file: _jpegBlob(),
+      contentType: "image/jpeg",
+      size: { width: 4032, height: 3024 },
+      purposes: ["thumb"],
+    });
+    const encodedPurposes = made.derivatives.map(({ purpose }) => {
+      return purpose;
+    });
+    expect(encodedPurposes).toEqual(["thumb"]);
+    expect(decode).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ resizeWidth: 480 }),
+    );
+    expect(bitmap.close).toHaveBeenCalledOnce();
+  });
+
+  it("encodes an oversized JPEG even when its dimensions fit a thumbnail", async () => {
+    vi.stubGlobal("createImageBitmap", async () => {
+      return _makeBitmapStub({ width: 320, height: 240 });
+    });
+    vi.stubGlobal("OffscreenCanvas", EncodingCanvas);
+    const made = await makeImageDerivativesFromFile({
+      file: new Blob([new Uint8Array(129 * 1024)], { type: "image/jpeg" }),
+      contentType: "image/jpeg",
+      size: { width: 320, height: 240 },
+      purposes: ["thumb"],
+    });
+    expect(
+      made.derivatives.map(({ purpose }) => {
+        return purpose;
+      }),
+    ).toEqual(["thumb"]);
+  });
+
   it("drops what it cannot decode, rather than throwing, and says why", async () => {
     const decode = vi.fn(async () => {
       throw new DOMException(

@@ -19,26 +19,38 @@ const IMAGE_TARGETS: readonly DerivativeTarget[] = [
 /**
  * Which derivatives to make, from the type and the displayed size.
  *
- * **Never upscale, and never re-encode for nothing.** A JPEG whose long edge is
- * already at or under a target is already a displayable file at that size, so
- * that derivative is skipped and `MediaRef` falls back to the original for it.
- * Anything else (a PNG, a HEIC Chrome cannot show) is encoded at its native
- * size instead. With no size yet, both are planned and the plan is made again
- * once the decode says how big the picture is.
+ * Never upscale. A JPEG can stand in for a target only when both its long
+ * edge and encoded bytes fit that target's budget. Other image formats are
+ * encoded at native size when smaller. Unknown dimensions are planned again
+ * after decoding. Purpose selection avoids decoding or encoding unused sizes.
  *
  * @param options.contentType The declared type.
+ * @param options.file The source Blob, for byte-aware JPEG reuse.
+ * @param options.purposes The requested targets; defaults to both.
  * @param options.size The displayed size, or undefined when the header had
  *   none.
  */
 export function getDerivativePlanFromSize(
-  options: Readonly<{ contentType: string; size: PixelSize | undefined }>,
+  options: Readonly<{
+    contentType: string;
+    size: PixelSize | undefined;
+    file?: Blob;
+    purposes?: ReadonlyArray<"thumb" | "display">;
+  }>,
 ): DerivativeTarget[] {
   const { size } = options;
-  if (size === undefined || options.contentType !== "image/jpeg") {
-    return [...IMAGE_TARGETS];
-  }
-  const longEdge = Math.max(size.width, size.height);
   return IMAGE_TARGETS.filter((target) => {
-    return longEdge > target.longEdgePx;
+    if (options.purposes && !options.purposes.includes(target.purpose))
+      return false;
+    if (size === undefined || options.contentType !== "image/jpeg") return true;
+    const byteBudget = appConfig.mediaProcessing.photoCandidates.find(
+      (candidate) => {
+        return candidate.longEdge === target.longEdgePx;
+      },
+    )!.bytes;
+    return (
+      Math.max(size.width, size.height) > target.longEdgePx ||
+      (options.file?.size ?? 0) > byteBudget
+    );
   });
 }

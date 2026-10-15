@@ -1,3 +1,4 @@
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import { FRAME_METADATA } from "./makeVideoDerivativesTestFixtures.constants";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -122,6 +123,90 @@ describe("makeVideoDerivatives", () => {
     media.hidden = isHidden;
     document.dispatchEvent(new Event("visibilitychange"));
   };
+
+  it("keeps the shared decoder through a timed-out native encode while releasing the video promptly", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
+    const encode = Promise.withResolvers<Blob | undefined>();
+    vi.mocked(makeJpegFromSource).mockReturnValue(encode.promise);
+    const coordinator = createUploadDecodeCoordinator();
+    const signal = new AbortController().signal;
+    const first = coordinator.run({
+      priority: "preview",
+      signal,
+      work: () => {
+        return makeVideoDerivativesFromFile(new Blob(["v"]));
+      },
+    });
+    await _settle();
+    await _deliverSeekedFrame({ hasFrameCallback: true });
+    let hasStartedNext = false;
+    const second = coordinator.run({
+      priority: "active",
+      signal,
+      work: async () => {
+        hasStartedNext = true;
+      },
+    });
+    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL);
+    expect(document.querySelector("video")).toBeNull();
+    expect(hasStartedNext).toBe(false);
+    encode.resolve(_makeJpegBlob());
+    await expect(first).resolves.toEqual({ derivatives: [], size: undefined });
+    await second;
+    expect(hasStartedNext).toBe(true);
+    expect(makeJpegFromSource).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    coordinator.dispose();
+  });
+
+  it("settles a no-event timeout and starts the next shared decode with listeners retired", async () => {
+    const coordinator = createUploadDecodeCoordinator();
+    const signal = new AbortController().signal;
+    const first = coordinator.run({
+      priority: "preview",
+      signal,
+      work: () => {
+        return makeVideoDerivativesFromFile(new Blob(["v"]));
+      },
+    });
+    await _settle();
+    const video = _getVideo();
+    let hasStartedNext = false;
+    const second = coordinator.run({
+      priority: "active",
+      signal,
+      work: async () => {
+        hasStartedNext = true;
+      },
+    });
+    await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
+    await expect(first).resolves.toEqual({ derivatives: [], size: undefined });
+    await second;
+    expect(hasStartedNext).toBe(true);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL);
+    expect(document.querySelector("video")).toBeNull();
+    video.dispatchEvent(new Event("loadedmetadata"));
+    video.dispatchEvent(new Event("seeked"));
+    await _settle();
+    expect(makeJpegFromSource).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    coordinator.dispose();
+  });
+
+  it("preview encodes only the video thumbnail", async () => {
+    vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
+    const made = makeVideoDerivativesFromFile(new Blob(["v"]), ["thumb"]);
+    await _settle();
+    await _deliverSeekedFrame({ hasFrameCallback: true });
+    expect(
+      (await made).derivatives.map(({ purpose }) => {
+        return purpose;
+      }),
+    ).toEqual(["thumb"]);
+    expect(makeJpegFromSource).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL);
+  });
 
   it("makes a poster and a thumb from a frame the engine presented", async () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);

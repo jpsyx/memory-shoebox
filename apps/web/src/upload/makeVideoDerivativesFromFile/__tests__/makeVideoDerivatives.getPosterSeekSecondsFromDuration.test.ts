@@ -58,6 +58,34 @@ describe("getVideoDerivativeSizesFromSize", () => {
 });
 
 describe("waitForPresentedFrame", () => {
+  it("abort retires the frame callback and timer before capture can resume", async () => {
+    const controller = new AbortController();
+    const cancelVideoFrameCallback = vi.fn();
+    const video = {
+      requestVideoFrameCallback: () => {
+        return 42;
+      },
+      cancelVideoFrameCallback,
+    };
+    const waited = waitForPresentedFrame({
+      video,
+      timeoutMs: 500,
+      signal: controller.signal,
+    });
+    const outcome = waited.then(
+      (value) => {
+        return value;
+      },
+      (error) => {
+        return error.name as string;
+      },
+    );
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(await outcome).toBe("AbortError");
+    expect(cancelVideoFrameCallback).toHaveBeenCalledWith(42);
+    expect(vi.getTimerCount()).toBe(0);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
   });

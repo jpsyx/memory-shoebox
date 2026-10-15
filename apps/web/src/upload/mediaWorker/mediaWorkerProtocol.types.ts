@@ -27,10 +27,14 @@ export type ImageDerivativesRequest = {
   contentType: string;
   /** Post-orientation, from the header, so the decode can resize. */
   size: PixelSize | undefined;
+  purposes?: ReadonlyArray<"thumb" | "display">;
 };
 
 /** Read photo identity without encoding any derivative. */
-export type FingerprintRequest = Omit<ImageDerivativesRequest, "kind"> & {
+export type FingerprintRequest = Omit<
+  ImageDerivativesRequest,
+  "kind" | "purposes"
+> & {
   kind: "fingerprint";
 };
 

@@ -1,3 +1,4 @@
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import type {
   MadeDerivative,
   PixelSize,
@@ -15,6 +16,7 @@ import type {
 } from "./createUploadPreviewQueue.types";
 
 function _getDependenciesFromOptions({
+  decodeCoordinator = createUploadDecodeCoordinator(),
   createMediaWorker = () => {
     return new Worker(
       new URL("../mediaWorker/mediaWorker.ts", import.meta.url),
@@ -35,6 +37,7 @@ function _getDependenciesFromOptions({
   maxCachedBytes = 24 * 1024 * 1024,
 }: Readonly<CreateUploadPreviewQueueOptions>): Required<CreateUploadPreviewQueueOptions> {
   return {
+    decodeCoordinator,
     createMediaWorker: createMediaWorker,
     makeVideoDerivativesFromFile: makeVideoDerivativesFromFileDependency,
     createObjectUrl: createObjectUrl,
@@ -61,6 +64,7 @@ function _requestPreview({
   }
   // Each viewport re-entry owns a distinct token, even with the same input.
   context.requests.set(input.fileId, { ...input });
+  context.abortControllers.set(input.fileId, new AbortController());
   context.values.set(input.fileId, { kind: "preparing", size: input.size });
   _notify(context);
   _startQueuedPreview(context);
@@ -74,6 +78,8 @@ function _disposePreview({
   if (preview?.kind === "ready") {
     context.options.revokeObjectUrl(preview.url);
   }
+  context.abortControllers.get(fileId)?.abort();
+  context.abortControllers.delete(fileId);
   context.requests.delete(fileId);
   context.activeFileIds.delete(fileId);
   context.cachedBytes -= context.cachedByteSizes.get(fileId) ?? 0;
@@ -110,6 +116,8 @@ function _deactivate({
   fileId,
 }: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
   context.activeFileIds.delete(fileId);
+  context.abortControllers.get(fileId)?.abort();
+  context.abortControllers.delete(fileId);
   context.requests.delete(fileId);
   const hasCancelled =
     context.values.get(fileId)?.kind === "preparing" &&
@@ -173,6 +181,8 @@ function _getPreviewDerivativesFromImage({
   }
   const plan = getDerivativePlanFromSize({
     contentType: input.contentType,
+    file: input.file,
+    purposes: ["thumb"],
     size,
   });
   const needsThumbnail = plan.some((target) => {
@@ -191,7 +201,7 @@ async function _getDerivativesFromInput({
   input: Readonly<UploadPreviewInput>;
 }>): Promise<{ derivatives: MadeDerivative[]; size?: PixelSize }> {
   if (input.contentType.startsWith("video/")) {
-    return context.options.makeVideoDerivativesFromFile(input.file);
+    return context.options.makeVideoDerivativesFromFile(input.file, ["thumb"]);
   }
   if (!input.contentType.startsWith("image/")) {
     return { derivatives: [] };
@@ -203,6 +213,7 @@ async function _getDerivativesFromInput({
     file: input.file,
     contentType: input.contentType,
     size: input.size,
+    purposes: ["thumb"],
   });
   if (made.usedWasmDecoder) {
     context.wasmDecodeCount += 1;
@@ -227,9 +238,12 @@ async function _preparePreview({
   input: Readonly<UploadPreviewInput>;
 }>): Promise<void> {
   try {
-    const made = await _getDerivativesFromInput({
-      context: context,
-      input: input,
+    const made = await context.options.decodeCoordinator.run({
+      priority: "preview",
+      signal: context.abortControllers.get(input.fileId)!.signal,
+      work: () => {
+        return _getDerivativesFromInput({ context, input });
+      },
     });
     if (context.isDestroyed || context.requests.get(input.fileId) !== input) {
       return;
@@ -246,6 +260,7 @@ async function _preparePreview({
   } finally {
     if (context.requests.get(input.fileId) === input) {
       context.requests.delete(input.fileId);
+      context.abortControllers.delete(input.fileId);
       _notify(context);
     }
   }
@@ -325,6 +340,7 @@ export function createUploadPreviewQueue(
     options: _getDependenciesFromOptions(options),
     values: new Map(),
     requests: new Map(),
+    abortControllers: new Map(),
     activeFileIds: new Set(),
     cachedByteSizes: new Map(),
     cachedBytes: 0,

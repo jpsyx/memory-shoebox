@@ -1,3 +1,4 @@
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import {
   presignUploadFile,
   completeUploadFile,
@@ -28,6 +29,7 @@ export function makeContextFromOptions(
 ): EngineContext {
   const { options } = input;
   const {
+    decodeCoordinator = createUploadDecodeCoordinator(),
     concurrency = appConfig.upload.maxParallelTransfers,
     api = {
       presignUploadFile,
@@ -48,6 +50,7 @@ export function makeContextFromOptions(
   } = options;
   return {
     sessionId: options.sessionId,
+    decodeCoordinator,
     concurrency: concurrency,
     api: api,
     onEvent: options.onEvent,

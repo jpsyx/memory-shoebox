@@ -646,3 +646,39 @@ processing disabled, actual codec upload/publication, and catalog reopening
 around crash recovery against the local bucket. Its direct codec runner exists
 only in test support. These results do not establish per-job cgroup enforcement,
 the 128 MiB serving reserve, or the complete 512 MiB deployment envelope.
+
+## Shared upload decoding
+
+The upload-session owner injects one `createUploadDecodeCoordinator` into the
+controller's visual duplicate checks, viewport preview queue and transfer engine.
+It permits one costly decode, gives queued active preparation precedence over
+queued previews, and leaves streaming SHA-256 and the existing two original
+transfer lanes independent. Queued cancellation cannot invoke a terminated
+checking worker or publish a stale generation. An executing decode keeps the
+slot until its underlying work settles, including when its caller aborts. The
+video helper's 20-second capture deadline promptly retires the video/source/URL
+and aborts media/frame waits. Any already-started native encode retains the slot
+until settlement and its timed-out output is discarded. The deadline cannot
+force a native encoder to stop, so a platform stall can delay later decodes.
+
+Previews request only `thumb`; actual transfers request photo `display`/`thumb`
+or video `poster`/`thumb`. Purpose filtering also survives replanning when image
+headers lack dimensions. JPEG reuse requires both dimensions and encoded bytes
+to fit the existing 480 px/128 KiB thumbnail or 2048 px/1.5 MiB display budgets,
+and successful encodes must return a JPEG Blob. The browser does not encode a
+second 960 px display; the server queue owns responsive upgrades.
+
+The existing cache keeps completed previews and pins visible entries. Release
+and teardown revoke their object URLs. Workers retain their existing per-owner
+lifetimes and recycle after eight actual WASM decoder uses, including failed
+attempts. Cancelled queued requests do not count as uses. This bounds active
+decoding work, not aggregate retained WASM memory across idle workers.
+
+C4's separately labeled pre-change mixed-media preview baseline is after the
+earlier delivery/runtime work, not frozen M1 (which measured viewing/timeline,
+not upload CPU). The same five local fixtures and instrumentation produced ten
+JPEG derivative encodes before C4 and five after, in Chrome and WebKit. Single
+wall-time samples varied, including a WebKit regression; they do not establish
+a universal latency or total-CPU improvement. Main-thread task duration excludes
+worker CPU, and aggregate worker/WASM heap remains unmeasured. See the C4 task
+report and raw local artifacts for the measurement boundaries.

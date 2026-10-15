@@ -1,3 +1,4 @@
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import { createUploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue";
 import { createUploadSessionController } from "@/upload/createUploadSessionController/createUploadSessionController";
 import { createUploadFileIntake } from "@/upload/createUploadFileIntake/createUploadFileIntake";
@@ -8,8 +9,10 @@ import type { UploadSessionResources } from "./UploadSessionProvider.types";
 export function useUploadResources(memberId: string): UploadSessionResources {
   const queryClient = useQueryClient();
   const owner = useMemo(() => {
+    const decodeCoordinator = createUploadDecodeCoordinator();
     const controller = createUploadSessionController({
       memberId,
+      decodeCoordinator,
       onBurstChanged: () => {
         void Promise.all([
           queryClient.invalidateQueries({ queryKey: ["timeline"] }),
@@ -23,7 +26,8 @@ export function useUploadResources(memberId: string): UploadSessionResources {
     });
     return {
       controller,
-      previews: createUploadPreviewQueue(),
+      previews: createUploadPreviewQueue({ decodeCoordinator }),
+      decodeCoordinator,
       fileIntake: createUploadFileIntake(controller),
       lease: 0,
     };
@@ -39,6 +43,7 @@ export function useUploadResources(memberId: string): UploadSessionResources {
             void owner.controller.discardDraft().catch(() => {});
             owner.controller.destroy();
             owner.previews.destroy();
+            owner.decodeCoordinator.dispose();
           }
         });
       };

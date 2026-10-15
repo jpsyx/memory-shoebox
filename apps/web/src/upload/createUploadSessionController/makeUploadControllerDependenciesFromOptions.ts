@@ -1,3 +1,4 @@
+import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator";
 import {
   cancelUploadSession,
   commitUploadSession,
@@ -58,6 +59,7 @@ function _makeDefaultStorage(): Required<CreateUploadSessionControllerOptions>["
 
 /** Returns browser upload dependencies with optional overrides applied. */
 export function makeUploadControllerDependenciesFromOptions({
+  decodeCoordinator = createUploadDecodeCoordinator(),
   api = DEFAULT_UPLOAD_API,
   getManifestEntryFromFile:
     getManifestEntryFromFileDependency = getManifestEntryFromFile,
@@ -75,6 +77,7 @@ export function makeUploadControllerDependenciesFromOptions({
 }: Readonly<CreateUploadSessionControllerOptions>): Required<CreateUploadSessionControllerOptions> {
   return {
     memberId: memberId,
+    decodeCoordinator,
     api: api,
     getManifestEntryFromFile: getManifestEntryFromFileDependency,
     createUploadEngine: createUploadEngineDependency,
