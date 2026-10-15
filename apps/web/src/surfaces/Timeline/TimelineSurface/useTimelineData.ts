@@ -1,4 +1,8 @@
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
+import {
+  useTimelinePaging,
+  type TimelinePaging,
+} from "@/api/timeline/useTimelinePaging/useTimelinePaging";
 import { meQueryOptions } from "@/api/me/me";
 import { markItemsSeen } from "@/api/seen/seen";
 import {
@@ -7,10 +11,12 @@ import {
   makeSearchFromSelection,
   type TimelineSearch,
   type TimelineSelection,
+  type TimelineView,
 } from "@/api/timeline/selection/selection";
 import {
   makeTimelineQueryOptionsFromView,
   timelineRailQueryOptions,
+  type TimelineQueryPage,
 } from "@/api/timeline/timeline";
 import { makeFilterFacetsQueryOptionsFromSelection } from "@/api/vocabularies/vocabularies";
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
@@ -30,6 +36,8 @@ import {
   useQuery,
   useQueryClient,
   type QueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryResult,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type RefCallback } from "react";
@@ -61,6 +69,8 @@ export type TimelineData = {
   /** Either "show everything" button, both of which keep the jump. */
   onClearFilters: () => void;
   onReachEnd: () => void;
+  /** Guarded newer-page entry point; C3 owns the measured start trigger. */
+  onReachStart: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
   onClearBursts: () => void;
@@ -251,8 +261,8 @@ type MakeTimelineDataOptions = {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   isStreamSuccess: boolean;
   hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => void;
+  onReachEnd: () => void;
+  onReachStart: () => void;
   onSelectionChange: (next: TimelineSelection) => void;
   onClearFilters: () => void;
   onRestart: (at: string) => void;
@@ -295,33 +305,43 @@ function _makeTimelineData(
     hasMore: options.hasNextPage,
     onSelectionChange: options.onSelectionChange,
     onClearFilters: options.onClearFilters,
-    onReachEnd: () => {
-      if (options.hasNextPage && !options.isFetchingNextPage) {
-        options.fetchNextPage();
-      }
-    },
+    onReachEnd: options.onReachEnd,
+    onReachStart: options.onReachStart,
     onRestart: options.onRestart,
   };
 }
 
 /**
- * Every query surfaces 2, 5 and 6 share, boiled down to one object.
- *
- * Kept apart from `TimelineSurface` itself so that function stays a plain
- * layout: this is the piece that talks to TanStack Query and the router, and
- * `_makeTimelineData` is the piece that decides what the results mean.
+ * The member-bound stream and both callbacks sharing its current fetch slot.
  */
+function useTimelineStream(view: Readonly<TimelineView>): {
+  stream: UseInfiniteQueryResult<
+    InfiniteData<TimelineQueryPage, string | null>
+  >;
+  paging: TimelinePaging;
+  role: MemberRole | undefined;
+} {
+  const me = useQuery(meQueryOptions);
+  const memberId = me.data?.me.member.memberId;
+  const streamOptions = makeTimelineQueryOptionsFromView({ view, memberId });
+  const stream = useInfiniteQuery({
+    ...streamOptions,
+    enabled: memberId !== undefined,
+  });
+  const paging = useTimelinePaging({
+    queryKey: streamOptions.queryKey,
+    stream,
+  });
+  return { stream, paging, role: me.data?.me.role };
+}
+
+/** The member-bound stream, complete rail, facets and pile controls. */
 export function useTimelineData(search: TimelineSearch): TimelineData {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const view = getViewFromSearch(search);
   const { selection } = view;
-  const me = useQuery(meQueryOptions);
-  const memberId = me.data?.me.member.memberId;
-  const stream = useInfiniteQuery({
-    ...makeTimelineQueryOptionsFromView({ view, memberId }),
-    enabled: memberId !== undefined,
-  });
+  const { stream, paging, role } = useTimelineStream(view);
   const rail = useQuery(timelineRailQueryOptions(selection));
   const facets = useQuery({
     ...makeFilterFacetsQueryOptionsFromSelection({ selection }),
@@ -339,18 +359,17 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
     ..._makeTimelineData({
       search,
       selection,
-      role: me.data?.me.role,
+      role,
       days,
       railDays: rail.data?.days ?? [],
-      resultCount: stream.data?.pages[0]?.resultCount,
+      resultCount:
+        stream.data?.pages[0]?.selectionResultCount ??
+        stream.data?.pages[0]?.resultCount,
       facets: facets.data,
       framesByBurstId,
       isStreamSuccess: stream.isSuccess,
       hasNextPage: stream.hasNextPage,
-      isFetchingNextPage: stream.isFetchingNextPage,
-      fetchNextPage: () => {
-        void stream.fetchNextPage();
-      },
+      ...paging,
       onSelectionChange,
       onClearFilters,
       onRestart,

@@ -24,6 +24,7 @@ export function answerBulkTimeline(
     },
     "GET /api/timeline": {
       body: {
+        previousCursor: null,
         days: [
           makeDay({
             items: BULK_ITEM_IDS.map((itemId, position) => {

@@ -14,6 +14,8 @@ import type { CandidateDay } from "./readItemDays.ts";
  * @param options.untilDay The selection's inclusive upper date, if any.
  * @param options.beforeDay The cursor's day, exclusive.
  * @param options.sinceDay The window's floor, inclusive.
+ * @param options.afterDay The newer cursor's exclusive lower bound.
+ * @param options.throughDay The newer window's inclusive ceiling.
  */
 export function getUnionDaysFromMilestones(options: {
   milestones: readonly MilestoneRef[];
@@ -21,6 +23,8 @@ export function getUnionDaysFromMilestones(options: {
   untilDay: string | undefined;
   beforeDay: string | undefined;
   sinceDay: string | undefined;
+  afterDay?: string;
+  throughDay?: string;
 }): string[] {
   const days = options.milestones.flatMap((milestone) => {
     return getDaysFromMilestone(milestone);
@@ -30,19 +34,21 @@ export function getUnionDaysFromMilestones(options: {
       (options.fromDay === undefined || day >= options.fromDay) &&
       (options.untilDay === undefined || day <= options.untilDay) &&
       (options.beforeDay === undefined || day < options.beforeDay) &&
-      (options.sinceDay === undefined || day >= options.sinceDay)
+      (options.sinceDay === undefined || day >= options.sinceDay) &&
+      (options.afterDay === undefined || day > options.afterDay) &&
+      (options.throughDay === undefined || day <= options.throughDay)
     );
   });
 }
 
 /**
- * The floor that bounds the milestone query, and the bound is provable.
+ * The far edge of the milestone window in the requested traversal order.
  *
  * Item days are read with `limit + 1`; if a `(limit + 1)`-th day comes back,
- * no date below it can reach this page, because every such date already has
- * at least `limit + 1` item days above it in the merged descending order.
+ * no date farther away can reach this page: at least `limit + 1` item days
+ * are closer. It is a floor for older reads and a ceiling for newer reads.
  * With fewer than that there are no more item days at all, so there is no
- * floor.
+ * far edge.
  *
  * The index is only reached once the length check has already proven it is
  * in range, so a miss there is a bug worth a thrown error, not a silent
@@ -51,7 +57,7 @@ export function getUnionDaysFromMilestones(options: {
  * @param options.itemDays The item days, read with `limit + 1`.
  * @param options.limit Days per page.
  */
-export function getWindowFloorFromItemDays(options: {
+export function getWindowBoundaryFromItemDays(options: {
   itemDays: readonly CandidateDay[];
   limit: number;
 }): string | undefined {
@@ -61,7 +67,7 @@ export function getWindowFloorFromItemDays(options: {
 }
 
 /**
- * The union: item days and milestone days as one descending stream.
+ * The union in traversal order, descending by default for the complete rail.
  *
  * A date that has both keeps its counts. A date that has only an occasion
  * arrives at `itemCount: 0`, which is surface 2's `milestone-empty` state and
@@ -69,10 +75,12 @@ export function getWindowFloorFromItemDays(options: {
  *
  * @param options.itemDays The days with items, from query 1.
  * @param options.milestoneDays The days a covering occasion contributes.
+ * @param options.direction Nearest days first; older when omitted.
  */
 export function makeMergedDays(options: {
   itemDays: readonly CandidateDay[];
   milestoneDays: readonly string[];
+  direction?: "older" | "newer";
 }): CandidateDay[] {
   const itemDates = new Set(
     options.itemDays.map((day) => {
@@ -95,7 +103,9 @@ export function makeMergedDays(options: {
         };
       }),
   ].sort((left, right) => {
-    return right.capturedOn.localeCompare(left.capturedOn);
+    return options.direction === "newer"
+      ? left.capturedOn.localeCompare(right.capturedOn)
+      : right.capturedOn.localeCompare(left.capturedOn);
   });
 }
 

@@ -69,6 +69,7 @@ async function _routeTimeline({
       "true";
     await route.fulfill({
       json: {
+        previousCursor: null,
         days: excluded
           ? [
               {

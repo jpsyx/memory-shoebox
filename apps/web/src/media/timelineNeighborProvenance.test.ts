@@ -20,6 +20,63 @@ afterEach(() => {
 });
 
 describe("retained timeline page authority", () => {
+  it.each(["adjacent", "gap", "stale", "empty-boundary"])(
+    "proves reverse-restored continuity only with fresh server-issued edges: %s",
+    (scenario) => {
+      vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+      const queryClient = new QueryClient();
+      const page = {
+        days: [makeDay({ items: items.slice(0, 2) })],
+        nextCursor: "older-1",
+        previousCursor: null,
+        resultCount: null,
+        selectionResultCount: null,
+        metadataUpdatedAt: 1_000_000,
+      };
+      const leading =
+        scenario === "empty-boundary"
+          ? { ...page, days: [], metadataUpdatedAt: 960_000 }
+          : page;
+      const following = {
+        ...page,
+        days: [
+          makeDay({
+            items:
+              scenario === "empty-boundary"
+                ? items.slice(0, 4)
+                : items.slice(2, 4),
+          }),
+        ],
+        previousCursor: scenario === "gap" ? "different" : "newer-0",
+        nextCursor: null,
+        metadataUpdatedAt: scenario === "stale" ? 960_000 : 1_000_000,
+      };
+      queryClient.setQueryData(options.queryKey, {
+        pages: [leading, following],
+        pageParams: ["newer-0", "newer-1"],
+      });
+      try {
+        const window = getKnownMediaNeighborWindowFromQueries({
+          queryClient,
+          memberId: "member",
+          request: { itemId: items[0]!.itemId, selection, direction: "next" },
+        });
+        if (scenario === "adjacent") {
+          expect(
+            window?.ahead.map((item) => {
+              return item.itemId;
+            }),
+          ).toEqual([items[1]!.itemId, items[2]!.itemId]);
+          expect(window?.behind).toEqual([]);
+          expect(window?.metadataUpdatedAt).toBe(1_000_000);
+        } else {
+          expect(window).toBeUndefined();
+        }
+      } finally {
+        queryClient.clear();
+      }
+    },
+  );
   it.each([10_000, 31_000])(
     "does not renew earlier or mixed-page identities when fetchNextPage appends after %s ms",
     async (elapsed) => {
@@ -29,6 +86,7 @@ describe("retained timeline page authority", () => {
         requests.push(url);
         const isFirst = url === "/api/timeline";
         return Response.json({
+          previousCursor: isFirst ? null : "page-1-newer",
           days: [
             makeDay({ items: isFirst ? items.slice(0, 4) : items.slice(4) }),
           ],
@@ -81,7 +139,12 @@ describe("retained timeline page authority", () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData([...options.queryKey], {
       pages: [
-        { days: [makeDay({ items })], nextCursor: null, resultCount: null },
+        {
+          previousCursor: null,
+          days: [makeDay({ items })],
+          nextCursor: null,
+          resultCount: null,
+        },
       ],
       pageParams: [null],
     });
@@ -101,6 +164,8 @@ describe("retained timeline page authority", () => {
       vi.spyOn(Date, "now").mockReturnValue(1_031_000);
       const queryClient = new QueryClient();
       const fresh = {
+        selectionResultCount: null,
+        previousCursor: null,
         days: [makeDay({ items: items.slice(0, 2) })],
         metadataUpdatedAt: 1_031_000,
         resultCount: null,
@@ -109,13 +174,27 @@ describe("retained timeline page authority", () => {
       const empty = { ...fresh, days: [], metadataUpdatedAt: 1_000_000 };
       const pages =
         position === "leading"
-          ? [{ ...empty, nextCursor: "page-2" }, fresh]
+          ? [
+              { ...empty, nextCursor: "page-2" },
+              { ...fresh, previousCursor: "page-1-newer" },
+            ]
           : position === "trailing"
-            ? [{ ...fresh, nextCursor: "page-2" }, empty]
+            ? [
+                { ...fresh, nextCursor: "page-2" },
+                { ...empty, previousCursor: "page-1-newer" },
+              ]
             : [
                 { ...fresh, nextCursor: "page-2" },
-                { ...empty, nextCursor: "page-3" },
-                { ...fresh, days: [makeDay({ items: items.slice(2, 4) })] },
+                {
+                  ...empty,
+                  nextCursor: "page-3",
+                  previousCursor: "page-1-newer",
+                },
+                {
+                  ...fresh,
+                  previousCursor: "page-2-newer",
+                  days: [makeDay({ items: items.slice(2, 4) })],
+                },
               ];
       queryClient.setQueryData(options.queryKey, {
         pages,

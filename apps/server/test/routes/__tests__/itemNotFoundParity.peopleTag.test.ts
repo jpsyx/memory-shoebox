@@ -85,6 +85,7 @@ describe("a photograph somebody is tagged in but may not see", () => {
     });
     expect(timeline.statusCode).toBe(200);
     expect(timeline.json()).toEqual({
+      previousCursor: null,
       days: [],
       nextCursor: null,
       resultCount: null,

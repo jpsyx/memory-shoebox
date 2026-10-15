@@ -74,6 +74,7 @@ export async function timelineRoutes(app: FastifyInstance): Promise<void> {
         filter,
         limit: query.limit,
         cursor: _getPageStateFromCursor({ cursor: query.cursor, filter }),
+        includeResultCount: query.includeResultCount,
         now: request.server.clock(),
         logger: request.log,
       });

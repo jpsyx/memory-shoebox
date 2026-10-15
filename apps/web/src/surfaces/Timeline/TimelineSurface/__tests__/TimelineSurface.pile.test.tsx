@@ -50,7 +50,12 @@ describe("the timeline", () => {
   it("shows surface 5 when the archive has no days", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
         status: 200,
       },
       "GET /api/timeline/rail": {
@@ -69,7 +74,12 @@ describe("the timeline", () => {
         status: 200,
       },
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
         status: 200,
       },
       "GET /api/timeline/rail": {
@@ -107,6 +117,7 @@ describe("the timeline", () => {
       "GET /api/timeline": {
         status: 200,
         body: {
+          previousCursor: null,
           days: [makeDay({ items: [first, second] })],
           nextCursor: null,
           resultCount: null,
@@ -170,7 +181,12 @@ describe("the timeline", () => {
   it("does not draw the end while there is another page to come", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [makeDay()], nextCursor: "next", resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [makeDay()],
+          nextCursor: "next",
+          resultCount: null,
+        },
         status: 200,
       },
     });
@@ -258,7 +274,12 @@ describe("the timeline", () => {
   it("keeps it too when the dead end's own clear-all is pressed", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: 0 },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: 0,
+        },
         status: 200,
       },
       "GET /api/filters/facets": { body: HOSPITAL_FACETS, status: 200 },
@@ -366,7 +387,12 @@ describe("the timeline", () => {
   it("leaves the jump control out when no day matches", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: 0 },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: 0,
+        },
         status: 200,
       },
       "GET /api/timeline/rail": {

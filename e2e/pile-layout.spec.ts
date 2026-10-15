@@ -42,7 +42,12 @@ test.beforeEach(async ({ page }) => {
     "/api/setup": { isRequired: false },
     "/api/setup/progress": { needsInvitations: false },
     "/api/me": createMeResponse(),
-    "/api/timeline": { days, nextCursor: null, resultCount: null },
+    "/api/timeline": {
+      previousCursor: null,
+      days,
+      nextCursor: null,
+      resultCount: null,
+    },
     "/api/timeline/rail": {
       days: days.map(({ capturedOn, itemCount }) => {
         return {

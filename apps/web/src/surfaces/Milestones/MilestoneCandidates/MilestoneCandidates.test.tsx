@@ -303,7 +303,12 @@ describe("occasion-first attachment hierarchy", () => {
       },
       "GET /api/timeline": {
         status: 200,
-        body: { days: [], nextCursor: null, resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
       },
       "GET /api/filters/facets": {
         status: 200,

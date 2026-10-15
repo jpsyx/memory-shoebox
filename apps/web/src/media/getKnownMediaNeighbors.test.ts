@@ -50,6 +50,8 @@ function setup() {
     view: { selection, at: undefined },
   }).queryKey;
   const page = {
+    selectionResultCount: null,
+    previousCursor: null,
     metadataUpdatedAt: Date.now(),
     days: [makeDay({ items })],
     nextCursor: null,
@@ -134,14 +136,24 @@ describe("known media neighborhood consumption", () => {
             days: [makeDay({ items: items.slice(0, 2) })],
             nextCursor: "a",
           },
-          { ...test.page, days: [makeDay({ items: items.slice(2) })] },
+          {
+            ...test.page,
+            previousCursor: "page-1-newer",
+            days: [makeDay({ items: items.slice(2) })],
+          },
         ],
         pageParams: [null, "different"],
       });
     }
     if (reason === "evicted") {
       test.queryClient.setQueryData(test.key, {
-        pages: [{ ...test.page, days: [makeDay({ items: items.slice(1) })] }],
+        pages: [
+          {
+            ...test.page,
+            previousCursor: "earlier",
+            days: [makeDay({ items: items.slice(1) })],
+          },
+        ],
         pageParams: ["later"],
       });
     }
@@ -206,7 +218,11 @@ describe("known media neighborhood consumption", () => {
           days: [makeDay({ items: items.slice(0, 2) })],
           nextCursor: "a",
         },
-        { ...test.page, days: [makeDay({ items: items.slice(2) })] },
+        {
+          ...test.page,
+          previousCursor: "page-1-newer",
+          days: [makeDay({ items: items.slice(2) })],
+        },
       ],
       pageParams: [null, "a"],
     });

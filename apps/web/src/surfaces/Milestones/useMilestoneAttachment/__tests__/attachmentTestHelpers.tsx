@@ -103,6 +103,7 @@ export function makeTimelinePageFromItems({
   cursor?: string;
 }>): TimelineResponse {
   return {
+    previousCursor: null,
     days: [
       {
         capturedOn: "2026-09-14",

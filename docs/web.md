@@ -456,6 +456,21 @@ ignores it when `at` is the only thing set. And the days above the jump stop
 being reachable by scrolling up, which is what "start the stream here" means;
 the rail is the way back and the rail never leaves.
 
+The timeline retains at most five atomic-day pages. Server-issued
+`previousCursor` restores newer eligible days after older-direction eviction;
+both directions still stop at the effective jump boundary, and every page is
+ordered newest first. `useTimelineData` exposes guarded `onReachEnd` and
+`onReachStart` callbacks that share the query's actual fetch slot with refresh.
+The measured near-start trigger and scroll anchoring belong to C3.
+
+Each retained web page carries `selectionResultCount`, copied from the view's
+uncursored response. It preserves the filtered count through eviction and
+remount without falling back to facets outside the jump. A retained-page
+refresh asks for `includeResultCount=true` only on its first cursor request,
+then carries that fresh count across the sequential fetch. Ordinary paging
+does not recount. Canceled and replacement refreshes have separate signal-owned
+count state. This scalar does not change any page's metadata timestamp.
+
 **The two empty states are told apart by `me.role` and by nothing else.**
 `timeline.md` transformation 9 makes a brand-new archive and a fully
 restricted viewer return byte-identical bodies, on purpose, so nothing in the
@@ -595,6 +610,12 @@ Neighbor reuse takes the oldest page contributing identities, continuity or an
 archive boundary and falls back when that provenance is missing or expired.
 The infinite query's aggregate `dataUpdatedAt` cannot establish page freshness.
 Existing `timeline` prefix invalidation still covers the member-bound stream.
+
+After reverse restoration, either matching server-issued edge proves adjacent
+pages. A first page with `previousCursor: null` proves the bounded view's start,
+even when it was fetched with a newer cursor. Missing edges, gaps and stale
+contributing pages still require the safe neighbor endpoint, including empty
+pages used to prove a boundary.
 
 **Every write lands in the cache, and nothing invalidates the item**, because a
 refetch is an open. All writes on one item share one mutation scope, for

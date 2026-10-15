@@ -19,6 +19,8 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
  * @param options.beforeDay The cursor's day. Nothing at or after it can show.
  * @param options.sinceDay The window's floor, below which no day can reach
  *   this page.
+ * @param options.afterDay The newer cursor's exclusive lower bound.
+ * @param options.throughDay The newer window's inclusive ceiling.
  */
 export async function readOverlappingMilestones(options: {
   database: DatabaseExecutor;
@@ -26,6 +28,8 @@ export async function readOverlappingMilestones(options: {
   untilDay: string | undefined;
   beforeDay: string | undefined;
   sinceDay: string | undefined;
+  afterDay?: string;
+  throughDay?: string;
 }): Promise<MilestoneRef[]> {
   const all = options.database
     .selectFrom("milestones")
@@ -55,5 +59,13 @@ export async function readOverlappingMilestones(options: {
       ? untilBounded
       : untilBounded.where("milestones.ends_on", ">=", options.fromDay);
 
-  return fromBounded.execute();
+  const afterBounded =
+    options.afterDay === undefined
+      ? fromBounded
+      : fromBounded.where("milestones.ends_on", ">", options.afterDay);
+  const throughBounded =
+    options.throughDay === undefined
+      ? afterBounded
+      : afterBounded.where("milestones.starts_on", "<=", options.throughDay);
+  return throughBounded.execute();
 }

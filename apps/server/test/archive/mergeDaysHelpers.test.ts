@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getUnionDaysFromMilestones,
-  getWindowFloorFromItemDays,
+  getWindowBoundaryFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
 } from "../../src/archive/mergeDaysHelpers.ts";
@@ -96,10 +96,10 @@ describe("getUnionDaysFromMilestones", () => {
   });
 });
 
-describe("getWindowFloorFromItemDays", () => {
+describe("getWindowBoundaryFromItemDays", () => {
   it("has no floor when there are fewer item days than the limit", () => {
     expect(
-      getWindowFloorFromItemDays({
+      getWindowBoundaryFromItemDays({
         itemDays: [makeDay("2026-09-14", 1), makeDay("2026-09-13", 1)],
         limit: 3,
       }),
@@ -108,7 +108,7 @@ describe("getWindowFloorFromItemDays", () => {
 
   it("has no floor when there are exactly the limit's worth of item days", () => {
     expect(
-      getWindowFloorFromItemDays({
+      getWindowBoundaryFromItemDays({
         itemDays: [
           makeDay("2026-09-14", 1),
           makeDay("2026-09-13", 1),
@@ -121,7 +121,7 @@ describe("getWindowFloorFromItemDays", () => {
 
   it("floors at the (limit + 1)-th item day when one comes back", () => {
     expect(
-      getWindowFloorFromItemDays({
+      getWindowBoundaryFromItemDays({
         itemDays: [
           makeDay("2026-09-14", 1),
           makeDay("2026-09-13", 1),

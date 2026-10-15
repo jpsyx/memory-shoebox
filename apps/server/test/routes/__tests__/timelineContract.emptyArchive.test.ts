@@ -39,14 +39,14 @@ describe("the empty archive and the invisible one", () => {
 
     expect(restrictedResponse.body).toBe(emptyResponse.body);
     expect(emptyResponse.body).toBe(
-      '{"days":[],"nextCursor":null,"resultCount":null}',
+      '{"days":[],"nextCursor":null,"previousCursor":null,"resultCount":null}',
     );
 
     await empty.close();
     await restricted.close();
   });
 
-  it("carries no field beyond the three the shape names", async () => {
+  it("carries no field beyond the four the shape names", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });
     const otherMemberId = await insertMember(database);
@@ -71,6 +71,7 @@ describe("the empty archive and the invisible one", () => {
     expect(Object.keys(response.json()).sort()).toEqual([
       "days",
       "nextCursor",
+      "previousCursor",
       "resultCount",
     ]);
     await close();

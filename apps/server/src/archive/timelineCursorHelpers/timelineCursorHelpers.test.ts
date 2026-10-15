@@ -9,20 +9,25 @@ import {
 const FIRST_MILESTONE = "0199c0a0-0000-7000-8000-000000000001";
 
 describe("the timeline cursor", () => {
-  it("round-trips the day and digest", () => {
-    const state = {
-      lastDay: "2026-09-11",
-      filterDigest: "abc123",
-    };
-    expect(
-      getPageStateFromTimelineCursor(makeTimelineCursorFromPageState(state)),
-    ).toEqual(state);
-  });
+  it.each(["older", "newer"] as const)(
+    "round-trips the exclusive boundary and %s direction",
+    (direction) => {
+      const state = {
+        boundaryDay: "2026-09-11",
+        filterDigest: "abc123",
+        direction,
+      };
+      expect(
+        getPageStateFromTimelineCursor(makeTimelineCursorFromPageState(state)),
+      ).toEqual(state);
+    },
+  );
 
   it("is opaque, and carries no readable day", () => {
     const cursor = makeTimelineCursorFromPageState({
-      lastDay: "2026-09-11",
+      boundaryDay: "2026-09-11",
       filterDigest: "abc123",
+      direction: "older",
     });
     expect(cursor).not.toContain("2026-09-11");
   });
@@ -82,8 +87,9 @@ describe("legacy timeline cursors", () => {
       ).toString("base64url");
     };
     expect(getPageStateFromTimelineCursor(encode([FIRST_MILESTONE]))).toEqual({
-      lastDay: "2026-09-11",
+      boundaryDay: "2026-09-11",
       filterDigest: "abc123",
+      direction: "older",
     });
     expect(getPageStateFromTimelineCursor(encode(["invalid"]))).toBeUndefined();
     expect(getPageStateFromTimelineCursor(encode(null))).toBeUndefined();

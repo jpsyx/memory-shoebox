@@ -28,6 +28,7 @@ function _answerTimeline(
     },
     "GET /api/timeline": {
       body: {
+        previousCursor: null,
         days: [
           makeDay({
             items: [
@@ -158,6 +159,7 @@ describe("timeline bulk editing", () => {
     respondWith({
       "GET /api/timeline": {
         body: {
+          previousCursor: null,
           days: [makeDay({ items: [makeItem({ burst })] })],
           nextCursor: null,
           resultCount: null,

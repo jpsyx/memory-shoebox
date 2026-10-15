@@ -60,6 +60,7 @@ describe("the milestone-span union under a filter", () => {
     });
     expect(byTag.statusCode).toBe(200);
     expect(byTag.json()).toEqual({
+      previousCursor: null,
       days: [],
       nextCursor: null,
       resultCount: 0,

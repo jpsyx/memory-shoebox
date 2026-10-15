@@ -19,6 +19,7 @@ import {
   infiniteQueryOptions,
   queryOptions,
   type InfiniteData,
+  type QueryFunction,
 } from "@tanstack/react-query";
 /** The day stream. Every page of every selection hangs below this key. */
 export const TIMELINE_QUERY_KEY = ["timeline"] as const;
@@ -30,15 +31,85 @@ export const TIMELINE_RAIL_QUERY_KEY = ["timeline", "rail"] as const;
 export type TimelineQueryPage = TimelineResponse & {
   /** Start of this page's actual metadata request, never an aggregate cache write. */
   metadataUpdatedAt: number;
+  /** Count from this view's uncursored request or latest explicit refresh head. */
+  selectionResultCount: number | null;
 };
+
+/** Count ownership is limited to one actual sequential fetch operation. */
+type TimelineCountOperation = {
+  signal: AbortSignal;
+  resultCount: number | null;
+};
+
+/** A separate count object for each actual fetch, including canceled reads. */
+function _makeCountOperationFromPageData(
+  options: Readonly<{
+    signal: AbortSignal;
+    cached: InfiniteData<TimelineQueryPage, string | null> | undefined;
+  }>,
+): TimelineCountOperation {
+  return {
+    signal: options.signal,
+    resultCount:
+      options.cached?.pages[0]?.selectionResultCount ??
+      options.cached?.pages[0]?.resultCount ??
+      null,
+  };
+}
+
+/** Produces pages while carrying count state only within one signal's fetch. */
+function _makeTimelinePageReaderFromView(
+  view: Readonly<TimelineView>,
+): QueryFunction<TimelineQueryPage, string[], string | null> {
+  let countOperation: TimelineCountOperation | undefined;
+  return async ({ pageParam, signal, client, queryKey }) => {
+    const metadataUpdatedAt = Date.now();
+    const cached =
+      client.getQueryData<InfiniteData<TimelineQueryPage, string | null>>(
+        queryKey,
+      );
+    if (countOperation?.signal !== signal) {
+      countOperation = _makeCountOperationFromPageData({ signal, cached });
+    }
+    const operation = countOperation;
+    const isRefreshHead =
+      pageParam !== null &&
+      cached?.pageParams[0] === pageParam &&
+      client.getQueryState(queryKey)?.fetchMeta?.fetchMore === undefined;
+    const page = await apiFetch({
+      path: makeTimelinePathFromView({
+        view,
+        cursor: pageParam ?? undefined,
+        includeResultCount: isRefreshHead && makeQueryFromView(view).size > 0,
+      }),
+      schema: timelineResponseSchema,
+      init: { signal },
+    });
+    if (pageParam === null || isRefreshHead) {
+      operation.resultCount = page.resultCount;
+    }
+    return {
+      ...page,
+      metadataUpdatedAt,
+      selectionResultCount: operation.resultCount,
+    };
+  };
+}
 
 /** The exact path one page of the day stream is asked for at. */
 export function makeTimelinePathFromView(
-  options: Readonly<{ view: Readonly<TimelineView>; cursor?: string }>,
+  options: Readonly<{
+    view: Readonly<TimelineView>;
+    cursor?: string;
+    includeResultCount?: boolean;
+  }>,
 ): string {
   const query = makeQueryFromView(options.view);
   if (options.cursor !== undefined) {
     query.set("cursor", options.cursor);
+  }
+  if (options.includeResultCount) {
+    query.set("includeResultCount", "true");
   }
   return makePathFromSearchParams({
     basePath: "/timeline",
@@ -90,22 +161,15 @@ export function makeTimelineQueryOptionsFromView({
       ...(memberId === undefined ? [] : [memberId]),
       query,
     ],
-    queryFn: async ({ pageParam, signal }): Promise<TimelineQueryPage> => {
-      const metadataUpdatedAt = Date.now();
-      const page = await apiFetch({
-        path: makeTimelinePathFromView({
-          view,
-          cursor: pageParam ?? undefined,
-        }),
-        schema: timelineResponseSchema,
-        init: { signal },
-      });
-      return { ...page, metadataUpdatedAt };
-    },
+    queryFn: _makeTimelinePageReaderFromView(view),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage: TimelineResponse) => {
       return lastPage.nextCursor;
     },
+    getPreviousPageParam: (firstPage: TimelineResponse) => {
+      return firstPage.previousCursor;
+    },
+    maxPages: 5,
   });
 }
 

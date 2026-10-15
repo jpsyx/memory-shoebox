@@ -147,8 +147,14 @@ function _getTimelineSequence(
   const nodes = data.pages.flatMap((page, index) => {
     const gap =
       index > 0 &&
-      (data.pages[index - 1]?.nextCursor === null ||
-        data.pages[index - 1]?.nextCursor !== data.pageParams[index]);
+      !(
+        typeof data.pages[index - 1]?.nextCursor === "string" &&
+        data.pages[index - 1]?.nextCursor === data.pageParams[index]
+      ) &&
+      !(
+        typeof page.previousCursor === "string" &&
+        page.previousCursor === data.pageParams[index - 1]
+      );
     return [
       ...(gap ? [undefined] : []),
       ...page.days.flatMap((day) => {
@@ -174,7 +180,7 @@ function _getTimelineSequence(
     metadataUpdatedAt: data.pages.map((page) => {
       return page.metadataUpdatedAt;
     }),
-    hasStart: data.pageParams[0] === null,
+    hasStart: data.pages[0]?.previousCursor === null,
     hasEnd: data.pages.at(-1)?.nextCursor === null,
   };
 }

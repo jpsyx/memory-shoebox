@@ -25,6 +25,7 @@ describe("selecting frames within timeline filters", () => {
     answerBulkTimeline({
       "GET /api/timeline": {
         body: {
+          previousCursor: null,
           days: [makeDay({ items: [makeItem({ burst })] })],
           nextCursor: null,
           resultCount: 1,

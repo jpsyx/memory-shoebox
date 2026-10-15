@@ -33,6 +33,7 @@ function _makeBurstAnswers() {
   const timeline: Answer = {
     status: 200,
     body: {
+      previousCursor: null,
       days: [makeDay({ items: [makeItem({ burst })] })],
       nextCursor: null,
       resultCount: null,
@@ -148,6 +149,7 @@ describe("timeline bulk recovery", () => {
       renderTimeline();
       await _chooseThirdFrame();
       timeline.body = {
+        previousCursor: null,
         days: [
           makeDay({
             items: [makeItem({ burst: { ...burst, visibleFrameCount: 2 } })],

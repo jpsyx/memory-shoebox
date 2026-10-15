@@ -20,7 +20,12 @@ import {
 function _timelineAnswers(): Record<string, Answer> {
   return {
     "GET /api/timeline": {
-      body: { days: [makeDay()], nextCursor: null, resultCount: null },
+      body: {
+        previousCursor: null,
+        days: [makeDay()],
+        nextCursor: null,
+        resultCount: null,
+      },
       status: 200,
     },
     "GET /api/timeline/rail": {

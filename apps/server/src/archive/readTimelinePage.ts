@@ -1,4 +1,9 @@
 import { getDayBandAssignmentsFromMilestoneSpans } from "../milestones/getDayBandAssignmentsFromMilestoneSpans/getDayBandAssignmentsFromMilestoneSpans.ts";
+import {
+  expressionBuilder,
+  type AliasableExpression,
+  type SqlBool,
+} from "kysely";
 import type {
   ItemSummary,
   MilestoneRef,
@@ -7,7 +12,7 @@ import type {
 } from "@memory-shoebox/shared";
 import { appConfig } from "../../../../app.config.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { countSelectedItems } from "./countSelectedItems.ts";
 import {
@@ -18,7 +23,12 @@ import { readDayStream } from "./readDayStream.ts";
 import type { CandidateDay } from "./readItemDays.ts";
 import { readItemSummariesByDay } from "./readItemSummariesByDay.ts";
 import { readMilestoneItemCounts } from "./readMilestoneItemCounts.ts";
-import { hasAnyFilter, type TimelineFilter } from "./selectionFilterHelpers.ts";
+import {
+  hasAnyFilter,
+  hasContentFilter,
+  makeSelectionExpressionFromFilter,
+  type TimelineFilter,
+} from "./selectionFilterHelpers.ts";
 import {
   makeDigestFromFilter,
   makeTimelineCursorFromPageState,
@@ -41,6 +51,8 @@ export type TimelinePageOptions = {
   limit: number;
   /** Decoded and already checked against the filter digest by the route. */
   cursor: TimelinePageState | undefined;
+  /** Explicitly recount a retained refresh whose uncursored page was evicted. */
+  includeResultCount?: boolean;
   /** The request's own clock, which every `expiresAt` counts from. */
   now: Date;
   /** Optional, for the one defect this route can meet and must survive. */
@@ -123,11 +135,14 @@ function _makeTimelineDay(options: {
   };
 }
 
-/** `resultCount`: computed once, only on the first page of a narrowed selection. */
+/** Count a narrowed selection only on bootstrap or an explicit refresh head. */
 async function _readResultCount(
   options: Readonly<TimelinePageOptions>,
 ): Promise<number | null> {
-  if (!hasAnyFilter(options.filter) || options.cursor !== undefined) {
+  if (
+    !hasAnyFilter(options.filter) ||
+    (options.cursor !== undefined && !options.includeResultCount)
+  ) {
     return null;
   }
   return countSelectedItems({
@@ -137,22 +152,120 @@ async function _readResultCount(
   });
 }
 
-/** The cursor for the next page, or null at the end of the archive. */
-function _makeNextCursor(options: {
+/** The side of one page checked for another eligible day. */
+type TimelineEdgeOptions = {
   pageOptions: Readonly<TimelinePageOptions>;
-  stream: { hasMore: boolean };
-  bandedDays: readonly BandedDay[];
-}): string | null {
-  const lastDay =
-    options.bandedDays[options.bandedDays.length - 1]?.day.capturedOn;
-  if (!options.stream.hasMore || lastDay === undefined) {
-    return null;
-  }
+  boundaryDay: string;
+  direction: "older" | "newer";
+};
 
-  return makeTimelineCursorFromPageState({
-    lastDay,
-    filterDigest: makeDigestFromFilter(options.pageOptions.filter),
-  });
+/** Whether the selected date window permits occasion days beyond this edge. */
+function _hasMilestoneDateWindow(
+  options: Readonly<TimelineEdgeOptions>,
+): boolean {
+  const { filter } = options.pageOptions;
+  return (
+    !hasContentFilter(filter) &&
+    (filter.from === undefined ||
+      filter.until === undefined ||
+      filter.from <= filter.until) &&
+    (options.direction === "older"
+      ? filter.from === undefined || filter.from < options.boundaryDay
+      : filter.until === undefined || filter.until > options.boundaryDay)
+  );
+}
+
+/** Visible, selection-exact items on one side, without a total count. */
+function _getItemDayExistenceExpression(
+  options: Readonly<TimelineEdgeOptions>,
+): AliasableExpression<SqlBool> {
+  const { viewer, filter } = options.pageOptions;
+  const expression = expressionBuilder<Database, never>();
+  const items = expression
+    .selectFrom("items")
+    .select("items.id")
+    .where(makeSelectionExpressionFromFilter({ viewer, filter }))
+    .where(
+      "items.captured_on",
+      options.direction === "older" ? "<" : ">",
+      options.boundaryDay,
+    )
+    .limit(1);
+  return expression.exists(items);
+}
+
+/** A date-keyset probe of eligible item and occasion days on one side. */
+function _getDayExistenceExpression(
+  options: Readonly<TimelineEdgeOptions>,
+): AliasableExpression<SqlBool> {
+  const itemExists = _getItemDayExistenceExpression(options);
+  if (!_hasMilestoneDateWindow(options)) {
+    return itemExists;
+  }
+  const { filter } = options.pageOptions;
+  const expression = expressionBuilder<Database, never>();
+  const milestones = expression
+    .selectFrom("milestones")
+    .select("milestones.id")
+    .where(
+      options.direction === "older"
+        ? "milestones.starts_on"
+        : "milestones.ends_on",
+      options.direction === "older" ? "<" : ">",
+      options.boundaryDay,
+    );
+  const fromBounded =
+    filter.from === undefined
+      ? milestones
+      : milestones.where("milestones.ends_on", ">=", filter.from);
+  const untilBounded =
+    filter.until === undefined
+      ? fromBounded
+      : fromBounded.where("milestones.starts_on", "<=", filter.until);
+  return expression.or([itemExists, expression.exists(untilBounded.limit(1))]);
+}
+
+/** Both server-issued edge cursors use visibility-scoped bounded existence. */
+async function _readEdgeCursors(options: {
+  pageOptions: Readonly<TimelinePageOptions>;
+  days: readonly CandidateDay[];
+}): Promise<Pick<TimelineResponse, "nextCursor" | "previousCursor">> {
+  const newestDay = options.days[0]?.capturedOn;
+  const oldestDay = options.days.at(-1)?.capturedOn;
+  if (newestDay === undefined || oldestDay === undefined) {
+    return { nextCursor: null, previousCursor: null };
+  }
+  const edges = await options.pageOptions.database
+    .selectNoFrom([
+      _getDayExistenceExpression({
+        pageOptions: options.pageOptions,
+        boundaryDay: oldestDay,
+        direction: "older",
+      }).as("hasOlder"),
+      _getDayExistenceExpression({
+        pageOptions: options.pageOptions,
+        boundaryDay: newestDay,
+        direction: "newer",
+      }).as("hasNewer"),
+    ])
+    .executeTakeFirstOrThrow();
+  const filterDigest = makeDigestFromFilter(options.pageOptions.filter);
+  return {
+    nextCursor: edges.hasOlder
+      ? makeTimelineCursorFromPageState({
+          boundaryDay: oldestDay,
+          filterDigest,
+          direction: "older",
+        })
+      : null,
+    previousCursor: edges.hasNewer
+      ? makeTimelineCursorFromPageState({
+          boundaryDay: newestDay,
+          filterDigest,
+          direction: "newer",
+        })
+      : null,
+  };
 }
 
 /**
@@ -178,7 +291,8 @@ export async function readTimelinePage(
     viewer: options.viewer,
     filter: options.filter,
     limit: options.limit,
-    beforeDay: options.cursor?.lastDay,
+    boundaryDay: options.cursor?.boundaryDay,
+    direction: options.cursor?.direction ?? "older",
     itemBudget: appConfig.timeline.pageItemBudget,
   });
 
@@ -206,7 +320,7 @@ export async function readTimelinePage(
     days: bandedDays.map((banded) => {
       return _makeTimelineDay({ banded, bandCounts, itemsByDay });
     }),
-    nextCursor: _makeNextCursor({ pageOptions: options, stream, bandedDays }),
+    ...(await _readEdgeCursors({ pageOptions: options, days: stream.days })),
     resultCount: await _readResultCount(options),
   };
 }

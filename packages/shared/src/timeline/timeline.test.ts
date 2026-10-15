@@ -23,6 +23,7 @@ describe("timelineRequestSchema", () => {
       excludeAttached: false,
       limit: 10,
       cursor: undefined,
+      includeResultCount: false,
     });
   });
 
@@ -88,14 +89,27 @@ describe("timelineRailRequestSchema", () => {
 });
 
 describe("timelineResponseSchema", () => {
-  it("is the collection envelope plus resultCount", () => {
+  it("requires both cursor directions in the collection envelope", () => {
     expect(
       timelineResponseSchema.parse({
         days: [],
         nextCursor: null,
+        previousCursor: null,
         resultCount: null,
       }),
-    ).toEqual({ days: [], nextCursor: null, resultCount: null });
+    ).toEqual({
+      days: [],
+      nextCursor: null,
+      previousCursor: null,
+      resultCount: null,
+    });
+    expect(
+      timelineResponseSchema.safeParse({
+        days: [],
+        nextCursor: null,
+        resultCount: null,
+      }).success,
+    ).toBe(false);
   });
 
   it("refuses a day with no counts", () => {

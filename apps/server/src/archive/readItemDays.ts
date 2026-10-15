@@ -23,6 +23,8 @@ type Options = {
   viewer: Viewer;
   filter: Readonly<TimelineFilter>;
   beforeDay?: string;
+  afterDay?: string;
+  direction?: "older" | "newer";
   limit?: number;
 };
 
@@ -40,8 +42,10 @@ function _makeCandidateDayFromRow(row: Readonly<CandidateDay>): CandidateDay {
 /**
  * Query 1 of a timeline page: the days with per-viewer media and unseen counts.
  *
- * Rides `(captured_on DESC, visibility_rule_id, id)`, so the group-by runs in
- * index order and a limit stops early. Media counts also read each item's kind.
+ * Uses exclusive date keysets and a grouped day limit in either direction.
+ * Admin reads group in date-index order; the non-admin visibility-or-uploader
+ * plan can group the eligible range in a temporary tree (see docs/archive.md).
+ * Media counts also read each item's kind.
  *
  * **The `item_views` join is `ON v.item_id = i.id AND v.member_id = :me`, in
  * the `ON` clause.** In the `WHERE` it becomes an inner join and every item
@@ -55,6 +59,8 @@ function _makeCandidateDayFromRow(row: Readonly<CandidateDay>): CandidateDay {
  * @param options.viewer The request's viewer.
  * @param options.filter The normalised selection.
  * @param options.beforeDay Exclusive upper bound: the cursor's day.
+ * @param options.afterDay Exclusive lower bound for a newer page.
+ * @param options.direction Nearest eligible days first; descending for the rail.
  * @param options.limit Days to read. Omitted for the rail, which is complete.
  */
 export async function readItemDays(
@@ -86,14 +92,21 @@ export async function readItemDays(
       }),
     )
     .groupBy("items.captured_on")
-    .orderBy("items.captured_on", "desc");
-
+    .orderBy(
+      "items.captured_on",
+      options.direction === "newer" ? "asc" : "desc",
+    );
   const bounded =
     options.beforeDay === undefined
       ? grouped
       : grouped.where("items.captured_on", "<", options.beforeDay);
+  const afterBounded =
+    options.afterDay === undefined
+      ? bounded
+      : bounded.where("items.captured_on", ">", options.afterDay);
   const limited =
-    options.limit === undefined ? bounded : bounded.limit(options.limit);
-
+    options.limit === undefined
+      ? afterBounded
+      : afterBounded.limit(options.limit);
   return (await limited.execute()).map(_makeCandidateDayFromRow);
 }

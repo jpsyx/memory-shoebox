@@ -96,8 +96,15 @@ export const timelineRequestSchema = timelineFilterQuerySchema.extend({
     .positive()
     .max(LIMITS.timelineMaxDays)
     .default(LIMITS.timelineDefaultDays),
-  /** Opaque. It encodes the last day and normalised filter digest. */
+  /** Opaque. It encodes an exclusive boundary, direction and filter digest. */
   cursor: cursorSchema.optional(),
+  /** Recount once when refreshing retained cursor pages after eviction. */
+  includeResultCount: z
+    .literal("true")
+    .optional()
+    .transform((value) => {
+      return value === "true";
+    }),
 });
 
 /** The day stream's query string. */
@@ -186,7 +193,7 @@ export type TimelineDay = z.infer<typeof timelineDaySchema>;
  * A page of days.
  *
  * With nothing visible the body is exactly
- * `{ "days": [], "nextCursor": null, "resultCount": null }`, and a brand-new
+ * `{ "days": [], "nextCursor": null, "previousCursor": null, "resultCount": null }`, and a brand-new
  * archive and a viewer restricted from everything produce byte-identical
  * bodies. No field may be added that distinguishes them.
  */
@@ -194,10 +201,12 @@ export const timelineResponseSchema = collectionSchema({
   resourceKey: "days",
   itemSchema: timelineDaySchema,
 }).extend({
+  /** Server-issued exclusive cursor toward newer eligible days, or null. */
+  previousCursor: cursorSchema.nullable(),
   /**
    * What the whole selection is worth, in items, for the filter strip. Null
-   * when no filter is set, and null on any request carrying a cursor: the
-   * strip is drawn once from the first page.
+   * when no filter is set. Cursor pages carry null unless the first retained
+   * refresh explicitly requests includeResultCount after page eviction.
    */
   resultCount: z.number().int().nonnegative().nullable(),
 });

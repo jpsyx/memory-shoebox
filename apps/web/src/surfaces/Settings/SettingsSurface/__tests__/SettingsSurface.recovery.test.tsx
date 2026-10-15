@@ -181,6 +181,7 @@ it("shows a passive real photo miniature without new navigation controls", async
       "GET /api/timeline": {
         status: 200,
         body: {
+          previousCursor: null,
           days: [
             makeDay({
               items: [

@@ -40,6 +40,7 @@ describe("timeline burst editing", () => {
       });
       const timeline: Answer = {
         body: {
+          previousCursor: null,
           days: [makeDay({ items: [_cover(3)] })],
           nextCursor: null,
           resultCount: null,
@@ -74,6 +75,7 @@ describe("timeline burst editing", () => {
         name: "Make this photo standalone?",
       });
       timeline.body = {
+        previousCursor: null,
         days: [
           makeDay({
             items: [

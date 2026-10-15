@@ -39,6 +39,7 @@ function _respond(
       "GET /api/timeline": {
         status: 200,
         body: {
+          previousCursor: null,
           days: [
             makeDay({
               capturedOn: FIRST.capturedOn,
@@ -140,6 +141,8 @@ describe("viewer navigation", () => {
       {
         pages: [
           {
+            selectionResultCount: null,
+            previousCursor: null,
             metadataUpdatedAt: Date.now(),
             days: [makeDay({ items: freshItems })],
             nextCursor: null,
@@ -204,6 +207,8 @@ describe("viewer navigation", () => {
         {
           pages: [
             {
+              selectionResultCount: null,
+              previousCursor: null,
               metadataUpdatedAt: now - 29_000,
               days: [makeDay({ items: freshItems })],
               nextCursor: null,
@@ -291,6 +296,7 @@ describe("viewer navigation", () => {
         "GET /api/timeline": {
           status: 200,
           body: {
+            previousCursor: null,
             days: [
               makeDay({
                 capturedOn: FIRST.capturedOn,
@@ -372,6 +378,7 @@ describe("viewer navigation", () => {
         "GET /api/timeline": {
           status: 200,
           body: {
+            previousCursor: null,
             days: [
               makeDay({
                 capturedOn: FIRST.capturedOn,
@@ -428,6 +435,7 @@ describe("viewer navigation", () => {
         "GET /api/timeline": {
           status: 200,
           body: {
+            previousCursor: null,
             days: [
               makeDay({ capturedOn: FIRST.capturedOn, items: [FIRST] }),
               makeDay({ capturedOn: "2026-09-12", items: [burstFirst] }),

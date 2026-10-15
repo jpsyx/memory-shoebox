@@ -34,6 +34,7 @@ describe("GET /api/timeline", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
+      previousCursor: null,
       days: [],
       nextCursor: null,
       resultCount: null,

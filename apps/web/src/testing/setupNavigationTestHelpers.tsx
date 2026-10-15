@@ -86,7 +86,14 @@ const DEFAULT_ANSWERS: Readonly<Record<string, SetupAnswer>> = {
   "/api/me": { body: ADMIN },
   "/api/mail/health": { body: MAIL },
   "/api/upload-sessions/current": { body: null, status: 204 },
-  "/api/timeline": { body: { days: [], nextCursor: null, resultCount: null } },
+  "/api/timeline": {
+    body: {
+      previousCursor: null,
+      days: [],
+      nextCursor: null,
+      resultCount: null,
+    },
+  },
   "/api/timeline/rail": { body: { days: [], nextCursor: null } },
   "/api/filters/facets": { body: { tags: [], people: [], resultCount: 0 } },
   "/api/tags": { body: { tags: [], nextCursor: null } },

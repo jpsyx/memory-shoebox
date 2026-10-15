@@ -69,6 +69,7 @@ describe("visible timeline signature renewal", () => {
     respondWith({
       "GET /api/timeline": {
         body: {
+          previousCursor: null,
           days: [makeDay({ items: [visible, hidden], itemCount: 2 })],
           nextCursor: null,
           resultCount: null,

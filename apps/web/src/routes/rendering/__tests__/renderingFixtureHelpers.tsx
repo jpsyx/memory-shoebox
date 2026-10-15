@@ -64,7 +64,12 @@ const EMPTY_TIMELINE_ANSWERS: Record<string, unknown> = {
   "/api/activity": { activity: [], nextCursor: null },
   "/api/settings": SETTINGS_RESPONSE,
   "/api/mail/health": SETTINGS_MAIL_HEALTH,
-  "/api/timeline": { days: [], nextCursor: null, resultCount: null },
+  "/api/timeline": {
+    previousCursor: null,
+    days: [],
+    nextCursor: null,
+    resultCount: null,
+  },
   "/api/timeline/rail": { days: [], nextCursor: null },
   "/api/filters/facets": { tags: [], people: [], resultCount: 0 },
   "/api/tags": { tags: [], nextCursor: null },

@@ -275,7 +275,8 @@ describe("readDayStream", () => {
       viewer: makeViewer(memberId),
       filter,
       limit: 10,
-      beforeDay: undefined,
+      boundaryDay: undefined,
+      direction: "older",
       itemBudget: 400,
     });
   };
@@ -378,7 +379,8 @@ describe("readDayStream, the window floor", () => {
       viewer: makeViewer(memberId),
       filter: makeTimelineFilterFromQuery({}),
       limit: 3,
-      beforeDay: undefined,
+      boundaryDay: undefined,
+      direction: "older",
       itemBudget: 400,
     });
 

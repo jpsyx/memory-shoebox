@@ -175,7 +175,12 @@ describe("timeline file intake", () => {
   it("keeps one declaration through StrictMode's mount probe", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
         status: 200,
       },
     });
@@ -322,7 +327,12 @@ describe("timeline file intake", () => {
         status: 200,
       },
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: null },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
         status: 200,
       },
     });

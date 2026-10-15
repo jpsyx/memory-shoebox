@@ -102,7 +102,12 @@ describe("the filter sheet", () => {
   it("says which filter is doing the excluding when nothing matches", async () => {
     respondWith({
       "GET /api/timeline": {
-        body: { days: [], nextCursor: null, resultCount: 0 },
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: 0,
+        },
         status: 200,
       },
       "GET /api/filters/facets": {

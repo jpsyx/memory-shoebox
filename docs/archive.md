@@ -151,12 +151,12 @@ own, so a milestone-only day looks the same to everybody.
 
 The day-stream milestone query is bounded, and its bound is provable.
 Global band ranking separately reads the complete small milestone catalog.
-Item days are fetched with `LIMIT limit + 1`; if a `(limit + 1)`-th day comes
-back, no date below it can reach this page, because every such date already has
-at least `limit + 1` item days above it in the merged descending order. Only
-milestones overlapping `[that day, the cursor's day]` can matter. With fewer
-than `limit + 1` item days there is no floor, and every milestone at or below
-the cursor is fetched, which is tens of rows.
+Item days are fetched nearest the exclusive cursor boundary, with
+`LIMIT limit + 1`. The extra day bounds the far edge of the milestone window:
+a floor for older reads, a ceiling for newer reads. Days beyond it cannot
+reach this page. With fewer item days there is no far edge, so the remaining
+small milestone catalog is eligible. The rail keeps its complete descending
+defaults.
 
 ### What a filter does to the union
 
@@ -182,24 +182,37 @@ filtered, and so gets a number for the filter strip, when any of `tags`,
 ### A day is atomic, and the guard is a soft budget
 
 `limit` counts days, defaults to 10 and caps at 30, and a day never splits
-across pages, so the next page is `captured_on < :d` strictly. The pile has no
+across pages. Older reads use `captured_on < :d`, newer reads use
+`captured_on > :d`. The pile has no
 in-day pagination affordance, and inventing one in an API would have been a
 design change made in the wrong document.
 
 A single day of 212 photographs therefore arrives whole. The guard against ten
 of those is `appConfig.timeline.pageItemBudget`: stop adding days once the
 running visible-item total passes it, but always return at least one day,
-however large. `nextCursor` is non-null whenever the budget or the limit cut
-the page short, so nothing is lost, only deferred.
+however large. This budget is applied nearest the requested boundary before
+normalizing every response to newest-first order. Both edge cursors use one
+bounded SQL statement with visible, selection-exact item existence probes and,
+when content filters permit them, occasion-day existence probes. Hidden rows
+and unfiltered totals cannot create a cursor.
 
 ## The cursor
 
-Base64url over `{ d, f }`, in `timelineCursorHelpers.ts`:
+Base64url over `{ v: 2, d, f, direction }`, in `timelineCursorHelpers.ts`:
 
-| Field | Holds                                        |
-| ----- | -------------------------------------------- |
-| `d`   | The `captured_on` of the last day returned   |
-| `f`   | A truncated SHA-256 of the normalised filter |
+| Field       | Holds                                        |
+| ----------- | -------------------------------------------- |
+| `v`         | Cursor version, currently `2`                |
+| `d`         | The exclusive `captured_on` boundary         |
+| `f`         | A truncated SHA-256 of the normalised filter |
+| `direction` | `older` or `newer`                           |
+
+`nextCursor` requests days older than the oldest returned day;
+`previousCursor` requests days newer than the newest returned day. Both are
+null when no eligible day exists on that side. Empty and fully restricted
+archives have the same four response fields and null cursors. The effective
+`until=min(until, at)` of a jump remains part of the normalized filter in both
+directions, so reversing never escapes the jump.
 
 Bands come from `milestones/getDayBandAssignmentsFromMilestoneSpans.ts`,
 a pure assignment across every date in every milestone span, newest first.
@@ -210,8 +223,10 @@ and jump position; a filtered day stays a continuation even if its opening
 band was omitted. Item counts remain per viewer and only bands have counts.
 Upload emails use the same assignment for their day's milestone name.
 
-Legacy `{ d, o, f }` cursors remain accepted: a supplied `o` must be an array
-of valid UUIDs, then it is discarded. It cannot influence ranking.
+Unversioned `{ d, f }` and `{ d, o, f }` cursors remain accepted as older
+reads: a supplied `o` must be an array of valid UUIDs, then it is discarded.
+It cannot influence ranking. Unknown versions and missing or invalid v2
+directions are refused.
 
 `f` is what stops a client changing the filter without resetting the cursor and
 receiving a page ranked against a different feed. A mismatch is a `400`, not a
@@ -347,6 +362,13 @@ items:
 | 9   | `shoebox.timezone`, for the date inside alt text           | when the page draws an item |
 | 10  | Per-viewer `itemCount` for milestones taking a **band**    | when the page has a band    |
 | 11  | `resultCount`                                              | filtered, uncursored only   |
+| 12  | Bounded older/newer day existence                          | nonempty pages              |
+
+The optional validated `includeResultCount=true` requests the existing filtered
+count once at the head of a retained-page refresh after eviction. Ordinary
+cursor reads still return null. This flag changes neither selection nor cursor
+digest, and costs one extra SQL statement per filtered refresh, rather than
+one per cursor page.
 
 Queries 5 to 9 are keyed by the ids actually **drawn**, so a collapsed
 forty-five-frame burst costs one item's renditions and one item's people rather
@@ -354,14 +376,22 @@ than forty-five. Query 6 left-joins `members` and `groups` for the subject
 display names, so a `VisibilitySummary` needs nothing further. Signing is
 in-process HMAC over distinct storage keys and touches no network.
 
-Measured, through the counting Kysely plugin in
-`apps/server/test/helpers/makeQueryCountingDatabaseFromDatabase.ts`: global
-assignment adds one complete catalog query per page to the previous baseline
-of **11** for a single print and **12** for a larger page with a band.
-The unchanged query-count test verifies the cost stays bounded as prints grow.
-The standing assertion
-is that the large page costs no more than the small one plus the band count it
-alone has a band for.
+Measured for C2 through the counting Kysely plugin: a single-print route
+request costs **14** statements and the 250-print, banded request costs **15**.
+The unchanged ceiling and small-versus-large assertion still pass. Direct
+cursor-page assembly costs **11** executions for both directions and both
+roles, before and after adding 1,000 unrelated items; the base was **10**.
+The edge existence query is the one new statement.
+
+`EXPLAIN QUERY PLAN` shows admin candidate and item-existence reads using
+`items_navigation_capture` with exclusive date bounds, without a temporary
+grouping tree. Non-admin reads preserve the base planner limitation: the
+visibility-or-uploader predicate uses `items_rule_captured_on` and
+`items_uploaded_by` in a multi-index OR, then groups the eligible range in a
+temporary tree. SQL has date keysets and bounded returned days in both
+directions, but this plan is not proof of bounded row work or early stopping
+for non-admin viewers. The small complete milestone catalog can also scan.
+Changing that access plan requires measurement and a separate decision.
 
 The other five routes: the rail is 2, the facets route is 2 with nothing
 selected and 5 with a selection, `GET /api/tags` is 1, `GET /api/people` is 4,
@@ -396,14 +426,28 @@ apart from the route it talks to. The surfaces themselves, and what the URL
 carries, are [web.md § The six built surfaces](web.md#the-six-built-surfaces).
 
 **The infinite query is keyed by the string the request is built from.**
-`makeTimelineQueryOptionsFromView` pages on `nextCursor` and stops on null. A
+`makeTimelineQueryOptionsFromView` pages on `nextCursor` and `previousCursor`,
+stops on null, and retains at most five pages. A
 cursor carries `f`, the digest of the filter it was minted under, and the
 server answers `400` rather than guessing when one is presented against a
 different selection, so a selection change has to land under a different query
 key or the next page is refused. Deriving the key from the same rendered query
 string the request is built from is what guarantees that, rather than a
 hand-kept list of which fields matter; `limit` is outside the digest, so
-nothing about page size can strand a scroll.
+nothing about page size can strand a scroll. Both boundary callbacks in the
+actual `useTimelineData` caller inspect the query's current fetch state and use
+`cancelRefetch: false`, excluding opposite-direction and refresh races even
+before React rerenders. C3 owns the measured near-start scroll trigger.
+
+Each web page retains its request-start `metadataUpdatedAt` and a scalar
+`selectionResultCount` from the uncursored response or latest refresh head.
+Appending, reversing and eviction preserve existing page timestamps. Carrying
+the count in these same five pages survives remount without an extra cache.
+A sequential retained-page refresh requests a new count only for its first
+cursor page, then propagates it within that fetch's AbortSignal ownership;
+late canceled operations cannot replace the next operation's count. Raw facet
+choices keep their full selection while the strip's count keeps the effective
+jump boundary.
 
 **The latch sends nothing when everything in view is already seen.** One
 intersection observer watches the whole pile, the prints announce themselves

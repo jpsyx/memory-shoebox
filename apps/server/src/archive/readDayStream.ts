@@ -3,7 +3,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   getUnionDaysFromMilestones,
-  getWindowFloorFromItemDays,
+  getWindowBoundaryFromItemDays,
   makeDayPageFromCandidates,
   makeMergedDays,
 } from "./mergeDaysHelpers.ts";
@@ -35,6 +35,8 @@ async function _readMilestoneDays(options: {
   filter: Readonly<TimelineFilter>;
   beforeDay: string | undefined;
   sinceDay: string | undefined;
+  afterDay: string | undefined;
+  throughDay: string | undefined;
 }): Promise<{ milestones: MilestoneRef[]; milestoneDays: string[] }> {
   const milestones = await readOverlappingMilestones({
     database: options.database,
@@ -42,6 +44,8 @@ async function _readMilestoneDays(options: {
     untilDay: options.filter.until,
     beforeDay: options.beforeDay,
     sinceDay: options.sinceDay,
+    afterDay: options.afterDay,
+    throughDay: options.throughDay,
   });
 
   const milestoneDays = hasContentFilter(options.filter)
@@ -52,6 +56,8 @@ async function _readMilestoneDays(options: {
         untilDay: options.filter.until,
         beforeDay: options.beforeDay,
         sinceDay: options.sinceDay,
+        afterDay: options.afterDay,
+        throughDay: options.throughDay,
       });
 
   return { milestones, milestoneDays };
@@ -61,8 +67,8 @@ async function _readMilestoneDays(options: {
  * Queries 1 and 2, merged and cut into the days one page returns.
  *
  * **The milestone query's window is bounded by
- * {@link getWindowFloorFromItemDays}.** Without a floor, every occasion at or
- * below the cursor is fetched, which is tens of rows.
+ * {@link getWindowBoundaryFromItemDays}.** Without a far edge, every occasion
+ * on the requested side is eligible, which is tens of rows.
  *
  * **The union applies only when no content filter is set** (`timeline.md`
  * Ruling 1). The milestones themselves are still read under a content filter,
@@ -72,26 +78,39 @@ async function _readMilestoneDays(options: {
  * @param options.viewer The request's viewer.
  * @param options.filter The normalised selection.
  * @param options.limit Days per page.
- * @param options.beforeDay The cursor's day, exclusive.
+ * @param options.boundaryDay The cursor's day, exclusive.
+ * @param options.direction Older or newer days nearest the boundary.
  * @param options.itemBudget `appConfig.timeline.pageItemBudget`.
  */
-export async function readDayStream(options: {
+type DayStreamOptions = {
   database: DatabaseExecutor;
   viewer: Viewer;
   filter: Readonly<TimelineFilter>;
   limit: number;
-  beforeDay: string | undefined;
+  boundaryDay: string | undefined;
+  direction: "older" | "newer";
   itemBudget: number;
-}): Promise<DayStreamPage> {
+};
+
+/** Candidate days in the requested traversal order, before the atomic budget. */
+async function _readDayStreamCandidates(
+  options: Readonly<DayStreamOptions>,
+): Promise<{ milestones: MilestoneRef[]; candidates: CandidateDay[] }> {
+  const beforeDay =
+    options.direction === "older" ? options.boundaryDay : undefined;
+  const afterDay =
+    options.direction === "newer" ? options.boundaryDay : undefined;
   const itemDays = await readItemDays({
     database: options.database,
     viewer: options.viewer,
     filter: options.filter,
-    beforeDay: options.beforeDay,
+    beforeDay,
+    afterDay,
+    direction: options.direction,
     limit: options.limit + 1,
   });
 
-  const sinceDay = getWindowFloorFromItemDays({
+  const windowEdge = getWindowBoundaryFromItemDays({
     itemDays,
     limit: options.limit,
   });
@@ -99,15 +118,34 @@ export async function readDayStream(options: {
   const { milestones, milestoneDays } = await _readMilestoneDays({
     database: options.database,
     filter: options.filter,
-    beforeDay: options.beforeDay,
-    sinceDay,
+    beforeDay,
+    afterDay,
+    sinceDay: options.direction === "older" ? windowEdge : undefined,
+    throughDay: options.direction === "newer" ? windowEdge : undefined,
   });
 
+  return {
+    milestones,
+    candidates: makeMergedDays({
+      itemDays,
+      milestoneDays,
+      direction: options.direction,
+    }),
+  };
+}
+
+/** Applies the atomic budget nearest the boundary, then returns newest first. */
+export async function readDayStream(
+  options: Readonly<DayStreamOptions>,
+): Promise<DayStreamPage> {
+  const { milestones, candidates } = await _readDayStreamCandidates(options);
   const page = makeDayPageFromCandidates({
-    candidates: makeMergedDays({ itemDays, milestoneDays }),
+    candidates,
     limit: options.limit,
     itemBudget: options.itemBudget,
   });
 
-  return { days: page.days, milestones, hasMore: page.hasMore };
+  const days =
+    options.direction === "newer" ? page.days.toReversed() : page.days;
+  return { days, milestones, hasMore: page.hasMore };
 }
