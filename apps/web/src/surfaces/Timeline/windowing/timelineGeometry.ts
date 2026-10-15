@@ -129,6 +129,7 @@ export function getAnchorFromTimelineWindow(
   return {
     capturedOn: row?.day.capturedOn ?? "",
     itemId,
+    burstId: row?.burstId,
     offsetPx:
       getAnchorNodeFromTimelineWindow(current, itemId)?.getBoundingClientRect()
         .top ?? 0,

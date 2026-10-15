@@ -65,6 +65,7 @@ export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
           framesByBurstId={data.framesByBurstId}
           hasMore={data.hasMore}
           onOpenBurst={data.onOpenBurst}
+          restoreBurst={data.restoreBurst}
           onOpenItem={data.onOpenItem}
           onReachEnd={data.onReachEnd}
           onRestart={data.onRestart}

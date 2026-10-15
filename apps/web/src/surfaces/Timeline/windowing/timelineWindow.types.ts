@@ -9,6 +9,7 @@ import type {
 export type TimelineAnchor = {
   capturedOn: string;
   itemId?: string;
+  burstId?: string;
   offsetPx: number;
   pageCursor: string | null;
 };
@@ -49,4 +50,7 @@ export type TimelineWindowOptions = {
   viewportWidth?: number;
   pageCursors?: ReadonlyMap<string, string | null>;
   recoverPage?: (anchor: TimelineAnchor) => Promise<void>;
+  restoreBurst?: (
+    burstId: string,
+  ) => Promise<readonly BurstFrameRef[] | undefined>;
 };

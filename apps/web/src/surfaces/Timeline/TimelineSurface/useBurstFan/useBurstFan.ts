@@ -11,8 +11,11 @@ import type {
   BurstFrameRef,
   BurstFramesResponse,
 } from "@memory-shoebox/shared";
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { burstFramesQueryOptions } from "@/api/bursts/bursts";
 import type { createTimelineMemory } from "../../windowing/createTimelineMemory";
+
+type PendingFrameRead = Promise<readonly BurstFrameRef[] | undefined>;
 
 type Options = {
   viewKey: string;
@@ -31,6 +34,7 @@ export function useBurstFan(
     import("../../windowing/timelineWindow.types").TimelineExpansion
   >;
   onOpenBurst: (burstId: string) => void;
+  restoreBurst: (burstId: string) => PendingFrameRead;
   onCollapseBurst: (burstId: string) => void;
   onClearBursts: () => void;
 } {
@@ -53,7 +57,7 @@ function useBurstState(options?: Options) {
   });
   const [revision, setRevision] = useState(0);
   const generation = useRef(0);
-  const pending = useRef(new Map<string, object>());
+  const pending = useRef(new Map<string, PendingFrameRead>());
   const owned = useRef(new Set<string>());
   const latest = useRef(options);
   latest.current = options;
@@ -104,9 +108,16 @@ function useBurstActions(
   state: BurstState,
 ) {
   const { generation, pending, setRevision, setFramesByBurstId } = state;
-  const onOpenBurst = useOpenBurst(queryClient, state);
+  const restoreBurst = useOpenBurst(queryClient, state);
+  const onOpenBurst = useCallback(
+    (burstId: string) => {
+      void restoreBurst(burstId).catch(() => {});
+    },
+    [restoreBurst],
+  );
   return {
     onOpenBurst,
+    restoreBurst,
     onCollapseBurst: (burstId: string) => {
       options?.memory.get(options.viewKey).expanded.delete(burstId);
       setRevision((value) => {
@@ -146,7 +157,7 @@ function useRetainedFrames(options: {
   queryClient: QueryClient;
   options?: Options;
   setFramesByBurstId: FrameSetter;
-  pending: Map<string, object>;
+  pending: Map<string, PendingFrameRead>;
   owned: Set<string>;
 }): void {
   const retainedKey = options.options
@@ -220,13 +231,13 @@ function useBurstUpdates(
 function _openBurst(options: {
   burstId: string;
   queryClient: QueryClient;
-  pending: RefObject<Map<string, object>>;
+  pending: RefObject<Map<string, PendingFrameRead>>;
   owned: RefObject<Set<string>>;
   latest: RefObject<Options | undefined>;
   generation: RefObject<number>;
   setRevision: React.Dispatch<React.SetStateAction<number>>;
   setFramesByBurstId: FrameSetter;
-}): void {
+}): PendingFrameRead {
   const {
     burstId,
     queryClient,
@@ -237,23 +248,33 @@ function _openBurst(options: {
     setRevision,
     setFramesByBurstId,
   } = options;
-  if (pending.current.has(burstId)) return;
+  const existing = pending.current.get(burstId);
+  if (existing) {
+    return existing;
+  }
   const current = latest.current;
-  if (current && !current.retainedBurstIds.has(burstId)) return;
+  if (current && !current.retainedBurstIds.has(burstId)) {
+    return Promise.resolve(undefined);
+  }
   current?.memory.expand(
     current.viewKey,
     burstId,
     current.memory.get(current.viewKey).expanded.get(burstId)?.height ?? 0,
   );
   const epoch = generation.current;
-  const request = {};
-  pending.current.set(burstId, request);
+
   owned.current.add(burstId);
   setRevision((value) => {
     return value + 1;
   });
-  void queryClient
+  const request = queryClient
     .fetchQuery(burstFramesQueryOptions(burstId))
+    .catch((error: unknown) => {
+      if (error instanceof ApiRequestError && error.status === 404) {
+        return { frames: [], nextCursor: null };
+      }
+      throw error;
+    })
     .then((response) => {
       if (
         epoch !== generation.current ||
@@ -264,18 +285,20 @@ function _openBurst(options: {
       setFramesByBurstId((previous) => {
         return new Map(previous).set(burstId, response.frames);
       });
+      return response.frames;
     })
-    .catch(() => {})
     .finally(() => {
       if (pending.current.get(burstId) === request)
         pending.current.delete(burstId);
     });
+  pending.current.set(burstId, request);
+  return request;
 }
 
 function useOpenBurst(
   queryClient: QueryClient,
   state: BurstState,
-): (burstId: string) => void {
+): (burstId: string) => PendingFrameRead {
   const {
     pending,
     owned,
@@ -286,7 +309,7 @@ function useOpenBurst(
   } = state;
   const onOpenBurst = useCallback(
     (burstId: string) => {
-      _openBurst({
+      return _openBurst({
         burstId,
         queryClient,
         pending,

@@ -42,6 +42,9 @@ type Props = {
   viewKey?: string;
   pageCursors?: ReadonlyMap<string, string | null>;
   recoverPage?: (anchor: TimelineAnchor) => Promise<void>;
+  restoreBurst?: (
+    burstId: string,
+  ) => Promise<readonly BurstFrameRef[] | undefined>;
   expanded?: ReadonlyMap<string, TimelineExpansion>;
   onCollapseBurst?: (burstId: string) => void;
   focusRetirement?: number;
@@ -92,6 +95,7 @@ function useStream(props: Readonly<Props>, element: RootRef) {
     ...layout,
     pageCursors: props.pageCursors,
     recoverPage: props.recoverPage,
+    restoreBurst: props.restoreBurst,
   });
   const position = useTimelinePosition({
     viewKey: props.viewKey ?? "timeline",

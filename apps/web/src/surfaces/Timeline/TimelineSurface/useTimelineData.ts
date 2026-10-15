@@ -88,6 +88,9 @@ export type TimelineData = {
   onReachStart: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
+  restoreBurst: (
+    burstId: string,
+  ) => Promise<readonly BurstFrameRef[] | undefined>;
   onClearBursts: () => void;
   /** A print or a fanned frame was pressed: the item viewer opens. */
   onOpenItem: (itemId: string) => void;
@@ -245,6 +248,9 @@ function usePileControls(options: {
 }): {
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   onOpenBurst: (burstId: string) => void;
+  restoreBurst: (
+    burstId: string,
+  ) => Promise<readonly BurstFrameRef[] | undefined>;
   onClearBursts: () => void;
   archiveRef: RefCallback<HTMLElement>;
   expanded: ReadonlyMap<string, TimelineExpansion>;
@@ -253,6 +259,7 @@ function usePileControls(options: {
   const {
     framesByBurstId,
     onOpenBurst,
+    restoreBurst,
     onClearBursts,
     expanded,
     onCollapseBurst,
@@ -274,6 +281,7 @@ function usePileControls(options: {
   return {
     framesByBurstId,
     onOpenBurst,
+    restoreBurst,
     onClearBursts,
     archiveRef,
     expanded,
@@ -320,6 +328,7 @@ function _makeTimelineData(
 ): Omit<
   TimelineData,
   | "onOpenBurst"
+  | "restoreBurst"
   | "onClearBursts"
   | "onOpenItem"
   | "archiveRef"
@@ -430,6 +439,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
   const {
     framesByBurstId,
     onOpenBurst,
+    restoreBurst,
     onClearBursts,
     archiveRef,
     expanded,
@@ -462,6 +472,7 @@ export function useTimelineData(search: TimelineSearch): TimelineData {
       onRestart,
     }),
     onOpenBurst,
+    restoreBurst,
     onClearBursts,
     onOpenItem,
     archiveRef,

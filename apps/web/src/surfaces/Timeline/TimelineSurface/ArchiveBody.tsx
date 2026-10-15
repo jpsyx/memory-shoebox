@@ -20,6 +20,7 @@ type Props = Pick<
   | "expanded"
   | "onCollapseBurst"
   | "recoverPage"
+  | "restoreBurst"
 > & {
   days: readonly TimelineDay[];
   railDays: readonly RailDay[];
@@ -47,6 +48,7 @@ export function ArchiveBody({
   expanded,
   onCollapseBurst,
   recoverPage,
+  restoreBurst,
   days,
   railDays,
   countLabel,
@@ -71,6 +73,7 @@ export function ArchiveBody({
           expanded,
           onCollapseBurst,
           recoverPage,
+          restoreBurst,
         }}
         days={days}
         countLabel={countLabel}

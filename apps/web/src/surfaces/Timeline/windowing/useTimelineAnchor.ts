@@ -1,3 +1,4 @@
+import { useTimelineRestoration } from "./useTimelineRestoration";
 import {
   useCallback,
   useEffect,
@@ -112,58 +113,6 @@ export function useTimelineAnchorEffects(
   ]);
 }
 
-async function _restoreAnchor(
-  anchor: TimelineAnchor,
-  virtualizer: WindowVirtualizer,
-  latest: AnchorState["latest"],
-  correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void,
-): Promise<void> {
-  let current = latest.current;
-  const viewKey = current.viewKey;
-  const element = current.element.current;
-  if (
-    !current.rows.some((row) => {
-      return row.day.capturedOn === anchor.capturedOn;
-    })
-  )
-    await current.recoverPage?.(anchor);
-  await new Promise<void>((fulfill) => {
-    return requestAnimationFrame(() => {
-      return fulfill();
-    });
-  });
-  current = latest.current;
-  if (
-    !element ||
-    current.element.current !== element ||
-    current.viewKey !== viewKey
-  )
-    return;
-  const index = current.rows.findIndex((row) => {
-    return anchor.itemId
-      ? row.itemIds.includes(anchor.itemId)
-      : row.day.capturedOn === anchor.capturedOn;
-  });
-  if (index < 0) {
-    virtualizer.scrollToIndex(0, { align: "start" });
-    return;
-  }
-  virtualizer.scrollToIndex(index, { align: "start", behavior: "auto" });
-  await new Promise<void>((fulfill) => {
-    return requestAnimationFrame(() => {
-      return fulfill();
-    });
-  });
-  if (latest.current.viewKey !== viewKey || current.element.current !== element)
-    return;
-  const node = getAnchorNodeFromTimelineWindow(latest.current, anchor.itemId);
-  if (node)
-    correctOffset(
-      virtualizer,
-      window.scrollY + node.getBoundingClientRect().top - anchor.offsetPx,
-    );
-}
-
 /** Stable navigation callbacks read current rows and fence retired DOM/view owners. */
 export function useTimelineAnchorActions(
   virtualizer: WindowVirtualizer,
@@ -177,11 +126,10 @@ export function useTimelineAnchorActions(
   const saveAnchor = useCallback(() => {
     return getAnchorFromTimelineWindow(latest.current);
   }, [latest]);
-  const restoreAnchor = useCallback(
-    (anchor: TimelineAnchor) => {
-      return _restoreAnchor(anchor, virtualizer, latest, correctOffset);
-    },
-    [virtualizer, latest, correctOffset],
+  const restoreAnchor = useTimelineRestoration(
+    latest.current,
+    virtualizer,
+    correctOffset,
   );
   return { saveAnchor, restoreAnchor };
 }

@@ -19,12 +19,17 @@ export function useTimelinePosition(options: Readonly<Options>): {
   const resources = useContext(MediaLoadingContext);
   const initial = useRef(resources?.timeline.get(viewKey).anchor);
   const restored = useRef(false);
+  const attempt = useRef(0);
   const [failure, setFailure] = useState<TimelineAnchor>();
   const retry = () => {
+    const currentAttempt = ++attempt.current;
     if (failure)
       void restoreAnchor(failure).then(
         () => {
-          return setFailure(undefined);
+          if (currentAttempt === attempt.current) {
+            initial.current = undefined;
+            setFailure(undefined);
+          }
         },
         () => {},
       );
@@ -34,9 +39,16 @@ export function useTimelinePosition(options: Readonly<Options>): {
     restored.current = true;
     let active = true;
     if (initial.current)
-      void restoreAnchor(initial.current).catch(() => {
-        if (active) setFailure(initial.current);
-      });
+      void restoreAnchor(initial.current).then(
+        () => {
+          if (active) {
+            initial.current = undefined;
+          }
+        },
+        () => {
+          if (active) setFailure(initial.current);
+        },
+      );
     return () => {
       active = false;
     };
@@ -45,7 +57,7 @@ export function useTimelinePosition(options: Readonly<Options>): {
     const memory = resources?.timeline.get(viewKey);
     if (!memory || !hasRows) return;
     const save = () => {
-      if (element.current) memory.anchor = saveAnchor();
+      if (element.current && !initial.current) memory.anchor = saveAnchor();
     };
     if (!memory.anchor) save();
     window.addEventListener("scroll", save, { passive: true });

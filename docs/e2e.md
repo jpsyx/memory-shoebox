@@ -1009,6 +1009,22 @@ keep the catalog's scale from multiplying the same media bytes in memory. The
 bucket adds 25 ms latency and limits each response to approximately 1 MiB/s;
 this is local transport shaping, not a measurement of Backblaze throughput.
 
+The timeline restoration case deliberately holds the real burst response after
+Back has remounted a collected frame query. It checks the original inner-frame
+offset within 2 px after the response and committed rows arrive. Timing barriers
+forward actual API responses; they do not synthesize Query behavior.
+
+The settled-memory case alone opts into 10,000 items through `catalogSize`;
+other media cases retain the 5,000-item default. It samples distinct five-page
+windows after the newest response is committed, every visible image has an
+assigned source and loaded natural width, tracked requests and seen writes have
+finished, intersection activity has been quiet beyond the 500 ms seen debounce,
+and active animations have settled. Its last eight windows compare identical
+mounted counts and observer targets, Chromium heap range and fitted slope,
+and DOM/listener counters. WebKit CDP heap and detached-node counters are
+explicitly unavailable. This is sampled convergence, not a hard browser memory
+cap; native/embedder and backing storage remain separate measurements.
+
 The fake bucket retains the upload protocol and its CORS rule. It now answers
 conditional GET/HEAD, actual object ETags, single bounded/open/suffix byte ranges,
 If-Range and unsatisfiable ranges. Multipart part listings and aborts stay scoped

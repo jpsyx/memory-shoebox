@@ -448,7 +448,9 @@ Appending, reversing and eviction preserve existing page timestamps. Carrying
 the count in these same five pages survives remount without an extra cache.
 A sequential retained-page refresh requests a new count only for its first
 cursor page, then propagates it within that fetch's AbortSignal ownership;
-late canceled operations cannot replace the next operation's count. Raw facet
+late canceled operations cannot replace the next operation's count. The reader
+uses weak signal keys with scalar values, so older retained query options cannot
+keep the signal's abort-listener closure and evicted pages alive. Raw facet
 choices keep their full selection while the strip's count keeps the effective
 jump boundary.
 

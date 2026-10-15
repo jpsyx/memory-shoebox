@@ -226,6 +226,7 @@ function _createMediaContext(clock: () => Date): Promise<MediaContext> {
 async function _seedMediaCatalog(
   context: Readonly<MediaContext>,
   responsivePhotos: boolean,
+  itemCount: number,
 ): Promise<{
   memberId: string;
   itemIds: string[];
@@ -236,7 +237,7 @@ async function _seedMediaCatalog(
     .updateTable("sessions")
     .set({ expires_at: new Date(Date.now() + 86_400_000).toISOString() })
     .execute();
-  const itemIds = Array.from({ length: 5000 }, (_, position) => {
+  const itemIds = Array.from({ length: itemCount }, (_, position) => {
     return `10000000-0000-4000-8000-${String(position).padStart(12, "0")}`;
   });
   const objects = new Map<string, StoredObject>();
@@ -302,7 +303,7 @@ function _makeMediaBucket(options: {
 
 /** Own 5,000 memories, a 1,000-item day, two bursts and direct signed media. */
 export async function createMediaAcceptanceCatalog(
-  options: { responsivePhotos?: boolean } = {},
+  options: { responsivePhotos?: boolean; itemCount?: number } = {},
 ): Promise<MediaAcceptanceCatalog> {
   let clockOffset = 0;
   const clock = () => {
@@ -314,6 +315,7 @@ export async function createMediaAcceptanceCatalog(
     const { memberId, itemIds, objects } = await _seedMediaCatalog(
       context,
       options.responsivePhotos ?? false,
+      options.itemCount ?? 5000,
     );
     const origin = await context.app.listen({ port: 0, host: "127.0.0.1" });
     const transfers: FakeS3Transfer[] = [];

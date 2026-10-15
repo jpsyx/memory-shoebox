@@ -8,11 +8,16 @@ import {
 export const test = base.extend<{
   catalog: MediaAcceptanceCatalog;
   responsivePhotos: boolean;
+  catalogSize: number;
 }>({
   responsivePhotos: [false, { option: true }],
-  catalog: async ({ browserName, responsivePhotos }, provide) => {
+  catalogSize: [5000, { option: true }],
+  catalog: async ({ browserName, responsivePhotos, catalogSize }, provide) => {
     void browserName;
-    const catalog = await createMediaAcceptanceCatalog({ responsivePhotos });
+    const catalog = await createMediaAcceptanceCatalog({
+      responsivePhotos,
+      itemCount: catalogSize,
+    });
     try {
       await provide(catalog);
     } finally {

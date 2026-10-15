@@ -91,22 +91,17 @@ function _shareTimelineQueryData(oldData: unknown, newData: unknown): unknown {
 
 /** Count ownership is limited to one actual sequential fetch operation. */
 type TimelineCountOperation = {
-  signal: AbortSignal;
   resultCount: number | null;
 };
 
 /** A separate count object for each actual fetch, including canceled reads. */
 function _makeCountOperationFromPageData(
-  options: Readonly<{
-    signal: AbortSignal;
-    cached: InfiniteData<TimelineQueryPage, string | null> | undefined;
-  }>,
+  cached: InfiniteData<TimelineQueryPage, string | null> | undefined,
 ): TimelineCountOperation {
   return {
-    signal: options.signal,
     resultCount:
-      options.cached?.pages[0]?.selectionResultCount ??
-      options.cached?.pages[0]?.resultCount ??
+      cached?.pages[0]?.selectionResultCount ??
+      cached?.pages[0]?.resultCount ??
       null,
   };
 }
@@ -116,16 +111,15 @@ function _makeTimelinePageReaderFromView(
   view: Readonly<TimelineView>,
   isRecovery = false,
 ): QueryFunction<TimelineQueryPage, string[], string | null> {
-  let countOperation: TimelineCountOperation | undefined;
+  const operations = new WeakMap<AbortSignal, TimelineCountOperation>();
   return async ({ pageParam, signal, client, queryKey }) => {
     const cached =
       client.getQueryData<InfiniteData<TimelineQueryPage, string | null>>(
         queryKey,
       );
-    if (countOperation?.signal !== signal) {
-      countOperation = _makeCountOperationFromPageData({ signal, cached });
-    }
-    const operation = countOperation;
+    const operation =
+      operations.get(signal) ?? _makeCountOperationFromPageData(cached);
+    operations.set(signal, operation);
     const isRefreshHead =
       pageParam !== null &&
       (isRecovery ||

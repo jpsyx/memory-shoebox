@@ -478,7 +478,9 @@ remount without falling back to facets outside the jump. A retained-page
 refresh asks for `includeResultCount=true` only on its first cursor request,
 then carries that fresh count across the sequential fetch. Ordinary paging
 does not recount. Canceled and replacement refreshes have separate signal-owned
-count state. This scalar does not change any page's metadata timestamp.
+count state. A weak signal key holds only the scalar count: retaining an older
+reader cannot retain a completed fetch signal and Query's prior pages through
+its abort listeners. This scalar does not change any page's metadata timestamp.
 
 If a retained refresh head becomes empty after a deletion or selection edit,
 the query retries that head once without a cursor in the same effective view.
@@ -496,14 +498,22 @@ only once; an empty or fully restricted effective selection remains empty with
 both cursors null. Canceled restarts cannot publish over a newer operation.
 
 The media provider owns compact navigation memory for at most 20 effective
-member/view keys. Each holds one exact containing-page cursor/item/offset and
+member/view keys. Each holds one exact containing-page cursor/item/optional-burst/offset and
 at most 20 recently expanded burst IDs with scalar reserved heights. Evicting
 an older expansion collapses it. Frame arrays are separate: only retained,
 expanded bursts remain cached (at most 20 reads of 200 frames); the existing
 selection owner keeps selected-frame metadata separately. Returning to an
 expanded burst with evicted frames reserves its height and reads frames only
 on positive intersection or explicit opening, because an actual burst read
-marks its frames seen.
+marks its frames seen. Committed Back/navigation to a saved frame is explicit
+restoration intent: it may request that one burst before intersection. Route
+preload and ordinary remembered overscan do not qualify. The restoration shares
+an already pending read and waits for the frame response and committed fan rows
+before correcting the saved frame offset. A transport failure keeps the original
+anchor and offers Retry; successful omission or 404 finishes at the surviving
+day. Pending/error scrolls and unmount cannot replace the requested position.
+View retirement and superseding restoration abort the waiting correction, while
+the existing frame owner fences late metadata and retires unobserved queries.
 
 One focused row retains its own bounded members and keyed DOM parent across
 regrouping and directional page eviction. It retires on blur, view/authority
