@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { burstFramesQueryOptions } from "@/api/burstQueryHelpers/burstQueryHelpers";
 import { burstSpanLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import { SiblingLinks } from "@/surfaces/Item/SiblingStrip/SiblingLinks";

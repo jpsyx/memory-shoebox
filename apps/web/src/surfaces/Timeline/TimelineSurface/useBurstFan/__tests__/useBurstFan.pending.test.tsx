@@ -1,6 +1,6 @@
 import {
   BURST_ID,
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeBurstSummary,
 } from "@/testing/itemFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
@@ -8,14 +8,30 @@ import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, render, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DayStream } from "../../../DayStream/DayStream";
-import { makeDay, makeItem } from "../../../timelineFixtures";
+import { makeDay, makeItem } from "../../../timelineFixtureHelpers";
 import { createTimelineMemory } from "../../../windowing/createTimelineMemory/createTimelineMemory";
 import { useBurstFan } from "../useBurstFan";
 
-function _fixture() {
+type BurstFanFixture = {
+  answers: Array<{
+    finish: (value: {
+      frames: Array<ReturnType<typeof makeBurstFrameFromPosition>>;
+    }) => void;
+    fail: (error: Error) => void;
+  }>;
+  client: QueryClient;
+  memory: ReturnType<typeof createTimelineMemory>;
+  options: {
+    viewKey: string;
+    memory: ReturnType<typeof createTimelineMemory>;
+    retainedBurstIds: Set<string>;
+  };
+};
+
+function _fixture(): BurstFanFixture {
   const answers: Array<{
     finish: (value: {
-      frames: Array<ReturnType<typeof makeBurstFrame>>;
+      frames: Array<ReturnType<typeof makeBurstFrameFromPosition>>;
     }) => void;
     fail: (error: Error) => void;
   }> = [];
@@ -38,14 +54,17 @@ function _fixture() {
 
 it("keeps the exact collapsed cover during a held fresh read, then publishes frames and expansion together", async () => {
   const fixture = _fixture();
-  const frame = makeBurstFrame(1);
+  const frame = makeBurstFrameFromPosition(1);
   const days = [
     makeDay({
       items: [makeItem({ itemId: frame.itemId, burst: makeBurstSummary() })],
     }),
   ];
   function Harness() {
-    const fan = useBurstFan(fixture.client, fixture.options);
+    const fan = useBurstFan({
+      queryClient: fixture.client,
+      options: fixture.options,
+    });
     return (
       <MantineProvider>
         <DayStream
@@ -85,7 +104,10 @@ it("keeps the exact collapsed cover during a held fresh read, then publishes fra
 it("leaves a failed fresh read collapsed and accepts a real retry", async () => {
   const fixture = _fixture();
   const hook = renderHook(() => {
-    return useBurstFan(fixture.client, fixture.options);
+    return useBurstFan({
+      queryClient: fixture.client,
+      options: fixture.options,
+    });
   });
   act(() => {
     return hook.result.current.onOpenBurst(BURST_ID);
@@ -99,7 +121,9 @@ it("leaves a failed fresh read collapsed and accepts a real retry", async () => 
     return hook.result.current.onOpenBurst(BURST_ID);
   });
   await act(async () => {
-    return fixture.answers[1]!.finish({ frames: [makeBurstFrame(1)] });
+    return fixture.answers[1]!.finish({
+      frames: [makeBurstFrameFromPosition(1)],
+    });
   });
   expect(hook.result.current.expanded.has(BURST_ID)).toBe(true);
 });
@@ -111,7 +135,7 @@ describe("retired pending fresh openings", () => {
       const fixture = _fixture();
       const hook = renderHook(
         ({ options }) => {
-          return useBurstFan(fixture.client, options);
+          return useBurstFan({ queryClient: fixture.client, options });
         },
         { initialProps: { options: fixture.options } },
       );
@@ -142,7 +166,9 @@ describe("retired pending fresh openings", () => {
         hook.unmount();
       }
       await act(async () => {
-        return fixture.answers[0]!.finish({ frames: [makeBurstFrame(1)] });
+        return fixture.answers[0]!.finish({
+          frames: [makeBurstFrameFromPosition(1)],
+        });
       });
       expect(fixture.memory.get("view").expanded.size).toBe(0);
       expect(hook.result.current.framesByBurstId.size).toBe(0);
@@ -156,21 +182,24 @@ it("bounds pending openings to twenty owners and rejects the retired oldest answ
     return `burst-${index}`;
   });
   const hook = renderHook(() => {
-    return useBurstFan(fixture.client, {
-      ...fixture.options,
-      retainedBurstIds: new Set(ids),
+    return useBurstFan({
+      queryClient: fixture.client,
+      options: {
+        ...fixture.options,
+        retainedBurstIds: new Set(ids),
+      },
     });
   });
-  for (const id of ids) {
+  ids.forEach((id) => {
     act(() => {
       return hook.result.current.onOpenBurst(id);
     });
-  }
+  });
   expect(hook.result.current.expanded.size).toBe(0);
   await act(async () => {
-    for (const answer of fixture.answers) {
-      answer.finish({ frames: [makeBurstFrame(1)] });
-    }
+    fixture.answers.forEach((answer) => {
+      answer.finish({ frames: [makeBurstFrameFromPosition(1)] });
+    });
   });
   expect([...hook.result.current.expanded.keys()]).toEqual(ids.slice(1));
   expect([...hook.result.current.framesByBurstId.keys()]).toEqual(ids.slice(1));
@@ -178,16 +207,21 @@ it("bounds pending openings to twenty owners and rejects the retired oldest answ
 
 it("retains the existing measured placeholder while restoring its frames", async () => {
   const fixture = _fixture();
-  fixture.memory.expand("view", BURST_ID, 1400);
+  fixture.memory.expand({ viewKey: "view", burstId: BURST_ID, height: 1400 });
   const hook = renderHook(() => {
-    return useBurstFan(fixture.client, fixture.options);
+    return useBurstFan({
+      queryClient: fixture.client,
+      options: fixture.options,
+    });
   });
   act(() => {
     return hook.result.current.onOpenBurst(BURST_ID);
   });
   expect(hook.result.current.expanded.get(BURST_ID)).toEqual({ height: 1400 });
   await act(async () => {
-    return fixture.answers[0]!.finish({ frames: [makeBurstFrame(1)] });
+    return fixture.answers[0]!.finish({
+      frames: [makeBurstFrameFromPosition(1)],
+    });
   });
   expect(hook.result.current.expanded.get(BURST_ID)).toEqual({ height: 1400 });
 });

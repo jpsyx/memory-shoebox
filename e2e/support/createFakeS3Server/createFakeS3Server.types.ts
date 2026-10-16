@@ -25,23 +25,27 @@ export type FakeS3Transfer = {
   bodyBytes: number;
 };
 
-/** Sanitized request lifecycle and payload events, including unfinished work. */
+/**
+ * Sanitized request lifecycle and payload events, including unfinished work.
+ */
 export type FakeS3RequestEvidence = {
   requestId: number;
   objectId: string;
   method: string;
   startSequence: number;
   startedAtMs: number;
-  terminalSequence: number | null;
-  terminatedAtMs: number | null;
-  closedAtMs: number | null;
-  terminal: "finished" | "closed-before-finish" | null;
-  status: number | null;
+  terminalSequence: number | undefined;
+  terminatedAtMs: number | undefined;
+  closedAtMs: number | undefined;
+  terminal: "finished" | "closed-before-finish" | undefined;
+  status: number | undefined;
   bodyBytes: number;
   chunks: Array<{ sequence: number; atMs: number; bodyBytes: number }>;
 };
 
-/** Immutable observation boundary; nextRequestId is the next start watermark. */
+/**
+ * Immutable observation boundary; nextRequestId is the next start watermark.
+ */
 export type FakeS3LedgerSnapshot = {
   capturedAtMs: number;
   nextRequestId: number;

@@ -3,7 +3,13 @@ import type {
   MediaPrefetchScheduler,
   MediaPromotion,
 } from "./mediaPrefetch.types";
-import type { PhotoViewport } from "./photoViewport";
+import type { PhotoViewport } from "./photoViewportHelpers";
+type NavigationOwnerOptions = {
+  state: State;
+  destination: Readonly<Destination>;
+  viewport: PhotoViewport | undefined;
+  promotion: MediaPromotion;
+};
 
 type Destination = {
   itemId: string;
@@ -40,13 +46,17 @@ type State = {
   adopted: Map<string, Owner>;
   owners: Set<() => void>;
 };
-/** Member-owned handoff; pending ownership exists before the old route exits. */
+/**
+ * Member-owned handoff; pending ownership exists before the old route exits.
+ */
 export type MediaNavigation = {
   /** Acquires a lease immediately, returning rejection/supersession cleanup. */
   prepare: (destination: Readonly<Destination>) => () => void;
   /** Transfers that lease to the exact item, rendition and URL. */
   adopt: (destination: Readonly<Presentation>) => MediaSourceClaim | undefined;
-  /** Reads without acquiring or extending ownership, including during render. */
+  /**
+   * Reads without acquiring or extending ownership, including during render.
+   */
   getDecodedPhoto: (
     destination: Readonly<Presentation>,
   ) => DecodedPhotoSnapshot | undefined;
@@ -80,10 +90,13 @@ function _notify(state: State): void {
   });
 }
 
-function _getOwner(
-  state: State,
-  destination: Readonly<Destination>,
-): Owner | undefined {
+function _getOwner({
+  state,
+  destination,
+}: {
+  state: State;
+  destination: Readonly<Destination>;
+}): Owner | undefined {
   const key = _getKeyFromDestination(destination);
   return state.pending !== undefined &&
     _getKeyFromDestination(state.pending) === key
@@ -91,12 +104,12 @@ function _getOwner(
     : state.adopted.get(key);
 }
 
-function _makeOwnerFromDestination(
-  state: State,
-  destination: Readonly<Destination>,
-  viewport: PhotoViewport | undefined,
-  promotion: MediaPromotion,
-): Owner {
+function _makeOwnerFromDestination({
+  state,
+  destination,
+  viewport,
+  promotion,
+}: NavigationOwnerOptions): Owner {
   const key = _getKeyFromDestination(destination);
   const owner: Owner = {
     ...destination,
@@ -128,11 +141,15 @@ function _makeOwnerFromDestination(
   return owner;
 }
 
-function _prepare(
-  state: State,
-  destination: Readonly<Destination>,
-  viewport: PhotoViewport | undefined,
-): () => void {
+function _prepare({
+  state,
+  destination,
+  viewport,
+}: {
+  state: State;
+  destination: Readonly<Destination>;
+  viewport: PhotoViewport | undefined;
+}): () => void {
   if (destination.source === undefined) {
     _finishRoute(state);
     return () => {};
@@ -140,27 +157,30 @@ function _prepare(
   const promotion = state.scheduler.promote(destination);
   // Replacement ownership must exist before the old lease can abort its load.
   _finishRoute(state);
-  const owner = _makeOwnerFromDestination(
+  const owner = _makeOwnerFromDestination({
     state,
     destination,
     viewport,
     promotion,
-  );
+  });
   state.owners.add(owner.release);
   state.pending = owner;
   return owner.release;
 }
 
-function _adopt(
-  state: State,
-  destination: Readonly<Presentation>,
-): MediaSourceClaim | undefined {
+function _adopt({
+  state,
+  destination,
+}: {
+  state: State;
+  destination: Readonly<Presentation>;
+}): MediaSourceClaim | undefined {
   const owner =
     destination.source === undefined &&
     destination.viewport === undefined &&
     state.pending?.itemId === destination.itemId
       ? state.pending
-      : _getOwner(state, destination);
+      : _getOwner({ state, destination });
   if (owner === undefined) {
     return undefined;
   }
@@ -177,10 +197,16 @@ function _adopt(
   ) {
     owner.promotion.finishSelectedDecode();
   }
-  return _makeClaimFromOwner(state, owner);
+  return _makeClaimFromOwner({ state, owner });
 }
 
-function _makeClaimFromOwner(state: State, owner: Owner): MediaSourceClaim {
+function _makeClaimFromOwner({
+  state,
+  owner,
+}: {
+  state: State;
+  owner: Owner;
+}): MediaSourceClaim {
   owner.viewVersion += 1;
   const version = owner.viewVersion;
   let released = false;
@@ -247,7 +273,7 @@ function _getPresentationFromState(
 ): Pick<MediaNavigation, "getDecodedPhoto" | "getPreparedViewport"> {
   return {
     getDecodedPhoto: (destination) => {
-      const owner = _getOwner(state, destination);
+      const owner = _getOwner({ state, destination });
       return owner !== undefined &&
         destination.viewport !== undefined &&
         (destination.sourceEpoch ?? 0) === 0 &&
@@ -289,10 +315,10 @@ export function createMediaNavigation(
     viewport: undefined,
     prepare: (destination) => {
       navigation.direction = destination.direction ?? "next";
-      return _prepare(state, destination, navigation.viewport);
+      return _prepare({ state, destination, viewport: navigation.viewport });
     },
     adopt: (destination) => {
-      return _adopt(state, destination);
+      return _adopt({ state, destination });
     },
     clear: () => {
       _finishRoute(state);

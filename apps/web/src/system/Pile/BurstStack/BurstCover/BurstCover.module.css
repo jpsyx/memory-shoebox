@@ -1,0 +1,24 @@
+.burstCoverCount {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-figure);
+  font-size: var(--step-1);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.burstCoverCount small {
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

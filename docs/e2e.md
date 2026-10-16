@@ -105,7 +105,7 @@ unseeded suite. There must never be a route that reads a sign-in code.
 ## The catalog lock
 
 Every run starts by deleting last run's catalog, so a specification cannot
-depend on yesterday. `e2e/support/deleteE2eCatalog.ts` does it as the **first
+depend on yesterday. `e2e/support/e2eCatalogLifecycleHelpers.ts` does it as the **first
 link of the web server command**, not in a Playwright `globalSetup`:
 Playwright starts `webServer` and waits for it to answer before `globalSetup`
 runs, so a deletion there would unlink the file under a server that already
@@ -128,7 +128,7 @@ suite shares that one bucket**, because every request in a run comes from
 `127.0.0.1`, while the per-address caps are spent two at a time by specs that
 each own their own address.
 
-`e2e/support/signIn.ts` checks each worker's request count against the actual
+`e2e/support/signInHelpers.ts` checks each worker's request count against the actual
 `RATE_LIMIT_RULES` value. It is only a lower bound for the complete run:
 replacement workers and distinct Playwright projects have separate module
 state while the server retains its bucket. The positive form driver also
@@ -196,7 +196,7 @@ There is one catalog and one server for a run, so the archive is either seeded
 or it is not. Surface 5 needs it empty and surfaces 2, 3, 4, 6 and 7 need it
 full.
 
-`e2e/support/archive.ts` writes the development archive into the run's catalog,
+`e2e/support/archiveSeedHelpers.ts` writes the development archive into the run's catalog,
 and the specs that need data call it in a `beforeAll`. Each call replaces what
 the last one wrote, so a photograph deleted or moved to another day in one file
 is back where it was for the next. `empty.spec.ts` does not seed, and asserts
@@ -207,7 +207,7 @@ failure in the spec that depends on it.
 
 **A spec that seeds must sort after `empty.spec.ts`.** Surfaces 3 and 4 live
 in `e2e/item/`, which sorts after it, seven files kept together. It is also why
-their contrast sweep is `e2e/item/item.contrast.spec.ts` rather than more
+their contrast sweep is `e2e/item/__tests__/item.contrast.spec.ts` rather than more
 cases in `contrast.spec.ts`, which sorts before `empty` and so cannot seed.
 
 ## Why the pile specs open a day by its address
@@ -240,7 +240,7 @@ read the DOM, the counts and the labels, and the contrast sweep measures text.
 
 Fifteen tests across three files. `e2e/contrast.spec.ts` checks surfaces 1 and
 9 in both colour schemes at both widths: eight tests, four views of surface 1
-and one of surface 9 in each. `e2e/item/item.contrast.spec.ts` checks surfaces
+and one of surface 9 in each. `e2e/item/__tests__/item.contrast.spec.ts` checks surfaces
 3 and 4 the same way in four tests, each sweeping three views: a photograph
 with every sheet its own uploader gets, the same photograph with two editors
 open (who can see it, and the date), and a video.
@@ -464,7 +464,7 @@ sent again.
 
 ## What the specs may and may not do
 
-Nothing in `e2e/support/signIn.ts` posts to the API. A helper that
+Nothing in `e2e/support/signInHelpers.ts` posts to the API. A helper that
 short-circuited the form by calling `POST /api/auth/session` itself would hand
 the account tests a session the product did not make, and what those tests are
 for is proving that a session the product made actually works. `signInAs`

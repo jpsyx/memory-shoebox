@@ -1,15 +1,21 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUuid } from "node:crypto";
 import { lstat, mkdir, readdir, realpath, rm, statfs } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import {
   createMediaCgroup,
   type MediaCgroup,
-} from "./mediaCgroup/mediaCgroup.ts";
+} from "./createMediaCgroup/createMediaCgroup.ts";
 import type { MediaChildOptions } from "./mediaRuntime.types.ts";
 import { runMediaChild } from "./runMediaChild.ts";
+type MediaCommandRunOptions = {
+  options: Readonly<MediaChildOptions>;
+  state: RunnerState;
+  config: Readonly<RunnerOptions>;
+  scratchPath: string;
+};
 
-const LIMITS = appConfig.mediaProcessing;
+const LIMITS = APP_CONFIG.mediaProcessing;
 type RunnerOptions = {
   cgroupRoot: string;
   scratchRoot: string;
@@ -61,11 +67,15 @@ async function _checkDisk(scratchPath: string): Promise<void> {
   }
 }
 
-async function _initialize(
-  state: RunnerState,
-  options: Readonly<RunnerOptions>,
-  scratchPath: string,
-): Promise<void> {
+async function _initialize({
+  state,
+  options,
+  scratchPath,
+}: {
+  state: RunnerState;
+  options: Readonly<RunnerOptions>;
+  scratchPath: string;
+}): Promise<void> {
   state.group = await createMediaCgroup(options.cgroupRoot);
   try {
     if (!isAbsolute(options.scratchRoot)) {
@@ -92,12 +102,12 @@ async function _initialize(
   }
 }
 
-async function _run(
-  options: Readonly<MediaChildOptions>,
-  state: RunnerState,
-  config: Readonly<RunnerOptions>,
-  scratchPath: string,
-): Promise<{ stdout: string; exitCode: number }> {
+async function _run({
+  options,
+  state,
+  config,
+  scratchPath,
+}: MediaCommandRunOptions): Promise<{ stdout: string; exitCode: number }> {
   if (state.disposed) {
     throw new Error("processing_disposed");
   }
@@ -114,19 +124,19 @@ async function _run(
   ) {
     throw new Error("processing_invalid_limits");
   }
-  state.initialization ??= _initialize(state, config, scratchPath);
+  state.initialization ??= _initialize({ state, options: config, scratchPath });
   await state.initialization;
   if (state.disposed || state.group === undefined) {
     throw new Error("processing_disposed");
   }
   await state.group.checkHeadroom();
   await _checkDisk(scratchPath);
-  return runMediaChild(
-    {
+  return runMediaChild({
+    options: {
       ...options,
       signal: AbortSignal.any([options.signal, state.shutdown.signal]),
     },
-    {
+    context: {
       group: state.group,
       scratchPath,
       checkDisk: () => {
@@ -134,13 +144,16 @@ async function _run(
       },
       clock: config.clock,
     },
-  );
+  });
 }
 
-async function _dispose(
-  state: RunnerState,
-  scratchPath: string,
-): Promise<void> {
+async function _dispose({
+  state,
+  scratchPath,
+}: {
+  state: RunnerState;
+  scratchPath: string;
+}): Promise<void> {
   state.disposed = true;
   state.shutdown.abort();
   await state.active?.catch(() => {
@@ -159,15 +172,20 @@ async function _dispose(
   }
 }
 
-/** Owns one exclusive job group and scratch directory across all child commands. */
+/**
+ * Owns one exclusive job group and scratch directory across all child commands.
+ */
 export function createMediaProcessRunner(options: Readonly<RunnerOptions>): {
+  /** Files stay here; accepted outputs belong under output/. */
   readonly scratchPath: string;
+  /** Runs one command at a time within the same isolated job. */
   run: (
     command: Readonly<MediaChildOptions>,
   ) => Promise<{ stdout: string; exitCode: number }>;
+  /** Cancels descendants before deleting this job's owned files. */
   dispose: () => Promise<void>;
 } {
-  const scratchPath = join(options.scratchRoot, `job-${randomUUID()}`);
+  const scratchPath = join(options.scratchRoot, `job-${randomUuid()}`);
   const state: RunnerState = {
     group: undefined,
     initialization: undefined,
@@ -177,30 +195,37 @@ export function createMediaProcessRunner(options: Readonly<RunnerOptions>): {
     shutdown: new AbortController(),
   };
   return {
-    /** Files must stay here; accepted outputs belong under output/. */
+    // Files must stay here; accepted outputs belong under output/.
     get scratchPath(): string {
       return scratchPath;
     },
-    /** Commands are sequential; callers retain the same job for all phases. */
+    // Commands are sequential; callers retain the same job for all phases.
     run: async (
       command: Readonly<MediaChildOptions>,
     ): Promise<{ stdout: string; exitCode: number }> => {
       if (state.active !== undefined) {
         throw new Error("processing_job_busy");
       }
-      state.active = _run(command, state, options, scratchPath);
+      state.active = _run({
+        options: command,
+        state,
+        config: options,
+        scratchPath,
+      });
       try {
         return await state.active;
       } finally {
         state.active = undefined;
       }
     },
-    /** Cancels all descendants before deleting only this job's owned files. */
+    // Cancels all descendants before deleting only this job's owned files.
     dispose: async (): Promise<void> => {
-      await _dispose(state, scratchPath);
+      await _dispose({ state, scratchPath });
     },
   };
 }
 
-/** The per-job runtime passed to probing, photo/video and fingerprint recipes. */
+/**
+ * The per-job runtime passed to probing, photo/video and fingerprint recipes.
+ */
 export type MediaProcessRunner = ReturnType<typeof createMediaProcessRunner>;

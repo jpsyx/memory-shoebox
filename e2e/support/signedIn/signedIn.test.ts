@@ -4,16 +4,59 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMeResponse } from "../../../apps/web/src/testing/createMeResponse.ts";
+import type { Mock } from "vitest";
+import type { SharedSessionState } from "../createSharedSessionStore/createSharedSessionStore.ts";
+
+/** Operations observed by the mocked fixture driver and mocked assertions. */
+type SessionPage = Pick<Page, "close"> & {
+  goto: (url: string) => Promise<unknown>;
+  getByLabel: (...args: Parameters<Page["getByLabel"]>) => object;
+};
+
+/** Context dependencies exercised by the real shared-session helper. */
+type SessionContext = {
+  newPage: () => Promise<SessionPage>;
+  storageState: () => Promise<SharedSessionState["storageState"]>;
+  request: {
+    get: (url: string) => Promise<{
+      status: () => number;
+      json: () => Promise<unknown>;
+    }>;
+  };
+  close: () => Promise<void>;
+};
+
+/** Browser dependency accepted by this test's captured fixture callbacks. */
+type SessionBrowser = {
+  newContext: (
+    options?: Parameters<Browser["newContext"]>[0],
+  ) => Promise<SessionContext>;
+};
+
+type SessionFixtures = Record<
+  string,
+  (
+    args: { browser: SessionBrowser },
+    provide: (page: SessionPage) => Promise<void>,
+  ) => Promise<void>
+>;
+
+type SessionHarness = {
+  browser: SessionBrowser;
+  account: ReturnType<typeof createMeResponse>;
+  accountRead: Mock<
+    () => Promise<{
+      status: () => number;
+      json: () => Promise<ReturnType<typeof createMeResponse>>;
+    }>
+  >;
+  status: { value: number };
+};
 
 const mocks = vi.hoisted(() => {
+  const fixtures: SessionFixtures = {};
   return {
-    fixtures: {} as Record<
-      string,
-      (
-        args: { browser: Browser },
-        provide: (page: Page) => Promise<void>,
-      ) => Promise<void>
-    >,
+    fixtures,
     mint: vi.fn(),
     seed: vi.fn(async () => {
       return { memberId: "018f0000-0000-7000-8000-000000000000" };
@@ -43,10 +86,10 @@ vi.mock("@playwright/test", () => {
 vi.mock("../database.ts", () => {
   return { seedMemberAtAddress: mocks.seed };
 });
-vi.mock("../signIn.ts", () => {
+vi.mock("../signInHelpers.ts", () => {
   return { signInAs: mocks.mint };
 });
-vi.mock("../deleteE2eCatalog.ts", () => {
+vi.mock("../e2eCatalogLifecycleHelpers.ts", () => {
   return {
     getSharedSessionStoreOptionsFromCatalogLock: () => {
       return mocks.run;
@@ -63,10 +106,10 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function _makeHarness() {
+function _makeHarness(): SessionHarness {
   mocks.run.directory = mkdtempSync(join(tmpdir(), "shoebox-session-worker-"));
   ownedDirectories.push(mocks.run.directory);
-  const state = {
+  const state: SharedSessionState["storageState"] = {
     cookies: [
       {
         name: "shoebox_session",
@@ -93,7 +136,7 @@ function _makeHarness() {
       },
     };
   });
-  const browser = {
+  const browser: SessionBrowser = {
     newContext: vi.fn(async () => {
       return {
         newPage: async () => {
@@ -112,11 +155,11 @@ function _makeHarness() {
         close: async () => {},
       };
     }),
-  } as unknown as Browser;
+  };
   return { browser, account, accountRead, status };
 }
 
-async function _runWorker(browser: Browser): Promise<void> {
+async function _runWorker(browser: SessionBrowser): Promise<void> {
   vi.resetModules();
   await import("./signedIn.ts");
   await mocks.fixtures.adminPage!({ browser }, async () => {});
@@ -136,7 +179,7 @@ it("three dedicated account contexts across workers reuse one UI sign-in and val
   account.me.email = "my-name@example.com";
   for (let caseIndex = 0; caseIndex < 3; caseIndex += 1) {
     vi.resetModules();
-    await import("../../account/account.fixtures.ts");
+    await import("../../account/accountTestHelpers.ts");
     await mocks.fixtures.accountPage!({ browser }, async () => {});
   }
   expect(mocks.mint).toHaveBeenCalledTimes(1);

@@ -1,0 +1,9 @@
+.selectedPhotoPictureLoading {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+.selectedPhotoPictureReady {
+  display: block;
+}

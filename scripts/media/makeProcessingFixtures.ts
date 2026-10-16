@@ -1,10 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import sharp from "../../apps/server/node_modules/sharp/dist/index.mjs";
 
-const ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const ROOT = fileUrlToPath(new URL("../../", import.meta.url));
 const OUTPUT = join(ROOT, "apps/server/test/fixtures/media-processing");
 const PREFIX = [
   "-v",
@@ -15,55 +15,13 @@ const PREFIX = [
   "1",
   "-filter_threads",
   "1",
-];
-
-/** Rebuilds small synthetic inputs; no family media or external downloads. */
-async function _makeFixtures(): Promise<void> {
-  mkdirSync(OUTPUT, { recursive: true });
-  const stripes = Array.from({ length: 100 }, (_, index) => {
-    return `<rect x="${index * 12}" y="1000" width="6" height="600" fill="white"/>`;
-  }).join("");
-  const chart = Buffer.from(
-    `<svg width="2400" height="1600"><rect width="1200" height="800" fill="#e6141e"/><rect x="1200" width="1200" height="800" fill="#14d21e"/><rect y="800" width="1200" height="800" fill="#2040df"/><rect x="1200" y="800" width="1200" height="800" fill="#e0c020"/>${stripes}</svg>`,
-  );
-  await sharp(chart).png().toFile(join(OUTPUT, "detail.png"));
-  await sharp(chart)
-    .withMetadata({ orientation: 6 })
-    .jpeg({ quality: 94 })
-    .toFile(join(OUTPUT, "oriented.jpg"));
-  await sharp({
-    create: {
-      width: 80,
-      height: 40,
-      channels: 4,
-      background: { r: 255, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .png()
-    .toFile(join(OUTPUT, "transparent.png"));
-  const noise = Buffer.alloc(400 * 400 * 3);
-  let state = 1;
-  noise.forEach((_, index) => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    noise[index] = state >>> 24;
-  });
-  await sharp(noise, { raw: { width: 400, height: 400, channels: 3 } })
-    .jpeg({ quality: 100, chromaSubsampling: "4:4:4" })
-    .toFile(join(OUTPUT, "heavy.jpg"));
-  copyFileSync(
-    join(ROOT, "apps/server/src/mediaProcessing/runtime/fixtures/primary.heic"),
-    join(OUTPUT, "primary.heic"),
-  );
-  _makeVideos();
-  _makeReviewFixtures();
-}
+] as const;
 
 function _ffmpeg(args: string[]): void {
   execFileSync("ffmpeg", [...PREFIX, ...args], { stdio: "pipe" });
 }
 
-function _makeVideos(): void {
-  const base = join(OUTPUT, "audio.mp4");
+function _makeAudioVideo(base: string): void {
   _ffmpeg([
     "-f",
     "lavfi",
@@ -93,6 +51,9 @@ function _makeVideos(): void {
     "+faststart",
     base,
   ]);
+}
+
+function _makeRotatedVideo(base: string): void {
   execFileSync(
     "docker",
     [
@@ -115,6 +76,9 @@ function _makeVideos(): void {
     ],
     { stdio: "pipe" },
   );
+}
+
+function _makeAlternateVideoEncodings(base: string): void {
   _ffmpeg([
     "-i",
     base,
@@ -145,6 +109,9 @@ function _makeVideos(): void {
     "yuv420p10le",
     join(OUTPUT, "hevc.mp4"),
   ]);
+}
+
+function _makeHdrVideos(): void {
   ["smpte2084", "arib-std-b67"].forEach((transfer) => {
     const target = join(
       OUTPUT,
@@ -189,27 +156,12 @@ function _makeVideos(): void {
   });
 }
 
-function _makeReviewFixtures(): void {
-  const source = join(OUTPUT, "sdr-601-anamorphic.mp4");
-  _ffmpeg([
-    "-f",
-    "lavfi",
-    "-i",
-    "color=c=red:size=720x576:rate=25,drawbox=x=360:y=0:w=360:h=288:color=lime:t=fill,drawbox=x=0:y=288:w=360:h=288:color=blue:t=fill,drawbox=x=360:y=288:w=360:h=288:color=white:t=fill",
-    "-t",
-    "1",
-    "-vf",
-    "setsar=16/15,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=smpte170m",
-    "-c:v",
-    "libx264",
-    "-crf",
-    "10",
-    "-threads",
-    "1",
-    source,
-  ]);
-  _makeUnsupportedReviewFixtures(source);
-  _makeRotatedReviewFixture(source);
+function _makeVideos(): void {
+  const base = join(OUTPUT, "audio.mp4");
+  _makeAudioVideo(base);
+  _makeRotatedVideo(base);
+  _makeAlternateVideoEncodings(base);
+  _makeHdrVideos();
 }
 
 function _makeUnsupportedReviewFixtures(source: string): void {
@@ -262,6 +214,70 @@ function _makeRotatedReviewFixture(source: string): void {
     ],
     { stdio: "pipe" },
   );
+}
+
+function _makeReviewFixtures(): void {
+  const source = join(OUTPUT, "sdr-601-anamorphic.mp4");
+  _ffmpeg([
+    "-f",
+    "lavfi",
+    "-i",
+    "color=c=red:size=720x576:rate=25,drawbox=x=360:y=0:w=360:h=288:color=lime:t=fill,drawbox=x=0:y=288:w=360:h=288:color=blue:t=fill,drawbox=x=360:y=288:w=360:h=288:color=white:t=fill",
+    "-t",
+    "1",
+    "-vf",
+    "setsar=16/15,setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=smpte170m",
+    "-c:v",
+    "libx264",
+    "-crf",
+    "10",
+    "-threads",
+    "1",
+    source,
+  ]);
+  _makeUnsupportedReviewFixtures(source);
+  _makeRotatedReviewFixture(source);
+}
+
+/** Rebuilds small synthetic inputs; no family media or external downloads. */
+async function _makeFixtures(): Promise<void> {
+  mkdirSync(OUTPUT, { recursive: true });
+  const stripes = Array.from({ length: 100 }, (_, index) => {
+    return `<rect x="${index * 12}" y="1000" width="6" height="600" fill="white"/>`;
+  }).join("");
+  const chart = Buffer.from(
+    `<svg width="2400" height="1600"><rect width="1200" height="800" fill="#e6141e"/><rect x="1200" width="1200" height="800" fill="#14d21e"/><rect y="800" width="1200" height="800" fill="#2040df"/><rect x="1200" y="800" width="1200" height="800" fill="#e0c020"/>${stripes}</svg>`,
+  );
+  await sharp(chart).png().toFile(join(OUTPUT, "detail.png"));
+  await sharp(chart)
+    .withMetadata({ orientation: 6 })
+    .jpeg({ quality: 94 })
+    .toFile(join(OUTPUT, "oriented.jpg"));
+  await sharp({
+    create: {
+      width: 80,
+      height: 40,
+      channels: 4,
+      background: { r: 255, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .png()
+    .toFile(join(OUTPUT, "transparent.png"));
+  const noise = Buffer.alloc(400 * 400 * 3);
+  let state = 1;
+  noise.forEach((_, index) => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    noise[index] = state >>> 24;
+  });
+  await sharp(noise, { raw: { width: 400, height: 400, channels: 3 } })
+    .jpeg({ quality: 100, chromaSubsampling: "4:4:4" })
+    .toFile(join(OUTPUT, "heavy.jpg"));
+  copyFileSync(
+    join(ROOT, "apps/server/src/mediaProcessing/runtime/fixtures/primary.heic"),
+    join(OUTPUT, "primary.heic"),
+  );
+  _makeVideos();
+  _makeReviewFixtures();
 }
 
 if (process.argv.includes("--review-only")) {

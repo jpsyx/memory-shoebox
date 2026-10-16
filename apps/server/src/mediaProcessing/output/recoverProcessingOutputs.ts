@@ -78,11 +78,15 @@ async function _claimCleanupOutputs(
   });
 }
 
-async function _abortOutputUploads(
-  options: Readonly<RecoveryOptions>,
-  output: Readonly<CleanupOutput>,
-): Promise<void> {
-  // Always list, even with a persisted ID: uncertain earlier initiations also matter.
+async function _abortOutputUploads({
+  options,
+  output,
+}: {
+  options: Readonly<RecoveryOptions>;
+  output: Readonly<CleanupOutput>;
+}): Promise<void> {
+  // Always list, even with a persisted ID: uncertain earlier initiations also
+  // matter.
   const uploadIds = new Set<string>();
   if (output.multipart_upload_id !== null) {
     uploadIds.add(output.multipart_upload_id);
@@ -103,7 +107,9 @@ async function _abortOutputUploads(
   }
 }
 
-/** Claims at most 100 abandoned outputs, preserving permanent cleanup ownership. */
+/**
+ * Claims at most 100 abandoned outputs, preserving permanent cleanup ownership.
+ */
 export async function recoverProcessingOutputs(
   options: Readonly<RecoveryOptions>,
 ): Promise<void> {
@@ -113,7 +119,7 @@ export async function recoverProcessingOutputs(
       const outputs = await _claimCleanupOutputs(options);
       for (const output of outputs) {
         try {
-          await _abortOutputUploads(options, output);
+          await _abortOutputUploads({ options, output });
         } catch {
           // Retain this attempt's timestamp: failures recheck daily without
           // monopolizing the bounded scan ahead of later cleanup obligations.

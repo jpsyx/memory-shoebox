@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { PhotoViewport } from "./photoViewport";
+import type { PhotoViewport } from "./photoViewportHelpers";
 
 /** Readiness belongs to an exact selected source and measured viewport. */
 export type ViewerReadiness = {
@@ -8,7 +8,10 @@ export type ViewerReadiness = {
   viewport: PhotoViewport;
   photosReady: boolean;
 };
-/** Photo decode reports to its viewer without changing PhotoFrame's public props. */
+/**
+ * Photo decode reports to its viewer without changing PhotoFrame's public
+ * props.
+ */
 export const PhotoReadinessContext = createContext<
   ((state: ViewerReadiness | undefined) => void) | undefined
 >(undefined);

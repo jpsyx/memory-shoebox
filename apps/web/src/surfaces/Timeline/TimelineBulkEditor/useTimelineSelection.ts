@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { BULK_EDIT_MAX_ITEMS, type TimelineDay } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { readTimelineSelection } from "./timelineSelectionReadHelpers";
 import type {
   TimelineSelectionActions,
@@ -73,7 +73,10 @@ function _makeActions(
   };
 }
 
-/** Selection contains explicit matching item IDs, never an implicit whole archive. */
+/**
+ * Selection contains explicit matching item IDs, never an implicit whole
+ * archive.
+ */
 export function useTimelineSelection(
   days: readonly TimelineDay[],
   filterSelection?: Readonly<TimelineSelection>,

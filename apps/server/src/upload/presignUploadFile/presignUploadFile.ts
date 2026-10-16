@@ -1,6 +1,6 @@
 import type { PresignUploadFileResponse } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type {
   PresignContext,
@@ -46,7 +46,7 @@ export async function presignUploadFile(
   const context: PresignContext = {
     ...options,
     expiresAt: new Date(
-      options.now.getTime() + appConfig.upload.presignTtlSeconds * 1000,
+      options.now.getTime() + APP_CONFIG.upload.presignTtlSeconds * 1000,
     ).toISOString(),
     now: options.now.toISOString(),
   };

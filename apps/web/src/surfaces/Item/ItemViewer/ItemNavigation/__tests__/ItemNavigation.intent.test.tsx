@@ -122,13 +122,13 @@ describe("safe viewer intent", () => {
   it("warms backward after selecting an earlier sibling link", async () => {
     const detail = makeBurstDetail({ position: 2, frameCount: 3 });
     const target = makeBurstDetail({ position: 1, frameCount: 3 });
-    respondWithNavigationItems(
-      {
+    respondWithNavigationItems({
+      routes: {
         [`GET /api/items/${detail.itemId}`]: { status: 200, body: detail },
         [`GET /api/items/${target.itemId}`]: { status: 200, body: target },
       },
-      [target, detail],
-    );
+      order: [target, detail],
+    });
     const { router } = renderItem(detail.itemId);
     await userEvent.click(
       await screen.findByRole("link", { name: "Photo 1 of 3" }),

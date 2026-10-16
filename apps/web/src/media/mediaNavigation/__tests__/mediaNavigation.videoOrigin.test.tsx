@@ -1,35 +1,23 @@
-import { useRef, useState, type ReactNode } from "react";
+import { MediaNavigationVideoOrigin } from "./MediaNavigationVideoOrigin";
+import type { MediaRef, MediaPreview } from "@memory-shoebox/shared";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  createMediaLoadingLifetime,
   createMediaLoadingResources,
   type MediaLoadingResources,
 } from "../../createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "../../createMediaLoadingResources/createMediaLoadingLifetime";
 
 import { MediaLoadingProvider } from "../../MediaLoadingProvider/MediaLoadingProvider";
-
-import { useItemNavigationMove } from "@/surfaces/Item/ItemViewer/ItemNavigation/useItemNavigationMove";
-
-import { QueryClient } from "@tanstack/react-query";
 
 import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
 
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
-
-import {
-  ViewerReadinessContext,
-  type ViewerReadiness,
-} from "../../PhotoReadinessContext";
-
-import { useVideoReadiness } from "../../useVideoReadiness/useVideoReadiness";
-
-import { useNeighborPrefetch } from "../../useNeighborPrefetch";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 const boundaryThumb = makeMediaSource({
   renditionId: "boundary-thumb",
@@ -52,7 +40,7 @@ const boundaryMedia = {
   thumb: boundaryThumb,
   display: boundaryDisplay,
   displayCandidates: [boundaryDisplay],
-};
+} satisfies MediaRef;
 
 const boundaryPreview = {
   itemId: "target",
@@ -60,35 +48,7 @@ const boundaryPreview = {
   width: 1600,
   height: 1067,
   media: boundaryMedia,
-};
-
-function VideoNeighbors(): ReactNode {
-  useNeighborPrefetch({
-    itemId: "video",
-    enabled: true,
-    neighbors: { ahead: [boundaryPreview], behind: [] },
-  });
-  return <Navigation />;
-}
-
-function VideoOrigin(): ReactNode {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [readiness, setReadiness] = useState<ViewerReadiness>();
-  useVideoReadiness({
-    itemId: "video",
-    enabled: true,
-    videoRef,
-    onReady: setReadiness,
-  });
-  return (
-    <ViewerReadinessContext value={readiness}>
-      <div>
-        <video ref={videoRef} />
-      </div>
-      <VideoNeighbors />
-    </ViewerReadinessContext>
-  );
-}
+} satisfies MediaPreview;
 
 const injected = vi.hoisted(() => {
   return {
@@ -113,31 +73,6 @@ vi.mock("@tanstack/react-router", () => {
   };
 });
 
-function Navigation(): ReactNode {
-  const movement = useItemNavigationMove({
-    context: {
-      detail: makeItemDetail(),
-      selection: { tags: [], people: [] },
-      queryClient: new QueryClient(),
-      memberId: "member",
-    },
-    targets: { next: { itemId: "target" } },
-    isUnavailable: false,
-  });
-  return (
-    <>
-      <button
-        onClick={() => {
-          void movement.move("next");
-        }}
-      >
-        Move
-      </button>
-      <output>{movement.error}</output>
-    </>
-  );
-}
-
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -157,7 +92,7 @@ describe("viewer promotion ownership", () => {
       const resources = createMediaLoadingResources({
         memberId: "member",
         lifetime: createMediaLoadingLifetime(),
-        load: (candidate, operationSignal) => {
+        load: ({ candidate, signal: operationSignal }) => {
           loaded.push(candidate.source.renditionId);
           signal = operationSignal;
           return new Promise(() => {});
@@ -171,7 +106,7 @@ describe("viewer promotion ownership", () => {
           supportsWebp: false,
         };
       }
-      resources.previews.put([boundaryPreview]);
+      resources.previews.put({ previews: [boundaryPreview] });
       injected.resources = resources;
       let finish = () => {};
       injected.router.navigate.mockReturnValueOnce(
@@ -181,7 +116,7 @@ describe("viewer promotion ownership", () => {
       );
       const view = render(
         <MediaLoadingProvider memberId="member" routeKey="/items/video">
-          <VideoOrigin />
+          <MediaNavigationVideoOrigin preview={boundaryPreview} />
         </MediaLoadingProvider>,
       );
       const video = view.container.querySelector("video")!;

@@ -1,7 +1,8 @@
 import { act, render } from "@testing-library/react";
-import { useRef } from "react";
+import { TimelineTransactionHarness } from "./TimelineTransactionHarness";
+import { TimelineExpansionHarness } from "./TimelineExpansionHarness";
 import { expect, it, vi } from "vitest";
-import { makeDay, makeItem } from "../../../timelineFixtures";
+import { makeDay, makeItem } from "../../../timelineFixtureHelpers";
 import type { TimelineRenderRow } from "../../timelineWindow.types";
 import { useTimelineWindow } from "../useTimelineWindow";
 
@@ -63,47 +64,18 @@ it("preserves the reading item when a preceding measurement arrives before struc
     },
   );
   let current: ReturnType<typeof useTimelineWindow>;
-  function Harness({
-    retained,
-    origin,
-  }: {
-    retained: TimelineRenderRow[];
-    origin: number;
-  }) {
-    const element = useRef<HTMLDivElement>(null);
-    current = useTimelineWindow({
-      rows: retained,
-      viewKey: "view",
-      focusedItemId: "item-0",
-      element,
-      tileWidth: 102,
-      viewportWidth: 300,
-      isMobile: false,
-    });
-    return (
-      <div ref={element} data-window-root data-origin={origin}>
-        {current.positions.map((position) => {
-          const row = retained[position.index]!;
-          return (
-            <div
-              key={row.key}
-              data-index={position.index}
-              data-timeline-row={row.key}
-              ref={current.virtualizer.measureElement}
-              style={{
-                top: position.start - current.virtualizer.options.scrollMargin,
-              }}
-            >
-              <button data-item-id={row.itemIds[0]} />
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  const captureWindow = (
+    window: ReturnType<typeof useTimelineWindow>,
+  ): void => {
+    current = window;
+  };
   try {
     const rendered = render(
-      <Harness retained={rows.slice(0, 20)} origin={0} />,
+      <TimelineTransactionHarness
+        retained={rows.slice(0, 20)}
+        origin={0}
+        captureWindow={captureWindow}
+      />,
     );
     const reading = rendered.container.querySelector<HTMLElement>(
       '[data-item-id="item-8"]',
@@ -114,7 +86,11 @@ it("preserves the reading item when a preceding measurement arrives before struc
     )!;
     focused.focus({ preventScroll: true });
     rendered.rerender(
-      <Harness retained={[rows[0]!, ...rows.slice(3, 22)]} origin={30} />,
+      <TimelineTransactionHarness
+        retained={[rows[0]!, ...rows.slice(3, 22)]}
+        origin={30}
+        captureWindow={captureWindow}
+      />,
     );
     expect(writes.length).toBeGreaterThan(0);
     expect(
@@ -240,53 +216,18 @@ it("waits for a newly measured header position to reach the DOM before consuming
         right: 300,
         width: 300,
         height,
-        toJSON() {
+        toJSON: () => {
           return {};
         },
       };
     },
   );
-  function Harness({ rows }: { rows: TimelineRenderRow[] }) {
-    const element = useRef<HTMLDivElement>(null);
-    const current = useTimelineWindow({
-      rows,
-      viewKey: "view",
-      element,
-      tileWidth: 200,
-      viewportWidth: 300,
-      isMobile: false,
-    });
-    return (
-      <div ref={element}>
-        {current.positions.map((position) => {
-          const row = rows[position.index]!;
-          return (
-            <div
-              key={row.key}
-              data-index={position.index}
-              data-timeline-row={row.key}
-              ref={current.virtualizer.measureElement}
-              style={{
-                top:
-                  current.measurements[position.index]!.start -
-                  current.virtualizer.options.scrollMargin,
-              }}
-            >
-              {row.itemIds.map((id) => {
-                return <button key={id} data-item-id={id} />;
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
   try {
-    const rendered = render(<Harness rows={ordinary} />);
+    const rendered = render(<TimelineExpansionHarness rows={ordinary} />);
     const initial = rendered.container
       .querySelector<HTMLElement>('[data-item-id="cover"]')!
       .getBoundingClientRect().top;
-    rendered.rerender(<Harness rows={expanded} />);
+    rendered.rerender(<TimelineExpansionHarness rows={expanded} />);
     await act(async () => {
       await new Promise<void>((done) => {
         return requestAnimationFrame(() => {
@@ -296,7 +237,7 @@ it("waits for a newly measured header position to reach the DOM before consuming
         });
       });
     });
-    rendered.rerender(<Harness rows={expanded} />);
+    rendered.rerender(<TimelineExpansionHarness rows={expanded} />);
     const current = rendered.container
       .querySelector<HTMLElement>('[data-item-id="cover"]')!
       .getBoundingClientRect().top;

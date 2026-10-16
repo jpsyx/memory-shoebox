@@ -1,0 +1,15 @@
+.videoReactionBarError {
+  color: var(--on-print);
+  font-size: var(--micro);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+.videoReactionBarError button {
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border: 0;
+  background: transparent;
+  min-height: 36px;
+}

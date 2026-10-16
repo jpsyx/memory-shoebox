@@ -1,0 +1,16 @@
+.videoTimeline {
+  position: relative;
+}
+.videoTimelineMarks {
+  height: 54px;
+  position: relative;
+  margin: 0 9px;
+}
+.videoTimelineScrubber {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--chip-white);
+  cursor: pointer;
+}

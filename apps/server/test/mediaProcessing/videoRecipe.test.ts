@@ -1,3 +1,4 @@
+import type { MediaRecipeInput } from "../../src/mediaProcessing/recipes/mediaRecipes.types.ts";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
@@ -7,11 +8,11 @@ import {
   createFixtureReader,
   createDockerVerificationRunner,
   createVerificationRunner,
-  getFixturePath,
+  makeFixturePathFromName,
   getHashFromFile,
   getKeyframeTimesFromFile,
   getMetadataFromFile,
-  getVideoProbe,
+  getVideoProbeFromFile,
 } from "./recipeTestHelpers.ts";
 
 const disposers: Array<() => Promise<void>> = [];
@@ -23,18 +24,26 @@ afterEach(async () => {
   );
 });
 
-async function _input(name: string, limit?: number, shipping = false) {
-  const path = getFixturePath(name);
+async function _input({
+  name,
+  limit,
+  shipping = false,
+}: {
+  name: string;
+  limit?: number;
+  shipping?: boolean;
+}): Promise<MediaRecipeInput> {
+  const path = makeFixturePathFromName(name);
   const runner =
     shipping && process.env.MEDIA_TEST_CODECS === "docker"
       ? await createDockerVerificationRunner(path)
       : await createVerificationRunner();
-  const reader = await createFixtureReader(path, limit);
+  const reader = await createFixtureReader({ path, byteLimit: limit });
   disposers.push(runner.dispose, reader.close);
   return {
     sourcePathOrUrl: reader.url,
     sourceBytes: (await stat(path)).size,
-    probe: await getVideoProbe(path),
+    probe: await getVideoProbeFromFile(path),
     runner,
     scratchDirectory: runner.scratchPath,
     signal: new AbortController().signal,
@@ -45,9 +54,9 @@ describe("actual video recipes (codec evidence, no isolation claim)", () => {
   it.each(["audio.mp4", "rotated.mp4", "vfr.mp4", "hevc.mp4"])(
     "makes a seekable compatible playback copy: %s",
     async (name) => {
-      const path = getFixturePath(name);
+      const path = makeFixturePathFromName(name);
       const before = await getHashFromFile(path);
-      const input = await _input(name);
+      const input = await _input({ name });
       const outputs = await makeVideoRenditionsFromSource(input);
       expect(
         outputs.map((output) => {
@@ -101,13 +110,13 @@ describe("actual video recipes (codec evidence, no isolation claim)", () => {
   );
 
   it("rejects a budget cutoff without accepting incomplete files", async () => {
-    const input = await _input("audio.mp4", 128 * 1024);
+    const input = await _input({ name: "audio.mp4", limit: 128 * 1024 });
     await expect(makeVideoRenditionsFromSource(input)).rejects.toThrow();
     expect(await readdir(join(input.runner.scratchPath, "output"))).toEqual([]);
   });
 
   it("rejects non-loopback sources before decode", async () => {
-    const input = await _input("audio.mp4");
+    const input = await _input({ name: "audio.mp4" });
     await expect(
       makeVideoRenditionsFromSource({
         ...input,
@@ -118,7 +127,7 @@ describe("actual video recipes (codec evidence, no isolation claim)", () => {
 });
 
 it("uses one video deadline and discards partial output on expiry", async () => {
-  const input = await _input("audio.mp4");
+  const input = await _input({ name: "audio.mp4" });
   const originalTimeout = AbortSignal.timeout.bind(AbortSignal);
   const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => {
     return originalTimeout(10);
@@ -141,7 +150,7 @@ it.each([
 ])(
   "refuses a successful encode when final %s violates playback policy",
   async (field, value) => {
-    const input = await _input("hevc.mp4");
+    const input = await _input({ name: "hevc.mp4" });
     const run = input.runner.run;
     input.runner.run = async (command) => {
       const result = await run(command);
@@ -169,9 +178,9 @@ it.each([
 ])(
   "preserves anamorphic display geometry after rotation: $name",
   async ({ name, dimensions, aspect }) => {
-    const source = getFixturePath(name);
+    const source = makeFixturePathFromName(name);
     const before = await getHashFromFile(source);
-    const input = await _input(name, undefined, true);
+    const input = await _input({ name, limit: undefined, shipping: true });
     const outputs = await makeVideoRenditionsFromSource(input);
     const video = (await getMetadataFromFile(outputs[0]!.path)).streams[0]!;
     expect([video.width, video.height]).toEqual(dimensions);
@@ -190,7 +199,11 @@ it.each([
 );
 
 it("converts encoded SMPTE170M matrix pixels before tagging BT.709", async () => {
-  const input = await _input("sdr-601-anamorphic.mp4", undefined, true);
+  const input = await _input({
+    name: "sdr-601-anamorphic.mp4",
+    limit: undefined,
+    shipping: true,
+  });
   const outputs = await makeVideoRenditionsFromSource(input);
   const video = (await getMetadataFromFile(outputs[0]!.path)).streams[0]!;
   expect([
@@ -211,9 +224,9 @@ it("converts encoded SMPTE170M matrix pixels before tagging BT.709", async () =>
 it.each(["untagged.mp4", "tiny-display-aspect.mp4"])(
   "rejects unsupported color or geometry without partial outputs: %s",
   async (name) => {
-    const path = getFixturePath(name);
+    const path = makeFixturePathFromName(name);
     const before = await getHashFromFile(path);
-    const input = await _input(name, undefined, true);
+    const input = await _input({ name, limit: undefined, shipping: true });
     await expect(makeVideoRenditionsFromSource(input)).rejects.toThrow();
     expect(await readdir(join(input.scratchDirectory, "output"))).toEqual([]);
     expect(await getHashFromFile(path)).toBe(before);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 import {
   createXhrUploadTransport,
   STALLED_PUT_TIMEOUT_MS,
@@ -238,7 +238,7 @@ describe("createXhrUploadTransport on a stalled link", () => {
       failure = error;
     });
     const request = _onlyRequest();
-    const maximumDurationMs = appConfig.upload.presignTtlSeconds * 1000;
+    const maximumDurationMs = APP_CONFIG.upload.presignTtlSeconds * 1000;
     Array.from({ length: 59 }, (_unused, index) => {
       vi.advanceTimersByTime(60_000);
       _progress({ request, loaded: index + 1 });
@@ -272,7 +272,7 @@ describe("createXhrUploadTransport on a stalled link", () => {
     await expect(pending).rejects.toBe(failure);
     expect(vi.getTimerCount()).toBe(0);
     controller.abort();
-    vi.advanceTimersByTime(appConfig.upload.presignTtlSeconds * 1000 + 1);
+    vi.advanceTimersByTime(APP_CONFIG.upload.presignTtlSeconds * 1000 + 1);
     expect(_onlyRequest().abortCount).toBe(0);
   });
 

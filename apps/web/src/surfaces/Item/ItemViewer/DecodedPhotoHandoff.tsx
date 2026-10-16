@@ -2,16 +2,20 @@ import type { DecodedPhotoSnapshot } from "@/media/createMediaNavigation";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 
-/** Temporarily hosts the owned native image without assigning another source. */
+type Props = {
+  snapshot: DecodedPhotoSnapshot;
+  media: MediaRef;
+  onUnavailable: () => void;
+};
+
+/**
+ * Temporarily hosts the owned native image without assigning another source.
+ */
 export function DecodedPhotoHandoff({
   snapshot,
   media,
   onUnavailable,
-}: Readonly<{
-  snapshot: DecodedPhotoSnapshot;
-  media: MediaRef;
-  onUnavailable: () => void;
-}>): ReactNode {
+}: Readonly<Props>): ReactNode {
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const container = host.current;

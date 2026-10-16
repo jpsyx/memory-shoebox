@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 
 import { expect, it, vi } from "vitest";
 
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 import {
   HEALTH,
   renderSettings,
 } from "@/surfaces/Settings/SettingsSurface/__tests__/settingsFixtureHelpers";
 
-import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 import { installSettingsSurfaceRecoveryTestLifecycle } from "./SettingsSurfacerecoveryTestHelpers";
 installSettingsSurfaceRecoveryTestLifecycle();
@@ -96,9 +96,11 @@ it("shows global and inline safe mail diagnosis and rereads health without claim
   expect(screen.getByText(/fresh domain check/)).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Recheck mail health" }));
   await waitFor(() => {
-    return expect(countCallsTo("GET", "/api/mail/health?refresh=true")).toBe(1);
+    return expect(
+      countCallsTo({ method: "GET", path: "/api/mail/health?refresh=true" }),
+    ).toBe(1);
   });
-  expect(countCallsTo("POST", "/api/mail/test")).toBe(0);
+  expect(countCallsTo({ method: "POST", path: "/api/mail/test" })).toBe(0);
   expect(screen.queryByText(/Test sent/)).not.toBeInTheDocument();
 });
 

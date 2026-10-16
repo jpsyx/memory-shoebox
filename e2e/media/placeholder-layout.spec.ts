@@ -1,7 +1,20 @@
 import { writeFile } from "node:fs/promises";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./media.fixtures.ts";
-import type { MediaAcceptanceCatalog } from "../support/createMediaAcceptanceCatalog.ts";
+import type { MediaAcceptanceCatalog } from "../support/createMediaAcceptanceCatalog/createMediaAcceptanceCatalog.ts";
+type CompactPreviewCheckOptions = {
+  page: Page;
+  itemId: string;
+  testInfo: TestInfo;
+  shape: string;
+};
+
+type MissingPreviewOptions = {
+  catalog: MediaAcceptanceCatalog;
+  itemIds: readonly string[];
+  width: number;
+  height: number;
+};
 
 type PlaceholderBox = {
   width: number;
@@ -31,12 +44,9 @@ async function _getPlaceholderBoxFromLocator(
   });
 }
 
-async function _setMissingPreviews(options: {
-  catalog: MediaAcceptanceCatalog;
-  itemIds: readonly string[];
-  width: number;
-  height: number;
-}): Promise<void> {
+async function _setMissingPreviews(
+  options: MissingPreviewOptions,
+): Promise<void> {
   await options.catalog.database
     .updateTable("items")
     .set({ width: options.width, height: options.height })
@@ -48,14 +58,9 @@ async function _setMissingPreviews(options: {
     .execute();
 }
 
-async function _checkSelectedAndStrip(options: {
-  page: Page;
-  itemId: string;
-  width: number;
-  height: number;
-  testInfo: TestInfo;
-  shape: string;
-}): Promise<Record<string, PlaceholderBox>> {
+async function _checkSelectedAndStrip(
+  options: CompactPreviewCheckOptions & { width: number; height: number },
+): Promise<Record<string, PlaceholderBox>> {
   const { page, itemId, width, height, testInfo, shape } = options;
   await page.goto(`/items/${itemId}`);
   const viewer = page.locator('[data-photo-surface="viewer"] [role="img"]');
@@ -88,19 +93,17 @@ async function _checkSelectedAndStrip(options: {
   expect
     .soft(siblingBox.height, `${shape} strip fits its fixed frame height`)
     .toBeLessThanOrEqual(siblingBox.parentHeight - 6 + 1);
-  if (shape === "portrait")
+  if (shape === "portrait") {
     await page.screenshot({
       path: testInfo.outputPath("viewer-and-strip.png"),
     });
+  }
   return { viewer: viewerBox, sibling: siblingBox, siblingLabel };
 }
 
-async function _checkCompactPreviews(options: {
-  page: Page;
-  itemId: string;
-  testInfo: TestInfo;
-  shape: string;
-}): Promise<Record<string, PlaceholderBox>> {
+async function _checkCompactPreviews(
+  options: CompactPreviewCheckOptions,
+): Promise<Record<string, PlaceholderBox>> {
   const { page, itemId, testInfo, shape } = options;
   await page
     .getByRole("button", { name: "More photo details", exact: true })
@@ -132,15 +135,16 @@ async function _checkCompactPreviews(options: {
   expect
     .soft(removalBox.height, `${shape} removal retains its 10rem media height`)
     .toBeLessThanOrEqual(removalBox.rem * 10 + 1);
-  if (shape === "portrait")
+  if (shape === "portrait") {
     await page.screenshot({ path: testInfo.outputPath("compact-removal.png") });
+  }
   return { presence: presenceBox, removal: removalBox };
 }
 
-for (const viewport of [
+[
   { width: 1280, height: 900 },
   { width: 390, height: 844 },
-]) {
+].forEach((viewport) => {
   test(`missing previews respect host media bounds at ${viewport.width}px`, async ({
     page,
     catalog,
@@ -179,4 +183,4 @@ for (const viewport of [
       contentType: "application/json",
     });
   });
-}
+});

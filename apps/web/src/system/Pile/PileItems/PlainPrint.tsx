@@ -2,7 +2,7 @@ import { useSeedMediaPreview } from "@/media/useSeedMediaPreview";
 import type { ReactNode } from "react";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { visibilityLabel } from "@/system/labelHelpers/labelHelpers";
-import { Print } from "@/system/Pile/Print";
+import { Print } from "@/system/Pile/Print/Print";
 
 type Props = {
   item: ItemSummary;

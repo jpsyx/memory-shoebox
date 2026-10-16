@@ -42,7 +42,7 @@ deferred acceptance are recorded in
 
 ## File map and shared decisions
 
-`apps/server/src/createApp.ts` is the actual application registration point, not the older docs' `app.ts`. Tasks register their own route modules there; one implementer owns that file at a time. Use existing `createTestApp`, `insertMember`, `insertSession`, `insertInvitation`, archive seed helpers and a frozen clock. Reuse the existing invitation resend middleware rather than implementing another limiter.
+`apps/server/src/createApp/createApp.ts` is the actual application registration point, not the older docs' `app.ts`. Tasks register their own route modules there; one implementer owns that file at a time. Use existing `createTestApp`, `insertMember`, `insertSession`, `insertInvitation`, archive seed helpers and a frozen clock. Reuse the existing invitation resend middleware rather than implementing another limiter.
 
 New server services live beside the resources they own: `administration/` for members/groups, `settings/` for settings/timezone, `observation/` for presence/activity, `setup/` for initialization, and `mail/` for invitation enqueue/domain reads/link repair. Each route module is a thin parser/guard/service adapter. Helper files named below may be split into adjacent focused files when the 45-line limit requires it; do not create barrels.
 

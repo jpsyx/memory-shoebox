@@ -4,6 +4,14 @@ import type {
 } from "../../media/mediaDelivery.types.ts";
 import type { S3Client } from "@aws-sdk/client-s3";
 import type { B2Config } from "../../configHelpers.ts";
+type PutObjectStreamOptions = {
+  key: string;
+  body: AsyncIterable<Uint8Array>;
+  contentType: string;
+  byteSize: number;
+  signal: AbortSignal;
+  onMultipartStarted: (uploadId: string) => Promise<void>;
+};
 
 /** Inputs for _signParts. */
 export type SignPartsOptions2 = {
@@ -103,7 +111,8 @@ export type SignPartsOptions = {
  * The Backblaze operations the rest of the server is allowed to use.
  *
  * Normal viewing and archival transfer bytes directly between browser and B2.
- * Bounded background derivative processing is the explicit server-side exception.
+ * Bounded background derivative processing is the explicit server-side
+ * exception.
  */
 export type B2Client = {
   /** Reuses a viewing lease for an already authorized immutable rendition. */
@@ -142,18 +151,15 @@ export type B2Client = {
     body: Uint8Array;
     contentType: string;
   }) => Promise<void>;
-  /** Streams a bounded processing output, durably owning multipart identity first. */
-  putObjectStream: (
-    options: Readonly<{
-      key: string;
-      body: AsyncIterable<Uint8Array>;
-      contentType: string;
-      byteSize: number;
-      signal: AbortSignal;
-      onMultipartStarted: (uploadId: string) => Promise<void>;
-    }>,
-  ) => Promise<void>;
-  /** Enumerates exact-key pending multipart uploads, including uncertain initiations. */
+  /**
+   * Streams a bounded processing output, durably owning multipart identity
+   * first.
+   */
+  putObjectStream: (options: Readonly<PutObjectStreamOptions>) => Promise<void>;
+  /**
+   * Enumerates exact-key pending multipart uploads, including uncertain
+   * initiations.
+   */
   listMultipartUploadsForKey: (
     key: string,
   ) => AsyncGenerator<{ uploadId: string }>;

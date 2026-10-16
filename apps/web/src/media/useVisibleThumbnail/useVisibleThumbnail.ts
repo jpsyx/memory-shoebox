@@ -2,16 +2,19 @@ import type { MediaSource } from "@memory-shoebox/shared";
 import { useCallback, useContext, useState, type RefCallback } from "react";
 import { MediaLoadingContext } from "../MediaLoadingContext";
 
-/** Withholds network sources until positive intersection; eager work shares one surface budget. */
+/**
+ * Withholds network sources until positive intersection; eager work shares one
+ * surface budget.
+ */
 export function useVisibleThumbnail(
   options: Readonly<{
     itemId: string;
-    source: MediaSource | null;
+    source: MediaSource | undefined;
   }>,
 ): {
   ref: RefCallback<HTMLElement>;
   loading: "eager" | "lazy";
-  source: MediaSource | null;
+  source: MediaSource | undefined;
 } {
   const resources = useContext(MediaLoadingContext);
   const [entry, setEntry] = useState<{ itemId: string; eager: boolean }>();
@@ -56,6 +59,6 @@ export function useVisibleThumbnail(
   return {
     ref,
     loading: entered && entry.eager ? "eager" : "lazy",
-    source: entered ? options.source : null,
+    source: entered ? options.source : undefined,
   };
 }

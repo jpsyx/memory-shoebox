@@ -114,10 +114,10 @@ describe("the floor rate", () => {
       const original =
         await importOriginal<typeof import("../../../../../../app.config")>();
       return {
-        appConfig: {
-          ...original.appConfig,
+        APP_CONFIG: {
+          ...original.APP_CONFIG,
           upload: {
-            ...original.appConfig.upload,
+            ...original.APP_CONFIG.upload,
             transferFloorBytesPerSecond: 32 * 1024,
           },
         },

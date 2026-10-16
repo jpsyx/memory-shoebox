@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 import {
   getTargetSizeFromLongEdge,
@@ -33,11 +33,11 @@ export function getVideoDerivativeSizesFromSize(size: Readonly<PixelSize>): {
   return {
     poster: getTargetSizeFromLongEdge({
       ...size,
-      longEdgePx: appConfig.upload.derivatives.displayLongEdgePx,
+      longEdgePx: APP_CONFIG.upload.derivatives.displayLongEdgePx,
     }),
     thumb: getTargetSizeFromLongEdge({
       ...size,
-      longEdgePx: appConfig.upload.derivatives.thumbLongEdgePx,
+      longEdgePx: APP_CONFIG.upload.derivatives.thumbLongEdgePx,
     }),
   };
 }
@@ -45,7 +45,7 @@ export function getVideoDerivativeSizesFromSize(size: Readonly<PixelSize>): {
 /**
  * Resolves once the sought frame has been presented, or after `timeoutMs`.
  *
- * **Both, because the two engines disagree** (finding 4). WebKit has not yet
+ * **Both, because the two engines disagree**. WebKit has not yet
  * painted the sought frame when `seeked` fires, so drawing then gives black;
  * `requestVideoFrameCallback` fires once it has. Chrome never fires that
  * callback for a paused seek, but its `seeked` frame is already correct, so
@@ -53,7 +53,7 @@ export function getVideoDerivativeSizesFromSize(size: Readonly<PixelSize>): {
  * all takes the timeout too.
  */
 export function waitForPresentedFrame(
-  functionOptions: Readonly<{
+  options: Readonly<{
     video: Readonly<
       Partial<
         Pick<
@@ -66,7 +66,7 @@ export function waitForPresentedFrame(
     signal?: AbortSignal;
   }>,
 ): Promise<"frame" | "timeout"> {
-  const { video, timeoutMs, signal } = functionOptions;
+  const { video, timeoutMs, signal } = options;
   signal?.throwIfAborted();
   return new Promise((settle, fail) => {
     const pending: { handle: number | undefined } = { handle: undefined };

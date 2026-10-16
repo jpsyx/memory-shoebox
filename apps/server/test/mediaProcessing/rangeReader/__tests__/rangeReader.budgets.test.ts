@@ -11,7 +11,9 @@ import {
 
 it("counts repeated and aborted ranges against one budget", async () => {
   const sourceBytes = MIB;
-  const b2 = await createRangeSource(makeRangeResponseFromSize(sourceBytes));
+  const b2 = await createRangeSource(
+    makeRangeResponseFromSize({ size: sourceBytes }),
+  );
   const reader = await createOwnedRangeReader({
     b2,
     key: "original",
@@ -43,14 +45,22 @@ it("counts repeated and aborted ranges against one budget", async () => {
   expect(reader.getBytesRead()).toBe(2 * sourceBytes + 16 * MIB);
   expect(reader.getFailure()).toBe("input_byte_limit");
   expect(
-    (await readRange(reader.url, `bytes=0-${sourceBytes - 1}`)).status,
+    (await readRange({ url: reader.url, range: `bytes=0-${sourceBytes - 1}` }))
+      .status,
   ).toBe(429);
 });
 
 it("rejects the 1,025th request without contacting storage", async () => {
   const lengths: number[] = [];
   const reader = await createOwnedRangeReader({
-    b2: await createRangeSource(makeRangeResponseFromSize(1, lengths)),
+    b2: await createRangeSource(
+      makeRangeResponseFromSize({
+        size: 1,
+        onRange: (length) => {
+          lengths.push(length);
+        },
+      }),
+    ),
     key: "source",
     sourceBytes: 1,
     signal: new AbortController().signal,
@@ -60,35 +70,44 @@ it("rejects the 1,025th request without contacting storage", async () => {
     if (index === 512) {
       reader.setPhaseByteLimit(undefined);
     }
-    expect((await readRange(reader.url, "bytes=0-0")).status).toBe(206);
+    expect(
+      (await readRange({ url: reader.url, range: "bytes=0-0" })).status,
+    ).toBe(206);
   }
-  expect((await readRange(reader.url, "bytes=0-0")).status).toBe(429);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-0" })).status,
+  ).toBe(429);
   expect(lengths).toHaveLength(1024);
   expect(reader.getFailure()).toBe("input_request_limit");
 }, 15_000);
 
 it("preserves aggregate bytes and request count when probe phase ends", async () => {
   const reader = await createOwnedRangeReader({
-    b2: await createRangeSource(makeRangeResponseFromSize(MIB)),
+    b2: await createRangeSource(makeRangeResponseFromSize({ size: MIB })),
     key: "source",
     sourceBytes: MIB,
     signal: new AbortController().signal,
     phaseByteLimit: 16 * MIB,
   });
   for (let index = 0; index < 16; index++) {
-    await readRange(reader.url, `bytes=0-${MIB - 1}`);
+    await readRange({ url: reader.url, range: `bytes=0-${MIB - 1}` });
   }
-  expect((await readRange(reader.url, `bytes=0-${MIB - 1}`)).status).toBe(429);
+  expect(
+    (await readRange({ url: reader.url, range: `bytes=0-${MIB - 1}` })).status,
+  ).toBe(429);
   expect(reader.getFailure()).toBe("phase_byte_limit");
   reader.setPhaseByteLimit(undefined);
   expect(reader.getFailure()).toBeUndefined();
   for (let index = 0; index < 2; index++) {
-    expect((await readRange(reader.url, `bytes=0-${MIB - 1}`)).status).toBe(
-      206,
-    );
+    expect(
+      (await readRange({ url: reader.url, range: `bytes=0-${MIB - 1}` }))
+        .status,
+    ).toBe(206);
   }
   expect(reader.getBytesRead()).toBe(18 * MIB);
-  expect((await readRange(reader.url, "bytes=0-0")).status).toBe(429);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-0" })).status,
+  ).toBe(429);
   expect(reader.getFailure()).toBe("input_byte_limit");
 });
 
@@ -145,7 +164,12 @@ it.each([
     const lengths: number[] = [];
     const reader = await createOwnedRangeReader({
       b2: await createRangeSource(
-        makeRangeResponseFromSize(sourceBytes, lengths),
+        makeRangeResponseFromSize({
+          size: sourceBytes,
+          onRange: (length) => {
+            lengths.push(length);
+          },
+        }),
       ),
       key: "source",
       sourceBytes,
@@ -165,9 +189,13 @@ it.each([
         : [8 * MIB, 8 * MIB, 123],
     );
     expect(reader.getFailure()).toBe("phase_byte_limit");
-    expect((await readRange(reader.url, "bytes=0-0")).status).toBe(429);
+    expect(
+      (await readRange({ url: reader.url, range: "bytes=0-0" })).status,
+    ).toBe(429);
     reader.setPhaseByteLimit(undefined);
-    expect((await readRange(reader.url, "bytes=0-0")).status).toBe(206);
+    expect(
+      (await readRange({ url: reader.url, range: "bytes=0-0" })).status,
+    ).toBe(206);
     expect(reader.getBytesRead()).toBe(phaseByteLimit + 1);
     expect(reader.getFailure()).toBeUndefined();
   },

@@ -11,7 +11,7 @@ export function RemovalRequestPreview({ request }: Readonly<Props>): ReactNode {
   const [failedUrl, setFailedUrl] = useState<string>();
   const thumbnail = useVisibleThumbnail({
     itemId: request.itemId ?? "",
-    source: request.media?.thumb ?? null,
+    source: request.media?.thumb ?? undefined,
   });
   if (request.itemId === null || request.media === null) {
     return (

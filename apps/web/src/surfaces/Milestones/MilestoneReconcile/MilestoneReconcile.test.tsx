@@ -7,7 +7,7 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type {
   ListMilestoneMismatchesResponse,
   MilestoneDetail,
@@ -65,13 +65,15 @@ function _answers(): Answers {
   };
   const post = _makeAcknowledgmentAnswer();
   respondWith({
-    "GET /api/milestones": {
-      body: { milestones: [detail], nextCursor: null },
-      status: 200,
+    routes: {
+      "GET /api/milestones": {
+        body: { milestones: [detail], nextCursor: null },
+        status: 200,
+      },
+      [`GET ${path}`]: detailAnswer,
+      [`GET ${path}/mismatches`]: page,
+      [`POST ${path}/reconcile`]: post,
     },
-    [`GET ${path}`]: detailAnswer,
-    [`GET ${path}/mismatches`]: page,
-    [`POST ${path}/reconcile`]: post,
   });
   return { detailAnswer, page, post };
 }

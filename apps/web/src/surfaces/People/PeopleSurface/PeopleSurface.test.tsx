@@ -1,3 +1,4 @@
+import type { PeopleResponse } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -42,7 +43,7 @@ const DIRECTORY = {
   ],
   nextCursor: null,
   peopleCount: 10,
-};
+} satisfies PeopleResponse;
 
 describe("the people directory", () => {
   beforeEach(() => {

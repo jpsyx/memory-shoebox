@@ -1,4 +1,4 @@
-import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import { makeTimelineQueryOptionsFromView } from "@/api/timelineHelpers/timelineHelpers";
 
 import { createMeResponse } from "@/testing/createMeResponse";
 
@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { getRecordedRequests } from "@/testing/fetchStubHelpers";
 
-import { makeDay } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 import { recordedUrls, renderItem } from "@/testing/itemHarnessHelpers";
 
@@ -26,7 +26,7 @@ import {
 
 describe("viewer navigation", () => {
   it("revalidates reused neighborhood authority on a later route mount", async () => {
-    respondWithNavigationItems({}, [FIRST, LAST]);
+    respondWithNavigationItems({ routes: {}, order: [FIRST, LAST] });
     const now = Date.now();
     const clock = vi.spyOn(Date, "now").mockReturnValue(now);
     try {
@@ -58,7 +58,7 @@ describe("viewer navigation", () => {
         {
           pages: [
             {
-              selectionResultCount: null,
+              selectionResultCount: undefined,
               previousCursor: null,
               metadataUpdatedAt: now - 29_000,
               days: [makeDay({ items: freshItems })],
@@ -66,14 +66,14 @@ describe("viewer navigation", () => {
               resultCount: null,
             },
           ],
-          pageParams: [null],
+          pageParams: [undefined],
         },
         { updatedAt: now - 29_000 },
       );
-      const next = await waitForNavigationReady();
+      const nextButton = await waitForNavigationReady();
       expect(recordedUrls()).not.toContain("/api/media/neighbors");
       clock.mockReturnValue(now + 2_000);
-      await userEvent.click(next);
+      await userEvent.click(nextButton);
       await waitFor(() => {
         expect(
           screen.getByRole("button", { name: "Previous photo or video" }),
@@ -107,16 +107,16 @@ describe("viewer navigation", () => {
 describe("viewer navigation", () => {
   it("shows only selected media while pending detail keeps mutations inert", async () => {
     const hold = makeHold();
-    respondWithNavigationItems(
-      {
+    respondWithNavigationItems({
+      routes: {
         [`GET /api/items/${LAST.itemId}`]: {
           status: 200,
           body: LAST,
           waitFor: hold.hold,
         },
       },
-      [FIRST, LAST],
-    );
+      order: [FIRST, LAST],
+    });
     const { container } = renderItem(FIRST.itemId);
     await userEvent.click(await waitForNavigationReady());
     await waitFor(() => {
@@ -141,9 +141,11 @@ describe("viewer navigation", () => {
 describe("viewer navigation", () => {
   it("retries a failed neighbour read without counting another item open", async () => {
     respondWithNavigationItems({
-      "POST /api/media/neighbors": {
-        status: 503,
-        body: { error: "unavailable", message: "Unavailable" },
+      routes: {
+        "POST /api/media/neighbors": {
+          status: 503,
+          body: { error: "unavailable", message: "Unavailable" },
+        },
       },
     });
     const { router } = renderItem(FIRST.itemId);
@@ -165,10 +167,12 @@ describe("viewer navigation", () => {
   it("abandons a delayed neighbor read after leaving the viewer", async () => {
     const hold = makeHold();
     respondWithNavigationItems({
-      "POST /api/media/neighbors": {
-        status: 200,
-        body: { ahead: [], behind: [] },
-        waitFor: hold.hold,
+      routes: {
+        "POST /api/media/neighbors": {
+          status: 200,
+          body: { ahead: [], behind: [] },
+          waitFor: hold.hold,
+        },
       },
     });
     const { router } = renderItem(FIRST.itemId);
@@ -191,10 +195,12 @@ describe("viewer navigation", () => {
   it("ignores another move while the destination is loading", async () => {
     const hold = makeHold();
     respondWithNavigationItems({
-      [`GET /api/items/${MIDDLE.itemId}`]: {
-        status: 200,
-        body: MIDDLE,
-        waitFor: hold.hold,
+      routes: {
+        [`GET /api/items/${MIDDLE.itemId}`]: {
+          status: 200,
+          body: MIDDLE,
+          waitFor: hold.hold,
+        },
       },
     });
     const { router } = renderItem(FIRST.itemId);

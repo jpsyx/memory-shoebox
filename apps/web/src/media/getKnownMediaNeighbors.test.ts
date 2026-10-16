@@ -1,23 +1,38 @@
-import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
-import { makeBurst, makeDay } from "@/surfaces/Timeline/timelineFixtures";
-import {
-  makeFrameIdFromPosition,
-  makeItemDetail,
-} from "@/testing/itemFixtureHelpers";
 import type {
+  TimelineSelection,
   MediaNeighborsRequest,
   MediaNeighborsResponse,
   TimelineResponse,
 } from "@memory-shoebox/shared";
+import { makeTimelineQueryOptionsFromView } from "@/api/timelineHelpers/timelineHelpers";
+import { makeBurst, makeDay } from "@/surfaces/Timeline/timelineFixtureHelpers";
+import {
+  makeFrameIdFromPosition,
+  makeItemDetail,
+} from "@/testing/itemFixtureHelpers";
 import { QueryClient, type InfiniteData } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "./createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "./createMediaLoadingResources/createMediaLoadingLifetime";
 import { readMediaNeighborsFromKnownQueries } from "./readMediaNeighborsFromKnownQueries";
+import type { MockInstance } from "vitest";
+import type { TimelineQueryPage } from "@/api/timelineHelpers/timelineHelpers";
 
-const selection = { tags: [], people: [] };
+type KnownNeighborsFixture = {
+  queryClient: QueryClient;
+  resources: ReturnType<typeof createMediaLoadingResources>;
+  fallback: MockInstance<
+    ReturnType<typeof createMediaLoadingResources>["readNeighbors"]
+  >;
+  renew: MockInstance<
+    ReturnType<typeof createMediaLoadingResources>["readPreviews"]
+  >;
+  request: MediaNeighborsRequest;
+  key: ReturnType<typeof makeTimelineQueryOptionsFromView>["queryKey"];
+  page: TimelineQueryPage;
+};
+
+const SELECTION = { tags: [], people: [] } satisfies TimelineSelection;
 const items = [1, 2, 3, 4].map((position) => {
   const detail = makeItemDetail({ itemId: makeFrameIdFromPosition(position) });
   return {
@@ -30,7 +45,7 @@ const items = [1, 2, 3, 4].map((position) => {
     },
   };
 });
-function setup() {
+function _setup(): KnownNeighborsFixture {
   const queryClient = new QueryClient();
   const resources = createMediaLoadingResources({
     memberId: "member",
@@ -42,27 +57,27 @@ function setup() {
   const renew = vi.spyOn(resources, "readPreviews").mockResolvedValue([]);
   const request: MediaNeighborsRequest = {
     itemId: items[1]!.itemId,
-    selection,
+    selection: SELECTION,
     direction: "next" as const,
   };
   const key = makeTimelineQueryOptionsFromView({
     memberId: "member",
-    view: { selection, at: undefined },
+    view: { selection: SELECTION, at: undefined },
   }).queryKey;
   const page = {
-    selectionResultCount: null,
+    selectionResultCount: undefined,
     previousCursor: null,
     metadataUpdatedAt: Date.now(),
     days: [makeDay({ items })],
     nextCursor: null,
     resultCount: null,
   };
-  queryClient.setQueryData(key, { pages: [page], pageParams: [null] });
+  queryClient.setQueryData(key, { pages: [page], pageParams: [undefined] });
   return { queryClient, resources, fallback, renew, request, key, page };
 }
 describe("known media neighborhood consumption", () => {
   it("uses sufficient retained member/selection refs without another neighbor or preview read", async () => {
-    const test = setup();
+    const test = _setup();
     const result = await readMediaNeighborsFromKnownQueries(test);
     expect(
       result.ahead.map((item) => {
@@ -78,7 +93,7 @@ describe("known media neighborhood consumption", () => {
     expect(test.renew).not.toHaveBeenCalled();
   });
   it("matches canonical selection IDs despite ordering and duplicates", async () => {
-    const test = setup();
+    const test = _setup();
     test.queryClient.removeQueries({ queryKey: test.key });
     const firstTag = makeFrameIdFromPosition(8);
     const secondTag = makeFrameIdFromPosition(9);
@@ -91,7 +106,7 @@ describe("known media neighborhood consumption", () => {
     }).queryKey;
     test.queryClient.setQueryData(key, {
       pages: [test.page],
-      pageParams: [null],
+      pageParams: [undefined],
     });
     test.request.selection = { tags: [firstTag, secondTag], people: [] };
     await readMediaNeighborsFromKnownQueries(test);
@@ -107,7 +122,7 @@ describe("known media neighborhood consumption", () => {
     "invalidated",
     "old",
   ])("falls back for %s uncertainty", async (reason) => {
-    const test = setup();
+    const test = _setup();
     if (reason === "burst") {
       test.queryClient.setQueryData(test.key, {
         pages: [
@@ -125,7 +140,7 @@ describe("known media neighborhood consumption", () => {
             ],
           },
         ],
-        pageParams: [null],
+        pageParams: [undefined],
       });
     }
     if (reason === "gap") {
@@ -142,7 +157,7 @@ describe("known media neighborhood consumption", () => {
             days: [makeDay({ items: items.slice(2) })],
           },
         ],
-        pageParams: [null, "different"],
+        pageParams: [undefined, "different"],
       });
     }
     if (reason === "evicted") {
@@ -162,12 +177,12 @@ describe("known media neighborhood consumption", () => {
     }
     if (reason === "selection") {
       test.request.selection = {
-        ...selection,
+        ...SELECTION,
         tags: [makeFrameIdFromPosition(9)],
       };
     }
     if (reason === "jump") {
-      Object.assign((test.request.selection = { ...selection }), {
+      Object.assign((test.request.selection = { ...SELECTION }), {
         until: "2026-09-01",
       });
     }
@@ -179,7 +194,7 @@ describe("known media neighborhood consumption", () => {
         test.key,
         {
           pages: [{ ...test.page, metadataUpdatedAt: Date.now() - 31_000 }],
-          pageParams: [null],
+          pageParams: [undefined],
         },
         { updatedAt: Date.now() - 31_000 },
       );
@@ -188,7 +203,7 @@ describe("known media neighborhood consumption", () => {
     expect(test.fallback).toHaveBeenCalledWith(test.request);
   });
   it("does not refresh ordering authority merely by deriving another cached neighborhood", async () => {
-    const test = setup();
+    const test = _setup();
     test.queryClient.removeQueries({ queryKey: test.key });
     test.queryClient.setQueryData(
       [
@@ -196,7 +211,7 @@ describe("known media neighborhood consumption", () => {
         "member",
         "item-neighbours",
         items[0]!.itemId,
-        selection,
+        SELECTION,
         "next",
       ],
       {
@@ -205,12 +220,14 @@ describe("known media neighborhood consumption", () => {
         metadataUpdatedAt: Date.now() - 31_000,
       },
     );
-    test.resources.previews.put([{ ...items[0]!, width: 1600, height: 1200 }]);
+    test.resources.previews.put({
+      previews: [{ ...items[0]!, width: 1600, height: 1200 }],
+    });
     await readMediaNeighborsFromKnownQueries(test);
     expect(test.fallback).toHaveBeenCalledWith(test.request);
   });
   it("crosses retained pages only when their opaque cursor chain matches", async () => {
-    const test = setup();
+    const test = _setup();
     test.queryClient.setQueryData(test.key, {
       pages: [
         {
@@ -224,7 +241,7 @@ describe("known media neighborhood consumption", () => {
           days: [makeDay({ items: items.slice(2) })],
         },
       ],
-      pageParams: [null, "a"],
+      pageParams: [undefined, "a"],
     });
     expect((await readMediaNeighborsFromKnownQueries(test)).ahead).toHaveLength(
       2,
@@ -232,7 +249,7 @@ describe("known media neighborhood consumption", () => {
     expect(test.fallback).not.toHaveBeenCalled();
   });
   it("re-probes ordering when renewal omits a formerly visible neighbor", async () => {
-    const test = setup();
+    const test = _setup();
     test.queryClient.removeQueries({ queryKey: test.key });
     test.queryClient.setQueryData(
       [
@@ -240,20 +257,19 @@ describe("known media neighborhood consumption", () => {
         "member",
         "item-neighbours",
         items[0]!.itemId,
-        selection,
+        SELECTION,
         "next",
       ],
       { ahead: [{ ...items[1]!, width: 1600, height: 1200 }], behind: [] },
     );
     await readMediaNeighborsFromKnownQueries(test);
     expect(test.renew).toHaveBeenCalledWith({
-      itemIds: [items[0]!.itemId],
-      purpose: "speculative-preview",
+      request: { itemIds: [items[0]!.itemId], purpose: "speculative-preview" },
     });
     expect(test.fallback).toHaveBeenCalledWith(test.request);
   });
   it("renews only stale media when exact neighboring IDs are already known", async () => {
-    const test = setup();
+    const test = _setup();
     const data = test.queryClient.getQueryData<InfiniteData<TimelineResponse>>(
       test.key,
     )!;
@@ -281,8 +297,7 @@ describe("known media neighborhood consumption", () => {
     ]);
     const result = await readMediaNeighborsFromKnownQueries(test);
     expect(test.renew).toHaveBeenCalledWith({
-      itemIds: [items[2]!.itemId],
-      purpose: "speculative-preview",
+      request: { itemIds: [items[2]!.itemId], purpose: "speculative-preview" },
     });
     expect(test.fallback).not.toHaveBeenCalled();
     expect(result.ahead[0]?.media.display?.expiresAt).toBe(
@@ -290,7 +305,7 @@ describe("known media neighborhood consumption", () => {
     );
   });
   it("uses a fresh known neighborhood at its proven end without a new metadata read", async () => {
-    const test = setup();
+    const test = _setup();
     test.queryClient.removeQueries({ queryKey: test.key });
     const preview = (index: number) => {
       return { ...items[index]!, width: 1600, height: 1200 };
@@ -301,12 +316,12 @@ describe("known media neighborhood consumption", () => {
         "member",
         "item-neighbours",
         items[0]!.itemId,
-        selection,
+        SELECTION,
         "next",
       ],
       { ahead: [preview(1)], behind: [] } satisfies MediaNeighborsResponse,
     );
-    test.resources.previews.put([preview(0)]);
+    test.resources.previews.put({ previews: [preview(0)] });
     const result = await readMediaNeighborsFromKnownQueries(test);
     expect(result.ahead).toEqual([]);
     expect(result.behind[0]?.itemId).toBe(items[0]!.itemId);

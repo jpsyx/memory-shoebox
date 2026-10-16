@@ -1,7 +1,7 @@
 import type { Nullable, SelectQueryBuilder } from "kysely";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import type { FastifyBaseLogger } from "fastify";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { Database, DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
@@ -11,7 +11,7 @@ import {
   makeDrawnEntriesFromItemRows,
   type DrawnBurst,
 } from "../makeDrawnEntriesFromItemRows.ts";
-import { makeAltTextFromItem } from "../makeAltTextFromItem.ts";
+import { itemAltText } from "../makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "../makeMediaRefFromSources.ts";
 import { readBurstCovers } from "../readBurstCovers.ts";
 import type { ItemRow } from "../readItemsForDays.ts";
@@ -142,7 +142,7 @@ async function _readSummaryLookups(
             return [itemId, "thumbnail"];
           }),
         ),
-        ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+        ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
       }),
       readPeopleNamesByItemId({ database: readOptions.database, itemIds }),
       readVisibilitySummaries({
@@ -214,8 +214,8 @@ function _makeSummariesFromRows(
           lookups.sources.previewStatesByItemId.get(item.itemId) ??
           "unavailable",
         sources: lookups.sources.sourcesByItemId.get(item.itemId) ?? new Map(),
-        durationMs: item.durationMs,
-        altText: makeAltTextFromItem({
+        durationMs: item.durationMs ?? undefined,
+        altText: itemAltText({
           altTextOverride: item.altTextOverride,
           personNames: lookups.people.get(item.itemId) ?? [],
           capturedAt: item.capturedAt,
@@ -235,7 +235,10 @@ function _makeSummariesFromRows(
     }),
   );
 }
-/** Reads visible items with explicit preview availability and burst siblings in batches. */
+/**
+ * Reads visible items with explicit preview availability and burst siblings in
+ * batches.
+ */
 export async function readItemSummariesByItemIds(
   options: Readonly<SummaryReadOptions>,
 ): Promise<Map<string, ItemSummary>> {

@@ -2,13 +2,19 @@ import { writeFile } from "node:fs/promises";
 import type { Page, Request } from "@playwright/test";
 import { test, expect } from "./media.fixtures.ts";
 
-type Activity = {
-  lastIntersection: number;
-  animations: number;
-  targets: number;
+type TimelineReadiness = {
+  visibleImages: number;
+  readyImages: number;
+  intersectionQuietMs: number;
+  activeAnimations: number;
+  documentAnimations: number;
+  observedTargets: number;
+  tiles: number;
+  days: string[];
+  y: number;
 };
 
-async function observeActivity(page: Page): Promise<void> {
+async function _observeActivity(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const activity = { lastIntersection: 0, animations: 0, targets: 0 };
     Object.assign(window, { timelineActivity: activity });
@@ -25,12 +31,16 @@ async function observeActivity(page: Page): Promise<void> {
         }, options);
       }
       override observe(target: Element): void {
-        if (!this.targets.has(target)) activity.targets += 1;
+        if (!this.targets.has(target)) {
+          activity.targets += 1;
+        }
         this.targets.add(target);
         super.observe(target);
       }
       override unobserve(target: Element): void {
-        if (this.targets.delete(target)) activity.targets -= 1;
+        if (this.targets.delete(target)) {
+          activity.targets -= 1;
+        }
         super.unobserve(target);
       }
       override disconnect(): void {
@@ -56,10 +66,17 @@ async function observeActivity(page: Page): Promise<void> {
   });
 }
 
-async function readReadiness(page: Page) {
+async function _readReadiness(page: Page): Promise<TimelineReadiness> {
   return page.evaluate(() => {
-    const activity = (window as unknown as { timelineActivity: Activity })
-      .timelineActivity;
+    const activity = (
+      window as typeof window & {
+        timelineActivity: {
+          lastIntersection: number;
+          animations: number;
+          targets: number;
+        };
+      }
+    ).timelineActivity;
     const visible = [
       ...document.querySelectorAll<HTMLImageElement>(
         '[data-photo-surface="pile"] img',
@@ -103,12 +120,7 @@ type HeapUsage = {
   embedderHeapUsedSize: number;
   backingStorageSize: number;
 };
-type DomCounters = {
-  documents: number;
-  nodes: number;
-  jsEventListeners: number;
-};
-type MemorySample = Awaited<ReturnType<typeof readReadiness>> & {
+type MemorySample = Awaited<ReturnType<typeof _readReadiness>> & {
   responses: number;
   sampleAnchor: { day: string; expectedTop: number; actualTop: number };
   pages: Array<number | undefined>;
@@ -116,10 +128,16 @@ type MemorySample = Awaited<ReturnType<typeof readReadiness>> & {
   seenStarted: number;
   seenFinished: number;
   heap: HeapUsage | "unavailable";
-  dom: DomCounters | "unavailable";
+  dom:
+    | {
+        documents: number;
+        nodes: number;
+        jsEventListeners: number;
+      }
+    | "unavailable";
 };
 
-function assertSampledConvergence(samples: MemorySample[]): void {
+function _assertSampledConvergence(samples: MemorySample[]): void {
   expect(
     samples.map((sample) => {
       return sample.responses;
@@ -160,7 +178,9 @@ function assertSampledConvergence(samples: MemorySample[]): void {
   const heaps = stable.flatMap((sample) => {
     return sample.heap === "unavailable" ? [] : [sample.heap.usedSize];
   });
-  if (heaps.length === 0) return;
+  if (heaps.length === 0) {
+    return;
+  }
   const mean =
     heaps.reduce((sum, size) => {
       return sum + size;
@@ -199,30 +219,34 @@ function assertSampledConvergence(samples: MemorySample[]): void {
   expect(Math.max(...nodes) / Math.min(...nodes)).toBeLessThanOrEqual(1.1);
 }
 
-for (const viewport of [
+[
   { width: 1280, height: 900 },
   { width: 390, height: 844 },
-]) {
+].forEach((viewport) => {
   test.describe(`${viewport.width}px settled memory`, () => {
-    // The complete 22-response settlement protocol also runs in the ordinary suite.
+    // The complete 22-response settlement protocol also runs in the ordinary
+    // suite.
     test.setTimeout(180000);
     test.use({ viewport, catalogSize: 10000 });
     test("measures equivalent retained windows after image, seen, request and animation settlement", async ({
       page,
       browserName,
     }) => {
-      await observeActivity(page);
+      await _observeActivity(page);
       const pending = new Set<Request>();
       let seenStarted = 0;
       let seenFinished = 0;
       page.on("request", (request) => {
         pending.add(request);
-        if (new URL(request.url()).pathname.includes("/seen")) seenStarted += 1;
+        if (new URL(request.url()).pathname.includes("/seen")) {
+          seenStarted += 1;
+        }
       });
       const finish = (request: Request) => {
         pending.delete(request);
-        if (new URL(request.url()).pathname.includes("/seen"))
+        if (new URL(request.url()).pathname.includes("/seen")) {
           seenFinished += 1;
+        }
       };
       page.on("requestfinished", finish);
       page.on("requestfailed", finish);
@@ -264,7 +288,9 @@ for (const viewport of [
             });
           });
         });
-        if (responses <= sampled) continue;
+        if (responses <= sampled) {
+          continue;
+        }
         const sampledResponse = responses;
         const anchorDay = firstDayByResponse.get(sampledResponse)!;
         const anchor = page.locator(`[id="day-${anchorDay}"]`);
@@ -285,7 +311,7 @@ for (const viewport of [
         await expect
           .poll(
             async () => {
-              const ready = await readReadiness(page);
+              const ready = await _readReadiness(page);
               const hasCommittedResponse = ready.days.some((day) => {
                 return pageByDay.get(day) === responses;
               });
@@ -304,7 +330,7 @@ for (const viewport of [
           )
           .toBe(true);
         expect(responses).toBe(sampledResponse);
-        const readiness = await readReadiness(page);
+        const readiness = await _readReadiness(page);
         const actualTop = await anchor.evaluate((element) => {
           return element.getBoundingClientRect().top;
         });
@@ -318,7 +344,9 @@ for (const viewport of [
         ];
         expect(pages.length).toBeLessThanOrEqual(5);
         expect(readiness.tiles).toBeLessThanOrEqual(200);
-        if (cdp) await cdp.send("HeapProfiler.collectGarbage");
+        if (cdp) {
+          await cdp.send("HeapProfiler.collectGarbage");
+        }
         samples.push({
           responses,
           sampleAnchor: { day: anchorDay, expectedTop, actualTop },
@@ -354,7 +382,7 @@ for (const viewport of [
         JSON.stringify(samples, null, 2),
       );
       expect(sampled).toBe(22);
-      assertSampledConvergence(samples);
+      _assertSampledConvergence(samples);
     });
   });
-}
+});

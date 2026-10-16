@@ -1,0 +1,20 @@
+.burstFanHeader {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  width: 100%;
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--panel-sunk);
+}
+
+.burstFanHeaderLabel {
+  font-family: var(--font-figure);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-right: auto;
+}

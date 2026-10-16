@@ -88,7 +88,7 @@ it("initialized anonymous entry preserves its intended destination", async () =>
   const { router } = makeRootRouterFromOptions({
     path: "/items/abc?tag=family",
     answer: () => {
-      return bootstrap(null);
+      return bootstrap({ account: null });
     },
   });
   await router.load();
@@ -113,7 +113,7 @@ it.each(["demotion", "revocation"])(
       client,
       answer: ({ path }) => {
         requestPaths.push(path);
-        return bootstrap(account);
+        return bootstrap({ account });
       },
     });
     await router.load();
@@ -121,15 +121,15 @@ it.each(["demotion", "revocation"])(
       change === "demotion" ? "/" : "/sign-in",
     );
     expect(client.getQueryData(["me"])).toEqual(account);
-    for (const key of [
+    [
       ["members", "admin"],
       ["mail-health"],
       ["me", "sessions"],
       ["timeline"],
       ["setup", "progress"],
-    ]) {
+    ].forEach((key) => {
       expect(client.getQueryData(key)).toBeUndefined();
-    }
+    });
     expect(
       requestPaths.every((path) => {
         return path === "/api/bootstrap";
@@ -143,7 +143,7 @@ it("pending invitation setup and completion races use the new bootstrap each nav
   const { router } = makeRootRouterFromOptions({
     path: "/people",
     answer: () => {
-      return bootstrap(ADMIN, needsInvitations);
+      return bootstrap({ account: ADMIN, needsInvitations });
     },
   });
   await router.load();

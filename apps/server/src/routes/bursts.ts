@@ -15,7 +15,7 @@ import {
   getPageStateFromBurstFrameCursor,
   type BurstFramePageState,
 } from "../items/burstFrameCursorHelpers.ts";
-import { readBurstFramePage } from "../items/readBurstFrameRefs/readBurstFrameRefs.ts";
+import { readBurstFramePage } from "../items/readBurstFramePage/readBurstFramePage.ts";
 
 /**
  * Decodes the cursor, or refuses the request.
@@ -109,7 +109,7 @@ export async function burstsRoutes(app: FastifyInstance): Promise<void> {
       // whole burst. It is not null by construction: the cursor resumes
       // strictly after `(burst_index, id)`, and `position` numbers straight
       // through the pages rather than restarting at 1 on each.
-      return { frames: page.frames, nextCursor: page.nextCursor };
+      return { frames: page.frames, nextCursor: page.nextCursor ?? null };
     },
   );
 }

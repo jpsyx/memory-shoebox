@@ -7,7 +7,7 @@ import {
   type ManifestOutcome,
 } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import { createId } from "../../db/createId.ts";
 
@@ -26,11 +26,11 @@ import { ARCHIVE_DUPLICATE_DETAIL } from "./manifestArchiveHelpers.ts";
 function _getRefusalCode(
   entry: Readonly<ManifestEntry>,
 ): RefusalCode | undefined {
-  const accepted: readonly string[] = appConfig.upload.acceptedContentTypes;
+  const accepted: readonly string[] = APP_CONFIG.upload.acceptedContentTypes;
   return accepted.includes(entry.declaredContentType.toLowerCase())
     ? entry.declaredBytes === 0
       ? "empty_file"
-      : entry.declaredBytes > appConfig.upload.maxFileBytes
+      : entry.declaredBytes > APP_CONFIG.upload.maxFileBytes
         ? "too_large"
         : undefined
     : "unsupported_type";

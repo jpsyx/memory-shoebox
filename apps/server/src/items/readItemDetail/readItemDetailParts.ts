@@ -12,7 +12,7 @@ import {
   type TagRef,
   type VisibilitySummary,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import { readBurstCovers } from "../../archive/readBurstCovers.ts";
 import { readMediaSources } from "../../archive/readMediaSources.ts";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
@@ -29,7 +29,7 @@ import {
   readItemReactionRows,
   type ReactionRow,
 } from "../readReactionSummaries.ts";
-import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
+import type { BurstFrameRow } from "../readBurstFramePage/readBurstFrameRows.ts";
 import type { ItemDetailOptions } from "./readItemDetail.types.ts";
 
 /** Everything the payload is built from, read in one round of the catalog. */
@@ -116,7 +116,8 @@ async function _readIsUnseen(options: {
  *
  * The item's own id is always in the list, including when the strip does not
  * hold it: a burst past the 60-frame cap can leave the item out of its own
- * siblings. Its catalog dimensions still provide layout when no rendition is available.
+ * siblings. Its catalog dimensions still provide layout when no rendition is
+ * available.
  *
  * @param options.item The item the permalink is for.
  * @param options.burstRows The visible siblings, already read.
@@ -133,7 +134,10 @@ function _getItemIdsForDetail(options: {
     : [options.item.itemId, ...stripItemIds];
 }
 
-/** The payload lookups, with two batched queries for leases and processing state. */
+/**
+ * The payload lookups, with two batched queries for leases and processing
+ * state.
+ */
 type ItemDetailLookups = {
   mediaSources: MediaSourcesResult;
   peopleByItemId: ReadonlyMap<string, PersonRef[]>;
@@ -190,7 +194,7 @@ async function _readItemDetailLookups(options: {
         }),
       ),
       now,
-      ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+      ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
     }),
     readPeopleRefsByItemId({ database, itemIds: options.itemIds }),
     readVisibilitySummaries({ database, ruleIds: [item.visibilityRuleId] }),
@@ -235,10 +239,12 @@ async function _readItemDetailLookups(options: {
  * @param options.detailOptions What the composer was called with.
  * @param options.burstRows The visible siblings, already read.
  */
-export async function readItemDetailParts(options: {
-  detailOptions: Readonly<ItemDetailOptions>;
-  burstRows: readonly BurstFrameRow[];
-}): Promise<ItemDetailParts> {
+export async function readItemDetailParts(
+  options: Readonly<{
+    detailOptions: Readonly<ItemDetailOptions>;
+    burstRows: readonly BurstFrameRow[];
+  }>,
+): Promise<ItemDetailParts> {
   const { database, viewer, item } = options.detailOptions;
 
   // `reactionRows` is taken off the rest: the payload carries the summary

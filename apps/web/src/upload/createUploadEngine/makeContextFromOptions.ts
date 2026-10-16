@@ -5,7 +5,7 @@ import {
 } from "@/api/uploadsHelpers/uploadsHelpers";
 import { createUploadDecodeCoordinator } from "@/upload/createUploadDecodeCoordinator/createUploadDecodeCoordinator";
 
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 import { makeVideoDerivativesFromFile } from "@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile";
 
@@ -21,16 +21,16 @@ import type {
 
 /** Every option resolved to its default, and the batch's own state. */
 export function makeContextFromOptions(
-  input: Readonly<{
+  options: Readonly<{
     options: Readonly<CreateUploadEngineOptions>;
     controller: AbortController;
     files: readonly UploadEngineFile[];
   }>,
 ): EngineContext {
-  const { options } = input;
+  const { options: engineOptions } = options;
   const {
     decodeCoordinator = createUploadDecodeCoordinator(),
-    concurrency = appConfig.upload.maxParallelTransfers,
+    concurrency = APP_CONFIG.upload.maxParallelTransfers,
     api = {
       presignUploadFile,
       completeUploadFile,
@@ -45,21 +45,22 @@ export function makeContextFromOptions(
       );
     },
     transport = createXhrUploadTransport(),
-    makeVideoDerivativesFromFile:
-      videoDerivativeMaker = makeVideoDerivativesFromFile,
-  } = options;
+    makeVideoDerivativesFromFile: videoDerivativeMaker = (file) => {
+      return makeVideoDerivativesFromFile({ file });
+    },
+  } = engineOptions;
   return {
-    sessionId: options.sessionId,
+    sessionId: engineOptions.sessionId,
     decodeCoordinator,
     concurrency: concurrency,
     api: api,
-    onEvent: options.onEvent,
+    onEvent: engineOptions.onEvent,
     createMediaWorker: createMediaWorker,
     transport: transport,
     makeVideoDerivativesFromFile: videoDerivativeMaker,
-    retry: options.retry,
-    controller: input.controller,
-    queue: [...input.files],
+    retry: engineOptions.retry,
+    controller: options.controller,
+    queue: [...options.files],
     answers: { latched: undefined, latest: undefined },
     hasSkippedFile: false,
     isBatchClosed: false,

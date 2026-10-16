@@ -1,4 +1,4 @@
-import { getRecordedCountFromLine } from "@/testing/surfaceHarness";
+import { getRecordedCountFromLine } from "@/testing/surfaceHarnessHelpers";
 import {
   act,
   fireEvent,
@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderTimeline } from "./TimelineSurface.fixtures";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import {
   answerBulkTimeline,
   tickBothTimelinePhotos,

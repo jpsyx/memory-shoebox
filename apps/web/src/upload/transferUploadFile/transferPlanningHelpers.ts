@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 /** Inputs for isLeaseLongEnoughForBytes. */
 type IsLeaseLongEnoughForBytesOptions = {
@@ -82,7 +82,7 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
  * part can use and the check can never ask for a new URL on every part.
  */
 export const FLOOR_BYTES_PER_SECOND =
-  appConfig.upload.transferFloorBytesPerSecond;
+  APP_CONFIG.upload.transferFloorBytesPerSecond;
 
 /** Headroom on an estimate: half again, plus ten seconds of latency. */
 const LIFETIME_SAFETY_FACTOR = 1.5;
@@ -156,7 +156,7 @@ export function getRemainingLifetimeMsFromReceipt(
     presignTtlSeconds?: number;
   }>,
 ): number {
-  const { presignTtlSeconds = appConfig.upload.presignTtlSeconds } = options;
+  const { presignTtlSeconds = APP_CONFIG.upload.presignTtlSeconds } = options;
   return options.receivedAtMs + presignTtlSeconds * 1000 - options.nowMs;
 }
 
@@ -183,8 +183,8 @@ export function isLeaseLongEnoughForBytes(
 /** Whether a fresh URL always outlives one part at the floor rate. */
 export function isPartPlanFeasible(
   options: Readonly<{ partSizeBytes: number; presignTtlSeconds: number }> = {
-    partSizeBytes: appConfig.upload.multipartPartSizeBytes,
-    presignTtlSeconds: appConfig.upload.presignTtlSeconds,
+    partSizeBytes: APP_CONFIG.upload.multipartPartSizeBytes,
+    presignTtlSeconds: APP_CONFIG.upload.presignTtlSeconds,
   },
 ): boolean {
   const neededMs = getRequiredLifetimeMsFromRate({
@@ -200,7 +200,7 @@ export function isPartPlanFeasible(
  * abandon grace, because nothing reaches the server while it waits.
  */
 export const OFFLINE_WAIT_CEILING_MS =
-  appConfig.upload.offlineWaitCeilingMinutes * 60_000;
+  APP_CONFIG.upload.offlineWaitCeilingMinutes * 60_000;
 
 /**
  * The longest one `429` is waited out for, whatever `retryAfterSeconds` says.

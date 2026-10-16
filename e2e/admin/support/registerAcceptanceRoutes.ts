@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { createMediaDelivery } from "../../../apps/server/src/media/createMediaDelivery.ts";
 import { makeMediaResponseFromFile } from "./makeMediaResponseFromFile.ts";
 import type { AcceptanceContext } from "./acceptance.types.ts";
@@ -23,7 +23,7 @@ function _registerMedia({
       if (!filename) {
         return reply.code(404).send();
       }
-      const path = fileURLToPath(
+      const path = fileUrlToPath(
         new URL(
           `../../fixtures/cartoon-media/web/${filename}`,
           import.meta.url,

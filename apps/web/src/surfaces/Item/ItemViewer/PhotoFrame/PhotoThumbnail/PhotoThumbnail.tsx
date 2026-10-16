@@ -1,7 +1,7 @@
 import { getPhotoCandidateFromViewport } from "@/media/getPhotoCandidateFromViewport/getPhotoCandidateFromViewport";
-import type { PhotoViewport } from "@/media/photoViewport";
+import type { PhotoViewport } from "@/media/photoViewportHelpers";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
-import classes from "@/system/system.module.css";
+import classes from "./PhotoThumbnail.module.css";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { type ReactNode } from "react";
 
@@ -24,7 +24,7 @@ export function PhotoThumbnail({
     />
   ) : (
     <MediaPlaceholder
-      className={classes.framePlaceholder}
+      className={classes.photoThumbnailPlaceholder}
       altText={media.altText}
       width={media.width}
       height={media.height}

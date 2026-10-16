@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
@@ -50,7 +50,8 @@ async function _expectDecodedPreviews(page: Page): Promise<void> {
   await PREVIEW_FIXTURES.reduce(async (previous, { filename, capturedOn }) => {
     await previous;
     const day = page.getByRole("region", { name: capturedOn, exact: true });
-    // A skipped pile has estimated height; align its day header, not its center.
+    // A skipped pile has estimated height; align its day header, not its
+    // center.
     await day.evaluate((element) => {
       element.scrollIntoView({ block: "start" });
     });
@@ -278,7 +279,7 @@ test("first selection on a cold development server retains every preview without
       }),
     ).toBe(documentStartedAt);
     if (process.env.CAPTURE_UPLOAD_PREVIEWS === "1") {
-      const directory = fileURLToPath(
+      const directory = fileUrlToPath(
         new URL("../../.playwright-mcp/upload-previews/", import.meta.url),
       );
       await mkdir(directory, { recursive: true });

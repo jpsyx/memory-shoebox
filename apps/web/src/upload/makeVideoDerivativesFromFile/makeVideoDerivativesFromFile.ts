@@ -33,10 +33,13 @@ import { makeNoPoster } from "./makeNoPoster";
  * @param purposes The requested sizes; defaults to poster and thumb.
  * @returns The derivatives made, possibly none, and the displayed size.
  */
-export async function makeVideoDerivativesFromFile(
-  file: Blob,
-  purposes: ReadonlyArray<"thumb" | "poster"> = ["poster", "thumb"],
-): Promise<VideoDerivativesResult> {
+export async function makeVideoDerivativesFromFile({
+  file,
+  purposes = ["poster", "thumb"],
+}: Readonly<{
+  file: Blob;
+  purposes?: ReadonlyArray<"thumb" | "poster">;
+}>): Promise<VideoDerivativesResult> {
   // The size is not known yet, so a tab that stays hidden past the cap
   // answers without one.
   if (!(await waitUntilReadyToCapture())) {

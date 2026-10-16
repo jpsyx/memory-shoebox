@@ -14,10 +14,13 @@ async function _observeNativePlay(video: Locator): Promise<void> {
   });
 }
 
-async function _expectKeyboardPlayback(
-  page: Page,
-  video: Locator,
-): Promise<void> {
+async function _expectKeyboardPlayback({
+  page,
+  video,
+}: {
+  page: Page;
+  video: Locator;
+}): Promise<void> {
   await _observeNativePlay(video);
   let expectedCalls = 0;
   for (const suffix of ["", " video"]) {
@@ -122,7 +125,7 @@ async function _expectKeyboardPlayback(
       await expect(video).toHaveJSProperty("paused", false);
       await page.getByRole("button", { name: "Pause", exact: true }).click();
       await expect(video).toHaveJSProperty("paused", true);
-      await _expectKeyboardPlayback(page, video);
+      await _expectKeyboardPlayback({ page, video });
     });
   });
 });

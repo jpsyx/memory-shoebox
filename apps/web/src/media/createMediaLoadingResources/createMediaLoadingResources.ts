@@ -1,7 +1,7 @@
 import {
   fetchMediaNeighbors,
   fetchMediaPreviews,
-} from "@/api/mediaPreview/mediaPreview";
+} from "@/api/mediaPreviewHelpers/mediaPreviewHelpers";
 import { createTimelineMemory } from "@/surfaces/Timeline/windowing/createTimelineMemory/createTimelineMemory";
 import type {
   MediaNeighborsRequest,
@@ -17,10 +17,7 @@ import {
   createMediaNavigation,
   type MediaNavigation,
 } from "../createMediaNavigation";
-import {
-  createMediaOperationGate,
-  type MediaOperationGate,
-} from "../createMediaOperationGate/createMediaOperationGate";
+import type { MediaLoadingLifetime } from "./createMediaLoadingLifetime";
 import { createMediaPrefetchScheduler } from "../createMediaPrefetchScheduler/createMediaPrefetchScheduler";
 import {
   createMediaPreviewStore,
@@ -31,30 +28,6 @@ import type {
   MediaPrefetchScheduler,
   SpeculativeMediaLoader,
 } from "../mediaPrefetch.types";
-
-/** Shared settlement only; no member metadata crosses this lifetime. */
-export type MediaLoadingLifetime = MediaOperationGate & {
-  /** Delays the next member's speculation until old owned work settles. */
-  retire: (work: ReadonlyArray<Promise<unknown>>) => void;
-};
-/** Owns the app-wide operation cap across member/provider replacement. */
-export function createMediaLoadingLifetime(): MediaLoadingLifetime {
-  const gate = createMediaOperationGate();
-  let retiredWork = Promise.resolve();
-  return {
-    run: (signal, operation) => {
-      const priorMember = retiredWork;
-      return gate.run(signal, async () => {
-        await priorMember;
-        signal.throwIfAborted();
-        return operation();
-      });
-    },
-    retire: (work) => {
-      retiredWork = Promise.allSettled([retiredWork, ...work]).then(() => {});
-    },
-  };
-}
 
 /** One member's media-only state and owned asynchronous operations. */
 export type MediaLoadingResources = {
@@ -72,10 +45,13 @@ export type MediaLoadingResources = {
   navigation: MediaNavigation;
   previews: MediaPreviewStore;
   /** Explicit urgency is independent of the safe representation purpose. */
-  readPreviews: (
-    request: Readonly<MediaPreviewRequest>,
-    priority?: "foreground" | "speculative",
-  ) => Promise<MediaPreview[]>;
+  readPreviews: ({
+    request,
+    priority,
+  }: Readonly<{
+    request: Readonly<MediaPreviewRequest>;
+    priority?: "foreground" | "speculative";
+  }>) => Promise<MediaPreview[]>;
   /** Safe neighboring media only, never an actual-detail cache read. */
   readNeighbors: (
     request: Readonly<MediaNeighborsRequest>,
@@ -94,13 +70,19 @@ type ResourceState = {
   requests: Set<AbortController>;
   work: Set<Promise<unknown>>;
   disposed: boolean;
-  navigation?: MediaNavigation;
-  leases?: MediaLeaseCoordinator;
-  thumbnails?: MediaLoadingResources["thumbnails"];
-  timeline?: ReturnType<typeof createTimelineMemory>;
+  navigation: MediaNavigation;
+  leases: MediaLeaseCoordinator;
+  thumbnails: MediaLoadingResources["thumbnails"];
+  timeline: ReturnType<typeof createTimelineMemory>;
 };
 
-function _track<T>(state: ResourceState, work: Promise<T>): Promise<T> {
+function _track<T>({
+  state,
+  work,
+}: {
+  state: Readonly<Pick<ResourceState, "work">>;
+  work: Promise<T>;
+}): Promise<T> {
   const tracked = work.finally(() => {
     state.work.delete(tracked);
   });
@@ -108,14 +90,17 @@ function _track<T>(state: ResourceState, work: Promise<T>): Promise<T> {
   return tracked;
 }
 
-async function _read<T>(
-  state: ResourceState,
+async function _read<T>({
+  state,
+  options,
+}: {
+  state: ResourceState;
   options: {
     request: (signal: AbortSignal) => Promise<T>;
     getPreviews: (response: T) => MediaPreview[];
     foreground: boolean;
-  },
-): Promise<T> {
+  };
+}): Promise<T> {
   if (state.disposed) {
     throw new DOMException("Media owner disposed", "AbortError");
   }
@@ -126,99 +111,118 @@ async function _read<T>(
     return options.request(controller.signal);
   };
   try {
-    const response = await _track(
+    const response = await _track({
       state,
-      options.foreground ? read() : state.lifetime.run(controller.signal, read),
-    );
+      work: options.foreground
+        ? read()
+        : state.lifetime.run({ signal: controller.signal, operation: read }),
+    });
     controller.signal.throwIfAborted();
-    state.previews.put(options.getPreviews(response), epoch);
+    state.previews.put({
+      previews: options.getPreviews(response),
+      epoch: epoch,
+    });
     return response;
   } finally {
     state.requests.delete(controller);
   }
 }
 
-function _readPreviews(
-  state: ResourceState,
-  request: Readonly<MediaPreviewRequest>,
-  priority: "foreground" | "speculative",
-): Promise<MediaPreview[]> {
-  return _read(state, {
-    request: (signal) => {
-      return fetchMediaPreviews(request, signal);
+function _readPreviews({
+  state,
+  request,
+  priority,
+}: {
+  state: ResourceState;
+  request: Readonly<MediaPreviewRequest>;
+  priority: "foreground" | "speculative";
+}): Promise<MediaPreview[]> {
+  return _read({
+    state,
+    options: {
+      request: (signal) => {
+        return fetchMediaPreviews({ request, signal });
+      },
+      getPreviews: (response) => {
+        return response;
+      },
+      foreground:
+        request.purpose === "selected-view" || priority === "foreground",
     },
-    getPreviews: (response) => {
-      return response;
-    },
-    foreground:
-      request.purpose === "selected-view" || priority === "foreground",
   });
 }
 
-function _readNeighbors(
-  state: ResourceState,
-  request: Readonly<MediaNeighborsRequest>,
-): Promise<MediaNeighborsResponse> {
-  return _read(state, {
-    request: (signal) => {
-      return fetchMediaNeighbors(request, signal);
+function _readNeighbors({
+  state,
+  request,
+}: {
+  state: ResourceState;
+  request: Readonly<MediaNeighborsRequest>;
+}): Promise<MediaNeighborsResponse> {
+  return _read({
+    state,
+    options: {
+      request: (signal) => {
+        return fetchMediaNeighbors({ request, signal });
+      },
+      getPreviews: (response) => {
+        return [...response.ahead, ...response.behind];
+      },
+      foreground: false,
     },
-    getPreviews: (response) => {
-      return [...response.ahead, ...response.behind];
-    },
-    foreground: false,
   });
 }
 
-function _clearWork(
-  state: ResourceState,
-  scheduler: Readonly<MediaPrefetchScheduler>,
-): void {
+function _clearWork({
+  state,
+  scheduler,
+}: {
+  state: ResourceState;
+  scheduler: Readonly<MediaPrefetchScheduler>;
+}): void {
   scheduler.clear();
   state.requests.forEach((controller) => {
     controller.abort();
   });
 }
 
-function _clearMember(
-  state: ResourceState,
-  scheduler: Readonly<MediaPrefetchScheduler>,
-): void {
-  state.timeline?.clear();
-  state.thumbnails?.reset();
-  state.leases?.clear();
-  state.navigation?.clear();
-  _clearWork(state, scheduler);
+function _clearMember({
+  state,
+  scheduler,
+}: {
+  state: ResourceState;
+  scheduler: Readonly<MediaPrefetchScheduler>;
+}): void {
+  state.timeline.clear();
+  state.thumbnails.reset();
+  state.leases.clear();
+  state.navigation.clear();
+  _clearWork({ state, scheduler });
   state.previews.clear();
   state.lifetime.retire([...state.work]);
 }
 
-function _dispose(
-  state: ResourceState,
-  scheduler: Readonly<MediaPrefetchScheduler>,
-): void {
-  if (!state.disposed) {
-    state.disposed = true;
-    _clearMember(state, scheduler);
-    scheduler.dispose();
-  }
-}
-
-function _makeSchedulerFromState(
-  state: ResourceState,
-  load: SpeculativeMediaLoader,
-): MediaPrefetchScheduler {
+function _makeSchedulerFromState({
+  state,
+  load,
+}: {
+  state: Readonly<Pick<ResourceState, "previews" | "lifetime" | "work">>;
+  load: SpeculativeMediaLoader;
+}): MediaPrefetchScheduler {
   return createMediaPrefetchScheduler({
-    load: (candidate, signal) => {
-      return _track(
+    load: ({ candidate, signal }) => {
+      return _track({
         state,
-        state.lifetime.run(signal, () => {
-          if (Date.parse(candidate.source.expiresAt) <= Date.now()) {
-            throw new Error("Speculative source expired while queued");
-          }
-          return load(candidate, signal);
+        work: state.lifetime.run({
+          signal: signal,
+          operation: () => {
+            if (Date.parse(candidate.source.expiresAt) <= Date.now()) {
+              throw new Error("Speculative source expired while queued");
+            }
+            return load({ candidate: candidate, signal: signal });
+          },
         }),
-      );
+      });
     },
     clock: Date.now,
     getEpoch: state.previews.captureEpoch,
@@ -234,41 +238,34 @@ export function createMediaLoadingResources(
   }>,
 ): MediaLoadingResources {
   const previews = createMediaPreviewStore(options.memberId);
-  const state: ResourceState = {
-    previews: {
-      ...previews,
-      remove: (itemId) => {
-        previews.remove(itemId);
-        state.navigation?.clear();
-        scheduler.clear();
-      },
-      clear: () => {
-        previews.clear();
-        state.navigation?.clear();
-        scheduler.clear();
-      },
-    },
-    lifetime: options.lifetime,
-    requests: new Set(),
-    work: new Set(),
-    disposed: false,
-  };
-  const scheduler = _makeSchedulerFromState(
-    state,
-    options.load ?? loadSpeculativeMedia,
-  );
+  const work = new Set<Promise<unknown>>();
+  const scheduler = _makeSchedulerFromState({
+    state: { previews, lifetime: options.lifetime, work },
+    load: options.load ?? loadSpeculativeMedia,
+  });
   const navigation = createMediaNavigation(scheduler);
-  state.navigation = navigation;
+  const ownedPreviews: MediaPreviewStore = {
+    ...previews,
+    remove: (itemId) => {
+      previews.remove(itemId);
+      navigation.clear();
+      scheduler.clear();
+    },
+    clear: () => {
+      previews.clear();
+      navigation.clear();
+      scheduler.clear();
+    },
+  };
   const leases = createMediaLeaseCoordinator({
-    store: state.previews,
+    store: ownedPreviews,
     onAuthorizationLoss: () => {
-      return _clearMember(state, scheduler);
+      return _clearMember({ state, scheduler });
     },
     read: (request) => {
-      return _readPreviews(state, request, "foreground");
+      return _readPreviews({ state, request, priority: "foreground" });
     },
   });
-  state.leases = leases;
   const eagerIds = new Set<string>();
   let isInitialViewport = true;
   const thumbnails = {
@@ -290,9 +287,18 @@ export function createMediaLoadingResources(
       isInitialViewport = false;
     },
   };
-  state.thumbnails = thumbnails;
   const timeline = createTimelineMemory();
-  state.timeline = timeline;
+  const state: ResourceState = {
+    previews: ownedPreviews,
+    lifetime: options.lifetime,
+    requests: new Set(),
+    work,
+    disposed: false,
+    navigation,
+    leases,
+    thumbnails,
+    timeline,
+  };
   return {
     timeline,
     thumbnails,
@@ -302,19 +308,23 @@ export function createMediaLoadingResources(
     previews: state.previews,
     scheduler,
     clearWork: () => {
-      _clearWork(state, scheduler);
+      _clearWork({ state, scheduler });
     },
-    readPreviews: (request, priority = "speculative") => {
-      return _readPreviews(state, request, priority);
+    readPreviews: ({ request, priority = "speculative" }) => {
+      return _readPreviews({ state, request, priority });
     },
     clearMember: () => {
-      _clearMember(state, scheduler);
+      _clearMember({ state, scheduler });
     },
     readNeighbors: (request) => {
-      return _readNeighbors(state, request);
+      return _readNeighbors({ state, request });
     },
     dispose: () => {
-      _dispose(state, scheduler);
+      if (!state.disposed) {
+        state.disposed = true;
+        _clearMember({ state, scheduler });
+        scheduler.dispose();
+      }
     },
   };
 }

@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 
 /** Inputs for _wireRequest. */
 type WireRequestOptions = {
@@ -72,11 +72,11 @@ export class UploadNetworkError extends Error {
  * so the transfer's ordinary retry sends that part, or that file, again.
  */
 export const STALLED_PUT_TIMEOUT_MS =
-  appConfig.upload.stalledPutTimeoutSeconds * 1000;
+  APP_CONFIG.upload.stalledPutTimeoutSeconds * 1000;
 
 /** One PUT's hard duration cap, shared with the server's cleanup window. */
 export const MAXIMUM_PUT_DURATION_MS =
-  appConfig.upload.presignTtlSeconds * 1000;
+  APP_CONFIG.upload.presignTtlSeconds * 1000;
 
 /** Starts one timeout; only the stall timeout is restarted on progress. */
 function _startPutTimer(

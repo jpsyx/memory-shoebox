@@ -3,12 +3,12 @@ import {
   makeVisualFingerprintFromRgba,
   VISUAL_FINGERPRINT_SIDE,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 sharp.concurrency(1);
 sharp.cache(false);
 const pixels = await sharp(process.argv[2], {
-  limitInputPixels: appConfig.mediaProcessing.photoPixels,
+  limitInputPixels: APP_CONFIG.mediaProcessing.photoPixels,
   pages: 1,
   failOn: "error",
 })

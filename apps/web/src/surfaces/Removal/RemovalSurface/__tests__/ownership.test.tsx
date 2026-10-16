@@ -1,6 +1,10 @@
 import { makeItemSummaryFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
-import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
+import {
+  recordedUrls,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarnessHelpers";
 import { act, screen, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { HISTORY, ITEM, OWN, RESPONSE } from "./renderRemovalSurface";
@@ -10,14 +14,16 @@ it("keeps new-item history isolated from a delayed old-item read", async () => {
   });
   const { hold, letGo } = makeHold();
   respondWith({
-    [`GET ${HISTORY}`]: {
-      status: 200,
-      body: { ...RESPONSE, removalRequests: [OWN] },
-      waitFor: hold,
-    },
-    [`GET /api/items/${other.itemId}/removal-requests`]: {
-      status: 200,
-      body: { ...RESPONSE, item: other, canRequestRemoval: false },
+    routes: {
+      [`GET ${HISTORY}`]: {
+        status: 200,
+        body: { ...RESPONSE, removalRequests: [OWN] },
+        waitFor: hold,
+      },
+      [`GET /api/items/${other.itemId}/removal-requests`]: {
+        status: 200,
+        body: { ...RESPONSE, item: other, canRequestRemoval: false },
+      },
     },
   });
   const { router } = renderAt(`/items/${ITEM.itemId}/removal`);

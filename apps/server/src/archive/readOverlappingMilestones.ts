@@ -1,5 +1,14 @@
 import type { MilestoneRef } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
+/** Milestone Day Window contract. */
+export type MilestoneDayWindow = {
+  fromDay: string | undefined;
+  untilDay: string | undefined;
+  beforeDay: string | undefined;
+  sinceDay: string | undefined;
+  afterDay?: string;
+  throughDay?: string;
+};
 
 /**
  * Query 2 of a timeline page: the occasions covering the window.
@@ -9,7 +18,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
  * `data-models.md` § `items` refuses: a day is `GROUP BY captured_on`, and the
  * one cost of that is this query.
  *
- * **A milestone has no visibility of its own** (Decision 5), so no predicate
+ * **A milestone has no visibility of its own**, so no predicate
  * appears here: the occasion and its name are visible to everybody and only
  * its photographs are restricted.
  *
@@ -22,15 +31,9 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
  * @param options.afterDay The newer cursor's exclusive lower bound.
  * @param options.throughDay The newer window's inclusive ceiling.
  */
-export async function readOverlappingMilestones(options: {
-  database: DatabaseExecutor;
-  fromDay: string | undefined;
-  untilDay: string | undefined;
-  beforeDay: string | undefined;
-  sinceDay: string | undefined;
-  afterDay?: string;
-  throughDay?: string;
-}): Promise<MilestoneRef[]> {
+export async function readOverlappingMilestones(
+  options: Readonly<MilestoneDayWindow & { database: DatabaseExecutor }>,
+): Promise<MilestoneRef[]> {
   const all = options.database
     .selectFrom("milestones")
     .select([

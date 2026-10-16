@@ -1,4 +1,4 @@
-import { makePreviewHarnessFromOptions } from "@/upload/createUploadPreviewQueue/__tests__/uploadPreviewTestHelpers";
+import { makePreviewHarnessFromOptions } from "@/upload/createUploadPreviewQueue/__tests__/makePreviewHarnessFromOptions";
 import { makeUploadFileFromPosition } from "@/upload/createUploadSessionController/__tests__/uploadSurfaceFixtureHelpers";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";

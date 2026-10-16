@@ -3,7 +3,10 @@ import { observeWindowOffset, type Virtualizer } from "@tanstack/react-virtual";
 
 type WindowVirtualizer = Virtualizer<Window, HTMLElement>;
 
-/** Acknowledges a completed geometry correction through Virtual's public observer. */
+/**
+ * Acknowledges a completed geometry correction through Virtual's public
+ * observer.
+ */
 export function useTimelineScroll(): {
   observeOffset: typeof observeWindowOffset;
   correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void;
@@ -16,7 +19,9 @@ export function useTimelineScroll(): {
       readBack.current = callback;
       const stop = observeWindowOffset(instance, callback);
       return () => {
-        if (readBack.current === callback) readBack.current = undefined;
+        if (readBack.current === callback) {
+          readBack.current = undefined;
+        }
         stop?.();
       };
     },
@@ -25,9 +30,11 @@ export function useTimelineScroll(): {
   const correctOffset = useCallback(
     (virtualizer: WindowVirtualizer, offset: number) => {
       virtualizer.scrollToOffset(offset, { behavior: "auto" });
-      // This is a one-shot layout correction. Adopt actual browser readback before
+      // This is a one-shot layout correction. Adopt actual browser readback
+      // before
       // a later measurement, then retire its absolute target so it cannot undo
-      // the measurement's own compensation. Ordinary scrolling keeps its observer.
+      // the measurement's own compensation. Ordinary scrolling keeps its
+      // observer.
       readBack.current?.(window.scrollY, virtualizer.isScrolling);
       virtualizer.cancelScroll();
     },

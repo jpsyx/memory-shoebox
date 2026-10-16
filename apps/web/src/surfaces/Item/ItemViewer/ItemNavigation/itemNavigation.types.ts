@@ -1,11 +1,13 @@
 import type { ItemDetail } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 /** Direction through the timeline, including the frames inside each stack. */
 export type ItemDirection = "previous" | "next";
 
-/** An exact item target, including the server-selected directional burst edge. */
+/**
+ * An exact item target, including the server-selected directional burst edge.
+ */
 export type ItemNavigationTarget = { itemId: string };
 
 /** Inputs for finding neighbours without opening their item permalinks. */

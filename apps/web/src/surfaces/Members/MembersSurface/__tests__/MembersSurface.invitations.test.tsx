@@ -2,7 +2,7 @@ import { LIMITS } from "@memory-shoebox/shared";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   INVITED,
   renderMembers,
@@ -89,7 +89,7 @@ describe("Members administration", () => {
     expect(
       screen.queryByText("Enter a valid email address."),
     ).not.toBeInTheDocument();
-    expect(countCallsTo("POST", "/api/members")).toBe(0);
+    expect(countCallsTo({ method: "POST", path: "/api/members" })).toBe(0);
   });
   it("prefills a suggested name but preserves a deliberate edit when another suggestion arrives", async () => {
     const release = _renderDelayedSuggestions();
@@ -107,7 +107,10 @@ describe("Members administration", () => {
     release();
     await waitFor(() => {
       return expect(
-        countCallsTo("GET", "/api/member-suggestions?email=mama%40example.com"),
+        countCallsTo({
+          method: "GET",
+          path: "/api/member-suggestions?email=mama%40example.com",
+        }),
       ).toBeGreaterThan(0);
     });
     expect(screen.getByLabelText("What to call them")).toHaveValue("Tío Tomás");
@@ -134,7 +137,7 @@ describe("Members administration", () => {
     expect(
       await screen.findByText("Enter a valid email address."),
     ).toBeVisible();
-    expect(countCallsTo("POST", "/api/members")).toBe(0);
+    expect(countCallsTo({ method: "POST", path: "/api/members" })).toBe(0);
     await user.type(screen.getByLabelText("Their email"), "new@example.com");
     await user.type(screen.getByLabelText("What to call them"), "New person");
     await user.click(
@@ -218,7 +221,10 @@ describe("Members administration", () => {
       return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
     expect(
-      countCallsTo("DELETE", `/api/members/${INVITED.memberId}/invitation`),
+      countCallsTo({
+        method: "DELETE",
+        path: `/api/members/${INVITED.memberId}/invitation`,
+      }),
     ).toBe(1);
   });
   it("disables the invitation address and cancellation while sending", async () => {

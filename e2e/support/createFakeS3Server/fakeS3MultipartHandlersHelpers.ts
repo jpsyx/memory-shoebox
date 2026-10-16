@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUuid } from "node:crypto";
 
 import type {
   FakeS3Exchange,
@@ -25,7 +25,7 @@ export function answerFakeS3CreateMultipartUpload(
   exchange: FakeS3Exchange,
 ): void {
   const { request, response, state, key } = exchange;
-  const uploadId = randomUUID();
+  const uploadId = randomUuid();
   state.uploads.set(uploadId, {
     key,
     contentType: request.headers["content-type"] ?? "binary/octet-stream",
@@ -34,11 +34,7 @@ export function answerFakeS3CreateMultipartUpload(
   sendFakeS3Xml({
     response,
     status: 200,
-    xml:
-      `<InitiateMultipartUploadResult xmlns="${S3_NAMESPACE}">` +
-      `<Bucket>${makeXmlTextFromPlainText(state.bucketName)}</Bucket>` +
-      `<Key>${makeXmlTextFromPlainText(key)}</Key>` +
-      `<UploadId>${uploadId}</UploadId></InitiateMultipartUploadResult>`,
+    xml: `<InitiateMultipartUploadResult xmlns="${S3_NAMESPACE}"><Bucket>${makeXmlTextFromPlainText(state.bucketName)}</Bucket><Key>${makeXmlTextFromPlainText(key)}</Key><UploadId>${uploadId}</UploadId></InitiateMultipartUploadResult>`,
   });
 }
 
@@ -157,12 +153,7 @@ export function answerFakeS3CompleteMultipartUpload(
   sendFakeS3Xml({
     response,
     status: 200,
-    xml:
-      `<CompleteMultipartUploadResult xmlns="${S3_NAMESPACE}">` +
-      `<Bucket>${makeXmlTextFromPlainText(state.bucketName)}</Bucket>` +
-      `<Key>${makeXmlTextFromPlainText(key)}</Key>` +
-      `<ETag>${makeXmlTextFromPlainText(etag)}</ETag>` +
-      `</CompleteMultipartUploadResult>`,
+    xml: `<CompleteMultipartUploadResult xmlns="${S3_NAMESPACE}"><Bucket>${makeXmlTextFromPlainText(state.bucketName)}</Bucket><Key>${makeXmlTextFromPlainText(key)}</Key><ETag>${makeXmlTextFromPlainText(etag)}</ETag></CompleteMultipartUploadResult>`,
   });
 }
 
@@ -223,10 +214,13 @@ export function answerFakeS3ListMultipartUploads(
       );
     })
     .sort((first, second) => {
-      if (first.key !== second.key) {
-        return first.key < second.key ? -1 : 1;
-      }
-      return first.uploadId < second.uploadId ? -1 : 1;
+      return first.key !== second.key
+        ? first.key < second.key
+          ? -1
+          : 1
+        : first.uploadId < second.uploadId
+          ? -1
+          : 1;
     });
   const page = uploads.slice(0, maximum);
   const isTruncated = uploads.length > page.length;

@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PrefetchCandidate } from "../mediaPrefetch.types";
 import { loadSpeculativeMedia } from "./loadSpeculativeMedia";
@@ -20,7 +21,10 @@ const CANDIDATE: PrefetchCandidate = {
   },
 };
 
-function _nativeImage() {
+function _nativeImage(): {
+  image: HTMLImageElement;
+  decode: Mock<HTMLImageElement["decode"]>;
+} {
   const image = document.createElement("img");
   const decode = vi.fn().mockResolvedValue(undefined);
   image.decode = decode;
@@ -48,10 +52,10 @@ describe("native speculative image", () => {
       ...CANDIDATE,
       source: { ...CANDIDATE.source, expiresAt: "2099-01-01T00:00:00Z" },
     };
-    const pending = loadSpeculativeMedia(
-      candidate,
-      new AbortController().signal,
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: candidate,
+      signal: new AbortController().signal,
+    });
     image.dispatchEvent(new Event("load"));
     completion.resolve();
     const media = await pending;
@@ -64,10 +68,10 @@ describe("native speculative image", () => {
   });
   it("uses the exact later-rendered URL and default CORS/referrer mode", async () => {
     const { image, decode } = _nativeImage();
-    const pending = loadSpeculativeMedia(
-      CANDIDATE,
-      new AbortController().signal,
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: CANDIDATE,
+      signal: new AbortController().signal,
+    });
     expect(image.src).toBe(CANDIDATE.source.url);
     expect(image.hasAttribute("crossorigin")).toBe(false);
     expect(image.hasAttribute("referrerpolicy")).toBe(false);
@@ -83,11 +87,12 @@ describe("native speculative image", () => {
     const { image, decode } = _nativeImage();
     const controller = new AbortController();
     let settled = false;
-    const pending = loadSpeculativeMedia(CANDIDATE, controller.signal).finally(
-      () => {
-        settled = true;
-      },
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: CANDIDATE,
+      signal: controller.signal,
+    }).finally(() => {
+      settled = true;
+    });
     const rejected = expect(pending).rejects.toMatchObject({
       name: "AbortError",
     });
@@ -103,10 +108,10 @@ describe("native speculative image", () => {
 
   it("releases a native image on error without decoding", async () => {
     const { image, decode } = _nativeImage();
-    const pending = loadSpeculativeMedia(
-      CANDIDATE,
-      new AbortController().signal,
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: CANDIDATE,
+      signal: new AbortController().signal,
+    });
     const rejected = expect(pending).rejects.toThrow();
     image.dispatchEvent(new Event("error"));
     await rejected;
@@ -124,11 +129,12 @@ describe("native speculative image", () => {
     });
     const controller = new AbortController();
     let settled = false;
-    const pending = loadSpeculativeMedia(CANDIDATE, controller.signal).finally(
-      () => {
-        settled = true;
-      },
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: CANDIDATE,
+      signal: controller.signal,
+    }).finally(() => {
+      settled = true;
+    });
     const rejected = expect(pending).rejects.toMatchObject({
       name: "AbortError",
     });
@@ -143,10 +149,10 @@ describe("native speculative image", () => {
 
   it("does not explicitly decode posters or distant photos", async () => {
     const { image, decode } = _nativeImage();
-    const pending = loadSpeculativeMedia(
-      { ...CANDIDATE, decode: false },
-      new AbortController().signal,
-    );
+    const pending = loadSpeculativeMedia({
+      candidate: { ...CANDIDATE, decode: false },
+      signal: new AbortController().signal,
+    });
     image.dispatchEvent(new Event("load"));
     const media = await pending;
     expect(decode).not.toHaveBeenCalled();
@@ -157,13 +163,16 @@ describe("native speculative image", () => {
   it("refuses metadata and already-aborted loads without allocating an image", async () => {
     _nativeImage();
     await expect(
-      loadSpeculativeMedia(
-        { ...CANDIDATE, kind: "video-metadata" },
-        new AbortController().signal,
-      ),
+      loadSpeculativeMedia({
+        candidate: { ...CANDIDATE, kind: "video-metadata" },
+        signal: new AbortController().signal,
+      }),
     ).rejects.toThrow();
     await expect(
-      loadSpeculativeMedia(CANDIDATE, AbortSignal.abort()),
+      loadSpeculativeMedia({
+        candidate: CANDIDATE,
+        signal: AbortSignal.abort(),
+      }),
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(Image).not.toHaveBeenCalled();
   });

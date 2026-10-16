@@ -1,5 +1,5 @@
 import { getRecordedRequests } from "@/testing/fetchStubHelpers";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import { renderAt, respondWith } from "@/testing/surfaceHarnessHelpers";
 import type { RemovalRequestDto } from "@memory-shoebox/shared";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,7 +23,9 @@ function _installRequiresAFreshAskAgainAfterAAnswers0(): {
     },
   };
 
-  respondWith({ [`GET ${HISTORY}`]: { status: 200, body: RESPONSE } });
+  respondWith({
+    routes: { [`GET ${HISTORY}`]: { status: 200, body: RESPONSE } },
+  });
   return responseState;
 }
 
@@ -217,13 +219,15 @@ it("requires a fresh Ask again after a second request is sent and withdrawn", as
 });
 it("renders returned withdrawal even when refreshed ask authority stays false", async () => {
   respondWith({
-    [`GET ${HISTORY}`]: {
-      status: 200,
-      body: { ...RESPONSE, removalRequests: [OWN], canRequestRemoval: false },
-    },
-    [`POST /api/removal-requests/${OWN.requestId}/withdraw`]: {
-      status: 200,
-      body: { ...OWN, state: "withdrawn", canWithdraw: false },
+    routes: {
+      [`GET ${HISTORY}`]: {
+        status: 200,
+        body: { ...RESPONSE, removalRequests: [OWN], canRequestRemoval: false },
+      },
+      [`POST /api/removal-requests/${OWN.requestId}/withdraw`]: {
+        status: 200,
+        body: { ...OWN, state: "withdrawn", canWithdraw: false },
+      },
     },
   });
   renderAt(`/items/${ITEM.itemId}/removal`);

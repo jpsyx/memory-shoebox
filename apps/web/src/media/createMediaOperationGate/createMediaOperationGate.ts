@@ -1,14 +1,26 @@
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 /** Coordinates speculative metadata and byte operations across owners. */
 export type MediaOperationGate = {
   /** Queued aborts never start; active aborts wait for real settlement. */
-  run: <T>(signal: AbortSignal, operation: () => Promise<T>) => Promise<T>;
+  run: <T>({
+    signal,
+    operation,
+  }: Readonly<{
+    signal: AbortSignal;
+    operation: () => Promise<T>;
+  }>) => Promise<T>;
 };
 
 type GateState = { active: number; waiting: Set<() => void> };
 
-function _acquire(state: GateState, signal: AbortSignal): Promise<void> {
+function _acquire({
+  state,
+  signal,
+}: {
+  state: GateState;
+  signal: AbortSignal;
+}): Promise<void> {
   return new Promise((resolve, reject) => {
     const onAbort = () => {
       state.waiting.delete(start);
@@ -22,7 +34,7 @@ function _acquire(state: GateState, signal: AbortSignal): Promise<void> {
     };
     if (signal.aborted) {
       reject(signal.reason);
-    } else if (state.active < appConfig.media.prefetch.maxOperations) {
+    } else if (state.active < APP_CONFIG.media.prefetch.maxOperations) {
       start();
     } else {
       state.waiting.add(start);
@@ -35,8 +47,8 @@ function _acquire(state: GateState, signal: AbortSignal): Promise<void> {
 export function createMediaOperationGate(): MediaOperationGate {
   const state: GateState = { active: 0, waiting: new Set() };
   return {
-    run: async (signal, operation) => {
-      await _acquire(state, signal);
+    run: async ({ signal, operation }) => {
+      await _acquire({ state, signal });
       try {
         signal.throwIfAborted();
         return await operation();

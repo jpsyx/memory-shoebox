@@ -14,11 +14,20 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as playbackModule from "./VideoConversation/useVideoPlayback/useVideoPlayback";
-import { getSourceRenewalFromVideo } from "./VideoConversation/useVideoSourceRenewal/useVideoSourceRenewal";
+import { getSourceRenewalFromVideo } from "./VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
+import type { MockInstance } from "vitest";
+
+type PendingVideoFixture = {
+  video: HTMLVideoElement;
+  field: HTMLElement;
+  pause: MockInstance<HTMLVideoElement["pause"]>;
+  play: MockInstance<HTMLVideoElement["play"]>;
+  view: ReturnType<typeof renderItem>;
+};
 
 const useRealPlayback = playbackModule.useVideoPlayback;
 let playback: playbackModule.VideoPlayback;
-const controls = [
+const CONTROLS = [
   { surface: "toolbar", key: "{Enter}", paused: "Play", playing: "Pause" },
   { surface: "toolbar", key: " ", paused: "Play", playing: "Pause" },
   {
@@ -92,7 +101,9 @@ function _respond(): string {
   return renewed.playback.url;
 }
 
-async function _pendingVideo(isInitiallyPaused: boolean) {
+async function _pendingVideo(
+  isInitiallyPaused: boolean,
+): Promise<PendingVideoFixture> {
   const renewedUrl = _respond();
   const view = renderItem(ITEM_ID);
   const field = await screen.findByRole("textbox", { name: "Write a comment" });
@@ -130,17 +141,26 @@ async function _pendingVideo(isInitiallyPaused: boolean) {
   return { video, field, pause, play, view };
 }
 
-async function _activate(name: string, key: string): Promise<void> {
+async function _activate({
+  name,
+  key,
+}: {
+  name: string;
+  key: string;
+}): Promise<void> {
   const button = screen.getByRole("button", { name });
   button.focus();
   expect(button).toHaveFocus();
   await userEvent.keyboard(key);
 }
 
-async function _expectExplicitRetry(
-  container: HTMLElement,
-  failedVideo: HTMLVideoElement,
-): Promise<void> {
+async function _expectExplicitRetry({
+  container,
+  failedVideo,
+}: {
+  container: HTMLElement;
+  failedVideo: HTMLVideoElement;
+}): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Try again" }));
   await waitFor(() => {
     expect(container.querySelector("video")).not.toBe(failedVideo);
@@ -187,25 +207,28 @@ describe("real video button keyboard renewal ownership", () => {
       if (input === "pointer") {
         await userEvent.click(button);
       } else {
-        await _activate("Play", input);
+        await _activate({ name: "Play", key: input });
       }
       expect(play).not.toHaveBeenCalled();
       expect(selectPlayback).not.toHaveBeenCalled();
       expect(beforePlay).not.toHaveBeenCalled();
       expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(1);
       expect(button).toHaveAttribute("aria-disabled", "true");
-      await _expectExplicitRetry(view.container, video);
+      await _expectExplicitRetry({
+        container: view.container,
+        failedVideo: video,
+      });
     },
   );
 
-  it.each(controls)(
+  it.each(CONTROLS)(
     "$surface $key pause supersedes queued seek-and-play and retains its comment time",
     async (control) => {
       const { video, field, pause, play } = await _pendingVideo(false);
       act(() => {
-        playback.seek(3, true);
+        playback.seek({ seconds: 3, shouldPlay: true });
       });
-      await _activate(control.playing, control.key);
+      await _activate({ name: control.playing, key: control.key });
       expect(pause).toHaveBeenCalledOnce();
       expect(video.paused).toBe(true);
       expect(video.currentTime).toBe(0);
@@ -222,17 +245,17 @@ describe("real video button keyboard renewal ownership", () => {
       expect(
         getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
       ).toEqual({ body: "Keyboard moment.", atSeconds: 3 });
-      await _activate(control.paused, control.key);
+      await _activate({ name: control.paused, key: control.key });
       expect(play).toHaveBeenCalledOnce();
       expect(video.paused).toBe(false);
     },
   );
 
-  it.each(controls)(
+  it.each(CONTROLS)(
     "$surface $key play awaits replacement readiness and activates exactly once",
     async (control) => {
       const { video, play } = await _pendingVideo(true);
-      await _activate(control.paused, control.key);
+      await _activate({ name: control.paused, key: control.key });
       expect(play).not.toHaveBeenCalled();
       await act(async () => {
         fireEvent.loadedMetadata(video);
@@ -242,11 +265,11 @@ describe("real video button keyboard renewal ownership", () => {
     },
   );
 
-  it.each(controls)(
+  it.each(CONTROLS)(
     "retires pending $surface $key play with the actual consumer",
     async (control) => {
       const { video, play, view } = await _pendingVideo(true);
-      await _activate(control.paused, control.key);
+      await _activate({ name: control.paused, key: control.key });
       view.unmount();
       await act(async () => {
         fireEvent.loadedMetadata(video);

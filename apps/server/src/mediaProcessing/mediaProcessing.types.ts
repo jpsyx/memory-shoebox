@@ -6,13 +6,18 @@ import type { MediaDecodeCoordinator } from "./createMediaDecodeCoordinator.ts";
 import type { MediaRuntimeCapabilities } from "./runtime/mediaRuntime.types.ts";
 import type { ProcessedRendition } from "./recipes/mediaRecipes.types.ts";
 
-/** Catalog source snapshot; actual original identity is fenced again at commit. */
+/**
+ * Catalog source snapshot; actual original identity is fenced again at commit.
+ */
 export type MediaProcessingSource = {
   key: string;
   byteSize: number;
   kind: "photo" | "video";
 };
-/** Runtime keeps owned files alive through upload/publication, then disposes them. */
+/**
+ * Runtime keeps owned files alive through upload/publication, then disposes
+ * them.
+ */
 export type MediaProcessingSourceOptions = {
   b2: B2Client;
   source: MediaProcessingSource;
@@ -28,12 +33,16 @@ export type MediaProcessingRuntime = {
     options: Readonly<MediaProcessingSourceOptions>,
   ) => Promise<void>;
   /** Automatic fingerprint decoding uses the same mandatory isolated runner. */
-  makeFingerprint: (
-    bytes: Uint8Array,
-    signal: AbortSignal,
-  ) => Promise<string | undefined>;
+  makeFingerprint: ({
+    bytes,
+    signal,
+  }: Readonly<{ bytes: Uint8Array; signal: AbortSignal }>) => Promise<
+    string | undefined
+  >;
 };
-/** Existing scheduler owns ticks and drain; this job owns one durable attempt. */
+/**
+ * Existing scheduler owns ticks and drain; this job owns one durable attempt.
+ */
 export type MediaProcessingJobOptions = {
   database: Kysely<Database>;
   b2: B2Client;

@@ -1,3 +1,4 @@
+import type { MediaPreview } from "@memory-shoebox/shared";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { act, render } from "@testing-library/react";
 import { StrictMode, useEffect, type ReactNode } from "react";
@@ -14,7 +15,7 @@ const PREVIEW = {
   width: DETAIL.media.width,
   height: DETAIL.media.height,
   media: DETAIL.media,
-};
+} satisfies MediaPreview;
 
 type Props = { onResources: (resources: MediaLoadingResources) => void };
 function Observer({ onResources }: Props): ReactNode {
@@ -45,17 +46,17 @@ describe("media loading provider", () => {
     };
     const view = render(tree("first"));
     const first = observed[0]!;
-    first.previews.put([PREVIEW]);
+    first.previews.put({ previews: [PREVIEW] });
     const epoch = first.previews.captureEpoch();
     view.rerender(tree("second"));
     await act(async () => {});
     const second = observed[1]!;
     expect(first.previews.read(ITEM_ID)).toBeUndefined();
-    first.previews.put([PREVIEW], epoch);
-    second.previews.put([PREVIEW], epoch);
+    first.previews.put({ previews: [PREVIEW], epoch: epoch });
+    second.previews.put({ previews: [PREVIEW], epoch: epoch });
     expect(first.previews.read(ITEM_ID)).toBeUndefined();
     expect(second.previews.read(ITEM_ID)).toBeUndefined();
-    second.previews.put([PREVIEW]);
+    second.previews.put({ previews: [PREVIEW] });
     view.unmount();
     await act(async () => {});
     expect(second.previews.read(ITEM_ID)).toBeUndefined();
@@ -85,10 +86,10 @@ describe("media loading provider", () => {
     );
     const view = render(tree("/items/first"));
     const resources = observed[0]!;
-    resources.previews.put([PREVIEW]);
+    resources.previews.put({ previews: [PREVIEW] });
     const schedule = () => {
-      return resources.scheduler.schedule(
-        [
+      return resources.scheduler.schedule({
+        candidates: [
           {
             itemId: ITEM_ID,
             rank: 0,
@@ -100,14 +101,14 @@ describe("media loading provider", () => {
             },
           },
         ],
-        {
+        environment: {
           memberId: "first",
           selectionKey: "first",
           visible: true,
           saveData: false,
           effectiveType: "4g",
         },
-      );
+      });
     };
     schedule();
     view.rerender(tree("/settings"));
@@ -156,8 +157,10 @@ describe("media loading provider", () => {
     const resources = observed.at(-1)!;
     await expect(
       resources.readPreviews({
-        itemIds: [ITEM_ID],
-        purpose: "speculative-preview",
+        request: {
+          itemIds: [ITEM_ID],
+          purpose: "speculative-preview",
+        },
       }),
     ).resolves.toEqual([PREVIEW]);
     expect(resources.previews.read(ITEM_ID)).toEqual(PREVIEW);
@@ -188,8 +191,10 @@ describe("media loading provider", () => {
         first = resources;
       } else {
         secondRead = resources.readPreviews({
-          itemIds: [ITEM_ID],
-          purpose: "speculative-preview",
+          request: {
+            itemIds: [ITEM_ID],
+            purpose: "speculative-preview",
+          },
         });
       }
     };
@@ -201,8 +206,8 @@ describe("media loading provider", () => {
       );
     };
     const view = render(tree("first"));
-    first!.scheduler.schedule(
-      [
+    first!.scheduler.schedule({
+      candidates: [
         {
           itemId: ITEM_ID,
           rank: 0,
@@ -214,14 +219,14 @@ describe("media loading provider", () => {
           },
         },
       ],
-      {
+      environment: {
         memberId: "first",
         selectionKey: "first",
         visible: true,
         saveData: false,
         effectiveType: "4g",
       },
-    );
+    });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(250);
     });

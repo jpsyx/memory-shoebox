@@ -1,3 +1,5 @@
+import type { Selectable } from "kysely";
+import type { Database } from "../src/db/types/db.types.ts";
 // apps/server/test/writeArchivePlan.test.ts
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../src/db/client.ts";
@@ -13,7 +15,14 @@ import {
 } from "./helpers/seedHelpers/miscSeedHelpers.ts";
 import { NOW } from "./helpers/seedHelpers/seedTime.ts";
 
-async function _seededCatalog() {
+type SeededArchiveCatalog = {
+  database: ReturnType<typeof createDatabase>;
+  written: Awaited<ReturnType<typeof writeArchivePlan>>;
+  uploaderMemberId: string;
+  viewerMemberId: string;
+};
+
+async function _seededCatalog(): Promise<SeededArchiveCatalog> {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const uploader = await seedMember({
@@ -63,7 +72,7 @@ async function _writePriorArchiveHistory(
     requestedByMemberId: viewerMemberId,
     itemUploaderMemberId: uploaderMemberId,
   });
-  const commentId = await _writePriorConversation(catalog, item.id);
+  const commentId = await _writePriorConversation({ catalog, itemId: item.id });
   await insertSession(database, { memberId: viewerMemberId });
   await insertOutboundEmail(database, {
     kind: "removal_request",
@@ -79,10 +88,13 @@ async function _writePriorArchiveHistory(
   });
 }
 
-async function _writePriorConversation(
-  catalog: Awaited<ReturnType<typeof _seededCatalog>>,
-  itemId: string,
-): Promise<string> {
+async function _writePriorConversation({
+  catalog,
+  itemId,
+}: {
+  catalog: Awaited<ReturnType<typeof _seededCatalog>>;
+  itemId: string;
+}): Promise<string> {
   const { database, uploaderMemberId, viewerMemberId } = catalog;
   const commentId = await insertComment(database, {
     itemId,
@@ -113,7 +125,11 @@ async function _writePriorConversation(
 
 async function _getPreservedRows(
   catalog: Awaited<ReturnType<typeof _seededCatalog>>,
-) {
+): Promise<{
+  members: Array<Selectable<Database["members"]>>;
+  sessions: Array<Selectable<Database["sessions"]>>;
+  mail: Array<Selectable<Database["outbound_emails"]>>;
+}> {
   const { database } = catalog;
   return {
     members: await database
@@ -154,13 +170,13 @@ async function _expectNoPriorConversation(
 describe("writeArchivePlan", () => {
   it("writes one row per planned item", async () => {
     const { database, written } = await _seededCatalog();
-    const count = await database
+    const itemCountRow = await database
       .selectFrom("items")
       .select((builder) => {
         return builder.fn.countAll<number>().as("total");
       })
       .executeTakeFirstOrThrow();
-    expect(count.total).toBe(ARCHIVE_PLAN.items.length);
+    expect(itemCountRow.total).toBe(ARCHIVE_PLAN.items.length);
     expect(written.itemCount).toBe(ARCHIVE_PLAN.items.length);
     await database.destroy();
   });
@@ -226,13 +242,13 @@ describe("writeArchivePlan", () => {
       uploaderMemberId: uploader.id,
       viewerMemberId: viewer.id,
     });
-    const count = await database
+    const itemCountRow = await database
       .selectFrom("items")
       .select((builder) => {
         return builder.fn.countAll<number>().as("total");
       })
       .executeTakeFirstOrThrow();
-    expect(count.total).toBe(ARCHIVE_PLAN.items.length);
+    expect(itemCountRow.total).toBe(ARCHIVE_PLAN.items.length);
     // The session the items hang off is part of "one archive". Counting only
     // `items` is what let a second session, and a third, accumulate unseen.
     const sessions = await database

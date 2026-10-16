@@ -3,7 +3,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   getUnionDaysFromMilestones,
-  makeMergedDays,
+  makeMergedDaysFromItemAndMilestoneDays,
 } from "./mergeDaysHelpers.ts";
 import { readItemDays } from "./readItemDays.ts";
 import { readOverlappingMilestones } from "./readOverlappingMilestones.ts";
@@ -62,7 +62,10 @@ export async function readRailDays(
         sinceDay: undefined,
       });
 
-  return makeMergedDays({ itemDays, milestoneDays }).map((day) => {
+  return makeMergedDaysFromItemAndMilestoneDays({
+    itemDays,
+    milestoneDays,
+  }).map((day) => {
     return {
       capturedOn: day.capturedOn,
       itemCount: day.itemCount,

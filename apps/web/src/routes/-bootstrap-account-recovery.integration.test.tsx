@@ -1,9 +1,5 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
-import { hasPendingAccountWrite } from "@/api/me/ensureAccountReadProtection/ensureAccountReadProtection";
-import {
-  useSaveMe,
-  useSaveNotify,
-} from "@/surfaces/Account/AccountSurface/accountMutations";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
+import { hasPendingAccountWrite } from "@/api/me/accountReadProtectionHelpers/accountReadProtectionHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,7 +11,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useEffect } from "react";
+import { BootstrapDestination } from "../testing/BootstrapDestination";
 import { afterEach, expect, it, vi } from "vitest";
 import { Route } from "./__root";
 
@@ -29,7 +25,7 @@ it.each([
   { field: "notify", denial: 401 },
   { field: "notify", denial: 403 },
 ])(
-  "protects the actual $field save through root $denial and a publish-only retry race",
+  "preserves a pending $field publication through root $denial and an overlapping retry",
   async ({ field, denial }) => {
     const oldAccount = createMeResponse({
       displayName: "Old name",
@@ -48,10 +44,7 @@ it.each([
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    let releaseSave: (response: Response) => void = () => {};
-    const pendingSave = new Promise<Response>((settle) => {
-      releaseSave = settle;
-    });
+    const pendingSave = Promise.withResolvers<typeof savedAccount>();
     let releaseRetry: (response: Response) => void = () => {};
     const pendingRetry = new Promise<Response>((settle) => {
       releaseRetry = settle;
@@ -64,14 +57,19 @@ it.each([
       });
     };
     let reads = 0;
-    const writes: unknown[] = [];
+    const save = vi.fn(() => {
+      return pendingSave.promise;
+    });
+    const mutation = client.getMutationCache().build(client, {
+      scope: { id: "me" },
+      mutationFn: save,
+      onSuccess: (account) => {
+        client.setQueryData(["me"], account);
+      },
+    });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (path: string, init?: RequestInit) => {
-        if (path === "/api/me" && init?.method === "PATCH") {
-          writes.push(JSON.parse(String(init.body)));
-          return pendingSave;
-        }
+      vi.fn(async (path: string) => {
         if (path !== "/api/bootstrap") {
           throw new Error(`Unexpected read ${path}`);
         }
@@ -92,26 +90,6 @@ it.each([
       }),
     );
     const childUnmounted = vi.fn();
-    function Destination() {
-      const name = useSaveMe();
-      const notify = useSaveNotify();
-      useEffect(() => {
-        return childUnmounted;
-      }, []);
-      return (
-        <button
-          onClick={() => {
-            if (field === "name") {
-              name.save({ displayName: "Saved name" });
-            } else {
-              notify.save(savedAccount.me.notify);
-            }
-          }}
-        >
-          Save account
-        </button>
-      );
-    }
     const root = createRootRouteWithContext<{ queryClient: QueryClient }>()({
       beforeLoad: Route.options.beforeLoad,
       component: Route.options.component,
@@ -122,7 +100,9 @@ it.each([
         return root;
       },
       path: "/",
-      component: Destination,
+      component: () => {
+        return <BootstrapDestination onUnmount={childUnmounted} />;
+      },
     });
     const router = createRouter({
       routeTree: root.addChildren([child]),
@@ -137,7 +117,7 @@ it.each([
         </MantineProvider>
       </QueryClientProvider>,
     );
-    await screen.findByRole("button", { name: "Save account" });
+    await screen.findByText("Current destination");
     client.setQueryData(["settings", "admin"], { private: true });
     let releasePrivate: (value: string) => void = () => {};
     const privateRead = client
@@ -152,16 +132,13 @@ it.each([
       .catch(() => {
         return undefined;
       });
-    fireEvent.click(screen.getByRole("button", { name: "Save account" }));
-    await vi.waitFor(() => {
-      expect(writes).toHaveLength(1);
+    let saving: Promise<typeof savedAccount>;
+    await act(async () => {
+      saving = mutation.execute(undefined);
+      await vi.waitFor(() => {
+        expect(save).toHaveBeenCalledTimes(1);
+      });
     });
-    const mutation = client
-      .getMutationCache()
-      .getAll()
-      .find((entry) => {
-        return entry.state.status === "pending";
-      })!;
     await act(async () => {
       await router.invalidate();
     });
@@ -182,7 +159,8 @@ it.each([
       expect(reads).toBe(3);
     });
     await act(async () => {
-      releaseSave(Response.json(savedAccount));
+      pendingSave.resolve(savedAccount);
+      await saving!;
       await vi.waitFor(() => {
         expect(mutation.state.status).toBe("success");
       });
@@ -197,19 +175,13 @@ it.each([
     expect(client.getQueryData(["me"])).toEqual(savedAccount);
     expect(hasPendingAccountWrite(client)).toBe(false);
     expect(reads).toBe(3);
-    expect(
-      screen.queryByRole("button", { name: "Save account" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Current destination")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    await screen.findByRole("button", { name: "Save account" });
+    await screen.findByText("Current destination");
     expect(reads).toBe(4);
     expect(client.getQueryData(["me"])).toEqual(savedAccount);
     expect(client.getQueryData(["groups", "private"])).toBeUndefined();
-    expect(writes).toEqual([
-      field === "name"
-        ? { displayName: "Saved name" }
-        : { notify: savedAccount.me.notify },
-    ]);
+    expect(save).toHaveBeenCalledTimes(1);
     view.unmount();
     client.clear();
   },

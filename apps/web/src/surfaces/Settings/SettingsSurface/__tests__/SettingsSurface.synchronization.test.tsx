@@ -32,7 +32,7 @@ it("applies a saved arrangement to the actual shell and a remote update across n
   const originalFetch = vi.mocked(fetch).getMockImplementation()!;
   vi.mocked(fetch).mockImplementation((path, init) => {
     const me = createMeResponse();
-    if (path === "/api/bootstrap")
+    if (path === "/api/bootstrap") {
       return Promise.resolve(
         Response.json({
           setup: { isRequired: false },
@@ -43,6 +43,7 @@ it("applies a saved arrangement to the actual shell and a remote update across n
           progress: { needsInvitations: false },
         }),
       );
+    }
     return path === "/api/me"
       ? Promise.resolve(
           Response.json({
@@ -187,7 +188,7 @@ it("prevents background reads started before a save from overwriting its setting
   let hasReadMe = false;
   let hasReadSettings = false;
   vi.mocked(fetch).mockImplementation((path, init) => {
-    if (path === "/api/bootstrap")
+    if (path === "/api/bootstrap") {
       return Promise.resolve(
         Response.json({
           setup: { isRequired: false },
@@ -198,6 +199,7 @@ it("prevents background reads started before a save from overwriting its setting
           progress: { needsInvitations: false },
         }),
       );
+    }
     if (path === "/api/me") {
       if (!hasReadMe) {
         hasReadMe = true;

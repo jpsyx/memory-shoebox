@@ -1,18 +1,16 @@
-import { Button } from "@mantine/core";
-
 import { useContext, type ReactNode } from "react";
 
 import { PileItems } from "@/system/Pile/PileItems/PileItems";
 
-import { BurstPhoto } from "@/system/Pile/BurstStack/BurstPhoto";
+import { BurstPhoto } from "@/system/Pile/BurstStack/BurstPhoto/BurstPhoto";
 
 import { PileBurstActionsContext } from "@/system/Pile/PileBurstActions";
 
 import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
 
-import classes from "@/system/system.module.css";
+import { BurstFanHeader } from "@/system/Pile/BurstFanHeader/BurstFanHeader";
 import type { Props } from "./TimelineDayRows.types";
-import { TimelineHeader } from "./TimelineHeader";
+import { TimelineHeader } from "./TimelineHeader/TimelineHeader";
 /** Renders the owned TimelineRowContent portion of the timeline. */
 export function TimelineRowContent({
   row,
@@ -26,21 +24,13 @@ export function TimelineRowContent({
   const onRemove = useContext(PileBurstActionsContext);
   if (row.isFanHeader) {
     return (
-      <div className={classes.fanHead}>
-        <b className={classes.fanHeadLabel}>
-          {row.items[0]?.burst?.visibleFrameCount} photos
-        </b>
-        <Button
-          disabled={selection?.framesByBurstId.has(row.burstId!)}
-          variant="panel"
-          size="sm"
-          onClick={() => {
-            return onCollapseBurst?.(row.burstId!);
-          }}
-        >
-          Collapse
-        </Button>
-      </div>
+      <BurstFanHeader
+        label={<>{row.items[0]?.burst?.visibleFrameCount} photos</>}
+        isDisabled={selection?.framesByBurstId.has(row.burstId!)}
+        onCollapse={() => {
+          return onCollapseBurst?.(row.burstId!);
+        }}
+      />
     );
   }
   if (row.frames) {

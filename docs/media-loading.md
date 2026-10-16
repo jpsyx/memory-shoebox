@@ -94,9 +94,9 @@ regression, not a production latency benchmark.
 Reads and writes promote an entry; removal and clearing drop it. Each store is
 independent, including a replacement for the same member. The store additionally
 exposes `captureEpoch()`: asynchronous consumers capture a token before starting
-work and call `put(previews, token)` on completion. `clear()` invalidates every
+work and call `put({ previews, epoch: token })` on completion. `clear()` invalidates every
 captured token, and a token from another store is rejected even when an aborted
-request still completes. Calling `put(previews)` without a token is reserved for
+request still completes. Calling `put({ previews })` without a token is reserved for
 synchronous seeding. The member provider owns this lifecycle and keeps the store
 separate from actual-detail query authority.
 
@@ -109,11 +109,11 @@ captures the store epoch before its request and passes it to `put`; aborted
 reads also check their signal before returning or writing. A selected-view
 renewal uses the same safe reader but runs as foreground work. Representation
 purpose and urgency are separate: a visible-thumbnail renewal calls
-`readPreviews(request, "foreground")` even when the request purpose is
+`readPreviews({ request, priority: "foreground" })` even when the request purpose is
 `speculative-preview`. Selected-view requests always run as foreground work;
 other preview requests default to speculative priority.
 
-The viewer calls `scheduler.schedule(candidates, environment)` after its
+The viewer calls `scheduler.schedule({ candidates, environment })` after its
 selected source is ready. That starts a 250 ms dwell for a new selection. The
 neighbor policy assigns rank 0 to the immediate photo in the direction of
 travel, rank 1 to the second, and rank 2 to the one behind. It takes the
@@ -230,7 +230,7 @@ speculative original-video or first-segment transport.
 
 ### Native cache-reuse evidence
 
-`e2e/media/prefetch/prefetch.nativeImage.spec.ts` serves the actual native-image primitive through a
+`e2e/media/prefetch/__tests__/prefetch.nativeImage.spec.ts` serves the actual native-image primitive through a
 test-only JavaScript endpoint on M1's isolated app origin. The separate local
 bucket records one 21,746-byte warm transfer in Chromium and WebKit; after
 releasing the speculative element and navigating to the normal viewer, the
@@ -241,7 +241,7 @@ settlement rule, not guaranteed browser transport cancellation.
 
 ```sh
 pnpm build
-pnpm exec playwright test -c playwright.media.config.ts e2e/media/prefetch/prefetch.nativeImage.spec.ts
+pnpm exec playwright test -c playwright.media.config.ts e2e/media/prefetch/__tests__/prefetch.nativeImage.spec.ts
 ```
 
 These tests use isolated catalog data, test signatures, fake email and no

@@ -9,7 +9,7 @@ import { insertMilestone } from "../../../helpers/seedHelpers/seedHelpers.ts";
 import {
   insertDrawableItem,
   makeApp,
-} from "../../__tests__/timelineContractTestHelpers.ts";
+} from "../../timelineContractTestHelpers.ts";
 
 describe("bidirectional atomic-day timeline pages", () => {
   it("reverse traversal restores evicted pages without splitting days", async () => {
@@ -28,25 +28,27 @@ describe("bidirectional atomic-day timeline pages", () => {
           }),
         );
       }
-      const read = async (cursor: string | null): Promise<TimelineResponse> => {
+      const read = async (
+        cursor: string | undefined,
+      ): Promise<TimelineResponse> => {
         const response = await fixture.app.inject({
           method: "GET",
           headers: { cookie },
-          url: `/api/timeline?limit=2${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
+          url: `/api/timeline?limit=2${cursor === undefined ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
         });
         expect(response.statusCode).toBe(200);
         return response.json();
       };
-      const pages = [await read(null)];
+      const pages = [await read(undefined)];
       for (let pageIndex = 1; pageIndex < 8; pageIndex += 1) {
-        pages.push(await read(pages.at(-1)!.nextCursor));
+        pages.push(await read(pages.at(-1)!.nextCursor ?? undefined));
       }
       expect(pages[0]!.previousCursor).toBeNull();
       expect(pages.at(-1)!.nextCursor).toBeNull();
       const retained = pages.slice(-5);
       const restored = [];
       for (let pageIndex = 0; pageIndex < 3; pageIndex += 1) {
-        const previous = await read(retained[0]!.previousCursor);
+        const previous = await read(retained[0]!.previousCursor ?? undefined);
         restored.unshift(previous);
         retained.unshift(previous);
         retained.pop();
@@ -97,19 +99,21 @@ describe("bidirectional atomic-day timeline pages", () => {
         seq: 1002,
         capturedOn: "2026-09-19",
       });
-      const read = async (cursor: string | null): Promise<TimelineResponse> => {
+      const read = async (
+        cursor: string | undefined,
+      ): Promise<TimelineResponse> => {
         const response = await fixture.app.inject({
           method: "GET",
           headers: { cookie },
-          url: `/api/timeline?limit=1${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
+          url: `/api/timeline?limit=1${cursor === undefined ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
         });
         expect(response.statusCode).toBe(200);
         return response.json();
       };
-      const newest = await read(null);
-      const middle = await read(newest.nextCursor);
-      const oldest = await read(middle.nextCursor);
-      const restored = await read(oldest.previousCursor);
+      const newest = await read(undefined);
+      const middle = await read(newest.nextCursor ?? undefined);
+      const oldest = await read(middle.nextCursor ?? undefined);
+      const restored = await read(oldest.previousCursor ?? undefined);
       expect(
         middle.days.map((day) => {
           return day.itemCount;
@@ -155,17 +159,19 @@ describe("bidirectional atomic-day timeline pages", () => {
         startsOn: "2026-09-20",
         endsOn: "2026-09-22",
       });
-      const read = async (cursor: string | null): Promise<TimelineResponse> => {
+      const read = async (
+        cursor: string | undefined,
+      ): Promise<TimelineResponse> => {
         const response = await fixture.app.inject({
           method: "GET",
           headers: { cookie },
-          url: `/api/timeline?limit=3${cursor === null ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
+          url: `/api/timeline?limit=3${cursor === undefined ? "" : `&cursor=${encodeURIComponent(cursor)}`}`,
         });
         return response.json();
       };
-      const first = await read(null);
-      const second = await read(first.nextCursor);
-      const reverse = await read(second.previousCursor);
+      const first = await read(undefined);
+      const second = await read(first.nextCursor ?? undefined);
+      const reverse = await read(second.previousCursor ?? undefined);
       expect(reverse.days).toEqual(first.days);
       expect(
         reverse.days.map((day) => {

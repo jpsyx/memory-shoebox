@@ -1,7 +1,7 @@
 import { expect, test as setup } from "@playwright/test";
 import { seedMemberAtAddress } from "./support/database.ts";
 import { E2E_BASE_URL } from "./support/e2eEnvironment.constants.ts";
-import { signInAs } from "./support/signIn.ts";
+import { signInAs } from "./support/signInHelpers.ts";
 import { activateMember } from "./support/uploadCatalogHelpers.ts";
 import {
   FAMILY_EMAIL,

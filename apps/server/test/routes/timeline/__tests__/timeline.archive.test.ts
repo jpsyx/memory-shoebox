@@ -14,16 +14,16 @@ import {
   insertVisibilityRule,
   NOW,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
-const makeApp = async () => {
+async function _makeApp() {
   return createTestApp({
     clock: () => {
       return new Date(NOW);
     },
   });
-};
+}
 describe("GET /api/timeline", () => {
   it("answers an empty archive with the one shape the contract fixes", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const response = await app.inject({
@@ -43,7 +43,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("answers a day with its counts, its prints and their media", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({
       database,
       member: { display_name: "Lucía" },
@@ -95,7 +95,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("reads the alt text date in the Shoebox's own zone", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertInstanceSetting(database, {
       key: "shoebox.timezone",
@@ -122,7 +122,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("keeps an item with no renditions as an unavailable print with catalog layout", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertItem(database, { uploadedBy: memberId, seq: 1 });
 
@@ -146,7 +146,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("carries a milestone-only day, which is still a day", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
     await insertMilestone(database, {
       name: "Home from the hospital",
@@ -171,7 +171,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("returns resultCount only on an uncursored filtered request", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     const itemId = await insertItem(database, {
       uploadedBy: memberId,
@@ -197,7 +197,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("pages, and the cursor comes back for a page that has more", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertItem(database, {
       uploadedBy: memberId,
@@ -230,7 +230,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("refuses a cursor that belongs to a different selection", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
     await insertItem(database, {
       uploadedBy: memberId,
@@ -261,7 +261,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("refuses a cursor that does not decode", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const response = await app.inject({
@@ -274,7 +274,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("refuses a limit over the cap", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const overLimit = await app.inject({
@@ -288,7 +288,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("refuses a malformed date", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({ database });
 
     const badDate = await app.inject({
@@ -302,7 +302,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("answers 401 with no session", async () => {
-    const { app, close } = await makeApp();
+    const { app, close } = await _makeApp();
     const response = await app.inject({ method: "GET", url: "/api/timeline" });
     expect(response.statusCode).toBe(401);
     expect(response.json().error).toBe("not_signed_in");
@@ -310,7 +310,7 @@ describe("GET /api/timeline", () => {
   });
 
   it("shows an admin everything, with the clause dropped", async () => {
-    const { app, database, close } = await makeApp();
+    const { app, database, close } = await _makeApp();
     const { cookie } = await insertSignedInMember({
       database,
       member: { role: "admin" },

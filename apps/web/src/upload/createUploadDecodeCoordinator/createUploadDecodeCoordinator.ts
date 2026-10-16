@@ -33,10 +33,13 @@ function _drain(context: DecodeContext): void {
   }
 }
 
-function _run<T>(
-  context: DecodeContext,
-  options: Readonly<DecodeRequest<T>>,
-): Promise<T> {
+function _run<T>({
+  context,
+  options,
+}: {
+  context: DecodeContext;
+  options: Readonly<DecodeRequest<T>>;
+}): Promise<T> {
   if (context.isDisposed || options.signal.aborted) {
     return Promise.reject(_abortError());
   }
@@ -53,7 +56,8 @@ function _run<T>(
       priority: options.priority,
       cancel,
       start: () => {
-        // Caller cancellation never releases an uncancellable underlying decode.
+        // Caller cancellation never releases an uncancellable underlying
+        // decode.
         void (async () => {
           return options.work();
         })()
@@ -79,11 +83,12 @@ export function createUploadDecodeCoordinator(): UploadDecodeCoordinator {
     isDisposed: false,
   };
   return {
-    /** Active preparation overtakes waiting previews without preempting a decode. */
+    // Active preparation overtakes waiting previews without preempting a
+    // decode.
     run: <T>(options: Readonly<DecodeRequest<T>>): Promise<T> => {
-      return _run(context, options);
+      return _run({ context, options });
     },
-    /** Rejects waiting/future work; an executing decode retains its slot. */
+    // An executing decode retains its slot while queued work is rejected.
     dispose: (): void => {
       context.isDisposed = true;
       [...context.jobs].forEach((job) => {

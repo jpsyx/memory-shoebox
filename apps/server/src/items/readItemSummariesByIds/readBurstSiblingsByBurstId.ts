@@ -2,7 +2,7 @@ import { readBurstCovers } from "../../archive/readBurstCovers.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import { applyVisibilityFilter } from "../../visibility/applyVisibilityFilter.ts";
-import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
+import type { BurstFrameRow } from "../readBurstFramePage/readBurstFrameRows.ts";
 
 /** One burst-sibling row, before it is grouped by the burst it belongs to. */
 type BurstSiblingRow = {
@@ -82,11 +82,13 @@ function _groupSiblingsByBurstId(
  * @param options.viewer The request's viewer.
  * @param options.burstIds The bursts the selection touches.
  */
-export async function readBurstSiblingsByBurstId(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  burstIds: readonly string[];
-}): Promise<{
+export async function readBurstSiblingsByBurstId(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    burstIds: readonly string[];
+  }>,
+): Promise<{
   siblingsByBurstId: Map<string, BurstFrameRow[]>;
   covers: Map<string, string>;
 }> {

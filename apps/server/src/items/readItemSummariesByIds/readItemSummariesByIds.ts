@@ -3,7 +3,7 @@ import type { ItemSummary } from "@memory-shoebox/shared";
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
-import { makeItemSummariesById } from "./makeItemSummariesById.ts";
+import { makeItemSummariesByIdFromRows } from "./makeItemSummariesById.ts";
 import { readItemSummaryParts } from "./readItemSummaryParts.ts";
 import { readItemSummaryRows } from "./readItemSummaryRows.ts";
 
@@ -55,7 +55,7 @@ export async function readItemSummariesByIds(
     now: options.now,
     rows,
   });
-  const summariesById = makeItemSummariesById({
+  const summariesById = makeItemSummariesByIdFromRows({
     rows,
     parts,
     logger: options.logger,

@@ -58,7 +58,7 @@ async function _pickLocalBatch(page: Page): Promise<string> {
             .getByRole("link", { name: "Back to the timeline", exact: true })
             .click();
         }
-        await expect(page).toHaveURL(catalog.origin + "/");
+        await expect(page).toHaveURL(`${catalog.origin}/`);
         await page.getByRole("link", { name: "Add", exact: true }).click();
       }
       await expect(page.getByRole("button", { name: "Put 2 up" })).toHaveCount(
@@ -70,7 +70,7 @@ async function _pickLocalBatch(page: Page): Promise<string> {
           exact: true,
         }),
       ).toHaveCount(0);
-      await expect(page).toHaveURL(catalog.origin + "/upload");
+      await expect(page).toHaveURL(`${catalog.origin}/upload`);
       await expect
         .poll(async () => {
           return (

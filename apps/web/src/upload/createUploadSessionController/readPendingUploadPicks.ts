@@ -3,7 +3,7 @@ import {
   type MediaWorkerClient,
 } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
 import type { ManifestEntry } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 import type {
   UploadControllerContext,
   UploadPendingPick,
@@ -31,11 +31,11 @@ type FingerprintEntryOptions = {
 };
 
 function _isHashableEntry(entry: Readonly<ManifestEntry>): boolean {
-  const accepted: readonly string[] = appConfig.upload.acceptedContentTypes;
+  const accepted: readonly string[] = APP_CONFIG.upload.acceptedContentTypes;
   return (
     accepted.includes(entry.declaredContentType.toLowerCase()) &&
     entry.declaredBytes > 0 &&
-    entry.declaredBytes <= appConfig.upload.maxFileBytes
+    entry.declaredBytes <= APP_CONFIG.upload.maxFileBytes
   );
 }
 
@@ -43,7 +43,7 @@ function _getWorkerFromLane(
   options: Readonly<{ lane: CheckingLane; context: UploadControllerContext }>,
 ): MediaWorkerClient {
   const { lane, context } = options;
-  if (lane.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount) {
+  if (lane.wasmDecodeCount >= APP_CONFIG.upload.heicWorkerRecycleCount) {
     lane.worker?.terminate();
     lane.worker = undefined;
     lane.wasmDecodeCount = 0;

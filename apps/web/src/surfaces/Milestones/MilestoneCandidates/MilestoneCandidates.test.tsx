@@ -6,26 +6,28 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { ItemSummary, MilestoneDetail } from "@memory-shoebox/shared";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 function _installKeepsChosenPrintsThroughAFailedBackgroundAnswers0(): void {
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
-    },
-    [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-      status: 200,
-      body: detail,
-    },
-    [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
-      status: 200,
-      body: {
-        candidates: [{ item, isAttached: false, isOutsideSpan: false }],
-        nextCursor: null,
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
+      },
+      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+        status: 200,
+        body: detail,
+      },
+      [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
+        status: 200,
+        body: {
+          candidates: [{ item, isAttached: false, isOutsideSpan: false }],
+          nextCursor: null,
+        },
       },
     },
   });
@@ -55,29 +57,7 @@ function _installKeepsChosenPrintsThroughAFailedBackgroundFetch1(): {
 
 function _installKeepsExplicitIntentWithoutABrokenImageAnswers2(): void {
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
-    },
-    [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-      status: 200,
-      body: detail,
-    },
-    [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
-      status: 200,
-      body: {
-        candidates: [{ item, isAttached: false, isOutsideSpan: false }],
-        nextCursor: null,
-      },
-    },
-  });
-}
-
-const detail = makeMilestoneDetailFromOverrides() satisfies MilestoneDetail;
-const item = makeItemSummaryFromOverrides() satisfies ItemSummary;
-describe("saved span suggestions", () => {
-  it("leaves a saved occasion intact when cancelled and empty save never deletes", async () => {
-    respondWith({
+    routes: {
       "GET /api/milestones": {
         status: 200,
         body: { milestones: [detail], nextCursor: null },
@@ -91,6 +71,32 @@ describe("saved span suggestions", () => {
         body: {
           candidates: [{ item, isAttached: false, isOutsideSpan: false }],
           nextCursor: null,
+        },
+      },
+    },
+  });
+}
+
+const detail = makeMilestoneDetailFromOverrides() satisfies MilestoneDetail;
+const item = makeItemSummaryFromOverrides() satisfies ItemSummary;
+describe("saved span suggestions", () => {
+  it("leaves a saved occasion intact when cancelled and empty save never deletes", async () => {
+    respondWith({
+      routes: {
+        "GET /api/milestones": {
+          status: 200,
+          body: { milestones: [detail], nextCursor: null },
+        },
+        [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+          status: 200,
+          body: detail,
+        },
+        [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
+          status: 200,
+          body: {
+            candidates: [{ item, isAttached: false, isOutsideSpan: false }],
+            nextCursor: null,
+          },
         },
       },
     });
@@ -158,24 +164,26 @@ describe("confirmed delta presentation", () => {
       detachedCount: 0,
     };
     respondWith({
-      "GET /api/milestones": {
-        status: 200,
-        body: { milestones: [detail], nextCursor: null },
-      },
-      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-        status: 200,
-        body: detail,
-      },
-      [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
-        status: 200,
-        body: {
-          candidates: [{ item, isAttached: false, isOutsideSpan: false }],
-          nextCursor: null,
+      routes: {
+        "GET /api/milestones": {
+          status: 200,
+          body: { milestones: [detail], nextCursor: null },
         },
-      },
-      [`PATCH /api/milestones/${detail.milestone.milestoneId}/items`]: {
-        status: 200,
-        body: saved,
+        [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+          status: 200,
+          body: detail,
+        },
+        [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
+          status: 200,
+          body: {
+            candidates: [{ item, isAttached: false, isOutsideSpan: false }],
+            nextCursor: null,
+          },
+        },
+        [`PATCH /api/milestones/${detail.milestone.milestoneId}/items`]: {
+          status: 200,
+          body: saved,
+        },
       },
     });
     const { router } = renderAt(
@@ -203,18 +211,20 @@ describe("picker read announcements", () => {
       release = settle;
     });
     respondWith({
-      "GET /api/milestones": {
-        status: 200,
-        body: { milestones: [detail], nextCursor: null },
-      },
-      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-        status: 200,
-        body: detail,
-      },
-      [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
-        status: 200,
-        body: { candidates: [], nextCursor: null },
-        waitFor: held,
+      routes: {
+        "GET /api/milestones": {
+          status: 200,
+          body: { milestones: [detail], nextCursor: null },
+        },
+        [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+          status: 200,
+          body: detail,
+        },
+        [`GET /api/milestones/${detail.milestone.milestoneId}/candidates`]: {
+          status: 200,
+          body: { candidates: [], nextCursor: null },
+          waitFor: held,
+        },
       },
     });
     renderAt(
@@ -293,26 +303,28 @@ describe("picker-owned unavailable thumbnails", () => {
 describe("occasion-first attachment hierarchy", () => {
   it("identifies the selected occasion before its full archive filter grammar", async () => {
     respondWith({
-      "GET /api/milestones": {
-        status: 200,
-        body: { milestones: [detail], nextCursor: null },
-      },
-      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-        status: 200,
-        body: detail,
-      },
-      "GET /api/timeline": {
-        status: 200,
-        body: {
-          previousCursor: null,
-          days: [],
-          nextCursor: null,
-          resultCount: null,
+      routes: {
+        "GET /api/milestones": {
+          status: 200,
+          body: { milestones: [detail], nextCursor: null },
         },
-      },
-      "GET /api/filters/facets": {
-        status: 200,
-        body: { tags: [], people: [] },
+        [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+          status: 200,
+          body: detail,
+        },
+        "GET /api/timeline": {
+          status: 200,
+          body: {
+            previousCursor: null,
+            days: [],
+            nextCursor: null,
+            resultCount: null,
+          },
+        },
+        "GET /api/filters/facets": {
+          status: 200,
+          body: { tags: [], people: [] },
+        },
       },
     });
     renderAt(

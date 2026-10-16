@@ -10,7 +10,7 @@
  * The server imports this with a relative path and a `.ts` extension, because
  * Node strips types at load time and resolves the import literally.
  */
-export const appConfig = {
+export const APP_CONFIG = {
   burst: {
     /**
      * The largest gap, in seconds, between two consecutive frames that still
@@ -111,7 +111,9 @@ export const appConfig = {
       maxOperations: 2,
       maxEncodedBytes: 8 * 1024 ** 2,
       maxDecodedBytes: 32 * 1024 ** 2,
-      /** M2 must prove native-player transfer budgets before enabling this. */
+      /**
+       * Requires native-player transfer-budget qualification before enabling.
+       */
       videoMetadataEnabled: false,
     },
   },
@@ -186,12 +188,6 @@ export const appConfig = {
      * and the people who can see the two hundred files that did arrive are
      * never told.
      *
-     * Ninety. `apis/upload.md` § Configuration gave sixty for
-     * `upload.abandon_grace_minutes`, with the note "Too short fails a slow
-     * file; too long delays the email". It is a product number rather than
-     * a per-machine one, so it lives here rather than as deployment
-     * configuration.
-     *
      * The reason is worth keeping, because it is what makes the number
      * defensible rather than merely chosen. Nothing reports progress: the
      * browser PUTs straight to Backblaze, and an upload-progress event is
@@ -200,10 +196,8 @@ export const appConfig = {
      * means "no server contact for n minutes", which is the ordinary
      * condition of a large video that is transferring perfectly well.
      *
-     * Sixty assumed that once the URLs a file was handed had expired, an hour
-     * after presign, the transfer could not go on without re-presigning, so
-     * silence past that was proof. It is not quite. A URL's expiry is checked
-     * when a request starts, so the browser starts a PUT, first try or retry,
+     * A URL's expiry is checked when a request starts, so the browser starts
+     * a PUT, first try or retry,
      * only on a URL with the life left to finish it at
      * `transferFloorBytesPerSecond`, and re-presigns first when it has not:
      * every PUT, the longest included, ends inside its URL's hour. After the

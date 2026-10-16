@@ -4,7 +4,7 @@ import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { Explanation } from "@/surfaces/Timeline/NoResults/Explanation";
 import { WaysOut } from "@/surfaces/Timeline/NoResults/WaysOut";
 import { Ghosts } from "@/system/Pile/Ghosts";

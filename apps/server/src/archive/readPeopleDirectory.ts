@@ -5,7 +5,7 @@ import type {
   MediaSource,
   PeopleResponse,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
@@ -193,15 +193,10 @@ async function _readFallbackFaceIds(
 }
 
 /**
- * Queries 2 and 3: one face id per person, or none.
+ * The visible face item ID for each person who has an eligible photograph.
  *
- * Two passes, run in sequence because the second only concerns whoever the
- * first could not resolve: {@link _readVisiblePreferredIds} checks the
- * preferred face against this viewer's visibility, then
- * {@link _readFallbackFaceIds} finds everybody left a most-recent visible
- * item instead. A person the first pass resolves wins over anything the
- * second finds for them, which the merge order below encodes: otherwise
- * nothing, and the client draws the ghost frame it already has.
+ * A visible preferred face wins over the most-recent visible fallback.
+ * People with neither have no face and display a placeholder.
  */
 async function _readFaceItemIds(options: {
   database: DatabaseExecutor;
@@ -285,11 +280,11 @@ function _makeDirectoryResponse(
         itemCount: row.itemCount,
         firstCapturedOn: row.firstCapturedOn,
         lastCapturedOn: row.lastCapturedOn,
-        face: _makeFaceFromSources({
-          sources: options.mediaSources.get(
-            options.faceItemIds.get(row.personId) ?? "",
-          ),
-        }),
+        face:
+          options.mediaSources
+            .get(options.faceItemIds.get(row.personId) ?? "")
+            ?.values()
+            .next().value ?? null,
       };
     }),
     nextCursor: null,
@@ -298,24 +293,7 @@ function _makeDirectoryResponse(
 }
 
 /**
- * The card's thumbnail, and only that.
- *
- * One source rather than a `MediaRef`: the card draws a decorative image with
- * an empty alt and never opens it, so a display URL, video sources and
- * generated alt text would all be minted unread.
- */
-function _makeFaceFromSources(options: {
-  sources: ReadonlyMap<string, MediaSource> | undefined;
-}): MediaSource | null {
-  return options.sources?.values().next().value ?? null;
-}
-
-/**
  * The people directory, faces resolved per viewer.
- *
- * A thin orchestrator over the four functions above: the full directory, the
- * `q` narrow-and-sort, the faces, and the media those faces need, in that
- * order, then the response assembly.
  *
  * @param options.database The Kysely handle.
  * @param options.b2 The Backblaze client, faked in tests.
@@ -324,7 +302,7 @@ function _makeFaceFromSources(options: {
  * @param options.now The request's own clock.
  */
 export async function readPeopleDirectory(
-  options: ReadPeopleDirectoryShape,
+  options: Readonly<ReadPeopleDirectoryShape>,
 ): Promise<PeopleResponse> {
   const rows = await _readDirectoryRows({
     database: options.database,
@@ -348,7 +326,7 @@ export async function readPeopleDirectory(
       }),
     ),
     now: options.now,
-    ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+    ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
   });
 
   return _makeDirectoryResponse({

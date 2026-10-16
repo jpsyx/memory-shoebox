@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 type Props = {
   selection: TimelineSelection;

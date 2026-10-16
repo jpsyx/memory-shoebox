@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
@@ -109,15 +109,17 @@ it.each(["role", "settings"])(
     });
     const first = observed.at(-1)!;
     const detail = makeItemDetail();
-    first.previews.put([
-      {
-        itemId: detail.itemId,
-        kind: detail.kind,
-        width: detail.media.width,
-        height: detail.media.height,
-        media: detail.media,
-      },
-    ]);
+    first.previews.put({
+      previews: [
+        {
+          itemId: detail.itemId,
+          kind: detail.kind,
+          width: detail.media.width,
+          height: detail.media.height,
+          media: detail.media,
+        },
+      ],
+    });
     authorityRequests.length = 0;
     account =
       change === "role"

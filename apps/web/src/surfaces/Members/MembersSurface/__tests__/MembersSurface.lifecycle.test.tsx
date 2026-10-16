@@ -2,7 +2,7 @@ import { groupsQueryOptions } from "@/api/groups/groups";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   ADMIN_ACCOUNT,
   INVITED,
@@ -75,9 +75,12 @@ describe("Members administration", () => {
     await waitFor(() => {
       return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
-    expect(countCallsTo("PATCH", `/api/members/${SECOND_ADMIN.memberId}`)).toBe(
-      1,
-    );
+    expect(
+      countCallsTo({
+        method: "PATCH",
+        path: `/api/members/${SECOND_ADMIN.memberId}`,
+      }),
+    ).toBe(1);
     const picker = await queryClient.fetchQuery(groupsQueryOptions());
     expect(picker.groups).toEqual([
       { groupId: INVITED.memberId, name: "Fresh group", members: [] },
@@ -97,16 +100,19 @@ describe("Members administration", () => {
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(
-      countCallsTo("PATCH", `/api/members/${ADMIN_ACCOUNT.me.member.memberId}`),
+      countCallsTo({
+        method: "PATCH",
+        path: `/api/members/${ADMIN_ACCOUNT.me.member.memberId}`,
+      }),
     ).toBe(0);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Remove Papá" }));
     expect(screen.getByRole("button", { name: "Remove them" })).toBeDisabled();
     expect(
-      countCallsTo(
-        "DELETE",
-        `/api/members/${ADMIN_ACCOUNT.me.member.memberId}`,
-      ),
+      countCallsTo({
+        method: "DELETE",
+        path: `/api/members/${ADMIN_ACCOUNT.me.member.memberId}`,
+      }),
     ).toBe(0);
   });
   it("keeps a concurrent last-admin refusal open with recovery copy", async () => {
@@ -180,10 +186,10 @@ describe("Members administration", () => {
       );
       await waitFor(() => {
         return expect(
-          countCallsTo(
-            "DELETE",
-            `/api/members/${ADMIN_ACCOUNT.me.member.memberId}/sessions/${sessionId}`,
-          ),
+          countCallsTo({
+            method: "DELETE",
+            path: `/api/members/${ADMIN_ACCOUNT.me.member.memberId}/sessions/${sessionId}`,
+          }),
         ).toBe(1);
       });
       if (isCurrent) {

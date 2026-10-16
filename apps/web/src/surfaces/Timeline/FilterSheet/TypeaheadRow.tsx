@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DirectoryPerson, TagCount } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { TypeaheadChip } from "@/surfaces/Timeline/FilterSheet/TypeaheadChip";
 import { ChipRow } from "@/system/Chip/ChipRow";
 
@@ -8,7 +8,9 @@ type Props = {
   tags: readonly TagCount[];
   people: readonly DirectoryPerson[];
   selection: TimelineSelection;
-  onToggle: (dimension: "tags" | "people", id: string) => void;
+  onToggle: (
+    options: Readonly<{ dimension: "tags" | "people"; id: string }>,
+  ) => void;
 };
 
 /** The type-ahead's own row: up to six matching tags, then up to six people. */
@@ -28,7 +30,7 @@ export function TypeaheadRow({
             itemCount={entry.itemCount}
             active={selection.tags.includes(entry.tag.tagId)}
             onToggle={() => {
-              onToggle("tags", entry.tag.tagId);
+              onToggle({ dimension: "tags", id: entry.tag.tagId });
             }}
           />
         );
@@ -41,7 +43,7 @@ export function TypeaheadRow({
             itemCount={entry.itemCount}
             active={selection.people.includes(entry.person.personId)}
             onToggle={() => {
-              onToggle("people", entry.person.personId);
+              onToggle({ dimension: "people", id: entry.person.personId });
             }}
           />
         );

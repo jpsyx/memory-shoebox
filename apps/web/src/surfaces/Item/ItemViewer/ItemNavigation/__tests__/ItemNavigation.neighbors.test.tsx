@@ -1,4 +1,4 @@
-import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import { makeTimelineQueryOptionsFromView } from "@/api/timelineHelpers/timelineHelpers";
 
 import { createMeResponse } from "@/testing/createMeResponse";
 
@@ -10,17 +10,17 @@ import { describe, expect, it } from "vitest";
 
 import { getRecordedRequests } from "@/testing/fetchStubHelpers";
 
-import { makeDay } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 import {
   makeBurstDetail,
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeFrameIdFromPosition,
 } from "@/testing/itemFixtureHelpers";
 
 import { recordedUrls, renderItem } from "@/testing/itemHarnessHelpers";
 
-import { renderAt } from "@/testing/surfaceHarness";
+import { renderAt } from "@/testing/surfaceHarnessHelpers";
 
 import { itemQueryOptions } from "@/api/items/items";
 
@@ -35,7 +35,7 @@ import {
 
 describe("viewer navigation", () => {
   it("navigates using sufficient retained timeline refs without another neighborhood read", async () => {
-    respondWithNavigationItems({}, [FIRST, LAST]);
+    respondWithNavigationItems({ routes: {}, order: [FIRST, LAST] });
     const { router } = renderItem(FIRST.itemId);
     const queryClient = router.options.context!.queryClient;
     const freshItems = [FIRST, LAST].map((item) => {
@@ -65,7 +65,7 @@ describe("viewer navigation", () => {
       {
         pages: [
           {
-            selectionResultCount: null,
+            selectionResultCount: undefined,
             previousCursor: null,
             metadataUpdatedAt: Date.now(),
             days: [makeDay({ items: freshItems })],
@@ -73,7 +73,7 @@ describe("viewer navigation", () => {
             resultCount: null,
           },
         ],
-        pageParams: [null],
+        pageParams: [undefined],
       },
     );
     await userEvent.click(await waitForNavigationReady());
@@ -104,8 +104,8 @@ describe("viewer navigation", () => {
     const { router } = renderItem(FIRST.itemId);
     await waitForNavigationReady();
     const changed = { ...FIRST, capturedAt: "2026-09-14T12:00:00.000Z" };
-    respondWithNavigationItems(
-      {
+    respondWithNavigationItems({
+      routes: {
         "GET /api/timeline": {
           status: 200,
           body: {
@@ -121,8 +121,8 @@ describe("viewer navigation", () => {
           },
         },
       },
-      [MIDDLE, changed, LAST],
-    );
+      order: [MIDDLE, changed, LAST],
+    });
     const queryClient = router.options.context!.queryClient;
     act(() => {
       queryClient.setQueryData(
@@ -188,8 +188,8 @@ describe("viewer navigation", () => {
   it("enters the last frame when moving backward into a stack", async () => {
     const burstFirst = makeBurstDetail({ position: 11, frameCount: 12 });
     const burstLast = makeBurstDetail({ position: 12, frameCount: 12 });
-    respondWithNavigationItems(
-      {
+    respondWithNavigationItems({
+      routes: {
         "GET /api/timeline": {
           status: 200,
           body: {
@@ -207,7 +207,10 @@ describe("viewer navigation", () => {
         [`GET /api/bursts/${burstFirst.burst!.burstId}/frames`]: {
           status: 200,
           body: {
-            frames: [makeBurstFrame(11), makeBurstFrame(12)],
+            frames: [
+              makeBurstFrameFromPosition(11),
+              makeBurstFrameFromPosition(12),
+            ],
             nextCursor: null,
           },
         },
@@ -216,8 +219,8 @@ describe("viewer navigation", () => {
           body: burstLast,
         },
       },
-      [burstFirst, burstLast, LAST],
-    );
+      order: [burstFirst, burstLast, LAST],
+    });
     const { router } = renderItem(LAST.itemId);
     const previousButton = await screen.findByRole("button", {
       name: "Previous photo or video",
@@ -238,7 +241,10 @@ describe("viewer navigation", () => {
       frameCount: 12,
       overrides: {
         capturedOn: "2026-09-12",
-        burstFrames: [makeBurstFrame(11), makeBurstFrame(12)],
+        burstFrames: [
+          makeBurstFrameFromPosition(11),
+          makeBurstFrameFromPosition(12),
+        ],
       },
     });
     const burstLast = {
@@ -246,8 +252,8 @@ describe("viewer navigation", () => {
       itemId: makeFrameIdFromPosition(12),
       burstPosition: 12,
     };
-    respondWithNavigationItems(
-      {
+    respondWithNavigationItems({
+      routes: {
         "GET /api/timeline": {
           status: 200,
           body: {
@@ -289,7 +295,10 @@ describe("viewer navigation", () => {
         [`GET /api/bursts/${burstFirst.burst!.burstId}/frames`]: {
           status: 200,
           body: {
-            frames: [makeBurstFrame(11), makeBurstFrame(12)],
+            frames: [
+              makeBurstFrameFromPosition(11),
+              makeBurstFrameFromPosition(12),
+            ],
             nextCursor: null,
           },
         },
@@ -302,8 +311,8 @@ describe("viewer navigation", () => {
           body: burstLast,
         },
       },
-      [FIRST, burstFirst, burstLast],
-    );
+      order: [FIRST, burstFirst, burstLast],
+    });
     const { router } = renderItem(FIRST.itemId);
     const nextButton = await waitForNavigationReady();
     expect(

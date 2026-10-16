@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { refreshSettingsDependents } from "@/surfaces/Settings/settingsSynchronization/refreshSettingsDependents";
+import { refreshSettingsDependents } from "@/surfaces/Settings/settingsSynchronizationHelpers/refreshSettingsDependents";
 import { useRefreshMemberAuthority } from "@/surfaces/Members/useRefreshMemberAuthority";
 import {
   SETTINGS_RECOVERY_KEY,

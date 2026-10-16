@@ -77,8 +77,6 @@ type KeepsQueryCountFixedAsRequestedItems2State2 =
     options: ItemSummaryReadContext;
     smallCount: number;
   };
-type KeepsQueryCountFixedAsRequestedItems2State3 =
-  KeepsQueryCountFixedAsRequestedItems2State2;
 
 async function _keepsRequestedIdentitiesAndMeasuresFullVisible1Stage1(
   state: Readonly<KeepsRequestedIdentitiesAndMeasuresFullVisible1State0>,
@@ -297,7 +295,7 @@ async function _keepsQueryCountFixedAsRequestedItems2Stage2(
 
 async function _keepsQueryCountFixedAsRequestedItems2Stage3(
   state: Readonly<KeepsQueryCountFixedAsRequestedItems2State2>,
-): Promise<KeepsQueryCountFixedAsRequestedItems2State3> {
+): Promise<KeepsQueryCountFixedAsRequestedItems2State2> {
   const { counting, options, itemIds, smallCount } = state;
   counting.reset();
   expect(

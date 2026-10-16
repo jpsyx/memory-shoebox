@@ -1,6 +1,6 @@
 import type { RenditionPurpose } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { MakeUploadStorageKeyFromRenditionOptions } from "./presignUploadFile.types.ts";
 
@@ -23,7 +23,7 @@ const ORIGINAL_EXTENSION_BY_TYPE: ReadonlyMap<string, string> = new Map(
     "video/quicktime": "mov",
     "video/mp4": "mp4",
   } satisfies Record<
-    (typeof appConfig.upload.acceptedContentTypes)[number],
+    (typeof APP_CONFIG.upload.acceptedContentTypes)[number],
     string
   >),
 );
@@ -58,7 +58,7 @@ export const PRESIGNABLE_FILE_STATES: ReadonlySet<string> = new Set([
  * @param byteSize The original's declared size in bytes.
  */
 export function getPartCountFromByteSize(byteSize: number): number {
-  return Math.ceil(byteSize / appConfig.upload.multipartPartSizeBytes);
+  return Math.ceil(byteSize / APP_CONFIG.upload.multipartPartSizeBytes);
 }
 
 /**

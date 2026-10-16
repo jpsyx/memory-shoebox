@@ -1,0 +1,28 @@
+/* Failed image alt text must not change the reserved media box. */
+.printMedia {
+  display: block;
+  position: relative;
+  width: 100%;
+}
+
+.printMedia img {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--panel-sunk);
+}
+
+:global([data-burst-fan]) .printMedia,
+:global([data-fan-row]) .printMedia {
+  width: auto;
+  height: 100%;
+}
+
+:global([data-burst-fan]) .printMedia img,
+:global([data-fan-row]) .printMedia img {
+  width: 100%;
+  height: 100%;
+}

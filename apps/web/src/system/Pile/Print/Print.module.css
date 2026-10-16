@@ -1,0 +1,78 @@
+.print {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 5px;
+  border: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-print);
+  cursor: pointer;
+  font: inherit;
+  text-align: inherit;
+  transition: transform 140ms var(--ease);
+}
+
+.print:hover {
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+:global([data-pile="messy"]) .print {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.03);
+  z-index: var(--z, 1);
+}
+
+:global([data-pile="messy"]) .print:hover {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.07);
+  z-index: 20;
+}
+
+.printSelectable {
+  outline-offset: -5px;
+}
+
+.printSelected {
+  outline: 5px solid var(--ink-dark);
+  outline-offset: -5px;
+}
+
+:global([data-burst-stack]) > .print {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+:global([data-pile="messy"]) :global([data-burst-stack]) > .print {
+  transform: rotate(var(--r, 0deg)) scale(1.02);
+}
+
+:global([data-pile="messy"]) :global([data-burst-stack]) > .print:hover {
+  transform: rotate(var(--r, 0deg)) scale(1.07);
+}
+
+:global([data-burst-fan]) .print {
+  flex: none;
+  width: auto;
+  height: 7.5rem;
+  padding: 4px;
+  margin-right: -1.6rem;
+  transform: rotate(var(--r, 0deg));
+  transform-origin: bottom center;
+}
+
+:global([data-burst-fan]) .print:hover {
+  transform: rotate(var(--r, 0deg)) translateY(-4px) scale(1.06);
+  z-index: 20;
+}
+
+:global([data-fan-row]) .print {
+  flex: none;
+  width: auto;
+  height: 7.5rem;
+  padding: 4px;
+  margin-right: -1.6rem;
+  transform: rotate(var(--r, 0deg));
+  transform-origin: bottom center;
+}

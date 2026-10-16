@@ -1,7 +1,7 @@
 import type { ItemSummary } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
 import { Ghosts } from "@/system/Pile/Ghosts";
-import { Print } from "@/system/Pile/Print";
+import { Print } from "@/system/Pile/Print/Print";
 import { Pile } from "@/system/Pile/Pile";
 import { Prose } from "@/system/typography/Prose";
 type Props = { items: readonly ItemSummary[]; isPending: boolean };

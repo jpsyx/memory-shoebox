@@ -2,7 +2,11 @@ import type { TimelineViewMemory } from "../timelineWindow.types";
 /** Bounded member-owned compact view cache. */
 export type TimelineMemory = {
   get: (key: string) => TimelineViewMemory;
-  expand: (viewKey: string, burstId: string, height: number) => void;
+  expand: ({
+    viewKey,
+    burstId,
+    height,
+  }: Readonly<{ viewKey: string; burstId: string; height: number }>) => void;
   clear: () => void;
 };
 /** Authority-owned compact positions, never query pages or media sources. */
@@ -19,7 +23,11 @@ export function createTimelineMemory(): TimelineMemory {
   };
   return {
     get,
-    expand: (viewKey: string, burstId: string, height: number) => {
+    expand: ({
+      viewKey,
+      burstId,
+      height,
+    }: Readonly<{ viewKey: string; burstId: string; height: number }>) => {
       const view = get(viewKey);
       view.expanded.delete(burstId);
       view.expanded.set(burstId, { height });

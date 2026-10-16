@@ -6,8 +6,11 @@ import { act, fireEvent, screen } from "@testing-library/react";
 
 import { beforeEach, vi } from "vitest";
 
-import { respondWith } from "./TimelineSurface.fixtures";
-/** Builds matching DataTransfer file/items views from the supplied File objects for drag-event delivery. */
+import { respondWith } from "./timelineSurfaceTestHelpers";
+/**
+ * Builds matching DataTransfer file/items views from the supplied File objects
+ * for drag-event delivery.
+ */
 export function makeDragPayloadFromFiles(files: readonly File[]): {
   dataTransfer: {
     types: string[];
@@ -31,7 +34,10 @@ export function makeDragPayloadFromFiles(files: readonly File[]): {
     },
   };
 }
-/** Dispatches drag-enter then drop through React act, targeting the mounted upload region when present. */
+/**
+ * Dispatches drag-enter then drop through React act, targeting the mounted
+ * upload region when present.
+ */
 export async function dropFiles(
   payload: Readonly<{ dataTransfer: object }>,
 ): Promise<void> {
@@ -46,7 +52,10 @@ export async function dropFiles(
     );
   });
 }
-/** Minimal callback-based file/directory entry contract used by recursive drop intake. */
+/**
+ * Minimal callback-based file/directory entry contract used by recursive drop
+ * intake.
+ */
 export type DroppedEntry = {
   name: string;
   fullPath: string;
@@ -57,7 +66,10 @@ export type DroppedEntry = {
     readEntries: (success: (entries: DroppedEntry[]) => void) => void;
   };
 };
-/** Wraps a File as a filesystem entry whose read callback settles in a microtask. */
+/**
+ * Wraps a File as a filesystem entry whose read callback settles in a
+ * microtask.
+ */
 export function makeFileEntryFromFile(file: File): DroppedEntry {
   return {
     name: file.name,
@@ -71,11 +83,17 @@ export function makeFileEntryFromFile(file: File): DroppedEntry {
     },
   };
 }
-/** Returns a directory entry whose readers deliver copied batches in order, then empty batches to signal exhaustion. */
-export function makeDirectoryEntryFromBatches(
-  name: string,
-  batches: ReadonlyArray<readonly DroppedEntry[]>,
-): DroppedEntry {
+/**
+ * Returns a directory entry whose readers deliver copied batches in order, then
+ * empty batches to signal exhaustion.
+ */
+export function makeDirectoryEntryFromBatches({
+  name,
+  batches,
+}: Readonly<{
+  name: string;
+  batches: ReadonlyArray<readonly DroppedEntry[]>;
+}>): DroppedEntry {
   return {
     name,
     fullPath: `/${name}`,
@@ -94,7 +112,10 @@ export function makeDirectoryEntryFromBatches(
     },
   };
 }
-/** Returns an upload-controller harness with an empty session for intake and recovery tests. */
+/**
+ * Returns an upload-controller harness with an empty session for intake and
+ * recovery tests.
+ */
 export function makeEmptyHarness(): ReturnType<
   typeof makeUploadControllerHarness
 > {
@@ -102,7 +123,10 @@ export function makeEmptyHarness(): ReturnType<
     makeUploadSurfaceDetail({ files: [], fileCount: 0, totalBytes: 0 }),
   );
 }
-/** Restores mocks and installs default timeline responses before each drop scenario. */
+/**
+ * Restores mocks and installs default timeline responses before each drop
+ * scenario.
+ */
 export function installTimelineSurfaceDropTestLifecycle(): void {
   beforeEach(() => {
     vi.restoreAllMocks();

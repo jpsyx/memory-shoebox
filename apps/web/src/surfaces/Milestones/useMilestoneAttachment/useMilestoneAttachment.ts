@@ -1,4 +1,4 @@
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { useState } from "react";
 import type {
   MilestoneAttachment,

@@ -1,26 +1,30 @@
 import { open, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 import type { MediaProcessRunner } from "../createMediaProcessRunner.ts";
 import type { MediaProbe } from "../mediaRuntime.types.ts";
 import {
-  getMediaInputArguments,
+  makeMediaArgumentsFromInput,
   getProbeFromFfprobe,
   getProbeFromHeifInfo,
-} from "./probeMedia.helpers.ts";
+} from "./probeMediaHelpers.ts";
 
-const LIMITS = appConfig.mediaProcessing;
+const LIMITS = APP_CONFIG.mediaProcessing;
 type ProbeOptions = {
   inputUrl: string;
   runner: MediaProcessRunner;
   signal: AbortSignal;
 };
 
-async function _fetchRange(
-  options: Readonly<ProbeOptions>,
-  start: number,
-  end: number,
-): Promise<Response> {
+async function _fetchRange({
+  options,
+  start,
+  end,
+}: {
+  options: Readonly<ProbeOptions>;
+  start: number;
+  end: number;
+}): Promise<Response> {
   const response = await fetch(options.inputUrl, {
     headers: { Range: `bytes=${start}-${end}` },
     redirect: "error",
@@ -59,18 +63,22 @@ function _getFormat(header: Buffer): string {
   throw new Error("processing_format_unsupported");
 }
 
-async function _saveProbePrefix(
-  options: Readonly<ProbeOptions>,
-  header: Buffer,
-  sourceBytes: number,
-): Promise<string> {
+async function _saveProbePrefix({
+  options,
+  header,
+  sourceBytes,
+}: {
+  options: Readonly<ProbeOptions>;
+  header: Buffer;
+  sourceBytes: number;
+}): Promise<string> {
   const path = join(options.runner.scratchPath, "probe-input");
   await writeFile(path, header, { flag: "wx" });
   const end = Math.min(sourceBytes, LIMITS.probeInputBytes) - 1;
   if (end < header.length) {
     return path;
   }
-  const response = await _fetchRange(options, header.length, end);
+  const response = await _fetchRange({ options, start: header.length, end });
   const file = await open(path, "a");
   let bytes = header.length;
   try {
@@ -87,10 +95,13 @@ async function _saveProbePrefix(
   return path;
 }
 
-async function _probeHeic(
-  options: Readonly<ProbeOptions>,
-  path: string,
-): Promise<MediaProbe> {
+async function _probeHeic({
+  options,
+  path,
+}: {
+  options: Readonly<ProbeOptions>;
+  path: string;
+}): Promise<MediaProbe> {
   const first = await options.runner.run({
     executable: "heif-info",
     args: [path],
@@ -128,13 +139,25 @@ async function _readHeader(response: Response): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-async function _checkImageChunks(path: string, format: string): Promise<void> {
+async function _checkImageChunks({
+  path,
+  format,
+}: {
+  path: string;
+  format: string;
+}): Promise<void> {
   if (!["png_pipe", "webp_pipe"].includes(format)) {
     return;
   }
   const file = await open(path, "r");
   const size = (await file.stat()).size;
-  const inspect = async (offset: number, remaining: number): Promise<void> => {
+  const inspect = async ({
+    offset,
+    remaining,
+  }: {
+    offset: number;
+    remaining: number;
+  }): Promise<void> => {
     if (offset >= size) {
       return;
     }
@@ -160,17 +183,17 @@ async function _checkImageChunks(path: string, format: string): Promise<void> {
     if (end > size || end <= offset) {
       throw new Error("processing_probe_invalid");
     }
-    await inspect(end, remaining - 1);
+    await inspect({ offset: end, remaining: remaining - 1 });
   };
   try {
-    await inspect(format === "png_pipe" ? 8 : 12, 4096);
+    await inspect({ offset: format === "png_pipe" ? 8 : 12, remaining: 4096 });
   } finally {
     await file.close();
   }
 }
 
 async function _probe(options: Readonly<ProbeOptions>): Promise<MediaProbe> {
-  getMediaInputArguments({ input: options.inputUrl, format: "mov" });
+  makeMediaArgumentsFromInput({ input: options.inputUrl, format: "mov" });
   await options.runner.run({
     executable: "/bin/true",
     args: [],
@@ -178,7 +201,7 @@ async function _probe(options: Readonly<ProbeOptions>): Promise<MediaProbe> {
     timeoutMs: LIMITS.probeTimeoutMs,
     stdoutLimitBytes: 0,
   });
-  const response = await _fetchRange(options, 0, 31);
+  const response = await _fetchRange({ options, start: 0, end: 31 });
   const header = await _readHeader(response);
   const sourceBytes = Number(
     /\/(\d+)$/.exec(response.headers.get("content-range") ?? "")?.[1],
@@ -190,25 +213,29 @@ async function _probe(options: Readonly<ProbeOptions>): Promise<MediaProbe> {
   const input =
     format === "mov"
       ? options.inputUrl
-      : await _saveProbePrefix(options, header, sourceBytes);
+      : await _saveProbePrefix({ options, header, sourceBytes });
   if (format === "heic") {
-    return _probeHeic(options, input);
+    return _probeHeic({ options, path: input });
   }
-  await _checkImageChunks(input, format);
-  return _probeFfprobe(options, format, input);
+  await _checkImageChunks({ path: input, format });
+  return _probeFfprobe({ options, format, input });
 }
 
-async function _probeFfprobe(
-  options: Readonly<ProbeOptions>,
-  format: string,
-  input: string,
-): Promise<MediaProbe> {
+async function _probeFfprobe({
+  options,
+  format,
+  input,
+}: {
+  options: Readonly<ProbeOptions>;
+  format: string;
+  input: string;
+}): Promise<MediaProbe> {
   const result = await options.runner.run({
     executable: "ffprobe",
     args: [
       "-v",
       "error",
-      ...getMediaInputArguments({ format, input }),
+      ...makeMediaArgumentsFromInput({ format, input }),
       "-probesize",
       String(LIMITS.probeInputBytes),
       "-analyzeduration",
@@ -235,7 +262,10 @@ async function _probeFfprobe(
   });
 }
 
-/** Uses one reader's probe phase; caller checks its typed failure before lifting. */
+/**
+ * Uses one reader's probe phase; caller checks its typed failure before
+ * lifting.
+ */
 export async function probeMedia(
   options: Readonly<ProbeOptions>,
 ): Promise<MediaProbe> {

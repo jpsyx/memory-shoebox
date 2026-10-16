@@ -1,0 +1,22 @@
+.printRuntime {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.printRuntime svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: currentColor;
+}

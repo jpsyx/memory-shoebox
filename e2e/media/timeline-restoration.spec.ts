@@ -1,10 +1,10 @@
 import { writeFile } from "node:fs/promises";
 import { test, expect } from "./media.fixtures.ts";
 
-for (const viewport of [
+[
   { width: 1280, height: 900 },
   { width: 390, height: 844 },
-]) {
+].forEach((viewport) => {
   test.describe(`${viewport.width}px saved fan`, () => {
     test.use({ viewport });
     test("returns to an inner frame after its collected frame query answers slowly", async ({
@@ -118,4 +118,4 @@ for (const viewport of [
       );
     });
   });
-}
+});

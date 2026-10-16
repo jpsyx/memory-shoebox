@@ -5,7 +5,7 @@ import {
   GROUP,
   renderGroups,
 } from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 afterEach(() => {
   return vi.unstubAllGlobals();
@@ -31,7 +31,10 @@ it("protects the edit draft and disables its controls while saving", async () =>
   );
   await waitFor(() => {
     return expect(
-      countCallsTo("PUT", `/api/groups/${GROUP.groupId}/members`),
+      countCallsTo({
+        method: "PUT",
+        path: `/api/groups/${GROUP.groupId}/members`,
+      }),
     ).toBe(1);
   });
   expect(screen.getByLabelText("What to call it")).toBeDisabled();

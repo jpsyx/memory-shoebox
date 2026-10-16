@@ -4,13 +4,13 @@ import {
   makeDay,
   makeItem,
   makeMediaSource,
-} from "@/surfaces/Timeline/timelineFixtures";
-import { getRecordedBodyFromRequest } from "@/testing/surfaceHarness";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
+import { getRecordedBodyFromRequest } from "@/testing/surfaceHarnessHelpers";
 import {
   recordedUrls,
   renderTimeline,
   respondWith,
-} from "./TimelineSurface.fixtures";
+} from "./timelineSurfaceTestHelpers";
 
 describe("visible timeline signature renewal", () => {
   afterEach(() => {

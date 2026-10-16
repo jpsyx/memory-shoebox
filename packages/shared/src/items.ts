@@ -48,14 +48,14 @@ export type ItemsSeenRequest = z.infer<typeof itemsSeenRequestSchema>;
  * sorts by count with no tiebreak, so four loves and four cares would swap
  * places between page loads without this.
  */
-export const REACTION_ORDER: readonly ReactionKind[] = [
+export const REACTION_ORDER = [
   "like",
   "love",
   "care",
   "haha",
   "wow",
   "sad",
-];
+] as const satisfies readonly ReactionKind[];
 
 /**
  * What this viewer may do on this item.
@@ -173,7 +173,7 @@ export const itemDetailSchema = itemSummarySchema.extend({
   /**
    * Null unless somebody typed a real description. Pre-fill the description
    * field from this, never from `media.altText`, or a generated default
-   * becomes a typed override on the next save (Decision 9).
+   * becomes a typed override on the next save.
    */
   altTextOverride: z.string().nullable(),
   /**
@@ -262,7 +262,8 @@ export const ITEM_ERROR_CODES = [
   "comment_not_found", // 404, including when the item is invisible
   "comment_edit_forbidden", // 403, author only
   "comment_delete_forbidden", // 403, author or admin
-  "video_reaction_conflict", // 409, event id already used with a different payload
+  // 409, event id already used with a different payload
+  "video_reaction_conflict",
   "video_reaction_delete_forbidden", // 403, author or admin
   "visibility_rule_forbidden", // 403, role only
 ] as const;

@@ -1,0 +1,27 @@
+.itemCommentActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.itemCommentActions > button {
+  color: var(--on-print-quiet);
+  font-size: var(--micro) !important;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-height: 36px;
+}
+.itemCommentActions > div {
+  margin: 0;
+}
+/* Keep compact action text independent of stylesheet injection order. */
+:global([data-item-conversation-surface]) .itemCommentActions button {
+  font-size: var(--micro);
+}
+.itemCommentActionsError {
+  color: var(--on-print);
+  font-size: var(--micro);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}

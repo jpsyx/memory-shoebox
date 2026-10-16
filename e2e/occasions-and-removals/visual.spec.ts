@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import {
   waitForControlledVisualMedia,
   type ControlledVisualImage,
-} from "./support/waitForControlledVisualMedia.ts";
+} from "./support/controlledVisualMediaHelpers.ts";
 import { mkdir, writeFile } from "node:fs/promises";
 import { ACCEPTANCE_DIRECTORY } from "./asking-occasions.constants.ts";
 import { expect, test } from "./asking-occasions.fixtures.ts";
@@ -56,7 +56,7 @@ async function _captureControlledVisual({
             : state === "created"
               ? 2
               : 0;
-  const images = await waitForControlledVisualMedia(page, imageCount);
+  const images = await waitForControlledVisualMedia({ page, imageCount });
   const metrics = await getDocumentMetricsFromPage(page);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
   const stem = `${surface}-${state}-${width}-${scheme}`;

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createUploadDecodeCoordinator } from "./createUploadDecodeCoordinator";
 
-function _deferred() {
+function _deferred(): PromiseWithResolvers<void> {
   return Promise.withResolvers<void>();
 }
 
@@ -10,11 +10,15 @@ describe("upload decoder scheduling", () => {
     const coordinator = createUploadDecodeCoordinator();
     const held = _deferred();
     const order: string[] = [];
-    const run = (
-      name: string,
-      priority: "active" | "preview",
+    const run = ({
+      name,
+      priority,
       work = async () => {},
-    ) => {
+    }: {
+      name: string;
+      priority: "active" | "preview";
+      work?: () => Promise<void>;
+    }) => {
       return coordinator.run({
         priority,
         signal: new AbortController().signal,
@@ -24,11 +28,15 @@ describe("upload decoder scheduling", () => {
         },
       });
     };
-    const first = run("owner", "preview", () => {
-      return held.promise;
+    const first = run({
+      name: "owner",
+      priority: "preview",
+      work: () => {
+        return held.promise;
+      },
     });
-    const preview = run("preview", "preview");
-    const active = run("active", "active");
+    const preview = run({ name: "preview", priority: "preview" });
+    const active = run({ name: "active", priority: "active" });
     expect(order).toEqual(["owner"]);
     held.resolve();
     await Promise.all([first, preview, active]);

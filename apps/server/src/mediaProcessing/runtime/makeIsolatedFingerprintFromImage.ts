@@ -1,6 +1,6 @@
 import { writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { visualFingerprintSchema } from "@memory-shoebox/shared";
 import type { MediaProcessRunner } from "./createMediaProcessRunner.ts";
 
@@ -31,7 +31,7 @@ export async function makeIsolatedFingerprintFromImage(
     const result = await options.runner.run({
       executable: process.execPath,
       args: [
-        fileURLToPath(new URL("./runFingerprintChild.ts", import.meta.url)),
+        fileUrlToPath(new URL("./runFingerprintChild.ts", import.meta.url)),
         path,
       ],
       signal: options.signal,

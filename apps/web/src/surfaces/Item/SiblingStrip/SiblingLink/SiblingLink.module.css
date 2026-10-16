@@ -1,0 +1,39 @@
+.siblingLink {
+  flex: none;
+  width: 4.25rem;
+  height: 4.25rem;
+  padding: 3px;
+  border: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+  cursor: pointer;
+}
+
+.siblingLink[aria-current] {
+  outline: 3px solid var(--on-print);
+  outline-offset: 1px;
+}
+
+/*
+ * Focus wins over the current-frame mark so the strip's current tab stop
+ * visibly changes when focused.
+ */
+.siblingLink:focus-visible {
+  outline: 3px solid var(--accent-on-print);
+  outline-offset: 2px;
+}
+
+.siblingLink img,
+.siblingLink .siblingLinkPlaceholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.siblingLink .siblingLinkPlaceholder {
+  font-family: var(--font-label);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  min-height: 0;
+  overflow: hidden;
+}

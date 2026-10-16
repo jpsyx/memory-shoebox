@@ -1,8 +1,10 @@
 import { playVideo } from "@/system/VideoFrame/playVideo";
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { getSourceRenewalFromVideo } from "../VideoConversation/useVideoSourceRenewal/useVideoSourceRenewal";
+import { getSourceRenewalFromVideo } from "../VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 
-/** One selected moment whose native write still belongs to this item and node. */
+/**
+ * One selected moment whose native write still belongs to this item and node.
+ */
 export type VideoSeekIntent = {
   isCurrent: () => boolean;
   apply: (shouldPlay: boolean) => void;
@@ -13,27 +15,36 @@ export type VideoSeekIntent = {
 export type VideoTransport = {
   videoRef: RefObject<HTMLVideoElement | null>;
   position: number;
-  /** Explicit pause supersedes pending restoration without dropping the moment. */
+  /**
+   * Explicit pause supersedes pending restoration without dropping the moment.
+   */
   pause: () => void;
   setPosition: (seconds: number) => void;
   /** Accepts an annotation target before its native readiness check settles. */
   selectPosition: (seconds: number) => VideoSeekIntent;
-  /** Ignores source-reset events until the current selected seek is acknowledged. */
-  updatePositionFromVideo: (
-    video: HTMLVideoElement,
-    hasSeeked?: boolean,
-  ) => boolean;
-  /** Uses the selected target while pending, otherwise the precise native clock. */
+  /**
+   * Ignores source-reset events until the current selected seek is
+   * acknowledged.
+   */
+  updatePositionFromVideo: ({
+    video,
+    hasSeeked,
+  }: Readonly<{ video: HTMLVideoElement; hasSeeked?: boolean }>) => boolean;
+  /**
+   * Uses the selected target while pending, otherwise the precise native clock.
+   */
   getAnnotationPosition: () => number;
   /** The moment a comment being written will stand at, if one is set. */
   pendingAt: number | undefined;
   setPendingAt: (seconds: number | undefined) => void;
-  /** Explicitly starts playback at a moment; ordinary seeking preserves state. */
+  /**
+   * Explicitly starts playback at a moment; ordinary seeking preserves state.
+   */
   seekAndPlay: (seconds: number) => void;
 };
 
 type SeekTarget = {
-  video: HTMLVideoElement | null;
+  video: HTMLVideoElement | undefined;
   position: number;
   applied: boolean;
 };
@@ -42,9 +53,15 @@ type SeekOwner = {
   target: RefObject<SeekTarget | undefined>;
   setPosition: (seconds: number) => void;
 };
-function _selectPosition(owner: SeekOwner, seconds: number): VideoSeekIntent {
+function _selectPosition({
+  owner,
+  seconds,
+}: {
+  owner: SeekOwner;
+  seconds: number;
+}): VideoSeekIntent {
   const target: SeekTarget = {
-    video: owner.videoRef.current,
+    video: owner.videoRef.current ?? undefined,
     position: seconds,
     applied: false,
   };
@@ -52,7 +69,8 @@ function _selectPosition(owner: SeekOwner, seconds: number): VideoSeekIntent {
   owner.setPosition(seconds);
   const isCurrent = () => {
     return (
-      owner.target.current === target && owner.videoRef.current === target.video
+      owner.target.current === target &&
+      (owner.videoRef.current ?? undefined) === target.video
     );
   };
   return {
@@ -69,7 +87,7 @@ function _selectPosition(owner: SeekOwner, seconds: number): VideoSeekIntent {
       }
       const video = target.video;
       target.applied = true;
-      if (video !== null) {
+      if (video !== undefined) {
         target.position = Math.min(
           seconds,
           Number.isFinite(video.duration) ? video.duration : seconds,
@@ -83,11 +101,15 @@ function _selectPosition(owner: SeekOwner, seconds: number): VideoSeekIntent {
     },
   };
 }
-function _updatePosition(
-  owner: SeekOwner,
-  video: HTMLVideoElement,
-  hasSeeked: boolean,
-): boolean {
+function _updatePosition({
+  owner,
+  video,
+  hasSeeked,
+}: {
+  owner: SeekOwner;
+  video: HTMLVideoElement;
+  hasSeeked: boolean;
+}): boolean {
   if (owner.videoRef.current !== video) {
     return false;
   }
@@ -107,7 +129,7 @@ function _updatePosition(
 function _retireChangedNode(owner: SeekOwner): void {
   if (
     owner.target.current !== undefined &&
-    owner.target.current.video !== owner.videoRef.current
+    owner.target.current.video !== (owner.videoRef.current ?? undefined)
   ) {
     owner.target.current = undefined;
     owner.setPosition(owner.videoRef.current?.currentTime ?? 0);
@@ -124,7 +146,8 @@ function useSeekOwner(itemId: string): SeekOwner & { position: number } {
     setPosition(0);
   }
   const owner = useRef<SeekOwner>({ videoRef, target, setPosition }).current;
-  // Each render checks its committed node, including a stable ref changing nodes.
+  // Each render checks its committed node, including a stable ref changing
+  // nodes.
   useLayoutEffect(() => {
     _retireChangedNode(owner);
   });
@@ -161,14 +184,15 @@ export function useVideoTransport(itemId: string): VideoTransport {
     },
     setPosition,
     selectPosition: (seconds) => {
-      return _selectPosition(owner, seconds);
+      return _selectPosition({ owner, seconds });
     },
-    updatePositionFromVideo: (video, hasSeeked = false) => {
-      return _updatePosition(owner, video, hasSeeked);
+    updatePositionFromVideo: ({ video, hasSeeked = false }) => {
+      return _updatePosition({ owner, video, hasSeeked });
     },
     getAnnotationPosition: () => {
       const target = owner.target.current;
-      return target !== undefined && target.video === owner.videoRef.current
+      return target !== undefined &&
+        target.video === (owner.videoRef.current ?? undefined)
         ? target.position
         : (owner.videoRef.current?.currentTime ?? owner.position);
     },

@@ -1,3 +1,4 @@
+import type { TimelineSelection } from "@memory-shoebox/shared";
 import { afterEach, expect } from "vitest";
 
 import type { Kysely } from "kysely";
@@ -17,16 +18,28 @@ import {
   insertUploadSession,
   NOW,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
-/** Owned test-app shutdown callbacks drained by the installed media-preview lifecycle. */
+type MediaPreviewBurstFixture = {
+  frameIds: string[];
+  burstId: string;
+  before: string;
+  after: string;
+};
+
+/**
+ * Owned test-app shutdown callbacks drained by the installed media-preview
+ * lifecycle.
+ */
 export const cleanups: Array<() => Promise<void>> = [];
-/** Creates a signed-in local app and uploader, exposes an authenticated media POST helper and registers app shutdown. */
+/**
+ * Creates a signed-in local app and uploader, exposes an authenticated media
+ * POST helper and registers app shutdown.
+ */
 export async function createMediaPreviewContext(): Promise<
   Awaited<ReturnType<typeof createTestApp>> &
     Awaited<ReturnType<typeof insertSignedInMember>> & {
       uploaderId: string;
       post: (
-        path: string,
-        payload: unknown,
+        options: Readonly<{ path: string; payload: unknown }>,
       ) => Promise<
         Awaited<
           ReturnType<Awaited<ReturnType<typeof createTestApp>>["app"]["inject"]>
@@ -41,7 +54,10 @@ export async function createMediaPreviewContext(): Promise<
   });
   cleanups.push(context.close);
   const member = await insertSignedInMember({ database: context.database });
-  const post = (path: string, payload: unknown) => {
+  const post = ({
+    path,
+    payload,
+  }: Readonly<{ path: string; payload: unknown }>) => {
     return context.app.inject({
       method: "POST",
       url: `/api/media/${path}`,
@@ -52,7 +68,10 @@ export async function createMediaPreviewContext(): Promise<
   const uploaderId = await insertMember(context.database, { role: "uploader" });
   return { ...context, ...member, uploaderId, post };
 }
-/** Snapshots view, activity and email tables in stable ID order to detect forbidden preview side effects. */
+/**
+ * Snapshots view, activity and email tables in stable ID order to detect
+ * forbidden preview side effects.
+ */
 export async function getMediaSideEffectsFromDatabase(
   database: Kysely<Database>,
 ): Promise<unknown[][]> {
@@ -66,15 +85,13 @@ export async function getMediaSideEffectsFromDatabase(
     }),
   );
 }
-/** Seeds a burst whose capture, index and cover orders differ, plus standalone neighbors on either side. */
+/**
+ * Seeds a burst whose capture, index and cover orders differ, plus standalone
+ * neighbors on either side.
+ */
 export async function seedMediaPreviewBurst(
   context: Awaited<ReturnType<typeof createMediaPreviewContext>>,
-): Promise<{
-  frameIds: string[];
-  burstId: string;
-  before: string;
-  after: string;
-}> {
+): Promise<MediaPreviewBurstFixture> {
   const session = await insertUploadSession(context.database, {
     uploadedBy: context.uploaderId,
   });
@@ -113,12 +130,17 @@ export async function seedMediaPreviewBurst(
   return { frameIds, burstId, before, after };
 }
 /** Unfiltered tag/person selection used by media-neighbor requests. */
-export const SELECTION = { tags: [], people: [] };
-/** Requires the neighbor response shape and extracts ahead/behind item IDs without reordering them. */
-export function getItemIdsFromNeighborResponse(body: {
-  ahead: Array<{ itemId: string }>;
-  behind: Array<{ itemId: string }>;
-}): { ahead: string[]; behind: string[] } {
+export const SELECTION = { tags: [], people: [] } satisfies TimelineSelection;
+/**
+ * Requires the neighbor response shape and extracts ahead/behind item IDs
+ * without reordering them.
+ */
+export function getItemIdsFromNeighborResponse(
+  body: Readonly<{
+    ahead: Array<{ itemId: string }>;
+    behind: Array<{ itemId: string }>;
+  }>,
+): { ahead: string[]; behind: string[] } {
   expect(body).toHaveProperty("ahead");
   return {
     ahead: body.ahead.map((item) => {
@@ -129,7 +151,10 @@ export function getItemIdsFromNeighborResponse(body: {
     }),
   };
 }
-/** Registers afterEach shutdown of every owned preview-test app and drains the cleanup registry. */
+/**
+ * Registers afterEach shutdown of every owned preview-test app and drains the
+ * cleanup registry.
+ */
 export function installMediaPreviewTestLifecycle(): void {
   afterEach(async () => {
     await Promise.all(

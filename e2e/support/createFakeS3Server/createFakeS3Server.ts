@@ -6,7 +6,7 @@ import {
   type ServerResponse,
 } from "node:http";
 
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 
 import { makeBucketCorsRuleFromOrigins } from "../../../apps/server/scripts/configureBucketCors/makeBucketCorsRuleFromOrigins.ts";
 import { VITE_DEV_ORIGIN } from "../../../apps/server/scripts/configureBucketCors/printConsoleFallback/printConsoleFallback.constants.ts";
@@ -217,30 +217,38 @@ function _recordResponseBytes(options: {
   recordBody: (bytes: number) => void;
 }): void {
   const { response, logged, recordBody } = options;
-  const count = (chunk: unknown, encoding: unknown): void => {
+  const recordChunkBytes = ({
+    chunk,
+    encoding,
+  }: {
+    chunk: unknown;
+    encoding: unknown;
+  }): void => {
     if (response.req.method === "HEAD" || response.statusCode === 304) {
       return;
     }
-    let bytes = 0;
-    if (typeof chunk === "string") {
-      bytes = Buffer.byteLength(
-        chunk,
-        typeof encoding === "string" ? (encoding as BufferEncoding) : "utf8",
-      );
-    } else if (chunk instanceof Uint8Array) {
-      bytes = chunk.byteLength;
-    }
+    const bytes =
+      typeof chunk === "string"
+        ? Buffer.byteLength(
+            chunk,
+            typeof encoding === "string"
+              ? (encoding as BufferEncoding)
+              : "utf8",
+          )
+        : chunk instanceof Uint8Array
+          ? chunk.byteLength
+          : 0;
     logged.bodyBytes += bytes;
     recordBody(bytes);
   };
   const originalWrite = response.write;
   const originalEnd = response.end;
   response.write = ((...args: unknown[]) => {
-    count(args[0], args[1]);
+    recordChunkBytes({ chunk: args[0], encoding: args[1] });
     return Reflect.apply(originalWrite, response, args);
   }) as ServerResponse["write"];
   response.end = ((...args: unknown[]) => {
-    count(args[0], args[1]);
+    recordChunkBytes({ chunk: args[0], encoding: args[1] });
     return Reflect.apply(originalEnd, response, args);
   }) as ServerResponse["end"];
 }
@@ -290,7 +298,7 @@ export function createFakeS3Server(
 
 // Only when Node was pointed at this file, which is how Playwright's
 // `webServer` runs it. Its tests import it and must not start a second one.
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === fileUrlToPath(import.meta.url)) {
   createFakeS3Server({
     bucketName: E2E_SERVER_ENVIRONMENT.B2_BUCKET,
     allowedOrigins: [E2E_BASE_URL, VITE_DEV_ORIGIN],

@@ -7,7 +7,10 @@ export type TimelineLayout = {
   isMobile: boolean;
   viewportWidth: number;
 };
-/** Reads the incumbent CSS grid instead of introducing a parallel breakpoint/column policy. */
+/**
+ * Reads the incumbent CSS grid instead of introducing a parallel
+ * breakpoint/column policy.
+ */
 export function useTimelineLayout(
   element: RefObject<HTMLElement | null>,
 ): TimelineLayout {
@@ -20,10 +23,14 @@ export function useTimelineLayout(
   });
   useLayoutEffect(() => {
     const root = element.current;
-    if (!root) return;
+    if (!root) {
+      return;
+    }
     const measure = () => {
       const pile = root.querySelector<HTMLElement>("[data-timeline-pile]");
-      if (!pile) return;
+      if (!pile) {
+        return;
+      }
       const width = pile.getBoundingClientRect().width;
       const tracks = getComputedStyle(pile)
         .gridTemplateColumns.split(" ")

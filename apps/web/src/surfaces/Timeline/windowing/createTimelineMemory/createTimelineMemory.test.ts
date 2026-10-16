@@ -14,7 +14,11 @@ it("bounds compact view anchors and expansions and clears authority state", () =
   expect(memory.get("first").anchor).toBeUndefined();
   const view = memory.get("current");
   for (let index = 0; index < 21; index += 1) {
-    memory.expand("current", `burst-${index}`, 200);
+    memory.expand({
+      viewKey: "current",
+      burstId: `burst-${index}`,
+      height: 200,
+    });
   }
   expect(view.expanded.size).toBe(20);
   expect(view.expanded.has("burst-0")).toBe(false);

@@ -8,7 +8,7 @@ import {
   respondWith,
   THAT_LAPTOP,
   THIS_PHONE,
-} from "./AccountSurface.fixtures";
+} from "./accountSurfaceTestHelpers";
 
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -37,8 +37,15 @@ describe("surface 9", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/sign-in");
     });
-    expect(countCallsTo("DELETE", "/api/auth/session")).toBe(1);
-    expect(countCallsTo("DELETE", `/api/me/sessions/${THIS_PHONE}`)).toBe(0);
+    expect(countCallsTo({ method: "DELETE", path: "/api/auth/session" })).toBe(
+      1,
+    );
+    expect(
+      countCallsTo({
+        method: "DELETE",
+        path: `/api/me/sessions/${THIS_PHONE}`,
+      }),
+    ).toBe(0);
   });
 
   it("signs another device out by its own id, and stays where it is", async () => {
@@ -54,9 +61,16 @@ describe("surface 9", () => {
     );
 
     await waitFor(() => {
-      expect(countCallsTo("DELETE", `/api/me/sessions/${THAT_LAPTOP}`)).toBe(1);
+      expect(
+        countCallsTo({
+          method: "DELETE",
+          path: `/api/me/sessions/${THAT_LAPTOP}`,
+        }),
+      ).toBe(1);
     });
-    expect(countCallsTo("DELETE", "/api/auth/session")).toBe(0);
+    expect(countCallsTo({ method: "DELETE", path: "/api/auth/session" })).toBe(
+      0,
+    );
     expect(router.state.location.pathname).toBe("/account");
   });
 
@@ -85,7 +99,7 @@ describe("surface 9", () => {
       screen.getByRole("region", { name: "Your devices" }),
     ).toContainElement(said);
     await waitFor(() => {
-      expect(countCallsTo("GET", "/api/me/sessions")).toBe(2);
+      expect(countCallsTo({ method: "GET", path: "/api/me/sessions" })).toBe(2);
     });
   });
 
@@ -138,7 +152,7 @@ describe("surface 9", () => {
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
     await waitFor(() => {
-      expect(countCallsTo("GET", "/api/me/sessions")).toBe(2);
+      expect(countCallsTo({ method: "GET", path: "/api/me/sessions" })).toBe(2);
     });
   });
 });

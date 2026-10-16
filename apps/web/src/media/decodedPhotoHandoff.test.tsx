@@ -1,13 +1,15 @@
+import type { MediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
+import type { Mock } from "vitest";
+import type { MediaRef } from "@memory-shoebox/shared";
+import type { PhotoViewport } from "./photoViewportHelpers";
 import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { act, fireEvent, render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "./createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingResources } from "./createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "./createMediaLoadingResources/createMediaLoadingLifetime";
 import { MediaLoadingContext } from "./MediaLoadingContext";
 
 const source = makeMediaSource({
@@ -21,15 +23,19 @@ const media = {
   ...makeItemDetail().media,
   display: source,
   displayCandidates: [source],
-};
-const viewport = {
+} satisfies MediaRef;
+const VIEWPORT = {
   cssWidth: 620,
   cssHeight: 600,
   devicePixelRatio: 1,
   supportsWebp: true,
-};
+} satisfies PhotoViewport;
 
-async function _warm(hasViewport = true) {
+async function _warm(hasViewport = true): Promise<{
+  resources: MediaLoadingResources;
+  image: HTMLImageElement;
+  release: Mock<() => void>;
+}> {
   const image = document.createElement("img");
   image.src = source.url;
   Object.defineProperties(image, {
@@ -59,17 +65,19 @@ async function _warm(hasViewport = true) {
       };
     },
   });
-  resources.navigation.viewport = hasViewport ? viewport : undefined;
-  resources.scheduler.schedule(
-    [{ itemId: "target", source, rank: 0, kind: "photo", decode: true }],
-    {
+  resources.navigation.viewport = hasViewport ? VIEWPORT : undefined;
+  resources.scheduler.schedule({
+    candidates: [
+      { itemId: "target", source, rank: 0, kind: "photo", decode: true },
+    ],
+    environment: {
       memberId: "member",
       selectionKey: "before",
       visible: true,
       saveData: false,
       effectiveType: "4g",
     },
-  );
+  });
   await vi.advanceTimersByTimeAsync(250);
   resources.navigation.prepare({ itemId: "target", source });
   return { resources, image, release };
@@ -172,7 +180,7 @@ test("retains pixels across a decoded preview and releases only when the separat
   resources.dispose();
 });
 
-for (const action of ["remove", "clear", "member", "dispose"] as const) {
+(["remove", "clear", "member", "dispose"] as const).forEach((action) => {
   test(`invalidates mounted native handoff synchronously on ${action}`, async () => {
     const { resources, image, release } = await _warm();
     const view = render(
@@ -197,7 +205,7 @@ for (const action of ["remove", "clear", "member", "dispose"] as const) {
     view.unmount();
     resources.dispose();
   });
-}
+});
 
 test("selected source failure releases temporary pixels before waiting for renewal", async () => {
   const { resources, image, release } = await _warm();

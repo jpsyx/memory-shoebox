@@ -3,36 +3,38 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 function _installUsesVocabularyQAndNeverTimelineQAnswers0(): void {
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
-    },
-    [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
-      status: 200,
-      body: detail,
-    },
-    "GET /api/timeline": {
-      status: 200,
-      body: {
-        previousCursor: null,
-        days: [],
-        nextCursor: null,
-        resultCount: null,
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
       },
+      [`GET /api/milestones/${detail.milestone.milestoneId}`]: {
+        status: 200,
+        body: detail,
+      },
+      "GET /api/timeline": {
+        status: 200,
+        body: {
+          previousCursor: null,
+          days: [],
+          nextCursor: null,
+          resultCount: null,
+        },
+      },
+      "GET /api/filters/facets": {
+        status: 200,
+        body: { tags: [], people: [] },
+      },
+      "GET /api/tags": { status: 200, body: { tags: [] } },
+      "GET /api/people": { status: 200, body: { people: [] } },
     },
-    "GET /api/filters/facets": {
-      status: 200,
-      body: { tags: [], people: [] },
-    },
-    "GET /api/tags": { status: 200, body: { tags: [] } },
-    "GET /api/people": { status: 200, body: { people: [] } },
   });
 }
 

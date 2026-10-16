@@ -1,0 +1,41 @@
+.pile {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
+  align-items: start;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding-bottom: var(--sp-5);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 75rem;
+  /* Paint containment must leave room for tilted prints and hover scaling. */
+  overflow-clip-margin: var(--sp-4);
+}
+
+.pile > * {
+  min-width: 0;
+}
+
+/* The jump target must not occupy a photo slot or introduce an empty row. */
+.pile > :global([data-pile-anchor]) {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+}
+
+:global([data-pile="messy"]) .pile {
+  column-gap: 2px;
+}
+
+@media (max-width: 44rem) {
+  .pile {
+    padding-block: var(--sp-2) var(--sp-4);
+  }
+}
+
+/* WebKit needs space inside the paint boundary instead of outside it. */
+@supports not (overflow-clip-margin: 1px) {
+  .pile {
+    padding: var(--sp-4);
+  }
+}

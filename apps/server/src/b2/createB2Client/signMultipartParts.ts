@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { B2Client, B2OperationContext } from "./createB2Client.types.ts";
 import { makeBucketKeyFromKey } from "./makeBucketKeyFromKey.ts";
@@ -17,7 +17,7 @@ export function signMultipartParts(
     key,
     uploadId,
     partNumbers,
-    expiresInSeconds = appConfig.upload.presignTtlSeconds,
+    expiresInSeconds = APP_CONFIG.upload.presignTtlSeconds,
   } = input.options;
 
   return signB2Parts({

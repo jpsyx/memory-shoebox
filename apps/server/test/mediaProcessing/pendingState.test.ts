@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import { createLifecycleFixture } from "./lifecycleTestHelpers.ts";
-import { discoverMediaProcessingWork } from "../../src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { createLifecycleFixture } from "./createLifecycleFixture.ts";
+import { discoverMediaProcessingWork } from "../../src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 import { readMediaSources } from "../../src/archive/readMediaSources.ts";
 import { makeMediaRefFromSources } from "../../src/archive/makeMediaRefFromSources.ts";
 import { insertRendition } from "../helpers/seedHelpers/seedHelpers.ts";
@@ -61,7 +61,7 @@ it("exposes pending only for current source and policy, retaining ready sources"
       kind: "photo",
       width: 10,
       height: 10,
-      durationMs: null,
+      durationMs: undefined,
       altText: "Photo",
     }).previewState,
   ).toBe("ready");

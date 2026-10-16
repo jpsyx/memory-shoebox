@@ -7,7 +7,7 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { ItemSummary, MilestoneDetail } from "@memory-shoebox/shared";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -21,30 +21,32 @@ function _installHeldOccasionEditAnswers(): {
   const firstPath = `/api/milestones/${first.milestone.milestoneId}`;
   const secondPath = `/api/milestones/${second.milestone.milestoneId}`;
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [first, second], nextCursor: null },
-    },
-    [`GET ${firstPath}`]: { status: 200, body: first },
-    [`GET ${secondPath}`]: { status: 200, body: second },
-    [`PATCH ${firstPath}`]: { status: 200, body: first, waitFor: held.hold },
-    [`GET ${firstPath}/candidates`]: {
-      status: 200,
-      body: {
-        candidates: [{ item, isAttached: false, isOutsideSpan: false }],
-        nextCursor: null,
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [first, second], nextCursor: null },
       },
-    },
-    [`GET ${firstPath}/mismatches`]: {
-      status: 200,
-      body: {
-        milestone: first.milestone,
-        mismatches: [{ item, attachedAt: "2026-10-04T12:00:00.000Z" }],
-        wideningSpan: first.milestone,
-        nextCursor: null,
+      [`GET ${firstPath}`]: { status: 200, body: first },
+      [`GET ${secondPath}`]: { status: 200, body: second },
+      [`PATCH ${firstPath}`]: { status: 200, body: first, waitFor: held.hold },
+      [`GET ${firstPath}/candidates`]: {
+        status: 200,
+        body: {
+          candidates: [{ item, isAttached: false, isOutsideSpan: false }],
+          nextCursor: null,
+        },
       },
+      [`GET ${firstPath}/mismatches`]: {
+        status: 200,
+        body: {
+          milestone: first.milestone,
+          mismatches: [{ item, attachedAt: "2026-10-04T12:00:00.000Z" }],
+          wideningSpan: first.milestone,
+          nextCursor: null,
+        },
+      },
+      [`PATCH ${secondPath}`]: { status: 200, body: second },
     },
-    [`PATCH ${secondPath}`]: { status: 200, body: second },
   });
   return { held, firstPath, secondPath };
 }

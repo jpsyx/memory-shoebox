@@ -9,9 +9,9 @@ import {
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
-import { DeclineRemovalControls } from "../../RemovalActionDialogs/DeclineRemovalDialog/DeclineRemovalControls";
+import { makeRemovalRouteComponentFromFixture } from "./makeRemovalRouteComponentFromFixture";
 import type { RemovalActions } from "../../useRemovalActions/useRemovalActions";
-import { RemovalRequestPreview } from "./RemovalRequestPreview";
+import { RemovalRequestTestDestination } from "./RemovalRequestTestDestination";
 
 it.each(["preview", "decline"])(
   "%s navigates internally and keeps a native modifier-click href",
@@ -37,22 +37,19 @@ it.each(["preview", "decline"])(
         return root;
       },
       path: "/removal-requests",
-      component: () => {
-        return kind === "preview" ? (
-          <RemovalRequestPreview request={request} />
-        ) : (
-          <DeclineRemovalControls actions={actions} reason="" href={href} />
-        );
-      },
+      component: makeRemovalRouteComponentFromFixture({
+        kind,
+        request,
+        actions,
+        href,
+      }),
     });
     const item = createRoute({
       getParentRoute: () => {
         return root;
       },
       path: "/items/$itemId",
-      component: () => {
-        return <p>Destination</p>;
-      },
+      component: RemovalRequestTestDestination,
     });
     const router = createRouter({
       routeTree: root.addChildren([queue, item]),
@@ -76,7 +73,9 @@ it.each(["preview", "decline"])(
     expect(modified.defaultPrevented).toBe(false);
     let documentNavigationCount = 0;
     const observe = (event: MouseEvent) => {
-      if (!event.defaultPrevented) documentNavigationCount += 1;
+      if (!event.defaultPrevented) {
+        documentNavigationCount += 1;
+      }
     };
     document.addEventListener("click", observe);
     await act(async () => {

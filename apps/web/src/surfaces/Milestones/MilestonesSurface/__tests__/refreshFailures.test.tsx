@@ -1,4 +1,4 @@
-import { recordedRequests, renderAt } from "@/testing/surfaceHarness";
+import { recordedRequests, renderAt } from "@/testing/surfaceHarnessHelpers";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";

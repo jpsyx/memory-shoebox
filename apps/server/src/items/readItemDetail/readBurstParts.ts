@@ -1,15 +1,15 @@
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import type { VisibleItem } from "../getVisibleItemOr404.ts";
 import {
   readBurstFrameRows,
   type BurstFrameRow,
-} from "../readBurstFrameRefs/readBurstFrameRows.ts";
+} from "../readBurstFramePage/readBurstFrameRows.ts";
 import {
   readBurstFrameTotals,
   type BurstFrameTotals,
-} from "../readBurstFrameRefs/readBurstFrameTotals.ts";
+} from "../readBurstFramePage/readBurstFrameTotals.ts";
 
 /** The two reads a burst costs, and what the payload takes from each. */
 export type BurstParts = {
@@ -46,7 +46,7 @@ export async function readBurstParts(options: {
       database: options.database,
       viewer: options.viewer,
       burstId: options.burstId,
-      limit: appConfig.items.burstStripMaxFrames,
+      limit: APP_CONFIG.items.burstStripMaxFrames,
     }),
     readBurstFrameTotals({
       database: options.database,

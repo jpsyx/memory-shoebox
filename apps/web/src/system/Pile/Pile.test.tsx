@@ -1,11 +1,13 @@
-import { MantineProvider } from "@mantine/core";
-import { render, screen } from "@testing-library/react";
 import type {
+  MediaSource,
   DayMilestoneBand,
   ItemSummary,
   MediaRef,
   TimelineDay,
 } from "@memory-shoebox/shared";
+import type { RenderResult } from "@testing-library/react";
+import { MantineProvider } from "@mantine/core";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { Archive } from "@/system/Pile/Archive";
@@ -20,7 +22,7 @@ import { scatterStyle } from "@/system/Pile/scatterStyle";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-function _source(url: string) {
+function _source(url: string): MediaSource {
   return {
     issuedAt: "2026-09-27T10:00:00.000Z",
     renditionId: "fixture-source",
@@ -79,7 +81,7 @@ const DAY: TimelineDay = {
   items: [_item()],
 };
 
-function _render(node: ReactNode) {
+function _render(node: ReactNode): RenderResult {
   return render(
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
       {node}

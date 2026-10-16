@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { expect, it, vi } from "vitest";
 
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 import { renderSettings } from "@/surfaces/Settings/SettingsSurface/__tests__/settingsFixtureHelpers";
 
@@ -58,7 +58,7 @@ it("keeps committed save and refresh-only recovery after leaving and returning",
   expect(await screen.findByText("The new name has been saved.")).toBeVisible();
   expect(await screen.findByText("Account refresh unavailable.")).toBeVisible();
   expect(name).toBeDisabled();
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
   await act(async () => {
     await router.navigate({ to: "/account" });
   });
@@ -75,7 +75,7 @@ it("keeps committed save and refresh-only recovery after leaving and returning",
   await waitFor(() => {
     return expect(screen.getByLabelText("Shoebox name")).toBeEnabled();
   });
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
 });
 
 it("removes privileged controls when cached authority changes", async () => {
@@ -103,7 +103,7 @@ it("removes privileged controls when cached authority changes", async () => {
     await screen.findByText("Only an admin can manage Shoebox settings."),
   ).toBeVisible();
   expect(screen.queryByLabelText("Shoebox name")).not.toBeInTheDocument();
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
 });
 
 it("keeps refresh recovery reachable when settings data expires and its reentry read fails", async () => {
@@ -135,7 +135,7 @@ it("keeps refresh recovery reachable when settings data expires and its reentry 
   await waitFor(() => {
     expect(screen.getByLabelText("Shoebox name")).toBeEnabled();
   });
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
 });
 
 it("retains a committed setting through bootstrap failure without mounting writable cached admin controls", async () => {
@@ -143,13 +143,12 @@ it("retains a committed setting through bootstrap failure without mounting writa
   const original = vi.mocked(fetch).getMockImplementation()!;
   let failBootstrap = false;
   vi.mocked(fetch).mockImplementation(async (path, init) => {
-    if (path === "/api/bootstrap" && failBootstrap) {
-      return Response.json(
-        { error: "unavailable", message: "Unavailable" },
-        { status: 503 },
-      );
-    }
-    return original(path, init);
+    return path === "/api/bootstrap" && failBootstrap
+      ? Response.json(
+          { error: "unavailable", message: "Unavailable" },
+          { status: 503 },
+        )
+      : original(path, init);
   });
   const user = userEvent.setup();
   const name = await screen.findByLabelText("Shoebox name");
@@ -163,7 +162,7 @@ it("retains a committed setting through bootstrap failure without mounting writa
   });
   expect(await screen.findByText("The new name has been saved.")).toBeVisible();
   expect(screen.queryByLabelText("Shoebox name")).not.toBeInTheDocument();
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
   failBootstrap = false;
   allowRefresh();
   await user.click(
@@ -176,5 +175,5 @@ it("retains a committed setting through bootstrap failure without mounting writa
   await waitFor(() => {
     return expect(screen.getByLabelText("Shoebox name")).toBeEnabled();
   });
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
 });

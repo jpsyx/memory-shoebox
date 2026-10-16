@@ -5,8 +5,15 @@ import {
   type MediaPreview,
 } from "@memory-shoebox/shared";
 import type { InfiniteData, QueryClient, Query } from "@tanstack/react-query";
-import { makeQueryFromSelection } from "@/api/timeline/selection/selection";
-import type { TimelineQueryPage } from "@/api/timeline/timeline";
+import { makeQueryFromSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import type { TimelineQueryPage } from "@/api/timelineHelpers/timelineHelpers";
+type SequenceNeighborsOptions = {
+  sequence: Sequence;
+  index: number;
+  before: number;
+  after: number;
+  direction: MediaNeighborsRequest["direction"];
+};
 
 /** Proven identity; media can be renewed without reconstructing ordering. */
 export type KnownMediaNeighbor = {
@@ -28,11 +35,15 @@ type Sequence = {
   hasEnd: boolean;
 };
 
-function _getMetadataUpdatedAtFromRange(
-  sequence: Sequence,
-  start: number,
-  end: number,
-): number | undefined {
+function _getMetadataUpdatedAtFromRange({
+  sequence,
+  start,
+  end,
+}: {
+  sequence: Sequence;
+  start: number;
+  end: number;
+}): number | undefined {
   const firstPage = start < 0 ? 0 : sequence.nodes[start]!.pageIndex;
   const lastPage =
     end > sequence.nodes.length
@@ -68,10 +79,13 @@ function _getCanonicalQuery(query: string): string {
       }),
   ).toString();
 }
-function _getWindowFromSequence(
-  sequence: Sequence,
-  request: MediaNeighborsRequest,
-): KnownMediaNeighborWindow | undefined {
+function _getWindowFromSequence({
+  sequence,
+  request,
+}: {
+  sequence: Sequence;
+  request: MediaNeighborsRequest;
+}): KnownMediaNeighborWindow | undefined {
   const index = sequence.nodes.findIndex((node) => {
     return node?.itemId === request.itemId;
   });
@@ -86,21 +100,21 @@ function _getWindowFromSequence(
   ) {
     return undefined;
   }
-  const neighbors = _getNeighborsFromSequence(
+  const neighbors = _getNeighborsFromSequence({
     sequence,
     index,
     before,
     after,
-    request.direction,
-  );
+    direction: request.direction,
+  });
   if (neighbors === undefined) {
     return undefined;
   }
-  const metadataUpdatedAt = _getMetadataUpdatedAtFromRange(
+  const metadataUpdatedAt = _getMetadataUpdatedAtFromRange({
     sequence,
-    index - before,
-    index + after + 1,
-  );
+    start: index - before,
+    end: index + after + 1,
+  });
   return metadataUpdatedAt === undefined
     ? undefined
     : {
@@ -109,13 +123,15 @@ function _getWindowFromSequence(
       };
 }
 
-function _getNeighborsFromSequence(
-  sequence: Sequence,
-  index: number,
-  before: number,
-  after: number,
-  direction: MediaNeighborsRequest["direction"],
-): Pick<KnownMediaNeighborWindow, "ahead" | "behind"> | undefined {
+function _getNeighborsFromSequence({
+  sequence,
+  index,
+  before,
+  after,
+  direction,
+}: SequenceNeighborsOptions):
+  | Pick<KnownMediaNeighborWindow, "ahead" | "behind">
+  | undefined {
   const selected = sequence.nodes.slice(
     Math.max(0, index - before),
     index + after + 1,
@@ -139,7 +155,7 @@ function _getNeighborsFromSequence(
     : { ahead: previous, behind: following };
 }
 function _getTimelineSequence(
-  data: InfiniteData<TimelineQueryPage, string | null>,
+  data: InfiniteData<TimelineQueryPage, string | undefined>,
 ): Sequence | undefined {
   if (data.pages.length === 0 || data.pages.length !== data.pageParams.length) {
     return undefined;
@@ -184,10 +200,13 @@ function _getTimelineSequence(
     hasEnd: data.pages.at(-1)?.nextCursor === null,
   };
 }
-function _getNeighborhoodSequence(
-  query: Query,
-  canonical: string,
-): Sequence | undefined {
+function _getNeighborhoodSequence({
+  query,
+  canonical,
+}: {
+  query: Query;
+  canonical: string;
+}): Sequence | undefined {
   const selection = timelineSelectionSchema.safeParse(query.queryKey.at(-2));
   const direction = query.queryKey.at(-1);
   const itemId = query.queryKey[3];
@@ -220,24 +239,30 @@ function _getNeighborhoodSequence(
     hasEnd: after.length < (direction === "next" ? 2 : 1),
   };
 }
-function _getSequenceFromQuery(
-  query: Query,
-  canonical: string,
-): Sequence | undefined {
+function _getSequenceFromQuery({
+  query,
+  canonical,
+}: {
+  query: Query;
+  canonical: string;
+}): Sequence | undefined {
   if (
     query.queryKey.length === 3 &&
     typeof query.queryKey[2] === "string" &&
     _getCanonicalQuery(query.queryKey[2]) === canonical
   ) {
     return _getTimelineSequence(
-      query.state.data as InfiniteData<TimelineQueryPage, string | null>,
+      query.state.data as InfiniteData<TimelineQueryPage, string | undefined>,
     );
   }
   return query.queryKey[2] === "item-neighbours"
-    ? _getNeighborhoodSequence(query, canonical)
+    ? _getNeighborhoodSequence({ query, canonical })
     : undefined;
 }
-/** Uses only the existing member/selection cache inside its metadata freshness window. */
+/**
+ * Uses only the existing member/selection cache inside its metadata freshness
+ * window.
+ */
 export function getKnownMediaNeighborWindowFromQueries(
   options: Readonly<{
     queryClient: QueryClient;
@@ -251,18 +276,17 @@ export function getKnownMediaNeighborWindowFromQueries(
   const queries = options.queryClient
     .getQueryCache()
     .findAll({ queryKey: ["timeline", options.memberId] });
-  for (const query of queries) {
+  let matchedWindow: KnownMediaNeighborWindow | undefined;
+  queries.some((query) => {
     if (query.state.isInvalidated || query.state.data === undefined) {
-      continue;
+      return false;
     }
-    const sequence = _getSequenceFromQuery(query, canonical);
-    const window =
+    const sequence = _getSequenceFromQuery({ query, canonical });
+    matchedWindow =
       sequence === undefined
         ? undefined
-        : _getWindowFromSequence(sequence, options.request);
-    if (window !== undefined) {
-      return window;
-    }
-  }
-  return undefined;
+        : _getWindowFromSequence({ sequence, request: options.request });
+    return matchedWindow !== undefined;
+  });
+  return matchedWindow;
 }

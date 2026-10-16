@@ -12,7 +12,7 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
-import { renderAt, type Answer } from "@/testing/surfaceHarness";
+import { renderAt, type Answer } from "@/testing/surfaceHarnessHelpers";
 
 describe("the item page", () => {
   it("says not here for an address that is not an item's, and asks for nothing", async () => {

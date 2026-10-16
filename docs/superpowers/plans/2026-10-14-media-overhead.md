@@ -1,6 +1,8 @@
 # Media Navigation and Delivery Overhead Implementation Plan
 
-Status: Tasks C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews remain pending. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+Status at the original M2 handoff: Tasks C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews were pending at that handoff. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+
+Update, 15 October 2026: the [Avandar Auto review and fix pass](../../media-loading-code-review.md) is complete, including independent rechecks and targeted regression verification. The original task checklist below is retained as the implementation record; current review results and verification limits are in that report.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -26,7 +28,7 @@ Bootstrap is a focused shared contract/server route/client query. Reverse cursor
 
 ## Task C1: One Current Bootstrap and Router Navigation
 
-**Files:** Create `packages/shared/src/bootstrap.ts`, `bootstrap.test.ts` beside it, `apps/server/src/routes/bootstrap.ts`, `apps/server/test/routes/bootstrap.test.ts`, `apps/web/src/api/bootstrap/bootstrap.ts`, `bootstrap.test.ts` beside it. Modify `packages/shared/src/index.ts`, `apps/server/src/createApp.ts`, `apps/web/src/routes/__root.tsx`, `-__root.test.ts`; `apps/web/src/surfaces/RemovalRequests/RemovalRequestCard/RemovalRequestPreview/RemovalRequestPreview.tsx`, `RemovalActionDialogs/DeclineRemovalDialog/DeclineRemovalControls.tsx`, `RemovalRequestsSurface/RemovalRequestsSurface.tsx` under that surface. Update `docs/setup.md`, `docs/web.md`, `docs/server.md`.
+**Files:** Create `packages/shared/src/bootstrap.ts`, `bootstrap.test.ts` beside it, `apps/server/src/routes/bootstrapRoutes.ts`, `apps/server/test/routes/bootstrap.test.ts`, `apps/web/src/api/bootstrapHelpers/bootstrapHelpers.ts`, `bootstrap.test.ts` beside it. Modify `packages/shared/src/index.ts`, `apps/server/src/createApp/createApp.ts`, `apps/web/src/routes/__root.tsx`, `-__root.test.ts`; `apps/web/src/surfaces/RemovalRequests/RemovalRequestCard/RemovalRequestPreview/RemovalRequestPreview.tsx`, `RemovalActionDialogs/DeclineRemovalDialog/DeclineRemovalControls.tsx`, `RemovalRequestsSurface/RemovalRequestsSurface.tsx` under that surface. Update `docs/setup.md`, `docs/web.md`, `docs/server.md`.
 
 **Interfaces:** `BootstrapResponse = { setup: SetupStatusResponse; account: MeResponse | null; progress: SetupProgressResponse | null }` with a shared Zod schema. `GET /api/bootstrap` composes existing setup/account/settings/progress readers under the current request viewer; response `Cache-Control: no-store`. `bootstrapQueryOptions` uses key `['bootstrap']`, staleTime 0, no focus/reconnect refetch, and current-authority failure behavior. Root navigation seeds existing account/progress caches from that response. Progress is null for anonymous/nonadmin callers; no user or private progress fields leak to anonymous callers.
 
@@ -38,7 +40,7 @@ Bootstrap is a focused shared contract/server route/client query. Reverse cursor
 
 ## Task C2: Bidirectional Atomic-Day Pagination
 
-**Files:** Modify `packages/shared/src/timeline/timeline.ts`, `timeline.test.ts`; `apps/server/src/archive/timelineCursorHelpers/timelineCursorHelpers.ts`, its test; `archive/readTimelinePage.ts`, `readDayStream.ts`, `readItemDays.ts`, `readOverlappingMilestones.ts`, `mergeDaysHelpers.ts`, `routes/timeline.ts` below `apps/server/src`; `apps/web/src/api/timeline/timeline.ts`, its test. Create `apps/server/test/routes/timelineReversePaging.test.ts`. Update `docs/archive.md`, `docs/web.md`.
+**Files:** Modify `packages/shared/src/timeline/timeline.ts`, `timeline.test.ts`; `apps/server/src/archive/timelineCursorHelpers/timelineCursorHelpers.ts`, its test; `archive/readTimelinePage.ts`, `readDayStream.ts`, `readItemDays.ts`, `readOverlappingMilestones.ts`, `mergeDaysHelpers.ts`, `routes/timeline.ts` below `apps/server/src`; `apps/web/src/api/timelineHelpers/timelineHelpers.ts`, its test. Create `apps/server/test/routes/timelineReversePaging.test.ts`. Update `docs/archive.md`, `docs/web.md`.
 
 **Interfaces:** Extend `TimelineResponse` with `previousCursor: string | null`, keeping `nextCursor`. Version-2 cursor payload is `{ v: 2; d: string; f: string; direction: 'older' | 'newer' }`; existing unversioned cursors decode as older for compatibility. `TimelinePageState` contains `boundaryDay`, `filterDigest`, and `direction`. Keep `makeTimelineCursorFromPageState(state): string` and `getPageStateFromTimelineCursor(cursor): TimelinePageState | undefined`. Both directions are server-issued, exclusive of boundary day, tied to the same effective normalized filter including `until`, and return days newest-first. Web query options add `getPreviousPageParam` and `maxPages: 5` while retaining the same opaque string page parameter.
 
@@ -74,7 +76,7 @@ Bootstrap is a focused shared contract/server route/client query. Reverse cursor
 
 ## Task C5: Immutable Hashed Assets and Precompressed Static Text
 
-**Files:** Create `apps/web/build/precompressStaticAssets.ts`, `apps/web/src/testing/precompressStaticAssets.test.ts`; modify `apps/web/vite.config.ts`. Modify `apps/server/src/web/staticSpa.ts`; create `apps/server/test/web/staticSpa.test.ts`. Update `docs/server.md`, `docs/deployment.md`.
+**Files:** Create `apps/web/build/precompressStaticAssets.ts`, `apps/web/src/testing/precompressStaticAssets.test.ts`; modify `apps/web/vite.config.ts`. Modify `apps/server/src/web/registerStaticSpa.ts`; create `apps/server/test/web/staticSpa.test.ts`. Update `docs/server.md`, `docs/deployment.md`.
 
 **Interfaces:** `precompressStaticAssets(): Plugin` uses Vite's build output hook and Node `brotliCompress`/`gzip` to emit `.br`/`.gz` for HTML, JS, CSS, JSON and SVG when smaller, skipping already-compressed/media assets. `registerStaticSpa` retains its current interface and uses fastify-static's precompressed serving with explicit cache headers: hashed Vite assets `public, max-age=31536000, immutable`; HTML `no-cache`; nonhashed public assets revalidate. Encoding responses vary on Accept-Encoding and have representation-correct ETags/types/lengths.
 

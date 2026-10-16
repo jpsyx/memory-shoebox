@@ -8,12 +8,12 @@ import {
   recordedUrls,
   renderTimeline,
   respondWith,
-} from "./TimelineSurface.fixtures";
+} from "./timelineSurfaceTestHelpers";
 import {
   HOSPITAL_FACETS,
   installTimelineSurfacePileTestLifecycle,
   TAG_HOSPITAL_ID,
-} from "./TimelineSurfacepileTestHelpers";
+} from "./installTimelineSurfacePileTestLifecycle";
 installTimelineSurfacePileTestLifecycle();
 describe("the timeline", () => {
   it.each([
@@ -57,18 +57,16 @@ describe("the timeline", () => {
         }),
       ).toBe(true);
     });
-    for (const prefix of [
-      "/api/timeline?",
-      "/api/timeline/rail?",
-      "/api/filters/facets?",
-    ]) {
-      const asked =
-        recordedUrls().find((url) => {
-          return url.startsWith(prefix);
-        }) ?? "";
-      expect(asked).toContain("tags=t1");
-      expect(asked).toContain("people=p1");
-    }
+    ["/api/timeline?", "/api/timeline/rail?", "/api/filters/facets?"].forEach(
+      (prefix) => {
+        const asked =
+          recordedUrls().find((url) => {
+            return url.startsWith(prefix);
+          }) ?? "";
+        expect(asked).toContain("tags=t1");
+        expect(asked).toContain("people=p1");
+      },
+    );
   });
 });
 describe("the timeline", () => {

@@ -2,7 +2,7 @@ import { TextInput } from "@mantine/core";
 import { IconSearch } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { DirectoryPerson, TagCount } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { TypeaheadRow } from "@/surfaces/Timeline/FilterSheet/TypeaheadRow";
 import { ICON_PROPS } from "@/system/icons";
 
@@ -13,7 +13,9 @@ type Props = {
   tags: readonly TagCount[];
   people: readonly DirectoryPerson[];
   selection: TimelineSelection;
-  onToggle: (dimension: "tags" | "people", id: string) => void;
+  onToggle: (
+    options: Readonly<{ dimension: "tags" | "people"; id: string }>,
+  ) => void;
 };
 
 /**

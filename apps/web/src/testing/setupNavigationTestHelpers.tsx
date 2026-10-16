@@ -1,7 +1,7 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { getBootstrapAnswerFromReader } from "./getBootstrapAnswerFromReader";
 import { routeTree } from "@/routeTree.gen";
-import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures";
+import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/signInCardTestHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { theme } from "@/theme/theme";
 import { MantineProvider } from "@mantine/core";

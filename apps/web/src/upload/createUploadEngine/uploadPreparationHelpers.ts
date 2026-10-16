@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 import { getImageHeaderFromFile } from "@/upload/getImageHeaderFromFile/getImageHeaderFromFile";
 
@@ -26,9 +26,9 @@ import type {
  * poster) would otherwise start a new one that nothing will ever end.
  */
 function _getClient(
-  functionOptions: Readonly<{ context: EngineContext; slot: WorkerSlot }>,
+  options: Readonly<{ context: EngineContext; slot: WorkerSlot }>,
 ): MediaWorkerClient {
-  const { context, slot } = functionOptions;
+  const { context, slot } = options;
 
   context.controller.signal.throwIfAborted();
   slot.client ??= makeMediaWorkerClientFromPort(context.createMediaWorker());
@@ -39,7 +39,7 @@ function _getClient(
  * Ends the slot's worker and lets the next file start a fresh one.
  *
  * libheif's heap grows to about 174 MB after a 24 MP file and never shrinks
- * (decision 1), so a worker that has decoded
+ * so a worker that has decoded
  * `appConfig.upload.heicWorkerRecycleCount` HEIC files through it is replaced.
  * A worker that errored is replaced the same way, since it may be broken.
  */
@@ -78,7 +78,7 @@ async function _prepareImage(
     slot.wasmDecodeCount += 1;
   }
   if (
-    slot.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount ||
+    slot.wasmDecodeCount >= APP_CONFIG.upload.heicWorkerRecycleCount ||
     (made.usedWasmDecoder && made.dropDetail !== undefined)
   ) {
     recycleMediaWorker(slot);
@@ -98,9 +98,9 @@ async function _prepareImage(
  * `complete` needs dimensions, and the file itself states them.
  */
 async function _prepareVideo(
-  functionOptions: Readonly<{ context: EngineContext; file: File }>,
+  options: Readonly<{ context: EngineContext; file: File }>,
 ): Promise<Omit<PreparedFile, "contentHash">> {
-  const { context, file } = functionOptions;
+  const { context, file } = options;
 
   const [made, movie] = await Promise.all([
     context.decodeCoordinator.run({
@@ -123,15 +123,15 @@ async function _prepareVideo(
   };
 }
 
-/** Hash, then derivatives: decision 8's first two steps. */
+/** Prepares a content hash and the supported derivatives for one file. */
 export async function makePreparedUploadFileFromFile(
-  functionOptions: Readonly<{
+  options: Readonly<{
     context: EngineContext;
     slot: WorkerSlot;
     file: File;
   }>,
 ): Promise<PreparedFile> {
-  const { context, slot, file } = functionOptions;
+  const { context, slot, file } = options;
 
   const contentHash = await _getClient({ context: context, slot: slot }).hash(
     file,

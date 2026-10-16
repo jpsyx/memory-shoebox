@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import type { SessionDto } from "@memory-shoebox/shared";
 import { mySessionsQueryOptions } from "@/api/me/me";
 import { DEVICE_LIST_FAILURE } from "@/surfaces/Account/accountCopy/accountCopy";
-import { useSignOutDevice } from "@/surfaces/Account/AccountSurface/accountMutations";
+import { useSignOutDevice } from "@/surfaces/Account/AccountSurface/accountMutationHelpers/accountMutationHelpers";
 import { DevicesSheet } from "@/surfaces/Account/DevicesSheet/DevicesSheet";
 
 /**

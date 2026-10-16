@@ -1,11 +1,11 @@
-.reactionArea {
+.mediaReactionBarArea {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   padding-top: var(--sp-1);
 }
-.reactionControls {
+.mediaReactionBarControls {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +13,7 @@
   gap: var(--sp-1);
   max-width: 100%;
 }
-.reactionBar {
+.mediaReactionBar {
   display: flex;
   align-items: center;
   padding: 5px 10px;
@@ -22,21 +22,11 @@
   box-shadow: var(--shadow-print);
   max-width: 100%;
 }
-.emojiButton {
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  font-size: 24px !important;
-  width: 40px;
-  height: 42px;
-  padding: 0;
-}
-.emojiButton:hover:not(:disabled),
-.moreButton:hover,
-.commentAction:hover {
+.mediaReactionBarMoreButton:hover,
+.mediaReactionBarCommentAction:hover {
   background: var(--print-sunk);
 }
-.moreButton {
+.mediaReactionBarMoreButton {
   background: transparent;
   border: 0;
   display: grid;
@@ -46,7 +36,7 @@
   height: 40px;
   border-radius: 50%;
 }
-.commentAction {
+.mediaReactionBarCommentAction {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -60,80 +50,46 @@
   border-left: 1px solid var(--rule-print);
   border-radius: 0 var(--pill) var(--pill) 0;
 }
-.reactionHint {
+.mediaReactionBarHint {
   margin: 0;
   color: var(--on-print);
   font-size: var(--micro);
   font-variant-numeric: tabular-nums;
 }
-.reactionHint span {
+.mediaReactionBarHint span {
   padding: 0 5px;
 }
 @media (max-width: 1000px) {
-  .emojiButton {
-    width: 32px;
-  }
-  .commentAction span {
+  .mediaReactionBarCommentAction span {
     display: none;
   }
 }
 @media (max-width: 800px) {
-  .reactionBar {
+  .mediaReactionBar {
     padding: 4px 6px;
   }
-  .emojiButton {
-    width: 32px;
-    height: 38px;
-    font-size: 22px !important;
-  }
-  .moreButton {
+  .mediaReactionBarMoreButton {
     width: 31px;
   }
-  .commentAction {
+  .mediaReactionBarCommentAction {
     width: 35px;
     padding: 0 0 0 8px;
     margin-left: 3px;
   }
-  .reactionArea {
+  .mediaReactionBarArea {
     padding-top: 14px;
   }
 }
-.emojiButton[aria-pressed="true"] {
-  background: var(--print-sunk);
-  outline: 2px solid var(--ink-dark);
-  outline-offset: -2px;
-}
 
-.reactionDropdown {
+.mediaReactionBarDropdown {
   color: var(--on-print);
   background: var(--print);
   border: 1px solid var(--rule-print);
   padding: 10px;
   border-radius: 0;
 }
-.reactionArea > [role="status"] {
+.mediaReactionBarArea > [role="status"] {
   margin: 0;
   color: var(--on-print-quiet);
   font-size: var(--micro);
-}
-
-.emoji {
-  display: inline-block;
-}
-.emojiButton[aria-pressed="true"] .emoji {
-  animation: reactionBloom 480ms var(--ease);
-}
-@keyframes reactionBloom {
-  0% {
-    scale: 0.7;
-    rotate: -14deg;
-  }
-  45% {
-    scale: 1.25;
-    rotate: 7deg;
-  }
-  100% {
-    scale: 1;
-    rotate: 0deg;
-  }
 }

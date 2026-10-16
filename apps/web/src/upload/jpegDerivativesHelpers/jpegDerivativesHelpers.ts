@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 /*
  * What every derivative the browser makes has in common, image or video: a
@@ -44,8 +44,8 @@ export function getTargetSizeFromLongEdge(
  */
 export function getJpegQualityFromEncoder(isWebKitEncoder: boolean): number {
   return isWebKitEncoder
-    ? appConfig.upload.derivatives.jpegQuality.webkit
-    : appConfig.upload.derivatives.jpegQuality.default;
+    ? APP_CONFIG.upload.derivatives.jpegQuality.webkit
+    : APP_CONFIG.upload.derivatives.jpegQuality.default;
 }
 
 let webKitEncoderCheck: Promise<boolean> | undefined;

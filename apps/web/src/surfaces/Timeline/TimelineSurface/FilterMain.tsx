@@ -3,9 +3,9 @@ import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
-import { isSelectionActive } from "@/api/timeline/selection/selection";
-import type { ArchiveTotals } from "@/api/timeline/timeline";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { isSelectionActive } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import type { ArchiveTotals } from "@/api/timelineHelpers/timelineHelpers";
 import { FilterSheet } from "@/surfaces/Timeline/FilterSheet/FilterSheet";
 import { NoResults } from "@/surfaces/Timeline/NoResults/NoResults";
 import { WholeArchive } from "@/surfaces/Timeline/TimelineSurface/WholeArchive";

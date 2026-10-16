@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import {
-  createMediaLoadingLifetime,
   createMediaLoadingResources,
   type MediaLoadingResources,
 } from "./createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "./createMediaLoadingResources/createMediaLoadingLifetime";
 
 const LIFETIME = createMediaLoadingLifetime();
 
@@ -18,17 +18,20 @@ export function useMediaLoadingResources(
     };
   }, [memberId]);
   const { resources } = owner;
-  useEffect(() => {
-    owner.lease += 1;
-    return () => {
-      resources.clearMember();
-      const teardownLease = ++owner.lease;
-      queueMicrotask(() => {
-        if (owner.lease === teardownLease) {
-          resources.dispose();
-        }
-      });
-    };
-  }, [owner, resources]);
+  useEffect(
+    function ownMediaLoadingResources() {
+      owner.lease += 1;
+      return () => {
+        resources.clearMember();
+        const teardownLease = ++owner.lease;
+        queueMicrotask(() => {
+          if (owner.lease === teardownLease) {
+            resources.dispose();
+          }
+        });
+      };
+    },
+    [owner, resources],
+  );
   return resources;
 }

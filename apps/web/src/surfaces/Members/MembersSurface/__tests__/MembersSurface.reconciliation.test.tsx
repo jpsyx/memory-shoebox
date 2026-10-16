@@ -2,7 +2,7 @@ import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { it, expect, vi } from "vitest";
 import { renderMembers, INVITED } from "./memberFixtureHelpers";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 function _failAccountReadsUntilReleased(): () => void {
   const originalFetch = fetch;
   let failAccount = true;
@@ -42,7 +42,7 @@ it("retains a committed invitation recovery after route changes and normal cache
   const allowRefresh = _failAccountReadsUntilReleased();
   await user.click(screen.getByRole("button", { name: "Send the invitation" }));
   await screen.findByRole("button", { name: "Refresh your account" });
-  expect(countCallsTo("POST", "/api/members")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/members" })).toBe(1);
   allowRefresh();
   await act(async () => {
     await router.navigate({ to: "/account" });
@@ -63,5 +63,5 @@ it("retains a committed invitation recovery after route changes and normal cache
       screen.queryByRole("button", { name: "Refresh your account" }),
     ).not.toBeInTheDocument();
   });
-  expect(countCallsTo("POST", "/api/members")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/members" })).toBe(1);
 });

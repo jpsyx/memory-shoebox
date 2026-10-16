@@ -10,7 +10,7 @@ build step and the production container runs the same files you edit.
 apps/server/
 ├── src/
 │   ├── index.ts            entry point: config, database, listen, shutdown
-│   ├── app.ts              builds the Fastify instance (createApp)
+│   ├── createApp/          application factory and background-work lifecycle
 │   ├── config.ts           environment parsing and validation
 │   ├── auth/               the cookie, the code, the session, the middleware
 │   ├── archive/            the day stream, the vocabularies, the directory and
@@ -59,11 +59,16 @@ close so its write-ahead log checkpoints properly.
 
 ## The application factory
 
-`createApp(deps)` in `src/app.ts` builds the Fastify instance and returns it.
+`createApp(deps)` in `src/createApp/createApp.ts` builds the Fastify instance and returns it.
 It reads no environment variables and opens no connections: the caller passes
 in the config, the database, and optionally a Backblaze client. That is what
 lets tests run the real application against an in-memory database and a fake
 B2, using `app.inject()` instead of a socket.
+
+`registerAppBackgroundWork` lives beside the factory and owns job registration,
+processing cancellation, and shutdown cleanup. The factory owns route and
+service composition. Processing aborts before the job runner stops, preserving
+the shutdown order without a second application lifecycle.
 
 Dependencies are attached to the instance with `app.decorate`, so any handler
 can reach them as `request.server.database` or `request.server.b2` without
@@ -1086,6 +1091,9 @@ disagreeing with the document is what fails, not the other way around, and the
 seven indexes the document does not list say in a comment which migration
 added them and why. All three records are keyed by `keyof Database`, so a stale or
 typo'd table name is a compile error rather than a silently dead entry.
+Catalog constraints and indexes live in `schemaExpectations/catalog/`, with
+separate typed constants for index expectations and foreign/unique constraints.
+
 It is a directory module, `schemaExpectations/`, holding one file per table
 group split the way the migrations are, plus the shared `indexColumns`
 helper. Its entry point composes the three records, and the

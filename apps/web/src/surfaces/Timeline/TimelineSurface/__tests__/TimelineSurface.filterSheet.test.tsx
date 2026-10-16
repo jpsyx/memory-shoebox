@@ -1,3 +1,4 @@
+import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import {
   recordedUrls,
   renderTimeline,
   respondWith,
-} from "./TimelineSurface.fixtures";
+} from "./timelineSurfaceTestHelpers";
 
 /**
  * Real UUIDs rather than the task file's shorthand ("t1", "p1"): every id
@@ -42,7 +43,7 @@ const FACETS = {
     },
   ],
   resultCount: 2147,
-};
+} satisfies FilterFacetsResponse;
 
 describe("the filter sheet", () => {
   beforeEach(() => {

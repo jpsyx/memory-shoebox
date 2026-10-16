@@ -134,7 +134,7 @@ describe("makeVideoDerivatives", () => {
       priority: "preview",
       signal,
       work: () => {
-        return makeVideoDerivativesFromFile(new Blob(["v"]));
+        return makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
       },
     });
     await _settle();
@@ -167,7 +167,7 @@ describe("makeVideoDerivatives", () => {
       priority: "preview",
       signal,
       work: () => {
-        return makeVideoDerivativesFromFile(new Blob(["v"]));
+        return makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
       },
     });
     await _settle();
@@ -196,7 +196,10 @@ describe("makeVideoDerivatives", () => {
 
   it("preview encodes only the video thumbnail", async () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]), ["thumb"]);
+    const made = makeVideoDerivativesFromFile({
+      file: new Blob(["v"]),
+      purposes: ["thumb"],
+    });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: true });
     expect(
@@ -211,7 +214,7 @@ describe("makeVideoDerivatives", () => {
   it("makes a poster and a thumb from a frame the engine presented", async () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: true });
 
@@ -231,7 +234,7 @@ describe("makeVideoDerivatives", () => {
   });
 
   it("still draws after the timeout in Chrome, which never calls back on a paused seek", async () => {
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: false });
     await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
@@ -248,7 +251,7 @@ describe("makeVideoDerivatives", () => {
   it("makes no poster after the timeout in WebKit, rather than a black one", async () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: false });
     await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
@@ -261,7 +264,7 @@ describe("makeVideoDerivatives", () => {
   it("makes no poster from a video that holds no frame yet", async () => {
     media.readyState = 1;
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: true });
 
@@ -273,7 +276,7 @@ describe("makeVideoDerivatives", () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     media.hidden = true;
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS - 1000);
     expect(URL.createObjectURL).not.toHaveBeenCalled();
     expect(document.querySelector("video")).toBeNull();
@@ -293,7 +296,7 @@ describe("makeVideoDerivatives", () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     media.hidden = true;
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS);
 
     await expect(made).resolves.toEqual({ derivatives: [], size: undefined });
@@ -311,9 +314,9 @@ describe("makeVideoDerivatives", () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     _setTabHidden(true);
 
-    const first = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const first = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(5000);
-    const second = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const second = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     const settled: string[] = [];
     void first.then(() => {
       settled.push("first");
@@ -329,7 +332,7 @@ describe("makeVideoDerivatives", () => {
     expect(settled).toEqual(["first", "second"]);
 
     // Past the cap, the next video answers at once instead of waiting again.
-    const third = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const third = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     void third.then(() => {
       settled.push("third");
     });
@@ -342,13 +345,15 @@ describe("makeVideoDerivatives", () => {
   it("gives a tab that is hidden again a fresh cap", async () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     _setTabHidden(true);
-    const first = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const first = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS);
     await first;
 
     _setTabHidden(false);
     _setTabHidden(true);
-    const nextVideoDerivatives = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const nextVideoDerivatives = makeVideoDerivativesFromFile({
+      file: new Blob(["v"]),
+    });
     await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS - 1000);
     _setTabHidden(false);
     await _settle();
@@ -362,7 +367,7 @@ describe("makeVideoDerivatives", () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(true);
     media.hidden = true;
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     document.dispatchEvent(new Event("visibilitychange"));
     await _settle();
     expect(document.querySelector("video")).toBeNull();

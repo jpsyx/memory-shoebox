@@ -3,6 +3,13 @@ import {
   type MadeDerivative,
   type PixelSize,
 } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
+/** Image Derivatives Options contract. */
+export type ImageDerivativesOptions = {
+  file: Blob;
+  contentType: string;
+  size: PixelSize | undefined;
+  purposes?: ReadonlyArray<"thumb" | "display">;
+};
 
 /** Inputs for _decodeImage. */
 export type DecodeImageOptions = {

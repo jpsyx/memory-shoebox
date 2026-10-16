@@ -1,3 +1,4 @@
+import type { EffectiveNetworkType } from "./EffectiveNetworkType";
 import type { MediaSource } from "@memory-shoebox/shared";
 
 /** One exact rendition selected by the same policy as its eventual display. */
@@ -15,7 +16,7 @@ export type PrefetchEnvironment = {
   selectionKey: string;
   visible: boolean;
   saveData: boolean;
-  effectiveType: "slow-2g" | "2g" | "3g" | "4g" | "unknown";
+  effectiveType: EffectiveNetworkType;
 };
 
 /** One completed native decode; its accessor becomes empty when released. */
@@ -33,12 +34,17 @@ export type SpeculativeMedia = {
 };
 
 /** Must settle only after the underlying transfer/decode has settled. */
-export type SpeculativeMediaLoader = (
-  candidate: Readonly<PrefetchCandidate>,
-  signal: AbortSignal,
-) => Promise<SpeculativeMedia>;
+export type SpeculativeMediaLoader = ({
+  candidate,
+  signal,
+}: Readonly<{
+  candidate: Readonly<PrefetchCandidate>;
+  signal: AbortSignal;
+}>) => Promise<SpeculativeMedia>;
 
-/** Exact foreground destination; transport deduplication still uses rendition. */
+/**
+ * Exact foreground destination; transport deduplication still uses rendition.
+ */
 export type MediaDestination = {
   itemId: string;
   source: Pick<MediaSource, "url" | "renditionId"> | undefined;
@@ -54,10 +60,13 @@ export type MediaPromotion = {
 /** A bounded speculative window, isolated from actual-detail reads. */
 export type MediaPrefetchScheduler = {
   /** Call after selected-source readiness; a changed selection starts dwell. */
-  schedule: (
-    candidates: readonly PrefetchCandidate[],
-    environment: Readonly<PrefetchEnvironment>,
-  ) => void;
+  schedule: ({
+    candidates,
+    environment,
+  }: Readonly<{
+    candidates: readonly PrefetchCandidate[];
+    environment: Readonly<PrefetchEnvironment>;
+  }>) => void;
   /**
    * Acquire foreground ownership before route cleanup. The caller must retain
    * the returned idempotent release across navigation and call it on failed

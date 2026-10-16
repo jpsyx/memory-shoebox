@@ -1,9 +1,9 @@
 import { readUploadBurstGroups } from "../readUploadBurstGroups.ts";
 import type { MediaRef, UploadFileDto } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
-import { makeAltTextFromItem } from "../../archive/makeAltTextFromItem.ts";
+import { itemAltText } from "../../archive/makeAltTextFromItem.ts";
 
 import { makeMediaRefFromSources } from "../../archive/makeMediaRefFromSources.ts";
 
@@ -87,7 +87,7 @@ async function _readMediaLookups(
         }),
       ),
       now: options.now,
-      ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+      ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
     }),
     readPeopleNamesByItemId({
       database: options.database,
@@ -123,8 +123,8 @@ function _makeMediaRefFromItem(options: {
     previewState:
       lookups.sources.previewStatesByItemId.get(item.itemId) ?? "unavailable",
     sources: lookups.sources.sourcesByItemId.get(item.itemId) ?? new Map(),
-    durationMs: item.durationMs ?? null,
-    altText: makeAltTextFromItem({
+    durationMs: item.durationMs ?? undefined,
+    altText: itemAltText({
       altTextOverride: item.altText ?? null,
       personNames: lookups.peopleNames.get(item.itemId) ?? [],
       capturedAt: item.capturedAt,

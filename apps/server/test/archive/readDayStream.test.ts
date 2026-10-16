@@ -19,7 +19,7 @@ import {
   insertVisibilityRule,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
-function makeViewer(memberId: string): Viewer {
+function _makeViewer(memberId: string): Viewer {
   return {
     memberId,
     sessionId: "a-session",
@@ -59,7 +59,7 @@ describe("readItemDays", () => {
     expect(
       await readItemDays({
         database,
-        viewer: makeViewer(memberId),
+        viewer: _makeViewer(memberId),
         filter: makeTimelineFilterFromQuery({}),
       }),
     ).toEqual([
@@ -91,7 +91,7 @@ describe("readItemDays", () => {
     expect(
       await readItemDays({
         database,
-        viewer: makeViewer(memberId),
+        viewer: _makeViewer(memberId),
         filter: makeTimelineFilterFromQuery({}),
       }),
     ).toEqual([
@@ -112,7 +112,7 @@ describe("readItemDays", () => {
 
     const days = await readItemDays({
       database,
-      viewer: makeViewer(memberId),
+      viewer: _makeViewer(memberId),
       filter: makeTimelineFilterFromQuery({}),
     });
     expect(days[0]?.unseenCount).toBe(1);
@@ -137,7 +137,7 @@ describe("readItemDays", () => {
 
     const days = await readItemDays({
       database,
-      viewer: makeViewer(memberId),
+      viewer: _makeViewer(memberId),
       filter: makeTimelineFilterFromQuery({}),
     });
     expect(days).toEqual([
@@ -170,7 +170,7 @@ describe("readItemDays", () => {
 
     const days = await readItemDays({
       database,
-      viewer: makeViewer(memberId),
+      viewer: _makeViewer(memberId),
       filter: makeTimelineFilterFromQuery({}),
       beforeDay: "2026-09-14",
       limit: 1,
@@ -272,7 +272,7 @@ describe("readDayStream", () => {
   ) => {
     return readDayStream({
       database,
-      viewer: makeViewer(memberId),
+      viewer: _makeViewer(memberId),
       filter,
       limit: 10,
       boundaryDay: undefined,
@@ -376,7 +376,7 @@ describe("readDayStream, the window floor", () => {
 
     const stream = await readDayStream({
       database,
-      viewer: makeViewer(memberId),
+      viewer: _makeViewer(memberId),
       filter: makeTimelineFilterFromQuery({}),
       limit: 3,
       boundaryDay: undefined,

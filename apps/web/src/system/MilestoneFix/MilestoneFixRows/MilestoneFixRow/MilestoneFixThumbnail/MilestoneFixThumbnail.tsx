@@ -9,7 +9,7 @@ export function MilestoneFixThumbnail({ stray }: Readonly<Props>): ReactNode {
   const [failedUrl, setFailedUrl] = useState<string>();
   const thumbnail = useVisibleThumbnail({
     itemId: stray.itemId,
-    source: stray.media.thumb,
+    source: stray.media.thumb ?? undefined,
   });
   return stray.media.thumb === null || failedUrl === stray.media.thumb.url ? (
     <MediaPlaceholder

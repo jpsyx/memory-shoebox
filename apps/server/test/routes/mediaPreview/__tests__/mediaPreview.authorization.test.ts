@@ -22,14 +22,20 @@ describe("side-effect-free media reads", () => {
     const { before: itemId, frameIds } = await seedMediaPreviewBurst(context);
     await insertRendition(context.database, { itemId });
     const before = await getMediaSideEffectsFromDatabase(context.database);
-    const preview = await context.post("preview", {
-      itemIds: [itemId, ...frameIds],
-      purpose: "speculative-preview",
+    const preview = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [itemId, ...frameIds],
+        purpose: "speculative-preview",
+      },
     });
-    const neighbors = await context.post("neighbors", {
-      itemId,
-      selection: SELECTION,
-      direction: "next",
+    const neighbors = await context.post({
+      path: "neighbors",
+      payload: {
+        itemId,
+        selection: SELECTION,
+        direction: "next",
+      },
     });
     expect(preview.statusCode).toBe(200);
     expect(neighbors.statusCode).toBe(200);
@@ -59,21 +65,30 @@ describe("side-effect-free media reads", () => {
       uploadedBy: context.uploaderId,
       seq: 1,
     });
-    const hiddenResponse = await context.post("preview", {
-      itemIds: [hidden],
-      purpose: "selected-view",
+    const hiddenResponse = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [hidden],
+        purpose: "selected-view",
+      },
     });
-    const missingResponse = await context.post("preview", {
-      itemIds: [createId()],
-      purpose: "selected-view",
+    const missingResponse = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [createId()],
+        purpose: "selected-view",
+      },
     });
     expect(hiddenResponse.statusCode).toBe(200);
     expect(hiddenResponse.json()).toEqual(missingResponse.json());
     expect(
       (
-        await context.post("preview", {
-          itemIds: [visible, visible, hidden],
-          purpose: "speculative-preview",
+        await context.post({
+          path: "preview",
+          payload: {
+            itemIds: [visible, visible, hidden],
+            purpose: "speculative-preview",
+          },
         })
       )
         .json()
@@ -83,10 +98,13 @@ describe("side-effect-free media reads", () => {
     ).toEqual([visible]);
     expect(
       (
-        await context.post("neighbors", {
-          itemId: hidden,
-          selection: SELECTION,
-          direction: "next",
+        await context.post({
+          path: "neighbors",
+          payload: {
+            itemId: hidden,
+            selection: SELECTION,
+            direction: "next",
+          },
         })
       ).json(),
     ).toEqual({ ahead: [], behind: [] });
@@ -115,19 +133,25 @@ describe("side-effect-free media reads", () => {
     ]) {
       expect(
         (
-          await context.post("preview", {
-            itemIds,
-            purpose: "speculative-preview",
+          await context.post({
+            path: "preview",
+            payload: {
+              itemIds,
+              purpose: "speculative-preview",
+            },
           })
         ).statusCode,
       ).toBe(400);
     }
     expect(
       (
-        await context.post("neighbors", {
-          itemId: "invalid",
-          direction: "next",
-          selection: SELECTION,
+        await context.post({
+          path: "neighbors",
+          payload: {
+            itemId: "invalid",
+            direction: "next",
+            selection: SELECTION,
+          },
         })
       ).statusCode,
     ).toBe(400);
@@ -154,24 +178,33 @@ describe("side-effect-free media reads", () => {
       captured_at: "2026-09-27T00:00:00.000Z",
     });
     const before = await getMediaSideEffectsFromDatabase(context.database);
-    const neighbors = await context.post("neighbors", {
-      itemId: precedingPhoto,
-      selection: SELECTION,
-      direction: "next",
+    const neighbors = await context.post({
+      path: "neighbors",
+      payload: {
+        itemId: precedingPhoto,
+        selection: SELECTION,
+        direction: "next",
+      },
     });
     expect(neighbors.json().ahead[0]).toMatchObject({
       itemId,
       media: { playback: null },
     });
-    const speculative = await context.post("preview", {
-      itemIds: [itemId],
-      purpose: "speculative-preview",
+    const speculative = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [itemId],
+        purpose: "speculative-preview",
+      },
     });
     expect(speculative.statusCode).toBe(200);
     expect(speculative.json().items[0].media.playback).toBeNull();
-    const selected = await context.post("preview", {
-      itemIds: [itemId],
-      purpose: "selected-view",
+    const selected = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [itemId],
+        purpose: "selected-view",
+      },
     });
     expect(selected.json().items[0].media.playback).toMatchObject({
       purpose: "original",
@@ -180,9 +213,12 @@ describe("side-effect-free media reads", () => {
     context.app.clock = () => {
       return new Date(new Date(NOW).getTime() + 3_540_000);
     };
-    const renewed = await context.post("preview", {
-      itemIds: [itemId],
-      purpose: "selected-view",
+    const renewed = await context.post({
+      path: "preview",
+      payload: {
+        itemIds: [itemId],
+        purpose: "selected-view",
+      },
     });
     expect(renewed.json().items[0].media.playback.issuedAt).not.toBe(
       selected.json().items[0].media.playback.issuedAt,
@@ -210,7 +246,7 @@ describe("side-effect-free media reads", () => {
     ).toBe(401);
     const responses = await Promise.all(
       Array.from({ length: 601 }, () => {
-        return context.post("preview", payload);
+        return context.post({ path: "preview", payload: payload });
       }),
     );
     expect(
@@ -220,10 +256,13 @@ describe("side-effect-free media reads", () => {
     ).toHaveLength(1);
     expect(
       (
-        await context.post("neighbors", {
-          itemId: payload.itemIds[0],
-          selection: SELECTION,
-          direction: "next",
+        await context.post({
+          path: "neighbors",
+          payload: {
+            itemId: payload.itemIds[0],
+            selection: SELECTION,
+            direction: "next",
+          },
         })
       ).statusCode,
     ).toBe(429);

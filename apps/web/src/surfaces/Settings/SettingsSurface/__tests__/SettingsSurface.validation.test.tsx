@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   countCallsTo,
-  getBodiesSentTo,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+  getBodiesFromRecordedRequests,
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   renderSettings,
   makeSavedSettingsResponseFromOverrides,
@@ -42,7 +42,7 @@ it("shows a readable sender validation error without sending a request or losing
     await screen.findByText("Enter a valid sending address."),
   ).toBeVisible();
   expect(sender).toHaveValue("invalid");
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
 });
 it("saves selected arrangement and sender without modifying the other settings", async () => {
   _renderArrangementSave();
@@ -78,7 +78,9 @@ it("saves selected arrangement and sender without modifying the other settings",
     await screen.findByText("The sending address has been saved."),
   ).toBeVisible();
   expect(sender).toHaveValue("family@example.com");
-  expect(getBodiesSentTo("PATCH", "/api/settings")).toEqual([
+  expect(
+    getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/settings" }),
+  ).toEqual([
     { pile: { arrangement: "tidy" } },
     { mail: { fromAddress: "family@example.com" } },
   ]);

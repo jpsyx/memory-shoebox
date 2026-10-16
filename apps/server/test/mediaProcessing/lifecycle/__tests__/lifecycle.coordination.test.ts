@@ -6,7 +6,7 @@ import { migrateToLatest } from "../../../../src/db/migrate.ts";
 
 import { createMediaDecodeCoordinator } from "../../../../src/mediaProcessing/createMediaDecodeCoordinator.ts";
 
-import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 
 import {
   insertItem,
@@ -14,7 +14,7 @@ import {
   insertRendition,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
 
-import { createLifecycleFixture } from "../../lifecycleTestHelpers.ts";
+import { createLifecycleFixture } from "../../createLifecycleFixture.ts";
 
 import { createVisualFingerprintBackfillJob } from "../../../../src/maintenance/visualFingerprintBackfill/createVisualFingerprintBackfillJob.ts";
 
@@ -33,19 +33,25 @@ it("serializes fingerprint and video work and releases failed or aborted waiters
     });
     active -= 1;
   };
-  const first = coordinator.run(work, shutdown.signal);
+  const first = coordinator.run({ work: work, signal: shutdown.signal });
   const cancelled = new AbortController();
-  const waiting = coordinator.run(work, cancelled.signal);
+  const waiting = coordinator.run({ work: work, signal: cancelled.signal });
   cancelled.abort();
   await expect(waiting).rejects.toThrow();
-  await Promise.all([first, coordinator.run(work, shutdown.signal)]);
+  await Promise.all([
+    first,
+    coordinator.run({ work: work, signal: shutdown.signal }),
+  ]);
   expect(maxActiveDecodes).toBe(1);
   await expect(
-    coordinator.run(async () => {
-      throw new Error("codec");
-    }, shutdown.signal),
+    coordinator.run({
+      work: async () => {
+        throw new Error("codec");
+      },
+      signal: shutdown.signal,
+    }),
   ).rejects.toThrow("codec");
-  await coordinator.run(work, shutdown.signal);
+  await coordinator.run({ work: work, signal: shutdown.signal });
   expect(active).toBe(0);
 });
 
@@ -121,7 +127,7 @@ it("shares the real fingerprint job's lane with video and capability work", asyn
   const process = fixture.runtime.processSource;
   fixture.runtime.getCapabilities = async () => {
     await enter();
-    return { available: true, reason: null };
+    return { available: true, reason: undefined };
   };
   fixture.runtime.processSource = async (options) => {
     await enter();

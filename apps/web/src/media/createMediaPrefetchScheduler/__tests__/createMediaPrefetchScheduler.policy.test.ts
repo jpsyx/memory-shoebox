@@ -10,14 +10,14 @@ installCreateMediaPrefetchSchedulerTestLifecycle();
 describe("bounded media prefetch", () => {
   it("starts two ahead and one behind after 250 ms", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("behind", 2),
-        makePrefetchCandidateFromId("ahead-2", 1),
-        makePrefetchCandidateFromId("ahead-1"),
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({ id: "behind", rank: 2 }),
+        makePrefetchCandidateFromId({ id: "ahead-2", rank: 1 }),
+        makePrefetchCandidateFromId({ id: "ahead-1" }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(249);
     expect(starts).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(1);
@@ -39,11 +39,18 @@ describe("bounded media prefetch", () => {
   it("never exceeds two operations or 8 MiB", async () => {
     const harness = createPrefetchHarness();
     const sources = [0, 1, 2].map((rank) => {
-      return makePrefetchCandidateFromId(String(rank), rank, {
-        byteSize: 4 * 1024 ** 2,
+      return makePrefetchCandidateFromId({
+        id: String(rank),
+        rank,
+        source: {
+          byteSize: 4 * 1024 ** 2,
+        },
       });
     });
-    harness.scheduler.schedule(sources, ENVIRONMENT);
+    harness.scheduler.schedule({
+      candidates: sources,
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(harness.starts).toHaveLength(2);
     harness.starts[0]!.finish();
@@ -59,16 +66,23 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("decodes only the nearest photo within 32 MiB", async () => {
     const { scheduler, starts, retained } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("nearest", 0, {
-          width: 4096,
-          height: 2048,
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "nearest",
+          rank: 0,
+          source: {
+            width: 4096,
+            height: 2048,
+          },
         }),
-        { ...makePrefetchCandidateFromId("second", 1), decode: true },
+        {
+          ...makePrefetchCandidateFromId({ id: "second", rank: 1 }),
+          decode: true,
+        },
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(
       starts.map(({ candidate }) => {
@@ -92,9 +106,12 @@ describe("bounded media prefetch", () => {
     { visible: false },
   ])("disables speculation for %j", async (environment) => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule([makePrefetchCandidateFromId("photo")], {
-      ...ENVIRONMENT,
-      ...environment,
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "photo" })],
+      environment: {
+        ...ENVIRONMENT,
+        ...environment,
+      },
     });
     await vi.advanceTimersByTimeAsync(1000);
     expect(starts).toHaveLength(0);
@@ -103,18 +120,18 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("limits 3G to the immediate photo and posters", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("immediate"),
-        makePrefetchCandidateFromId("farther", 1),
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({ id: "immediate" }),
+        makePrefetchCandidateFromId({ id: "farther", rank: 1 }),
         {
-          ...makePrefetchCandidateFromId("poster", 2),
+          ...makePrefetchCandidateFromId({ id: "poster", rank: 2 }),
           kind: "poster",
           decode: false,
         },
       ],
-      { ...ENVIRONMENT, effectiveType: "3g" },
-    );
+      environment: { ...ENVIRONMENT, effectiveType: "3g" },
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(
       starts.map(({ candidate }) => {
@@ -126,16 +143,16 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("uses the bounded policy when the connection API is unknown", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("first"),
-        makePrefetchCandidateFromId("second", 1),
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({ id: "first" }),
+        makePrefetchCandidateFromId({ id: "second", rank: 1 }),
       ],
-      {
+      environment: {
         ...ENVIRONMENT,
         effectiveType: "unknown",
       },
-    );
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(starts).toHaveLength(2);
   });
@@ -143,19 +160,27 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("skips oversized sources and never decodes a photo over 32 MiB", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("oversized", 0, {
-          byteSize: 8 * 1024 ** 2 + 1,
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "oversized",
+          rank: 0,
+          source: {
+            byteSize: 8 * 1024 ** 2 + 1,
+          },
         }),
-        makePrefetchCandidateFromId("too-many-pixels", 1, {
-          width: 8192,
-          height: 8192,
+        makePrefetchCandidateFromId({
+          id: "too-many-pixels",
+          rank: 1,
+          source: {
+            width: 8192,
+            height: 8192,
+          },
         }),
-        makePrefetchCandidateFromId("small", 2),
+        makePrefetchCandidateFromId({ id: "small", rank: 2 }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(
       starts.map(({ candidate }) => {
@@ -170,28 +195,40 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("rejects expired leases and all video metadata while measurement-gated", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("expired", 0, {
-          expiresAt: new Date(200).toISOString(),
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "expired",
+          rank: 0,
+          source: {
+            expiresAt: new Date(200).toISOString(),
+          },
         }),
         {
-          ...makePrefetchCandidateFromId("original", 1, {
-            purpose: "original",
-            contentType: "video/mp4",
+          ...makePrefetchCandidateFromId({
+            id: "original",
+            rank: 1,
+            source: {
+              purpose: "original",
+              contentType: "video/mp4",
+            },
           }),
           kind: "video-metadata",
         },
         {
-          ...makePrefetchCandidateFromId("optimized", 2, {
-            purpose: "video_mp4",
-            contentType: "video/mp4",
+          ...makePrefetchCandidateFromId({
+            id: "optimized",
+            rank: 2,
+            source: {
+              purpose: "video_mp4",
+              contentType: "video/mp4",
+            },
           }),
           kind: "video-metadata",
         },
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(starts).toHaveLength(0);
   });
@@ -199,10 +236,16 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("warms an immediate photo without requesting a decode above 32 MiB", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [makePrefetchCandidateFromId("large", 0, { width: 4096, height: 2049 })],
-      ENVIRONMENT,
-    );
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "large",
+          rank: 0,
+          source: { width: 4096, height: 2049 },
+        }),
+      ],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(starts).toHaveLength(1);
     expect(starts[0]!.candidate.decode).toBe(false);

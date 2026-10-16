@@ -16,10 +16,13 @@ const TRANSIENT_ERRORS = new Set([
   "processing_probe_input_unavailable",
 ]);
 
-async function _publish(
-  options: Readonly<AttemptOptions>,
-  renditions: readonly ProcessedRendition[],
-): Promise<void> {
+async function _publish({
+  options,
+  renditions,
+}: {
+  options: Readonly<AttemptOptions>;
+  renditions: readonly ProcessedRendition[];
+}): Promise<void> {
   options.signal.throwIfAborted();
   const outputs = await reserveMediaOutputs({
     ...options,
@@ -79,15 +82,18 @@ async function _process(options: Readonly<AttemptOptions>): Promise<void> {
       kind: source.kind === "video" ? "video" : "photo",
     },
     publish: (outputs) => {
-      return _publish(options, outputs);
+      return _publish({ options, renditions: outputs });
     },
   });
 }
 
-async function _finishFailure(
-  options: Readonly<AttemptOptions>,
-  error: unknown,
-): Promise<void> {
+async function _finishFailure({
+  options,
+  error,
+}: {
+  options: Readonly<AttemptOptions>;
+  error: unknown;
+}): Promise<void> {
   const code = options.signal.aborted
     ? "processing_cancelled"
     : error instanceof Error && /^processing_[a-z_]+$/.test(error.message)
@@ -118,7 +124,10 @@ async function _finishFailure(
   );
 }
 
-/** Renews every 30 seconds and drains all active work before relinquishing a lease. */
+/**
+ * Renews every 30 seconds and drains all active work before relinquishing a
+ * lease.
+ */
 export async function processMediaClaim(
   options: Readonly<AttemptOptions>,
 ): Promise<void> {
@@ -144,7 +153,7 @@ export async function processMediaClaim(
   try {
     await _process(bounded);
   } catch (error) {
-    await _finishFailure(bounded, error);
+    await _finishFailure({ options: bounded, error });
   } finally {
     clearInterval(heartbeat);
     await renewal;

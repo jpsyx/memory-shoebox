@@ -8,7 +8,7 @@ import {
   SENT,
   TWO_TRIES_LEFT,
   WRONG_CODE,
-} from "./SignInCard.fixtures";
+} from "./signInCardTestHelpers";
 
 beforeEach(() => {
   vi.unstubAllGlobals();

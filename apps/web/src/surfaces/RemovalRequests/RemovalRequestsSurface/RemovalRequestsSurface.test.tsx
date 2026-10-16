@@ -1,6 +1,10 @@
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
+import {
+  recordedUrls,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarnessHelpers";
 import type {
   ListRemovalRequestsResponse,
   RemovalRequestDto,
@@ -63,7 +67,9 @@ function _installRefreshesAllRequestsForADeletedItemAnswers0(): {
     ...REQUEST,
     requestId: "018f0000-0000-7000-8000-00000000a002",
   };
-  respondWith({ "GET /api/removal-requests": { body: PAGE, status: 200 } });
+  respondWith({
+    routes: { "GET /api/removal-requests": { body: PAGE, status: 200 } },
+  });
   return Object.assign(responseState, { secondRequest });
 }
 
@@ -80,7 +86,9 @@ const PAGE = {
 } satisfies ListRemovalRequestsResponse;
 describe("the routed answer queue", () => {
   it("shows server counts and no item GET, even with fewer loaded cards", async () => {
-    respondWith({ "GET /api/removal-requests": { body: PAGE, status: 200 } });
+    respondWith({
+      routes: { "GET /api/removal-requests": { body: PAGE, status: 200 } },
+    });
     renderAt("/removal-requests");
     expect(
       await screen.findByRole("tab", { name: "Waiting · 9" }),
@@ -105,9 +113,11 @@ describe("the routed answer queue", () => {
       });
     });
     respondWith({
-      "GET /api/removal-requests": {
-        body: { ...PAGE, openCount: 0, removalRequests: settled },
-        status: 200,
+      routes: {
+        "GET /api/removal-requests": {
+          body: { ...PAGE, openCount: 0, removalRequests: settled },
+          status: 200,
+        },
       },
     });
     renderAt("/removal-requests");
@@ -121,9 +131,11 @@ describe("the routed answer queue", () => {
   it("does not read the queue for a viewer", async () => {
     const me = createMeResponse();
     respondWith({
-      "GET /api/me": {
-        body: { ...me, me: { ...me.me, role: "viewer" } },
-        status: 200,
+      routes: {
+        "GET /api/me": {
+          body: { ...me, me: { ...me.me, role: "viewer" } },
+          status: 200,
+        },
       },
     });
     renderAt("/removal-requests");
@@ -138,7 +150,9 @@ describe("the routed answer queue", () => {
     ).toBe(false);
   });
   it("follows an empty advancing page and stops repeated cursors with retry copy", async () => {
-    respondWith({ "GET /api/removal-requests": { body: PAGE, status: 200 } });
+    respondWith({
+      routes: { "GET /api/removal-requests": { body: PAGE, status: 200 } },
+    });
     const originalFetch = fetch;
     vi.stubGlobal(
       "fetch",

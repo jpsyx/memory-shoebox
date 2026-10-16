@@ -191,11 +191,8 @@ export const visibilitySummarySchema = z.object({
     z.object({
       kind: z.enum(["member", "group"]),
       /**
-       * Spelled `id`, where § Field naming says `<thing>Id`. The one
-       * inconsistency the frozen DTOs kept rather than fixed: it reads fine
-       * nested inside a field that names the thing, and changing a shape eight
-       * slices cite is worse than the inconsistency. Not licence for the next
-       * nested id (`conventions.md` § The frozen DTOs).
+       * The visibility subject's stable identifier. This public DTO uses `id`;
+       * its surrounding `kind` names whether the subject is a member or group.
        */
       id: idSchema,
       displayName: z.string(),
@@ -283,7 +280,7 @@ export const commentDtoSchema = z.object({
   /** Where in a video the comment is pinned. Null on a photograph. */
   atSeconds: z.number().nonnegative().nullable(),
   createdAt: timestampSchema,
-  /** Drives the "edited" marker. Not optional: see Decision 8. */
+  /** Drives the "edited" marker. Not optional: see */
   editedAt: timestampSchema.nullable(),
   canEdit: z.boolean(),
   canDelete: z.boolean(),

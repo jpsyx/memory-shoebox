@@ -7,20 +7,21 @@ import {
   type Page,
 } from "@playwright/test";
 import { seedMemberAtAddress } from "../database.ts";
-import { getSharedSessionStoreOptionsFromCatalogLock } from "../deleteE2eCatalog.ts";
+import { getSharedSessionStoreOptionsFromCatalogLock } from "../e2eCatalogLifecycleHelpers.ts";
 import { E2E_BASE_URL } from "../e2eEnvironment.constants.ts";
 import {
   createSharedSessionStore,
   type SharedSessionState,
-} from "../sharedSessionState/sharedSessionState.ts";
-import { signInAs } from "../signIn.ts";
+} from "../createSharedSessionStore/createSharedSessionStore.ts";
+import { signInAs } from "../signInHelpers.ts";
 
 /**
  * One sign-in per address per run, shared by every spec that needs a session.
  *
  * **The budget is the reason this exists.** Twenty sign-in codes an hour are
  * allowed per IP, the whole suite shares that one bucket because every request
- * comes from `127.0.0.1`, and `signIn.ts` counts every mint against the rule the
+ * comes from `127.0.0.1` , and `signIn.ts` counts every mint against the rule
+ * the
  * server actually applies. A spec signing in per test spends the budget and the
  * failure lands somewhere else, as a `429` surfacing as a timeout on the code
  * field in whichever file runs next.
@@ -40,7 +41,9 @@ import { signInAs } from "../signIn.ts";
  * mints, not a reason to stop counting them.
  */
 
-/** The admin the suite has always used. Sees everything, including the doors. */
+/**
+ * The admin the suite has always used. Sees everything, including the doors.
+ */
 export const ADMIN_EMAIL = "abuela@example.com";
 
 /**
@@ -53,11 +56,17 @@ export const ADMIN_EMAIL = "abuela@example.com";
  */
 export const VIEWER_EMAIL = "prima@example.com";
 
-/** A cached cookie is never authority: validate the current account on every context. */
-async function _validateAccount(
-  context: BrowserContext,
-  state: SharedSessionState,
-): Promise<void> {
+/**
+ * A cached cookie is never authority: validate the current account on every
+ * context.
+ */
+async function _validateAccount({
+  context,
+  state,
+}: {
+  context: BrowserContext;
+  state: SharedSessionState;
+}): Promise<void> {
   const response = await context.request.get(`${E2E_BASE_URL}/api/me`);
   if (response.status() !== 200) {
     throw new Error(
@@ -76,12 +85,19 @@ async function _validateAccount(
   }
 }
 
-/** Mint only a missing entry through the real UI, retaining its exact member identity. */
-async function _mintState(
-  context: BrowserContext,
-  email: string,
-  role: SharedSessionState["role"],
-): Promise<SharedSessionState> {
+/**
+ * Mint only a missing entry through the real UI, retaining its exact member
+ * identity.
+ */
+async function _mintState({
+  context,
+  email,
+  role,
+}: {
+  context: BrowserContext;
+  email: string;
+  role: SharedSessionState["role"];
+}): Promise<SharedSessionState> {
   const { memberId } = await seedMemberAtAddress({ email, role });
   const page = await context.newPage();
   try {
@@ -99,23 +115,29 @@ async function _mintState(
   }
 }
 
-/** A fresh validated context from the browser and exact run-owned account identity. */
-export async function getSignedInContextFromBrowser(options: {
-  browser: Browser;
-  email: string;
-  role: "admin" | "viewer";
-}): Promise<BrowserContext> {
+/**
+ * A fresh validated context from the browser and exact run-owned account
+ * identity.
+ */
+export async function getSignedInContextFromBrowser(
+  options: Readonly<{
+    browser: Browser;
+    email: string;
+    role: "admin" | "viewer";
+  }>,
+): Promise<BrowserContext> {
   const store = createSharedSessionStore(
     getSharedSessionStoreOptionsFromCatalogLock(),
   );
   const email = options.email.trim().toLowerCase();
-  const cached = store.read(email, options.role);
+  const cached = store.read({ email: email, role: options.role });
   const context = await options.browser.newContext({
     storageState: cached?.storageState,
   });
   try {
-    const state = cached ?? (await _mintState(context, email, options.role));
-    await _validateAccount(context, state);
+    const state =
+      cached ?? (await _mintState({ context, email, role: options.role }));
+    await _validateAccount({ context, state });
     if (!cached) {
       store.write(state);
     }

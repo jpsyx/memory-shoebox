@@ -11,14 +11,17 @@ type MediaRefOptions = {
   width: number;
   height: number;
   previewState: MediaRef["previewState"];
-  durationMs: number | null;
+  durationMs: number | undefined;
   altText: string;
 };
 
-function _getEligibleSourcesFromSources(
-  options: Readonly<MediaRefOptions>,
-  purpose: MediaReadPurpose,
-): MediaSource[] {
+function _getEligibleSourcesFromSources({
+  options,
+  purpose,
+}: {
+  options: Readonly<MediaRefOptions>;
+  purpose: MediaReadPurpose;
+}): MediaSource[] {
   const rows = [...options.sources.values()].map((source) => {
     return { ...source, storageKey: source.url };
   });
@@ -46,10 +49,13 @@ function _getDisplayCandidatesFromSources(
     });
 }
 
-function _getDisplayFromCandidates(
-  candidates: readonly MediaSource[],
-  thumb: MediaSource | null,
-): MediaSource | null {
+function _getDisplayFromCandidates({
+  candidates,
+  thumb,
+}: {
+  candidates: readonly MediaSource[];
+  thumb: MediaSource | undefined;
+}): MediaSource | undefined {
   return (
     candidates.find((source) => {
       return source.purpose === "display";
@@ -68,24 +74,32 @@ function _getRepresentationRolesFromSources(
   MediaRef,
   "thumb" | "display" | "displayCandidates" | "poster" | "playback"
 > {
-  const selected = _getEligibleSourcesFromSources(options, "selected-view");
-  const thumb = _getEligibleSourcesFromSources(options, "thumbnail")[0] ?? null;
+  const selected = _getEligibleSourcesFromSources({
+    options,
+    purpose: "selected-view",
+  });
+  const thumb = _getEligibleSourcesFromSources({
+    options,
+    purpose: "thumbnail",
+  })[0];
   const candidates =
     options.kind === "photo" ? _getDisplayCandidatesFromSources(selected) : [];
   const display =
     options.kind === "photo"
-      ? _getDisplayFromCandidates(candidates, thumb)
-      : null;
+      ? _getDisplayFromCandidates({ candidates, thumb })
+      : undefined;
   return {
-    thumb,
-    display,
+    thumb: thumb ?? null,
+    display: display ?? null,
     displayCandidates:
-      candidates.length === 0 && display !== null ? [display] : candidates,
+      candidates.length === 0 && display !== undefined ? [display] : candidates,
     poster:
       options.kind === "video"
         ? (selected.find((source) => {
             return source.purpose === "poster";
-          }) ?? thumb)
+          }) ??
+          thumb ??
+          null)
         : null,
     playback:
       options.kind === "video"
@@ -96,7 +110,10 @@ function _getRepresentationRolesFromSources(
   };
 }
 
-/** Maps only economical signed sources to explicit roles, retaining catalog layout. */
+/**
+ * Maps only economical signed sources to explicit roles, retaining catalog
+ * layout.
+ */
 export function makeMediaRefFromSources(
   options: Readonly<MediaRefOptions>,
 ): MediaRef {
@@ -108,7 +125,7 @@ export function makeMediaRefFromSources(
     width: options.width,
     height: options.height,
     previewState: hasPreview ? "ready" : options.previewState,
-    durationMs: options.durationMs,
+    durationMs: options.durationMs ?? null,
     altText: options.altText,
   };
 }

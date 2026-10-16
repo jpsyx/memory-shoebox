@@ -4,7 +4,7 @@ import type { TagFacet } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 type Props = {
   tags: readonly TagFacet[];

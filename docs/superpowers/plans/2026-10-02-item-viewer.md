@@ -32,53 +32,53 @@
   - Everything: `pnpm check`
   - End to end: `pnpm exec playwright install chromium` once, then `pnpm test:e2e` (or `pnpm test:e2e e2e/item` for one directory). Not part of `pnpm check`.
 - **Never touch `apps/server`, `packages/shared`, `.agents/`, `.claude/skills/`, `.cursor/skills/` or `.opencode/`.**
-- The e2e catalog uploads no objects (`e2e/support/archive.ts`), so every `<img>` and `<video>` fails to load in Playwright. Anything a spec asserts must hold with no media loaded, which is one reason the transport reads its duration from the contract.
+- The e2e catalog uploads no objects (`e2e/support/archiveSeedHelpers.ts`), so every `<img>` and `<video>` fails to load in Playwright. Anything a spec asserts must hold with no media loaded, which is one reason the transport reads its duration from the contract.
 
 ## File map
 
 **Created**
 
-| File                                                                                                                                                                            | Responsibility                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `apps/web/src/testing/itemFixtures.ts`                                                                                                                                          | `makeItemDetail`, `makeComment`, `makeBurstFrame`, `makeBurstDetail`, the capability sets, the ids |
-| `apps/web/src/testing/itemHarness.ts`                                                                                                                                           | `respondWithItem` and `renderItem`, the canned server and render for the item route                |
-| `apps/web/src/api/items/items.ts` (+ test)                                                                                                                                      | The item query and the five `ItemDetail`-returning writes, the delete, the download href           |
-| `apps/web/src/api/comments/comments.ts` (+ test)                                                                                                                                | Create, edit, delete a comment                                                                     |
-| `apps/web/src/api/reactions/reactions.ts` (+ test)                                                                                                                              | Set and clear a reaction, on an item and on a comment                                              |
-| `apps/web/src/api/visibilityRules/visibilityRules.ts` (+ test)                                                                                                                  | `findOrCreateVisibilityRule`                                                                       |
-| `apps/web/src/api/members/members.ts` (+ test)                                                                                                                                  | `GET /api/members` against step 8a's contract, local schema                                        |
-| `apps/web/src/api/groups/groups.ts` (+ test)                                                                                                                                    | `GET /api/groups` against step 8a's contract, local schema                                         |
-| `apps/web/src/system/Chip/ChipLink.tsx`                                                                                                                                         | A chip that is a link, for people and tags                                                         |
-| `apps/web/src/system/Talk/CommentEditor.tsx`                                                                                                                                    | The edit form inside a comment                                                                     |
-| `apps/web/src/system/Talk/CommentOwnActions.tsx`                                                                                                                                | Edit and Delete under your own comment, and the delete dialog                                      |
-| `apps/web/src/system/VideoFrame/TransportSlider.tsx`                                                                                                                            | The scrubber as a `role="slider"`                                                                  |
-| `apps/web/src/system/VideoFrame/TransportMarks.tsx`                                                                                                                             | The pinned-comment marks and the pending mark, outside the slider                                  |
-| `apps/web/src/surfaces/Item/itemCopy/itemCopy.ts` (+ test)                                                                                                                      | Every kind-aware string, and the failure sentences                                                 |
-| `apps/web/src/surfaces/Item/itemWrites/itemWriteScope.ts`                                                                                                                       | The scope, the pile-staleness helper, the refetch-on-refusal helper                                |
-| `apps/web/src/surfaces/Item/itemWrites/itemCacheUpdates/itemCacheUpdates.ts` (+ test)                                                                                           | Pure updates of a cached `ItemDetail`                                                              |
-| `apps/web/src/surfaces/Item/itemWrites/useItemDetailWrite.ts`                                                                                                                   | The generic write that answers with an `ItemDetail`                                                |
-| `apps/web/src/surfaces/Item/itemWrites/useItemEdits.ts`                                                                                                                         | Tags, people, description, capture date, visibility                                                |
-| `apps/web/src/surfaces/Item/itemWrites/useConversation.ts`                                                                                                                      | Comments and both reaction sets                                                                    |
-| `apps/web/src/surfaces/Item/itemWrites/useDeleteItem.ts`                                                                                                                        | The delete                                                                                         |
-| `apps/web/src/surfaces/Item/ItemSurface/ItemSurface.tsx` (+ `__tests__/`)                                                                                                       | The query and the four states                                                                      |
-| `apps/web/src/surfaces/Item/ItemSurface/ItemNotHere.tsx`, `ItemLoading.tsx`, `ItemFailed.tsx`                                                                                   | Those states                                                                                       |
-| `apps/web/src/surfaces/Item/ItemViewer/ItemViewer.tsx`, `ItemMediaColumn.tsx`, `ItemSheets.tsx`, `useWayBack.ts`, `useVideoTransport.ts`                                        | The page once the item is in hand                                                                  |
-| `apps/web/src/surfaces/Item/PhotoFrame.tsx`, `ItemMeta.tsx`, `ItemReactions.tsx`, `PinningSheet.tsx`                                                                            | The left column's pieces                                                                           |
-| `apps/web/src/surfaces/Item/SiblingStrip/SiblingStrip.tsx`, `SiblingLinks.tsx` (+ test)                                                                                         | The burst strip                                                                                    |
-| `apps/web/src/surfaces/Item/ItemTalk/ItemTalk.tsx`, `ItemComment.tsx` (+ test)                                                                                                  | The thread                                                                                         |
-| `apps/web/src/surfaces/Item/InThisOne/` (+ test)                                                                                                                                | `InThisOne`, `PeopleRow`, `PeopleEditor`, `TagsRow`, `TagsEditor`, `makePeopleInputsFromNames/`    |
-| `apps/web/src/surfaces/Item/WhoCanSee/` (+ test)                                                                                                                                | `WhoCanSee`, `VisibilityEditor`, `visibilityChoice/`                                               |
-| `apps/web/src/surfaces/Item/WhenTaken/` (+ test)                                                                                                                                | `WhenTaken`, `CaptureDateEditor`, `DateMoveWarnings`                                               |
-| `apps/web/src/surfaces/Item/Describing/` (+ test)                                                                                                                               | The alt text override                                                                              |
-| `apps/web/src/surfaces/Item/ItemActions/` (+ test)                                                                                                                              | `ItemActions`, `RemovalAsk`, `DeleteItemModal`                                                     |
-| `e2e/item/item.photo.spec.ts`, `item.video.spec.ts`, `item.uploader.spec.ts`, `item.latch.spec.ts`, `item.keyboard.spec.ts`, `item.responsive.spec.ts`, `item.contrast.spec.ts` | End to end                                                                                         |
+| File                                                                                                                                                                                      | Responsibility                                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `apps/web/src/testing/itemFixtures.ts`                                                                                                                                                    | `makeItemDetail`, `makeComment`, `makeBurstFrame`, `makeBurstDetail`, the capability sets, the ids |
+| `apps/web/src/testing/itemHarness.ts`                                                                                                                                                     | `respondWithItem` and `renderItem`, the canned server and render for the item route                |
+| `apps/web/src/api/items/items.ts` (+ test)                                                                                                                                                | The item query and the five `ItemDetail`-returning writes, the delete, the download href           |
+| `apps/web/src/api/comments/comments.ts` (+ test)                                                                                                                                          | Create, edit, delete a comment                                                                     |
+| `apps/web/src/api/reactions/reactions.ts` (+ test)                                                                                                                                        | Set and clear a reaction, on an item and on a comment                                              |
+| `apps/web/src/api/visibilityRules/visibilityRules.ts` (+ test)                                                                                                                            | `findOrCreateVisibilityRule`                                                                       |
+| `apps/web/src/api/members/members.ts` (+ test)                                                                                                                                            | `GET /api/members` against step 8a's contract, local schema                                        |
+| `apps/web/src/api/groups/groups.ts` (+ test)                                                                                                                                              | `GET /api/groups` against step 8a's contract, local schema                                         |
+| `apps/web/src/system/Chip/ChipLink.tsx`                                                                                                                                                   | A chip that is a link, for people and tags                                                         |
+| `apps/web/src/system/Talk/CommentEditor.tsx`                                                                                                                                              | The edit form inside a comment                                                                     |
+| `apps/web/src/system/Talk/CommentOwnActions.tsx`                                                                                                                                          | Edit and Delete under your own comment, and the delete dialog                                      |
+| `apps/web/src/system/VideoFrame/TransportSlider.tsx`                                                                                                                                      | The scrubber as a `role="slider"`                                                                  |
+| `apps/web/src/system/VideoFrame/TransportMarks.tsx`                                                                                                                                       | The pinned-comment marks and the pending mark, outside the slider                                  |
+| `apps/web/src/surfaces/Item/itemCopy/itemCopy.ts` (+ test)                                                                                                                                | Every kind-aware string, and the failure sentences                                                 |
+| `apps/web/src/surfaces/Item/itemWrites/itemWriteScope.ts`                                                                                                                                 | The scope, the pile-staleness helper, the refetch-on-refusal helper                                |
+| `apps/web/src/surfaces/Item/itemWrites/itemCacheUpdates/itemCacheUpdates.ts` (+ test)                                                                                                     | Pure updates of a cached `ItemDetail`                                                              |
+| `apps/web/src/surfaces/Item/itemWrites/useItemDetailWrite.ts`                                                                                                                             | The generic write that answers with an `ItemDetail`                                                |
+| `apps/web/src/surfaces/Item/itemWrites/useItemEdits.ts`                                                                                                                                   | Tags, people, description, capture date, visibility                                                |
+| `apps/web/src/surfaces/Item/itemWrites/useConversation.ts`                                                                                                                                | Comments and both reaction sets                                                                    |
+| `apps/web/src/surfaces/Item/itemWrites/useDeleteItem.ts`                                                                                                                                  | The delete                                                                                         |
+| `apps/web/src/surfaces/Item/ItemSurface/ItemSurface.tsx` (+ `__tests__/`)                                                                                                                 | The query and the four states                                                                      |
+| `apps/web/src/surfaces/Item/ItemSurface/ItemNotHere.tsx`, `ItemLoading.tsx`, `ItemFailed.tsx`                                                                                             | Those states                                                                                       |
+| `apps/web/src/surfaces/Item/ItemViewer/ItemViewer.tsx`, `ItemMediaColumn.tsx`, `ItemSheets.tsx`, `useWayBack.ts`, `useVideoTransport.ts`                                                  | The page once the item is in hand                                                                  |
+| `apps/web/src/surfaces/Item/PhotoFrame.tsx`, `ItemMeta.tsx`, `ItemReactions.tsx`, `PinningSheet.tsx`                                                                                      | The left column's pieces                                                                           |
+| `apps/web/src/surfaces/Item/SiblingStrip/SiblingStrip.tsx`, `SiblingLinks.tsx` (+ test)                                                                                                   | The burst strip                                                                                    |
+| `apps/web/src/surfaces/Item/ItemTalk/ItemTalk.tsx`, `ItemComment.tsx` (+ test)                                                                                                            | The thread                                                                                         |
+| `apps/web/src/surfaces/Item/InThisOne/` (+ test)                                                                                                                                          | `InThisOne`, `PeopleRow`, `PeopleEditor`, `TagsRow`, `TagsEditor`, `makePeopleInputsFromNames/`    |
+| `apps/web/src/surfaces/Item/WhoCanSee/` (+ test)                                                                                                                                          | `WhoCanSee`, `VisibilityEditor`, `visibilityChoice/`                                               |
+| `apps/web/src/surfaces/Item/WhenTaken/` (+ test)                                                                                                                                          | `WhenTaken`, `CaptureDateEditor`, `DateMoveWarnings`                                               |
+| `apps/web/src/surfaces/Item/Describing/` (+ test)                                                                                                                                         | The alt text override                                                                              |
+| `apps/web/src/surfaces/Item/ItemActions/` (+ test)                                                                                                                                        | `ItemActions`, `RemovalAsk`, `DeleteItemModal`                                                     |
+| `e2e/item/__tests__/item.photo.spec.ts`, `item.video.spec.ts`, `item.uploader.spec.ts`, `item.latch.spec.ts`, `item.keyboard.spec.ts`, `item.responsive.spec.ts`, `item.contrast.spec.ts` | End to end                                                                                         |
 
 **Modified**
 
 | File                                                                                                                                                                           | Change                                                                             |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | `apps/web/src/api/client/client.ts`                                                                                                                                            | `jsonInit` takes `PUT`                                                             |
-| `apps/web/src/testing/surfaceHarness.tsx`                                                                                                                                      | `recordedRequests()`, which knows the method                                       |
+| `apps/web/src/testing/surfaceHarnessHelpers.tsx`                                                                                                                               | `recordedRequests()`, which knows the method                                       |
 | `apps/web/src/system/labelHelpers/labelHelpers.ts` (+ test)                                                                                                                    | Wall clock, time of day, capture moment, day and month, frame position, burst span |
 | `apps/web/src/system/PeopleField/PeopleField.tsx` (+ test)                                                                                                                     | `role` and `memberCount` optional                                                  |
 | `apps/web/src/system/Chrome/TopBar.tsx`                                                                                                                                        | The back link carries `search` and `onClick`                                       |
@@ -87,7 +87,7 @@
 | `apps/web/src/system/VideoFrame/VideoFrame.tsx` (+ test)                                                                                                                       | Controlled position, duration from the contract, slider, marks layer               |
 | `apps/web/src/system/system.module.css`                                                                                                                                        | `.scrubberSlider`, `.scrubberMarks`, `.sibling[aria-current]`                      |
 | `apps/web/src/system/Pile/Print.tsx`, `BurstStack.tsx`, `PileItems/PileItems.tsx`, `PileItems/BurstStackItem.tsx` (+ `Pile.test.tsx`)                                          | Fanned frames are `BurstFrameRef`s and open the viewer                             |
-| `apps/web/src/api/bursts/bursts.ts`, `apps/web/src/api/seen/seen.ts`                                                                                                           | The shared `burstFramesResponseSchema`; the stale `frameSchema` goes               |
+| `apps/web/src/api/burstQueryHelpers/burstQueryHelpers.ts`, `apps/web/src/api/seen/seen.ts`                                                                                     | The shared `burstFramesResponseSchema`; the stale `frameSchema` goes               |
 | `apps/web/src/surfaces/Timeline/` (`TimelinePile`, `ArchiveBody`, `DayStream`, `DayBlock/DayBlock`, `TimelineSurface/useTimelineData`, `TimelineSurface/useBurstFan/` + tests) | Frame type, and `onOpenItem` threaded down                                         |
 | `apps/web/src/routes/_app/items.$itemId.tsx`                                                                                                                                   | Renders `ItemSurface`; no loader                                                   |
 | `apps/web/src/routes/rendering.test.tsx`                                                                                                                                       | `/items/abc` is now "This one is not here."                                        |
@@ -105,7 +105,7 @@
 
 - Modify: `apps/web/src/api/client/client.ts` (the `jsonInit` function)
 - Modify: `apps/web/src/api/client/client.test.ts`
-- Modify: `apps/web/src/testing/surfaceHarness.tsx`
+- Modify: `apps/web/src/testing/surfaceHarnessHelpers.tsx`
 
 The two set-replacing routes (`PUT /api/items/:itemId/tags`, `/people`) and the two reaction routes are `PUT`s. The harness change lets a test tell `GET /api/items/:id` (which counts an open) from `PATCH /api/items/:id` (which saves a description): same URL, different method.
 
@@ -150,7 +150,7 @@ export function jsonInit(
 
 - [ ] **Step 4: Record the method in the harness**
 
-In `apps/web/src/testing/surfaceHarness.tsx`, below `const recorded: string[] = [];` add:
+In `apps/web/src/testing/surfaceHarnessHelpers.tsx`, below `const recorded: string[] = [];` add:
 
 ```ts
 const recordedLines: string[] = [];
@@ -206,7 +206,7 @@ Expected: type-check clean, all tests PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/web/src/api/client apps/web/src/testing/surfaceHarness.tsx
+git add apps/web/src/api/client apps/web/src/testing/surfaceHarnessHelpers.tsx
 git commit -m "feat(web): jsonInit takes a PUT, and the harness records the method
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -3677,8 +3677,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 
-- Modify: `apps/web/src/api/bursts/bursts.ts`
-- Create: `apps/web/src/api/bursts/bursts.test.ts`
+- Modify: `apps/web/src/api/burstQueryHelpers/burstQueryHelpers.ts`
+- Create: `apps/web/src/api/burstQueryHelpers/burstQueryHelpers.test.ts`
 - Modify: `apps/web/src/api/seen/seen.ts` (drop `frameSchema` and its now-unused `itemSummarySchema` import)
 - Modify: `apps/web/src/system/Pile/Print.tsx`, `BurstStack.tsx`, `PileItems/PileItems.tsx`, `PileItems/BurstStackItem.tsx`
 - Modify: `apps/web/src/system/Pile/Pile.test.tsx`
@@ -3689,7 +3689,7 @@ Decision 13. Step 5b wrote `bursts.ts` against a guessed `ItemSummary[]`; step 5
 
 - [ ] **Step 1: Write the failing test**
 
-`apps/web/src/api/bursts/bursts.test.ts`:
+`apps/web/src/api/burstQueryHelpers/burstQueryHelpers.test.ts`:
 
 ```ts
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9462,8 +9462,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 
-- Create: `e2e/item/item.photo.spec.ts`
-- Create: `e2e/item/item.video.spec.ts`
+- Create: `e2e/item/__tests__/item.photo.spec.ts`
+- Create: `e2e/item/__tests__/item.video.spec.ts`
 
 `step-6b.md` § Done when: open a print from the pile, read what was said, react, leave a comment, pin one to a moment of a video and watch it appear on the scrubber. The seeded clips run ten seconds (`archiveSeed/writeArchivePlan/writeItems.ts`, `duration_ms: 10_000`), so the pin goes at 0:04 rather than 0:42.
 
@@ -9635,7 +9635,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 
-- Create: `e2e/item/item.uploader.spec.ts`
+- Create: `e2e/item/__tests__/item.uploader.spec.ts`
 
 The admin uploaded every seeded item, so the admin is the item's own uploader here and holds every capability. Tests run in file order under one worker, and the date correction moves its photograph off its day, so it runs last and the delete uses a different photograph.
 
@@ -9773,13 +9773,13 @@ test("puts the date right, and the photograph moves to its day", async ({
 
 - [ ] **Step 2: Run it**
 
-Run: `pnpm test:e2e e2e/item/item.uploader.spec.ts`
+Run: `pnpm test:e2e e2e/item/__tests__/item.uploader.spec.ts`
 Expected: four PASS, one skipped (`fixme`).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add e2e/item/item.uploader.spec.ts
+git add e2e/item/__tests__/item.uploader.spec.ts
 git commit -m "test(e2e): tag, change who sees it, delete, and put the date right
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -9789,8 +9789,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 
-- Create: `e2e/item/item.latch.spec.ts`
-- Create: `e2e/item/item.keyboard.spec.ts`
+- Create: `e2e/item/__tests__/item.latch.spec.ts`
+- Create: `e2e/item/__tests__/item.keyboard.spec.ts`
 
 - [ ] **Step 1: Write `item.latch.spec.ts`**
 
@@ -10000,13 +10000,13 @@ test("pins a comment to a moment of a video", async ({ adminPage }) => {
 
 - [ ] **Step 3: Run them**
 
-Run: `pnpm test:e2e e2e/item/item.latch.spec.ts e2e/item/item.keyboard.spec.ts`
+Run: `pnpm test:e2e e2e/item/__tests__/item.latch.spec.ts e2e/item/__tests__/item.keyboard.spec.ts`
 Expected: three PASS. If the picker's first choice is not focused, `trapFocus` did not reach the dropdown: check Task 10's two `Popover` props before changing the test.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add e2e/item/item.latch.spec.ts e2e/item/item.keyboard.spec.ts
+git add e2e/item/__tests__/item.latch.spec.ts e2e/item/__tests__/item.keyboard.spec.ts
 git commit -m "test(e2e): one open and forty-four sightings, and the whole flow by keyboard
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -10016,8 +10016,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 
-- Create: `e2e/item/item.responsive.spec.ts`
-- Create: `e2e/item/item.contrast.spec.ts`
+- Create: `e2e/item/__tests__/item.responsive.spec.ts`
+- Create: `e2e/item/__tests__/item.contrast.spec.ts`
 
 - [ ] **Step 1: Write `item.responsive.spec.ts`**
 
@@ -10180,13 +10180,13 @@ for (const scheme of SCHEMES) {
 
 - [ ] **Step 3: Run them**
 
-Run: `pnpm test:e2e e2e/item/item.responsive.spec.ts e2e/item/item.contrast.spec.ts`
+Run: `pnpm test:e2e e2e/item/__tests__/item.responsive.spec.ts e2e/item/__tests__/item.contrast.spec.ts`
 Expected: eight PASS. A contrast failure names the words, both colours and the ratio. The usual cause is quiet ink chosen for the wrong ground (`docs/web.md` § Styling: `--on-panel-quiet` on the panel, the print's own quiet ink on a sheet): `Prose onPanel` is for text drawn straight on the enamel, and everything inside a `Sheet` or the `Talk` panel is on a print. Fix the component, not the spec.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add e2e/item/item.responsive.spec.ts e2e/item/item.contrast.spec.ts
+git add e2e/item/__tests__/item.responsive.spec.ts e2e/item/__tests__/item.contrast.spec.ts
 git commit -m "test(e2e): surfaces 3 and 4 at 200% zoom, and against AA in both schemes
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -10263,7 +10263,7 @@ focusable button that does nothing.
 - [ ] **Step 2: `docs/e2e.md`**
 
 1. "## The archive, and why one spec runs before the others": add `item/` to the list of what `empty` precedes, and one sentence that a spec needing the archive must sort after `empty.spec.ts`, which is why surfaces 3 and 4 live in `e2e/item/`.
-2. "## The contrast sweep": add that surfaces 3 and 4 are swept by `e2e/item/item.contrast.spec.ts`, with the item's own uploader's sheets and two editors open, and that it lives apart from `contrast.spec.ts` because it needs the archive.
+2. "## The contrast sweep": add that surfaces 3 and 4 are swept by `e2e/item/__tests__/item.contrast.spec.ts`, with the item's own uploader's sheets and two editors open, and that it lives apart from `contrast.spec.ts` because it needs the archive.
 3. Add a section:
 
 ```markdown

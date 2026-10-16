@@ -6,7 +6,7 @@ import { makeIdleUploadSnapshot } from "@/upload/createUploadSessionController/u
 import { MantineProvider } from "@mantine/core";
 import { render, screen, act, waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { makePreviewHarnessFromOptions } from "@/upload/createUploadPreviewQueue/__tests__/uploadPreviewTestHelpers";
+import { makePreviewHarnessFromOptions } from "@/upload/createUploadPreviewQueue/__tests__/makePreviewHarnessFromOptions";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { UploadSending } from "./UploadSending";
 it("keeps a late active original visible after the first twelve finish", () => {

@@ -21,7 +21,7 @@ import { createMeResponse } from "@/testing/createMeResponse";
 import {
   respondWith,
   type Answer,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 /** Complete six-key settings and storage response used by the real surface. */
 export const SETTINGS: GetSettingsResponse = {

@@ -10,25 +10,38 @@ import {
   type FakeB2State,
 } from "./createFakeB2Client.types.ts";
 
-/** Marks operations that must respect the fake client network-unavailable switch. */
+/**
+ * Marks operations that must respect the fake client network-unavailable
+ * switch.
+ */
 export const NETWORK = { isNetworkCall: true } as const;
 
-/** Marks local signing operations that remain available without provider access. */
+/**
+ * Marks local signing operations that remain available without provider access.
+ */
 export const LOCAL = { isNetworkCall: false } as const;
 
-/** Encodes object key, upload ID and part number into a deterministic fake part URL so distinct multipart identities cannot collide. */
-export function makePartUrlFromUpload(options: {
-  key: string;
-  uploadId: string;
-  partNumber: number;
-}): string {
+/**
+ * Encodes object key, upload ID and part number into a deterministic fake part
+ * URL so distinct multipart identities cannot collide.
+ */
+export function makePartUrlFromUpload(
+  options: Readonly<{
+    key: string;
+    uploadId: string;
+    partNumber: number;
+  }>,
+): string {
   const key = encodeURIComponent(options.key);
   const uploadId = encodeURIComponent(options.uploadId);
   return `https://b2.test/part/${key}/${uploadId}/${options.partNumber}`;
 }
 
-/** Copies every CORS array so callers cannot mutate stored rules through read or write aliases. */
-export function copyBucketCorsRule(
+/**
+ * Copies every CORS array so callers cannot mutate stored rules through read or
+ * write aliases.
+ */
+export function makeBucketCorsRuleCopyFromRule(
   rule: Readonly<BucketCorsRule>,
 ): BucketCorsRule {
   return {
@@ -40,7 +53,10 @@ export function copyBucketCorsRule(
   };
 }
 
-/** Uses the real lease policy with fake URLs identified by object, whole-second issue time and optional filename; records signing without network access. */
+/**
+ * Uses the real lease policy with fake URLs identified by object, whole-second
+ * issue time and optional filename; records signing without network access.
+ */
 export function createFakeMediaDelivery(
   record: (
     options: Readonly<{
@@ -78,7 +94,10 @@ export function createFakeMediaDelivery(
   });
 }
 
-/** Creates recorded listing, head and signing operations over the shared fake object state and lease cache. */
+/**
+ * Creates recorded listing, head and signing operations over the shared fake
+ * object state and lease cache.
+ */
 export function makeReadOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -98,14 +117,11 @@ export function makeReadOperationsFromContext(
   return {
     listObjects: async function* (options = {}) {
       context.record({ operation: "listObjects", options: NETWORK });
-      for (const object of context.state.objects.values()) {
-        if (
-          options.prefix === undefined ||
-          object.key.startsWith(options.prefix)
-        ) {
-          yield object;
-        }
-      }
+      yield* context.state.objects.values().filter((object) => {
+        return (
+          options.prefix === undefined || object.key.startsWith(options.prefix)
+        );
+      });
     },
     getMediaLease: delivery.getLease,
     presignGet: async ({ key, downloadFilename }) => {
@@ -122,7 +138,10 @@ export function makeReadOperationsFromContext(
   };
 }
 
-/** Creates recorded put/delete/signing operations; storage metadata mutates in memory and configured delete failures remain observable. */
+/**
+ * Creates recorded put/delete/signing operations; storage metadata mutates in
+ * memory and configured delete failures remain observable.
+ */
 export function makeWriteOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -165,7 +184,10 @@ export function makeWriteOperationsFromContext(
   };
 }
 
-/** Creates unique fake multipart lifetimes and deterministic part URLs; signing additional parts performs no provider operation. */
+/**
+ * Creates unique fake multipart lifetimes and deterministic part URLs; signing
+ * additional parts performs no provider operation.
+ */
 export function makeMultipartOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -207,7 +229,10 @@ export function makeMultipartOperationsFromContext(
   };
 }
 
-/** Reads and writes copied CORS rules on the current fake client, preserving caller/storage array isolation. */
+/**
+ * Reads and writes copied CORS rules on the current fake client, preserving
+ * caller/storage array isolation.
+ */
 export function makeCorsOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -223,16 +248,19 @@ export function makeCorsOperationsFromContext(
   return {
     getBucketCors: async () => {
       context.record({ operation: "getBucketCors", options: NETWORK });
-      return context.getClient().corsRules.map(copyBucketCorsRule);
+      return context.getClient().corsRules.map(makeBucketCorsRuleCopyFromRule);
     },
     putBucketCors: async ({ rules }) => {
       context.record({ operation: "putBucketCors", options: NETWORK });
-      context.getClient().corsRules = rules.map(copyBucketCorsRule);
+      context.getClient().corsRules = rules.map(makeBucketCorsRuleCopyFromRule);
     },
   };
 }
 
-/** Completes or aborts an owned fake upload; completion publishes only the preseeded assembled object metadata. */
+/**
+ * Completes or aborts an owned fake upload; completion publishes only the
+ * preseeded assembled object metadata.
+ */
 export function makeMultipartFinishOperationsFromContext(
   context: Readonly<{
     state: FakeB2State;
@@ -261,7 +289,10 @@ export function makeMultipartFinishOperationsFromContext(
   };
 }
 
-/** Consumes and counts streamed chunks under cancellation, publishes exact-size metadata on success, and aborts the fake multipart upload on failure. */
+/**
+ * Consumes and counts streamed chunks under cancellation, publishes exact-size
+ * metadata on success, and aborts the fake multipart upload on failure.
+ */
 export function makeStreamingOperationsFromContext(
   context: Parameters<typeof makeWriteOperationsFromContext>[0],
 ): Pick<B2Client, "putObjectStream" | "listMultipartUploadsForKey"> {
@@ -271,11 +302,14 @@ export function makeStreamingOperationsFromContext(
         operation: "listMultipartUploadsForKey",
         options: NETWORK,
       });
-      for (const [uploadId, upload] of context.state.multipartUploads) {
-        if (upload.key === key) {
-          yield { uploadId };
-        }
-      }
+      yield* context.state.multipartUploads
+        .entries()
+        .filter(([, upload]) => {
+          return upload.key === key;
+        })
+        .map(([uploadId]) => {
+          return { uploadId };
+        });
     },
     putObjectStream: async (options) => {
       context.record({ operation: "putObjectStream", options: NETWORK });

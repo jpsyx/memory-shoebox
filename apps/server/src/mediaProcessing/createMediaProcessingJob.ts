@@ -2,15 +2,18 @@ import type { Job } from "../jobs/createJobRunner.ts";
 import type { MediaProcessingJobOptions } from "./mediaProcessing.types.ts";
 import { recoverProcessingOutputs } from "./output/recoverProcessingOutputs.ts";
 import { createMediaProcessingQueue } from "./queue/createMediaProcessingQueue.ts";
-import { discoverMediaProcessingWork } from "./queue/discoverMediaProcessingWork.ts";
+import { discoverMediaProcessingWork } from "./queue/mediaProcessingWorkHelpers.ts";
 import { processMediaClaim } from "./processMediaClaim.ts";
 
-type DiagnosticState = { lastDiagnostic: string | null | undefined };
+type DiagnosticState = { lastDiagnostic: string | undefined };
 
-async function _processDueWork(
-  options: Readonly<MediaProcessingJobOptions>,
-  state: DiagnosticState,
-): Promise<void> {
+async function _processDueWork({
+  options,
+  state,
+}: {
+  options: Readonly<MediaProcessingJobOptions>;
+  state: DiagnosticState;
+}): Promise<void> {
   const capability = await options.runtime.getCapabilities(options.signal);
   if (!capability.available) {
     if (state.lastDiagnostic !== capability.reason) {
@@ -28,10 +31,13 @@ async function _processDueWork(
   }
 }
 
-async function _runTick(
-  options: Readonly<MediaProcessingJobOptions>,
-  state: DiagnosticState,
-): Promise<void> {
+async function _runTick({
+  options,
+  state,
+}: {
+  options: Readonly<MediaProcessingJobOptions>;
+  state: DiagnosticState;
+}): Promise<void> {
   if (options.signal.aborted) {
     return;
   }
@@ -45,9 +51,12 @@ async function _runTick(
     limit: 100,
   });
   try {
-    await options.coordinator.run(() => {
-      return _processDueWork(options, state);
-    }, options.signal);
+    await options.coordinator.run({
+      work: () => {
+        return _processDueWork({ options, state });
+      },
+      signal: options.signal,
+    });
   } catch (error) {
     if (!options.signal.aborted) {
       throw error;
@@ -68,7 +77,7 @@ export function createMediaProcessingJob(
     name: "media-processing",
     intervalMs: 30_000,
     run: () => {
-      return _runTick(options, state);
+      return _runTick({ options, state });
     },
   };
 }

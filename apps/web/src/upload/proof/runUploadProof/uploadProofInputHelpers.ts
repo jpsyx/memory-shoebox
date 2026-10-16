@@ -1,6 +1,6 @@
 import { type ManifestOutcome } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 
 import { type UploadEngineFile } from "@/upload/createUploadEngine/createUploadEngine.types";
 
@@ -14,7 +14,7 @@ export function getConcurrencyFromSearch(search: string): number {
   const asked = Number(new URLSearchParams(search).get("concurrency"));
   return Number.isInteger(asked) && asked >= 1 && asked <= 8
     ? asked
-    : appConfig.upload.maxParallelTransfers;
+    : APP_CONFIG.upload.maxParallelTransfers;
 }
 
 /** The hold a harness URL asks for: `?hold=before-commit`, or none. */

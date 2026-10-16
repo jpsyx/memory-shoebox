@@ -10,29 +10,43 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import { afterEach, beforeEach } from "vitest";
 
-import { registerStaticSpa } from "../../../../src/web/staticSpa.ts";
-/** Compressible HTML identity bytes used by routing and representation-validator cases. */
+import { registerStaticSpa } from "../../../../src/web/registerStaticSpa.ts";
+/**
+ * Compressible HTML identity bytes used by routing and representation-validator
+ * cases.
+ */
 export const HTML = `<html><body>${"family memories ".repeat(200)}</body></html>`;
-/** Compressible JavaScript identity bytes used by static encoding and validator cases. */
+/**
+ * Compressible JavaScript identity bytes used by static encoding and validator
+ * cases.
+ */
 export const JAVASCRIPT = `console.log(${JSON.stringify("family memories ".repeat(200))});`;
 /** Expected cache policy for inventory-approved immutable build assets. */
 export const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 /** Owned Fastify instances closed by the installed static-test lifecycle. */
 export const SERVERS: FastifyInstance[] = [];
-/** Per-test owned temporary dist directory populated by the installed lifecycle. */
+/**
+ * Per-test owned temporary dist directory populated by the installed lifecycle.
+ */
 export let directory: string;
 /** Per-test Fastify instance serving the owned static fixture. */
 export let app: FastifyInstance;
-/** Registers the actual SPA/static handler for a directory and retains the instance for lifecycle cleanup. */
+/**
+ * Registers the actual SPA/static handler for a directory and retains the
+ * instance for lifecycle cleanup.
+ */
 export async function makeServerFromDirectory(
   distPath: string,
 ): Promise<FastifyInstance> {
   const server = Fastify();
   SERVERS.push(server);
-  await registerStaticSpa(server, { distPath });
+  await registerStaticSpa({ app: server, options: { distPath } });
   return server;
 }
-/** Creates an owned static directory with identity/compressed fixtures before each case, then closes every server and removes that directory. */
+/**
+ * Creates an owned static directory with identity/compressed fixtures before
+ * each case, then closes every server and removes that directory.
+ */
 export function installStaticSpaTestLifecycle(): void {
   beforeEach(async () => {
     directory = await mkdtemp(join(tmpdir(), "shoebox-static-"));

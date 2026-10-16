@@ -1,0 +1,68 @@
+.videoPlaybackOverlaySurface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+:global([data-video-player])[role="group"]
+  .videoPlaybackOverlaySurface:focus-visible {
+  outline-offset: -3px;
+}
+.videoPlaybackOverlayCenterPlay {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  padding-left: 6px;
+  color: var(--chip-white);
+  background: color-mix(in oklab, var(--chip-black) 80%, transparent);
+  border: 0;
+  border-radius: 50%;
+}
+.videoPlaybackOverlayCenterPlay:hover {
+  background: var(--ink-dark);
+}
+.videoPlaybackOverlayReactionBurst {
+  position: absolute;
+  left: 50%;
+  top: 35%;
+  font-size: 64px;
+  pointer-events: none;
+  animation: videoPlaybackOverlayReactionRise 1.5s cubic-bezier(0.16, 1, 0.3, 1)
+    both;
+}
+@keyframes videoPlaybackOverlayReactionRise {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 40px) scale(0.7);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -100px) scale(0.9);
+  }
+}
+@media (max-width: 800px) {
+  .videoPlaybackOverlayCenterPlay {
+    width: 52px;
+    height: 52px;
+    top: 37%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .videoPlaybackOverlayReactionBurst {
+    animation: none;
+    transform: translateX(-50%);
+  }
+}

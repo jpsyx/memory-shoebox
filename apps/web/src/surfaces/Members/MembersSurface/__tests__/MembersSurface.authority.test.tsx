@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meQueryOptions } from "@/api/me/me";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   ADMIN_ACCOUNT,
   SECOND_ADMIN,
@@ -34,12 +34,13 @@ function _renderSelfDemotion(): void {
           }),
         );
       }
-      if (path === "/api/bootstrap" && hasDemoted)
+      if (path === "/api/bootstrap" && hasDemoted) {
         return Response.json({
           setup: { isRequired: false },
           account: createMeResponse({ role: "viewer" }),
           progress: null,
         });
+      }
       if (path === "/api/me" && hasDemoted) {
         return Response.json(createMeResponse({ role: "viewer" }));
       }
@@ -131,9 +132,12 @@ describe("Members administration", () => {
       await user.click(save);
     }
     await screen.findByText("Only an admin can manage members.");
-    expect(countCallsTo("PATCH", `/api/members/${SECOND_ADMIN.memberId}`)).toBe(
-      0,
-    );
+    expect(
+      countCallsTo({
+        method: "PATCH",
+        path: `/api/members/${SECOND_ADMIN.memberId}`,
+      }),
+    ).toBe(0);
   });
   it("refreshes account authority when a directory read refuses stale admin access", async () => {
     renderMembers({

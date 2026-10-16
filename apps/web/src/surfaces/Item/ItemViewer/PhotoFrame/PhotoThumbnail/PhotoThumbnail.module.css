@@ -1,0 +1,9 @@
+/* The viewer context retains precedence over the placeholder's base box. */
+:global([data-photo-surface="viewer"]) .photoThumbnailPlaceholder {
+  width: min(100%, calc(70vh * var(--media-aspect-ratio)));
+  height: auto;
+  max-height: 70vh;
+  object-fit: contain;
+  background: var(--panel-sunk);
+  margin-inline: auto;
+}

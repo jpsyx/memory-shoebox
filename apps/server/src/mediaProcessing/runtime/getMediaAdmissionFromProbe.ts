@@ -1,16 +1,19 @@
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import type { MediaProbe } from "./mediaRuntime.types.ts";
 
-const LIMITS = appConfig.mediaProcessing;
+const LIMITS = APP_CONFIG.mediaProcessing;
 
 function _isPositiveInteger(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0;
 }
 
-function _getPhotoFailure(
-  probe: Readonly<MediaProbe>,
-  sourceBytes: number,
-): string | null {
+function _getPhotoFailure({
+  probe,
+  sourceBytes,
+}: {
+  probe: Readonly<MediaProbe>;
+  sourceBytes: number;
+}): string | undefined {
   if (
     sourceBytes > LIMITS.photoInputBytes ||
     probe.width * probe.height > LIMITS.photoPixels
@@ -19,18 +22,18 @@ function _getPhotoFailure(
   }
   if (
     probe.primaryImageCount !== 1 ||
-    probe.frameRate !== null ||
-    probe.durationMs !== null ||
+    probe.frameRate !== undefined ||
+    probe.durationMs !== undefined ||
     probe.hasAudio
   ) {
     return "processing_photo_not_still";
   }
   return probe.bitDepth > 16 || probe.transfer !== "sdr"
     ? "processing_photo_unsupported"
-    : null;
+    : undefined;
 }
 
-function _getVideoFailure(probe: Readonly<MediaProbe>): string | null {
+function _getVideoFailure(probe: Readonly<MediaProbe>): string | undefined {
   if (
     Math.max(probe.width, probe.height) > LIMITS.videoLongEdge ||
     Math.min(probe.width, probe.height) > LIMITS.videoShortEdge
@@ -38,7 +41,7 @@ function _getVideoFailure(probe: Readonly<MediaProbe>): string | null {
     return "processing_video_dimensions";
   }
   if (
-    probe.frameRate === null ||
+    probe.frameRate === undefined ||
     !Number.isFinite(probe.frameRate) ||
     probe.frameRate <= 0 ||
     probe.frameRate > LIMITS.videoFrameRate
@@ -46,7 +49,7 @@ function _getVideoFailure(probe: Readonly<MediaProbe>): string | null {
     return "processing_video_frame_rate";
   }
   if (
-    probe.durationMs === null ||
+    probe.durationMs === undefined ||
     !Number.isFinite(probe.durationMs) ||
     probe.durationMs <= 0 ||
     probe.durationMs > LIMITS.videoDurationMs
@@ -55,13 +58,13 @@ function _getVideoFailure(probe: Readonly<MediaProbe>): string | null {
   }
   return probe.bitDepth > LIMITS.videoBitDepth
     ? "processing_video_bit_depth"
-    : null;
+    : undefined;
 }
 
 /** Refuses unsupported inputs before their full decode. */
 export function getMediaAdmissionFromProbe(
   options: Readonly<{ probe: MediaProbe; sourceBytes: number }>,
-): { admitted: boolean; reason: string | null } {
+): { admitted: boolean; reason: string | undefined } {
   const { probe, sourceBytes } = options;
   if (
     ![
@@ -77,7 +80,7 @@ export function getMediaAdmissionFromProbe(
   }
   const reason =
     probe.kind === "photo"
-      ? _getPhotoFailure(probe, sourceBytes)
+      ? _getPhotoFailure({ probe, sourceBytes })
       : _getVideoFailure(probe);
-  return { admitted: reason === null, reason };
+  return { admitted: reason === undefined, reason };
 }

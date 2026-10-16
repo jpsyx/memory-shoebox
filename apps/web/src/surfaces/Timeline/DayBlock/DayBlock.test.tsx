@@ -15,7 +15,7 @@ import {
   makeBurst,
   makeDay,
   makeItem,
-} from "@/surfaces/Timeline/timelineFixtures";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { theme } from "@/theme/theme";
 
 function _render(day: ReturnType<typeof makeDay>, countLabel?: string) {

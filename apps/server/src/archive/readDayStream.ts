@@ -5,7 +5,7 @@ import {
   getUnionDaysFromMilestones,
   getWindowBoundaryFromItemDays,
   makeDayPageFromCandidates,
-  makeMergedDays,
+  makeMergedDaysFromItemAndMilestoneDays,
 } from "./mergeDaysHelpers.ts";
 import { readItemDays, type CandidateDay } from "./readItemDays.ts";
 import { readOverlappingMilestones } from "./readOverlappingMilestones.ts";
@@ -13,6 +13,14 @@ import {
   hasContentFilter,
   type TimelineFilter,
 } from "./selectionFilterHelpers.ts";
+type MilestoneDaysOptions = {
+  database: DatabaseExecutor;
+  filter: Readonly<TimelineFilter>;
+  beforeDay: string | undefined;
+  sinceDay: string | undefined;
+  afterDay: string | undefined;
+  throughDay: string | undefined;
+};
 
 /** One page of days, and the occasions that might cover them. */
 export type DayStreamPage = {
@@ -25,19 +33,10 @@ export type DayStreamPage = {
 /**
  * The occasions covering the window, and which of their days the union
  * contributes.
- *
- * Split out of {@link readDayStream} because it is one self-contained
- * decision (read the milestones, then decide their union under Ruling 1)
- * rather than a step in the page's own assembly.
  */
-async function _readMilestoneDays(options: {
-  database: DatabaseExecutor;
-  filter: Readonly<TimelineFilter>;
-  beforeDay: string | undefined;
-  sinceDay: string | undefined;
-  afterDay: string | undefined;
-  throughDay: string | undefined;
-}): Promise<{ milestones: MilestoneRef[]; milestoneDays: string[] }> {
+async function _readMilestoneDays(
+  options: MilestoneDaysOptions,
+): Promise<{ milestones: MilestoneRef[]; milestoneDays: string[] }> {
   const milestones = await readOverlappingMilestones({
     database: options.database,
     fromDay: options.filter.from,
@@ -63,25 +62,7 @@ async function _readMilestoneDays(options: {
   return { milestones, milestoneDays };
 }
 
-/**
- * Queries 1 and 2, merged and cut into the days one page returns.
- *
- * **The milestone query's window is bounded by
- * {@link getWindowBoundaryFromItemDays}.** Without a far edge, every occasion
- * on the requested side is eligible, which is tens of rows.
- *
- * **The union applies only when no content filter is set** (`timeline.md`
- * Ruling 1). The milestones themselves are still read under a content filter,
- * because a day that does survive one still carries its band.
- *
- * @param options.database The Kysely handle.
- * @param options.viewer The request's viewer.
- * @param options.filter The normalised selection.
- * @param options.limit Days per page.
- * @param options.boundaryDay The cursor's day, exclusive.
- * @param options.direction Older or newer days nearest the boundary.
- * @param options.itemBudget `appConfig.timeline.pageItemBudget`.
- */
+/** Visibility, filtering, cursor and resource limits for a day-stream page. */
 type DayStreamOptions = {
   database: DatabaseExecutor;
   viewer: Viewer;
@@ -92,7 +73,9 @@ type DayStreamOptions = {
   itemBudget: number;
 };
 
-/** Candidate days in the requested traversal order, before the atomic budget. */
+/**
+ * Candidate days in the requested traversal order, before the atomic budget.
+ */
 async function _readDayStreamCandidates(
   options: Readonly<DayStreamOptions>,
 ): Promise<{ milestones: MilestoneRef[]; candidates: CandidateDay[] }> {
@@ -126,7 +109,7 @@ async function _readDayStreamCandidates(
 
   return {
     milestones,
-    candidates: makeMergedDays({
+    candidates: makeMergedDaysFromItemAndMilestoneDays({
       itemDays,
       milestoneDays,
       direction: options.direction,
@@ -134,7 +117,20 @@ async function _readDayStreamCandidates(
   };
 }
 
-/** Applies the atomic budget nearest the boundary, then returns newest first. */
+/**
+ * Returns newest-first days within the page budgets and overlapping occasions.
+ *
+ * Occasion-only days participate only without a content filter. Occasions
+ * still accompany matching item days when a content filter is active.
+ *
+ * @param options.database The Kysely handle.
+ * @param options.viewer The request's viewer.
+ * @param options.filter The normalised selection.
+ * @param options.limit Days per page.
+ * @param options.boundaryDay The cursor's day, exclusive.
+ * @param options.direction Older or newer days nearest the boundary.
+ * @param options.itemBudget The configured timeline page-item budget.
+ */
 export async function readDayStream(
   options: Readonly<DayStreamOptions>,
 ): Promise<DayStreamPage> {

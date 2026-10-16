@@ -1,7 +1,7 @@
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import type { MediaRef, VideoReaction } from "@memory-shoebox/shared";
 import { useEffect, useRef, useState } from "react";
-import { getSourceRenewalFromVideo } from "../useVideoSourceRenewal/useVideoSourceRenewal";
+import { getSourceRenewalFromVideo } from "../videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 import { getCrossedReactions } from "../videoMomentHelpers/videoMomentHelpers";
 
 type Options = {
@@ -23,10 +23,16 @@ export type VideoPlayback = {
   onTimeUpdate: (video: HTMLVideoElement) => void;
   onSeeking: () => void;
   onSeeked: () => void;
-  seek: (seconds: number, shouldPlay?: boolean) => void;
+  seek: ({
+    seconds,
+    shouldPlay,
+  }: Readonly<{ seconds: number; shouldPlay?: boolean }>) => void;
 };
 
-/** Playback state and brief acknowledgements, excluding reactions crossed by seeks. */
+/**
+ * Playback state and brief acknowledgements, excluding reactions crossed by
+ * seeks.
+ */
 export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
   const { media, transport, reactions, lastAdded } = options;
   const [isPlaying, setIsPlaying] = useState(false);
@@ -42,22 +48,28 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       return { key: (current?.key ?? 0) + 1, emoji: reaction.emoji };
     });
   };
-  useEffect(() => {
-    if (lastAdded !== undefined) {
-      showReaction(lastAdded);
-    }
-  }, [lastAdded]);
-  useEffect(() => {
-    if (burst === undefined) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      setBurst(undefined);
-    }, 1600);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [burst]);
+  useEffect(
+    function showAddedVideoReaction() {
+      if (lastAdded !== undefined) {
+        showReaction(lastAdded);
+      }
+    },
+    [lastAdded],
+  );
+  useEffect(
+    function clearReactionBurstAfterDelay() {
+      if (burst === undefined) {
+        return;
+      }
+      const timer = window.setTimeout(() => {
+        setBurst(undefined);
+      }, 1600);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    },
+    [burst],
+  );
   return {
     duration,
     isPlaying,
@@ -70,7 +82,7 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
       setHasError(false);
     },
     onTimeUpdate: (video: HTMLVideoElement) => {
-      if (!transport.updatePositionFromVideo(video)) {
+      if (!transport.updatePositionFromVideo({ video: video })) {
         return;
       }
       const crossed = getCrossedReactions({
@@ -90,13 +102,19 @@ export function useVideoPlayback(options: Readonly<Options>): VideoPlayback {
     },
     onSeeked: () => {
       const video = transport.videoRef.current;
-      if (video !== null && !transport.updatePositionFromVideo(video, true)) {
+      if (
+        video !== null &&
+        !transport.updatePositionFromVideo({ video: video, hasSeeked: true })
+      ) {
         return;
       }
       previousTime.current = video?.currentTime ?? 0;
       isSeeking.current = false;
     },
-    seek: (seconds: number, shouldPlay = false) => {
+    seek: ({
+      seconds,
+      shouldPlay = false,
+    }: Readonly<{ seconds: number; shouldPlay?: boolean | undefined }>) => {
       const position = Math.min(duration, Math.max(0, seconds));
       isSeeking.current = transport.videoRef.current?.currentTime !== position;
       previousTime.current = position;

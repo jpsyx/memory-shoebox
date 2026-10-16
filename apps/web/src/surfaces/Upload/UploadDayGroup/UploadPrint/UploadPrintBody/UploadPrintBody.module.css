@@ -1,0 +1,39 @@
+.uploadPrintBody {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 5px;
+  border: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-print);
+  cursor: pointer;
+  font: inherit;
+  text-align: inherit;
+  transition: transform 140ms var(--ease);
+}
+
+.uploadPrintBody:hover {
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+:global([data-pile="messy"]) .uploadPrintBody {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.03);
+  z-index: var(--z, 1);
+}
+
+:global([data-pile="messy"]) .uploadPrintBody:hover {
+  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
+    scale(1.07);
+  z-index: 20;
+}
+
+.uploadPrintBodySelectable {
+  outline-offset: -5px;
+}
+
+.uploadPrintBodySelected {
+  outline: 5px solid var(--ink-dark);
+  outline-offset: -5px;
+}

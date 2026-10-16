@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { renderTimeline } from "./TimelineSurface.fixtures";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import {
   dropFiles,
   installTimelineSurfaceDropTestLifecycle,

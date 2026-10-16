@@ -1,3 +1,4 @@
+import type { MediaRecipeInput } from "../../src/mediaProcessing/recipes/mediaRecipes.types.ts";
 import {
   copyFile,
   readFile,
@@ -11,11 +12,11 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makePhotoRenditionsFromSource } from "../../src/mediaProcessing/recipes/makePhotoRenditionsFromSource.ts";
-import { makeImageRenditionsFromFile } from "../../src/mediaProcessing/recipes/mediaRecipeFiles.ts";
+import { makeImageRenditionsFromFile } from "../../src/mediaProcessing/recipes/mediaRecipeFileHelpers.ts";
 import type { MediaProbe } from "../../src/mediaProcessing/runtime/mediaRuntime.types.ts";
 import {
   createVerificationRunner,
-  getFixturePath,
+  makeFixturePathFromName,
   getHashFromFile,
 } from "./recipeTestHelpers.ts";
 
@@ -28,18 +29,26 @@ afterEach(async () => {
   );
 });
 
-async function _input(name: string, width: number, height: number) {
+async function _input({
+  name,
+  width,
+  height,
+}: {
+  name: string;
+  width: number;
+  height: number;
+}): Promise<MediaRecipeInput> {
   const runner = await createVerificationRunner();
   disposers.push(runner.dispose);
   const sourcePathOrUrl = join(runner.scratchPath, "source");
-  await copyFile(getFixturePath(name), sourcePathOrUrl);
+  await copyFile(makeFixturePathFromName(name), sourcePathOrUrl);
   const probe: MediaProbe = {
     kind: "photo",
     width,
     height,
     bitDepth: 8,
-    frameRate: null,
-    durationMs: null,
+    frameRate: undefined,
+    durationMs: undefined,
     hasAudio: false,
     transfer: "sdr",
     rotationDegrees: 0,
@@ -57,7 +66,11 @@ async function _input(name: string, width: number, height: number) {
 
 describe("actual photo recipes (codec evidence, no isolation claim)", () => {
   it("makes oriented 480/960/2048 candidates without upscaling", async () => {
-    const input = await _input("oriented.jpg", 2400, 1600);
+    const input = await _input({
+      name: "oriented.jpg",
+      width: 2400,
+      height: 1600,
+    });
     const originalHashBefore = await getHashFromFile(input.sourcePathOrUrl);
     const outputs = await makePhotoRenditionsFromSource(input);
     expect(
@@ -92,7 +105,7 @@ describe("actual photo recipes (codec evidence, no isolation claim)", () => {
   }, 20000);
 
   it("re-encodes small-but-heavy JPEGs against byte targets", async () => {
-    const input = await _input("heavy.jpg", 400, 400);
+    const input = await _input({ name: "heavy.jpg", width: 400, height: 400 });
     expect(input.sourceBytes).toBeGreaterThan(128 * 1024);
     const outputs = await makePhotoRenditionsFromSource(input);
     const thumb = outputs.find((output) => {
@@ -107,7 +120,7 @@ describe("actual photo recipes (codec evidence, no isolation claim)", () => {
 
   it("flattens transparency to white without upscaling", async () => {
     const outputs = await makePhotoRenditionsFromSource(
-      await _input("transparent.png", 80, 40),
+      await _input({ name: "transparent.png", width: 80, height: 40 }),
     );
     expect(
       outputs.every((output) => {
@@ -121,7 +134,7 @@ describe("actual photo recipes (codec evidence, no isolation claim)", () => {
   });
 
   it("decodes the real rotated HEIC primary, never its embedded thumbnail", async () => {
-    const input = await _input("primary.heic", 32, 64);
+    const input = await _input({ name: "primary.heic", width: 32, height: 64 });
     const before = await getHashFromFile(input.sourcePathOrUrl);
     const outputs = await makePhotoRenditionsFromSource(input);
     const { data, info } = await sharp(outputs[0]!.path)
@@ -134,7 +147,11 @@ describe("actual photo recipes (codec evidence, no isolation claim)", () => {
   });
 
   it("rejects source-size mismatch and foreign scratch without accepted outputs", async () => {
-    const input = await _input("transparent.png", 80, 40);
+    const input = await _input({
+      name: "transparent.png",
+      width: 80,
+      height: 40,
+    });
     await expect(
       makePhotoRenditionsFromSource({
         ...input,
@@ -149,7 +166,11 @@ describe("actual photo recipes (codec evidence, no isolation claim)", () => {
 });
 
 it("refuses disguised external-reference formats before invoking a decoder", async () => {
-  const input = await _input("transparent.png", 80, 40);
+  const input = await _input({
+    name: "transparent.png",
+    width: 80,
+    height: 40,
+  });
   await writeFile(
     input.sourcePathOrUrl,
     '<svg width="80" height="40"><image href="http://127.0.0.1:1/private"/></svg>',
@@ -162,7 +183,11 @@ it("refuses disguised external-reference formats before invoking a decoder", asy
 });
 
 it("refuses a symlinked output directory without creating files outside its job", async () => {
-  const input = await _input("transparent.png", 80, 40);
+  const input = await _input({
+    name: "transparent.png",
+    width: 80,
+    height: 40,
+  });
   const sibling = await createVerificationRunner();
   disposers.push(sibling.dispose);
   await rm(join(input.scratchDirectory, "output"), { recursive: true });
@@ -177,7 +202,11 @@ it("refuses a symlinked output directory without creating files outside its job"
 });
 
 it("reuses an already small JPEG byte-for-byte", async () => {
-  const input = await _input("transparent.png", 80, 40);
+  const input = await _input({
+    name: "transparent.png",
+    width: 80,
+    height: 40,
+  });
   const jpeg = await sharp(input.sourcePathOrUrl)
     .flatten({ background: "white" })
     .jpeg()
@@ -189,7 +218,7 @@ it("reuses an already small JPEG byte-for-byte", async () => {
 });
 
 it("retains measured bytes after exhausting a bounded quality ladder", async () => {
-  const input = await _input("heavy.jpg", 400, 400);
+  const input = await _input({ name: "heavy.jpg", width: 400, height: 400 });
   const outputs = await makeImageRenditionsFromFile({
     input,
     source: input.sourcePathOrUrl,
@@ -211,7 +240,11 @@ it("retains measured bytes after exhausting a bounded quality ladder", async () 
 });
 
 it("cancels a real photo child at the shared deadline without accepting files", async () => {
-  const input = await _input("oriented.jpg", 2400, 1600);
+  const input = await _input({
+    name: "oriented.jpg",
+    width: 2400,
+    height: 1600,
+  });
   const originalTimeout = AbortSignal.timeout.bind(AbortSignal);
   const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => {
     return originalTimeout(10);

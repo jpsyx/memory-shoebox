@@ -1,6 +1,6 @@
 import type { BurstSummary } from "@memory-shoebox/shared";
-import type { BurstFrameRow } from "./readBurstFrameRefs/readBurstFrameRows.ts";
-import type { BurstFrameTotals } from "./readBurstFrameRefs/readBurstFrameTotals.ts";
+import type { BurstFrameRow } from "./readBurstFramePage/readBurstFrameRows.ts";
+import type { BurstFrameTotals } from "./readBurstFramePage/readBurstFrameTotals.ts";
 
 /**
  * The burst summary for a viewer, from the totals over its visible siblings.
@@ -11,7 +11,7 @@ import type { BurstFrameTotals } from "./readBurstFrameRefs/readBurstFrameTotals
  *
  * **Every figure comes from `totals`, never from `rows`.** `rows` is the strip
  * the caller will draw, and the permalink's is capped at
- * `appConfig.items.burstStripMaxFrames`; a count taken from it could never
+ * `APP_CONFIG.items.burstStripMaxFrames`; a count taken from it could never
  * exceed the cap, so `visibleFrameCount` could never do the one job it has,
  * which is to tell the client there are more frames than the strip carries and
  * send it to `GET /api/bursts/:burstId/frames`. A capped span is wrong the same
@@ -21,8 +21,8 @@ import type { BurstFrameTotals } from "./readBurstFrameRefs/readBurstFrameTotals
  * ones, which is the same figure the pile computes in
  * `makeDrawnEntriesFromItemRows`: the two must agree, or one burst reports 45
  * frames in the timeline and 44 on its own permalink. A visible frame whose
- * renditions have gone missing is therefore counted here and dropped from the
- * strip.
+ * renditions have gone missing is counted here and retains its placeholder
+ * in the strip.
  *
  * Fewer than two visible frames is not a burst. One frame renders as a plain
  * print, which is a read-time rule rather than a schema one: the burst row
@@ -43,7 +43,7 @@ export function makeBurstSummaryFromRows(options: {
   rows: readonly BurstFrameRow[];
   totals: BurstFrameTotals;
   storedCoverItemId: string | undefined;
-}): BurstSummary | null {
+}): BurstSummary | undefined {
   const { rows, totals } = options;
   const [earliest] = rows;
   // The three undefined checks are one condition: no visible sibling means no
@@ -54,7 +54,7 @@ export function makeBurstSummaryFromRows(options: {
     totals.startsAt === undefined ||
     totals.endsAt === undefined
   ) {
-    return null;
+    return undefined;
   }
 
   const isCoverVisible = rows.some((row) => {

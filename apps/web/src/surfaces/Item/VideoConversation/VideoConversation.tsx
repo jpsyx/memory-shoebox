@@ -2,12 +2,12 @@ import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTranspor
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { VideoPlayer } from "@videojs/react/video";
 import { useRef, type ReactNode } from "react";
-import { ItemComments } from "../ItemConversation/ItemComments";
+import { ItemComments } from "../ItemConversation/ItemComments/ItemComments";
 import { ItemConversation } from "../ItemConversation/ItemConversation";
-import { ConversationPlayer } from "./ConversationPlayer";
+import { ConversationPlayer } from "./ConversationPlayer/ConversationPlayer";
 import { useVideoPlayback } from "./useVideoPlayback/useVideoPlayback";
 import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
-import { VideoReactionBar } from "./VideoReactionBar";
+import { VideoReactionBar } from "./VideoReactionBar/VideoReactionBar";
 
 type Props = {
   detail: ItemDetail;
@@ -18,7 +18,10 @@ type Props = {
   onDeleted: () => void;
 };
 
-/** The approved video conversation surface, retaining every ancillary item action. */
+/**
+ * The approved video conversation surface, retaining every ancillary item
+ * action.
+ */
 export function VideoConversation({
   detail,
   viewer,
@@ -72,7 +75,7 @@ export function VideoConversation({
           transport={transport}
           fieldRef={fieldRef}
           onSeek={(seconds) => {
-            playback.seek(seconds);
+            playback.seek({ seconds: seconds });
           }}
         />
       }

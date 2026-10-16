@@ -92,7 +92,7 @@ export default defineConfig({
   // Gives the catalog lock back at the end of a run. Taking it is the first
   // thing `deleteE2eCatalog.ts` does; this is the same file, imported rather
   // than executed, so importing it deletes nothing.
-  globalTeardown: "./e2e/support/deleteE2eCatalog.ts",
+  globalTeardown: "./e2e/support/e2eCatalogLifecycleHelpers.ts",
   webServer: [
     {
       // The bucket. It holds nothing between runs: it is memory, and it dies
@@ -111,7 +111,7 @@ export default defineConfig({
       // Only the compiler uses production React/Vite. The guarded API keeps
       // explicit development/fake-email configuration and no-mail injection.
       command:
-        "node e2e/support/deleteE2eCatalog.ts && NODE_ENV=production pnpm build && node e2e/support/runE2eServer.ts",
+        "node e2e/support/e2eCatalogLifecycleHelpers.ts && NODE_ENV=production pnpm build && node e2e/support/runE2eServer.ts",
       url: `${E2E_BASE_URL}/api/health`,
       reuseExistingServer: false,
       timeout: 180_000,

@@ -15,7 +15,7 @@ import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import {
   respondWith,
   type Answer,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 /** Active admin on this browser. */
 export const ADMIN_ACCOUNT: MeResponse = createMeResponse();

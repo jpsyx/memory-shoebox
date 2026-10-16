@@ -1,4 +1,4 @@
-import { countItemsInE2eCatalog } from "./support/archive.ts";
+import { countItemsInE2eCatalog } from "./support/archiveSeedHelpers.ts";
 import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /**
@@ -10,7 +10,7 @@ import { expect, test } from "./support/signedIn/signedIn.ts";
  * assertion is what turns a change to that ordering into a named failure here.
  */
 test.describe("the empty archive", () => {
-  test("runs before anything has seeded the archive", async () => {
+  test("starts with no archived items", async () => {
     expect(
       await countItemsInE2eCatalog(),
       "empty.spec.ts must run before the specs that seed the archive; files run alphabetically under one worker",

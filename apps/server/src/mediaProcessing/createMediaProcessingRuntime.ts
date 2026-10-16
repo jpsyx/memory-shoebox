@@ -34,7 +34,7 @@ export function createMediaProcessingRuntime(
         runner: createMediaProcessRunner(options),
       });
     },
-    makeFingerprint: async (bytes, signal) => {
+    makeFingerprint: async ({ bytes, signal }) => {
       const runner = createMediaProcessRunner(options);
       try {
         return await makeIsolatedFingerprintFromImage({

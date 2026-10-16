@@ -31,9 +31,9 @@ afterAll(async () => {
 
 /** A path-style object URL, with the query a presigned URL would carry. */
 function _objectUrl(
-  functionOptions: Readonly<{ key: string; query?: string }>,
+  options: Readonly<{ key: string; query?: string }>,
 ): string {
-  const { key, query = "" } = functionOptions;
+  const { key, query = "" } = options;
 
   return `${baseUrl}/${BUCKET}/${key}?X-Amz-Signature=ignored${query}`;
 }

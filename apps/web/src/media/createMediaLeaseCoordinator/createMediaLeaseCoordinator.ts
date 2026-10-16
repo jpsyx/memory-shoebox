@@ -22,7 +22,7 @@ export type { LeaseConsumer } from "./createMediaLeaseCoordinator.types";
 
 import {
   clearMediaLeaseState,
-  getEntryFromMediaConsumer,
+  registerMediaConsumer,
   getExpiryFromMediaLease,
   getSourceIdentityFromMedia,
   listenForMediaReturn,
@@ -58,7 +58,7 @@ function _schedule(state: State): void {
           return getExpiryFromMediaLease(entry) <= Date.now() + 60_000;
         })
         .forEach((entry) => {
-          void _renew(state, entry);
+          void _renew({ state, entry });
         });
       _schedule(state);
     },
@@ -66,22 +66,29 @@ function _schedule(state: State): void {
   );
 }
 
-function _deny(state: State, itemId: string): void {
+function _deny({ state, itemId }: { state: State; itemId: string }): void {
   state.deniedIds.add(itemId);
   state.store.remove(itemId);
   state.entries.forEach((entry) => {
     if (entry.itemId === itemId) {
       entry.denied = true;
-      publishMediaLeaseSnapshot(entry, { media: undefined, hasError: true });
+      publishMediaLeaseSnapshot({
+        entry,
+        snapshot: { media: undefined, hasError: true },
+      });
     }
   });
 }
 
-function _acceptPreviews(
-  state: State,
-  entries: Entry[],
-  previews: MediaPreview[],
-): void {
+function _acceptPreviews({
+  state,
+  entries,
+  previews,
+}: {
+  state: State;
+  entries: Entry[];
+  previews: MediaPreview[];
+}): void {
   entries.forEach((entry) => {
     if (state.entries.get(`${entry.purpose}:${entry.itemId}`) !== entry) {
       return;
@@ -90,14 +97,17 @@ function _acceptPreviews(
       return candidate.itemId === entry.itemId;
     });
     if (preview === undefined) {
-      _deny(state, entry.itemId);
+      _deny({ state, itemId: entry.itemId });
       return;
     }
     entry.denied = false;
     state.deniedIds.delete(entry.itemId);
     state.authorizationLost = false;
-    listenForMediaReturn(state.onReturn, true);
-    publishMediaLeaseSnapshot(entry, { media: preview.media, hasError: false });
+    listenForMediaReturn({ onReturn: state.onReturn, enabled: true });
+    publishMediaLeaseSnapshot({
+      entry,
+      snapshot: { media: preview.media, hasError: false },
+    });
     entry.attemptedUrl =
       getExpiryFromMediaLease(entry) > Date.now() + 60_000
         ? undefined
@@ -105,14 +115,22 @@ function _acceptPreviews(
   });
 }
 
-function _onFailure(state: State, entries: Entry[], error: unknown): void {
+function _onFailure({
+  state,
+  entries,
+  error,
+}: {
+  state: State;
+  entries: Entry[];
+  error: unknown;
+}): void {
   if (
     error instanceof ApiRequestError &&
     [401, 403, 404].includes(error.status)
   ) {
     if (error.status === 404) {
       entries.forEach((entry) => {
-        _deny(state, entry.itemId);
+        _deny({ state, itemId: entry.itemId });
       });
     } else {
       state.onAuthorizationLoss();
@@ -124,12 +142,21 @@ function _onFailure(state: State, entries: Entry[], error: unknown): void {
     });
   } else {
     entries.forEach((entry) => {
-      publishMediaLeaseSnapshot(entry, { ...entry.snapshot, hasError: true });
+      publishMediaLeaseSnapshot({
+        entry,
+        snapshot: { ...entry.snapshot, hasError: true },
+      });
     });
   }
 }
 
-async function _readBatch(state: State, entries: Entry[]): Promise<void> {
+async function _readBatch({
+  state,
+  entries,
+}: {
+  state: State;
+  entries: Entry[];
+}): Promise<void> {
   const epoch = state.store.captureEpoch();
   let wasCurrent = false;
   try {
@@ -141,12 +168,12 @@ async function _readBatch(state: State, entries: Entry[]): Promise<void> {
     });
     if (state.store.captureEpoch() === epoch) {
       wasCurrent = true;
-      _acceptPreviews(state, entries, previews);
+      _acceptPreviews({ state, entries, previews });
     }
   } catch (error) {
     if (state.store.captureEpoch() === epoch) {
       wasCurrent = true;
-      _onFailure(state, entries, error);
+      _onFailure({ state, entries, error });
     }
   } finally {
     entries.forEach((entry) => {
@@ -156,7 +183,7 @@ async function _readBatch(state: State, entries: Entry[]): Promise<void> {
         state.entries.get(`${entry.purpose}:${entry.itemId}`) === entry &&
         getExpiryFromMediaLease(entry) <= Date.now() + 60_000
       ) {
-        _queue(state, entry);
+        _queue({ state, entry });
         return;
       }
       entry.settle?.(entry.denied ? undefined : entry.snapshot.media);
@@ -185,21 +212,28 @@ function _flush(state: State): void {
     return false;
   });
   state.queue.clear();
-  for (const purpose of ["selected-view", "speculative-preview"] as const) {
+  (["selected-view", "speculative-preview"] as const).forEach((purpose) => {
     const entries = queued.filter((entry) => {
       return entry.purpose === purpose;
     });
-    for (let index = 0; index < entries.length; index += 8) {
-      void _readBatch(state, entries.slice(index, index + 8));
-    }
-  }
+    Array.from({ length: Math.ceil(entries.length / 8) }).forEach(
+      (_, batchIndex) => {
+        const index = batchIndex * 8;
+        void _readBatch({ state, entries: entries.slice(index, index + 8) });
+      },
+    );
+  });
 }
 
-function _renew(
-  state: State,
-  entry: Entry,
+function _renew({
+  state,
+  entry,
   isExplicit = false,
-): Promise<MediaRef | undefined> {
+}: {
+  state: State;
+  entry: Entry;
+  isExplicit?: boolean;
+}): Promise<MediaRef | undefined> {
   entry.isExplicit ||= isExplicit;
   if (entry.pending !== undefined) {
     return entry.pending;
@@ -208,46 +242,57 @@ function _renew(
   entry.pending = new Promise((resolve) => {
     entry.settle = resolve;
   });
-  _queue(state, entry);
+  _queue({ state, entry });
   return entry.pending;
 }
 
-function _queue(state: State, entry: Entry): void {
+function _queue({ state, entry }: { state: State; entry: Entry }): void {
   state.queue.add(entry);
   state.flushTimer ??= setTimeout(() => {
     _flush(state);
   }, 0);
 }
 
-function _updateInitial(state: State, entry: Entry, media: MediaRef): void {
+function _updateInitial({
+  state,
+  entry,
+  media,
+}: {
+  state: State;
+  entry: Entry;
+  media: MediaRef;
+}): void {
   if (
     !entry.denied &&
     getSourceIdentityFromMedia(media) !==
       getSourceIdentityFromMedia(entry.initialMedia)
   ) {
     state.store.remove(entry.itemId);
-    seedMediaPreviewStore(state, entry.itemId, media);
+    seedMediaPreviewStore({ state, itemId: entry.itemId, media });
     entry.attemptedUrl = undefined;
-    publishMediaLeaseSnapshot(entry, { media, hasError: false });
+    publishMediaLeaseSnapshot({ entry, snapshot: { media, hasError: false } });
     _schedule(state);
   }
   entry.initialMedia = media;
 }
 
-function _register(
-  state: State,
-  consumer: Readonly<LeaseConsumer>,
-): MediaLeaseRegistration {
-  const entry = getEntryFromMediaConsumer(state, consumer);
+function _register({
+  state,
+  consumer,
+}: {
+  state: State;
+  consumer: Readonly<LeaseConsumer>;
+}): MediaLeaseRegistration {
+  const entry = registerMediaConsumer({ state, consumer });
   entry.consumers.set(consumer.onChange, consumer.isVisible);
   consumer.onChange(entry.snapshot);
   _schedule(state);
   return {
     renew: () => {
-      return _renew(state, entry, true);
+      return _renew({ state, entry, isExplicit: true });
     },
     updateInitial: (media) => {
-      _updateInitial(state, entry, media);
+      _updateInitial({ state, entry, media });
     },
     setVisible: (isVisible) => {
       entry.consumers.set(consumer.onChange, isVisible);
@@ -292,21 +337,21 @@ export function createMediaLeaseCoordinator(
   };
   return {
     register: (consumer) => {
-      listenForMediaReturn(state.onReturn, true);
-      const registration = _register(state, consumer);
+      listenForMediaReturn({ onReturn: state.onReturn, enabled: true });
+      const registration = _register({ state, consumer });
       return {
         ...registration,
         release: () => {
           registration.release();
           if (state.entries.size === 0) {
-            listenForMediaReturn(state.onReturn, false);
+            listenForMediaReturn({ onReturn: state.onReturn, enabled: false });
           }
         },
       };
     },
     clear: () => {
       clearMediaLeaseState(state);
-      listenForMediaReturn(state.onReturn, false);
+      listenForMediaReturn({ onReturn: state.onReturn, enabled: false });
     },
     isDenied: (itemId) => {
       return state.authorizationLost || state.deniedIds.has(itemId);

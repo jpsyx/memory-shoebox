@@ -1,13 +1,13 @@
 import { type ReactNode } from "react";
 
-import type { StreamProps } from "./DayStream.types";
-import { StreamDay } from "./StreamDay";
+import type { StreamProps as Props } from "./DayStream.types";
+import { StreamDay } from "./StreamDay/StreamDay";
 /** Renders the owned StreamDays portion of the timeline. */
 export function StreamDays({
   props,
   stream,
   onCollapseBurst,
-}: StreamProps): ReactNode {
+}: Readonly<Props>): ReactNode {
   const days = new Map(
     stream.rows.map((row) => {
       return [row.day.capturedOn, row.day];

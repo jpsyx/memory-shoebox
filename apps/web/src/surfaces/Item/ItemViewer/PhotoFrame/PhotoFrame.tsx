@@ -1,13 +1,12 @@
 import { useMediaLease } from "@/media/useMediaLease/useMediaLease";
 import { usePhotoSourceFailure } from "@/media/usePhotoSourceFailure";
 import { useSelectedPhoto, type SelectedPhoto } from "@/media/useSelectedPhoto";
-import classes from "@/system/system.module.css";
 import type { MediaRef } from "@memory-shoebox/shared";
 import { useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { DecodedPhotoHandoff } from "../DecodedPhotoHandoff";
-import photoClasses from "./PhotoFrame.module.css";
+import classes from "./PhotoFrame.module.css";
 import { PhotoThumbnail } from "./PhotoThumbnail/PhotoThumbnail";
-import { SelectedPhotoPicture } from "./SelectedPhotoPicture";
+import { SelectedPhotoPicture } from "./SelectedPhotoPicture/SelectedPhotoPicture";
 
 type Props = {
   media: MediaRef;
@@ -15,7 +14,9 @@ type Props = {
   presentation?: "preview" | "selected";
 };
 
-/** Shows owned pixels or a thumbnail until the current responsive image decodes. */
+/**
+ * Shows owned pixels or a thumbnail until the current responsive image decodes.
+ */
 export function PhotoFrame({
   media: initialMedia,
   itemId,
@@ -66,12 +67,12 @@ export function PhotoFrame({
   return (
     <div
       ref={photo.frame}
-      className={classes.frame}
+      className={classes.photoFrame}
       data-photo-surface="viewer"
       data-photo-item={itemId}
       data-photo-ready={photo.isReady}
     >
-      <div className={photoClasses.pixels}>
+      <div className={classes.photoFramePixels}>
         {photo.isReady ? null : photo.handoff !== undefined ? (
           <DecodedPhotoHandoff
             snapshot={photo.handoff}

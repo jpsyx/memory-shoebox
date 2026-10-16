@@ -1,0 +1,10 @@
+.timelineHeaderMobileSpine {
+  display: none;
+}
+
+@media (max-width: 44em) {
+  .timelineHeaderMobileSpine {
+    display: block;
+    grid-column: 1 / -1;
+  }
+}

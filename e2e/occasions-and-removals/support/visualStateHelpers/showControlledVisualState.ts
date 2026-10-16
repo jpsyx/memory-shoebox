@@ -6,30 +6,37 @@ import {
   type ItemSummary,
 } from "@memory-shoebox/shared";
 import { routeLocalVisualMedia } from "../routeLocalVisualMedia.ts";
-import type { Page } from "@playwright/test";
+import type { ControlledVisualPage } from "../visualPage.types.ts";
 import { makeItemSummaryFromOverrides } from "../../../../apps/web/src/testing/askingAndOccasionsFixtureHelpers.ts";
 import { prepareVisualOccasion } from "./prepareVisualOccasion.ts";
 import { prepareVisualRemoval } from "./prepareVisualRemoval.ts";
 type SignedInBaseline = BootstrapResponse & { account: MeResponse };
-// A controlled page owns one actual baseline; separate pages validate independently.
-const baselines = new WeakMap<Page, SignedInBaseline>();
+// A controlled page owns one actual baseline; separate pages validate
+// independently.
+const baselines = new WeakMap<ControlledVisualPage, SignedInBaseline>();
 
-async function _getBootstrapFromPage(page: Page): Promise<SignedInBaseline> {
+async function _getBootstrapFromPage(
+  page: ControlledVisualPage,
+): Promise<SignedInBaseline> {
   const cached = baselines.get(page);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const response = await page.request.get("/api/bootstrap");
-  if (response.status() !== 200)
+  if (response.status() !== 200) {
     throw new Error(`Controlled baseline returned ${response.status()}`);
+  }
   const bootstrap = bootstrapResponseSchema.parse(await response.json());
-  if (bootstrap.setup.isRequired || bootstrap.account === null)
+  if (bootstrap.setup.isRequired || bootstrap.account === null) {
     throw new Error("Controlled visuals require a complete signed-in baseline");
+  }
   const baseline = { ...bootstrap, account: bootstrap.account };
   baselines.set(page, baseline);
   return baseline;
 }
 
 type ControlledVisualOptions = {
-  page: Page;
+  page: ControlledVisualPage;
   surface: string;
   state: string;
   scheme: "light" | "dark";
@@ -87,7 +94,11 @@ async function _activateVisualState({
   page,
   surface,
   state,
-}: Readonly<{ page: Page; surface: string; state: string }>): Promise<void> {
+}: Readonly<{
+  page: Pick<ControlledVisualPage, "getByRole">;
+  surface: string;
+  state: string;
+}>): Promise<void> {
   if (state === "create-span") {
     await page
       .getByRole("switch", { name: "It ran over more than one day" })

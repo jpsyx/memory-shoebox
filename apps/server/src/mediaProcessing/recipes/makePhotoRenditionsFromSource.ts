@@ -1,26 +1,26 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import {
   checkMediaRecipeInput,
   getHeaderFromFile,
   getMediaRecipeErrorFromFailure,
-  getOwnedFileBytes,
+  getByteSizeFromOwnedFile,
   makeImageRenditionsFromFile,
-} from "./mediaRecipeFiles.ts";
+} from "./mediaRecipeFileHelpers.ts";
 import type {
   MediaRecipeInput,
   ProcessedRendition,
 } from "./mediaRecipes.types.ts";
 
 async function _getSource(input: Readonly<MediaRecipeInput>): Promise<string> {
-  const bytes = await getOwnedFileBytes({
+  const bytes = await getByteSizeFromOwnedFile({
     path: input.sourcePathOrUrl,
     directory: input.scratchDirectory,
   });
   if (
     bytes !== input.sourceBytes ||
-    bytes > appConfig.mediaProcessing.photoInputBytes
+    bytes > APP_CONFIG.mediaProcessing.photoInputBytes
   ) {
     throw new Error("processing_input_invalid");
   }
@@ -46,7 +46,7 @@ async function _getSource(input: Readonly<MediaRecipeInput>): Promise<string> {
     executable: "heif-thumbnailer",
     args: ["-p", "-s", "2048", input.sourcePathOrUrl, path],
     signal: input.signal,
-    timeoutMs: appConfig.mediaProcessing.photoTimeoutMs,
+    timeoutMs: APP_CONFIG.mediaProcessing.photoTimeoutMs,
     stdoutLimitBytes: 0,
   });
   if (decoded.exitCode !== 0) {
@@ -55,18 +55,20 @@ async function _getSource(input: Readonly<MediaRecipeInput>): Promise<string> {
   return path;
 }
 
-/** Makes local JPEG fallbacks and measured WebP candidates in one bounded job. */
+/**
+ * Makes local JPEG fallbacks and measured WebP candidates in one bounded job.
+ */
 export async function makePhotoRenditionsFromSource(
   input: Readonly<MediaRecipeInput>,
 ): Promise<ProcessedRendition[]> {
   const deadline = AbortSignal.timeout(
-    appConfig.mediaProcessing.photoTimeoutMs,
+    APP_CONFIG.mediaProcessing.photoTimeoutMs,
   );
   const boundedInput = {
     ...input,
     signal: AbortSignal.any([input.signal, deadline]),
   };
-  await checkMediaRecipeInput(boundedInput, "photo");
+  await checkMediaRecipeInput({ input: boundedInput, kind: "photo" });
   const outputDirectory = await mkdtemp(
     join(input.scratchDirectory, "output/photo-"),
   );
@@ -76,7 +78,7 @@ export async function makePhotoRenditionsFromSource(
       input: boundedInput,
       source,
       outputDirectory,
-      candidates: appConfig.mediaProcessing.photoCandidates.map(
+      candidates: APP_CONFIG.mediaProcessing.photoCandidates.map(
         (candidate, index) => {
           return {
             ...candidate,

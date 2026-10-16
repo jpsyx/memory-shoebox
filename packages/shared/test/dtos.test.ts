@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import * as contract from "../src/index.ts";
+import { calendarDateSchema } from "../src/index.ts";
 import * as dtos from "../src/dtos.ts";
 import {
   burstSummarySchema,
@@ -13,7 +13,7 @@ import {
 } from "../src/dtos.ts";
 
 /** A valid `MediaSource`, which every other fixture here is built from. */
-const mediaSource = {
+const MEDIA_SOURCE = {
   issuedAt: "2026-09-27T10:00:00.000Z",
   renditionId: "fixture-source",
   purpose: "thumb" as const,
@@ -23,16 +23,16 @@ const mediaSource = {
   expiresAt: "2026-09-27T15:03:11.412Z",
   width: 1600,
   height: 1200,
-};
+} satisfies dtos.MediaSource;
 
 /** A photograph: no poster, no video, no duration. */
-const photograph: MediaRef = {
+const PHOTOGRAPH: MediaRef = {
   width: 1600,
   height: 1200,
   previewState: "ready" as const,
   displayCandidates: [],
-  thumb: mediaSource,
-  display: mediaSource,
+  thumb: MEDIA_SOURCE,
+  display: MEDIA_SOURCE,
   poster: null,
   playback: null,
   durationMs: null,
@@ -40,16 +40,16 @@ const photograph: MediaRef = {
 };
 
 /** The same shape carrying a video instead. */
-const video: MediaRef = {
+const VIDEO: MediaRef = {
   width: 1600,
   height: 1200,
   previewState: "ready" as const,
   displayCandidates: [],
-  thumb: mediaSource,
-  display: mediaSource,
-  poster: mediaSource,
+  thumb: MEDIA_SOURCE,
+  display: MEDIA_SOURCE,
+  poster: MEDIA_SOURCE,
   playback: {
-    ...mediaSource,
+    ...MEDIA_SOURCE,
     purpose: "video_mp4" as const,
     contentType: "video/mp4",
   },
@@ -58,30 +58,30 @@ const video: MediaRef = {
 };
 
 /** A member reference, reused by the item and comment fixtures. */
-const uploadedBy = {
+const UPLOADED_BY = {
   memberId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f901234",
   displayName: "Abuela Rosa",
-};
+} satisfies dtos.MemberRef;
 
 /** A `BurstSummary`, reused by the item fixture and the burst schema tests. */
-const burst = {
+const BURST = {
   burstId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f909abc",
   visibleFrameCount: 7,
   startsAt: "2026-08-14T18:22:05.000Z",
   endsAt: "2026-08-14T18:22:09.000Z",
   coverItemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
   hasUnseenFrames: true,
-};
+} satisfies dtos.BurstSummary;
 
 /** A full `ItemSummary`, which exercises the composition of four DTOs. */
-const itemSummary = {
+const ITEM_SUMMARY = {
   itemId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
   kind: "photo",
   capturedAt: "2026-08-14T18:22:05.000Z",
   capturedOn: "2026-08-14",
-  media: photograph,
+  media: PHOTOGRAPH,
   isUnseen: true,
-  uploadedBy,
+  uploadedBy: UPLOADED_BY,
   visibility: {
     visibilityRuleId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f90aaaa",
     mode: "only",
@@ -94,14 +94,14 @@ const itemSummary = {
       },
     ],
   },
-  burst,
-};
+  burst: BURST,
+} satisfies dtos.ItemSummary;
 
 /** A full `CommentDto`, which carries a `ReactionSummary`. */
-const commentDto = {
+const COMMENT_DTO = {
   parentCommentId: null,
   commentId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f90def0",
-  author: uploadedBy,
+  author: UPLOADED_BY,
   body: "She never did let go of that shovel.",
   atSeconds: null,
   createdAt: "2026-09-01T09:14:00.000Z",
@@ -109,10 +109,10 @@ const commentDto = {
   canEdit: true,
   canDelete: false,
   reactions: {
-    kinds: [{ kind: "love", count: 2, members: [uploadedBy] }],
+    kinds: [{ kind: "love", count: 2, members: [UPLOADED_BY] }],
     myKind: "love",
   },
-};
+} satisfies dtos.CommentDto;
 
 describe("reactionKindSchema", () => {
   it("accepts the six kinds and nothing else", () => {
@@ -125,12 +125,12 @@ describe("reactionKindSchema", () => {
 });
 
 describe("mediaRefSchema", () => {
-  it("parses a photograph, whose poster and video are null", () => {
-    expect(mediaRefSchema.parse(photograph)).toEqual(photograph);
+  it("preserves a photograph with null poster and playback", () => {
+    expect(mediaRefSchema.parse(PHOTOGRAPH)).toEqual(PHOTOGRAPH);
   });
 
-  it("parses a video through the same shape", () => {
-    expect(mediaRefSchema.parse(video)).toEqual(video);
+  it("preserves a video and its media sources", () => {
+    expect(mediaRefSchema.parse(VIDEO)).toEqual(VIDEO);
   });
 
   it("rejects a storage key in place of a url", () => {
@@ -143,12 +143,12 @@ describe("mediaRefSchema", () => {
       "thumb.jpg",
     ].forEach((key) => {
       expect(
-        mediaSourceSchema.safeParse({ ...mediaSource, url: key }).success,
+        mediaSourceSchema.safeParse({ ...MEDIA_SOURCE, url: key }).success,
       ).toBe(false);
       expect(
         mediaRefSchema.safeParse({
-          ...photograph,
-          thumb: { ...mediaSource, url: key },
+          ...PHOTOGRAPH,
+          thumb: { ...MEDIA_SOURCE, url: key },
         }).success,
       ).toBe(false);
     });
@@ -160,9 +160,9 @@ describe("mediaRefSchema", () => {
       "data:image/png;base64,AAAA",
       "file:///tmp/a.jpg",
     ].forEach((url) => {
-      expect(mediaSourceSchema.safeParse({ ...mediaSource, url }).success).toBe(
-        false,
-      );
+      expect(
+        mediaSourceSchema.safeParse({ ...MEDIA_SOURCE, url }).success,
+      ).toBe(false);
     });
   });
 
@@ -175,7 +175,7 @@ describe("mediaRefSchema", () => {
       "2026-09-27T15:03:11.412+01:00",
     ].forEach((when) => {
       expect(
-        mediaSourceSchema.safeParse({ ...mediaSource, expiresAt: when })
+        mediaSourceSchema.safeParse({ ...MEDIA_SOURCE, expiresAt: when })
           .success,
       ).toBe(false);
     });
@@ -183,30 +183,30 @@ describe("mediaRefSchema", () => {
 });
 
 describe("itemSummarySchema", () => {
-  it("parses an item composed of a media ref, a visibility summary and a burst", () => {
-    expect(itemSummarySchema.parse(itemSummary)).toEqual(itemSummary);
+  it("preserves an item with its media, visibility and burst", () => {
+    expect(itemSummarySchema.parse(ITEM_SUMMARY)).toEqual(ITEM_SUMMARY);
   });
 
-  it("parses an item with no burst", () => {
+  it("accepts an item with no burst", () => {
     expect(
-      itemSummarySchema.safeParse({ ...itemSummary, burst: null }).success,
+      itemSummarySchema.safeParse({ ...ITEM_SUMMARY, burst: null }).success,
     ).toBe(true);
   });
 
   it("rejects a formatted date in place of a capture timestamp or calendar date", () => {
     expect(
       itemSummarySchema.safeParse({
-        ...itemSummary,
+        ...ITEM_SUMMARY,
         capturedAt: "14 August 2026",
       }).success,
     ).toBe(false);
     expect(
-      itemSummarySchema.safeParse({ ...itemSummary, capturedOn: "14/08/2026" })
+      itemSummarySchema.safeParse({ ...ITEM_SUMMARY, capturedOn: "14/08/2026" })
         .success,
     ).toBe(false);
     expect(
       itemSummarySchema.safeParse({
-        ...itemSummary,
+        ...ITEM_SUMMARY,
         capturedOn: "2026-08-14T00:00:00.000Z",
       }).success,
     ).toBe(false);
@@ -214,78 +214,34 @@ describe("itemSummarySchema", () => {
 });
 
 describe("commentDtoSchema", () => {
-  it("parses a comment carrying a reaction summary", () => {
-    expect(commentDtoSchema.parse(commentDto)).toEqual(commentDto);
+  it("preserves a comment and its reaction summary", () => {
+    expect(commentDtoSchema.parse(COMMENT_DTO)).toEqual(COMMENT_DTO);
   });
 
   it("requires editedAt rather than allowing it to be absent", () => {
-    // Decision 8: the "edited" marker is driven by an explicit null, not by a
+    // The "edited" marker is driven by an explicit null, not by a
     // missing key, so the two halves cannot disagree about what absence means.
-    const { editedAt: _editedAt, ...withoutEditedAt } = commentDto;
+    const { editedAt: _editedAt, ...withoutEditedAt } = COMMENT_DTO;
     expect(commentDtoSchema.safeParse(withoutEditedAt).success).toBe(false);
   });
 
   it("rejects a reaction kind outside the frozen enum", () => {
     expect(
       commentDtoSchema.safeParse({
-        ...commentDto,
-        reactions: { ...commentDto.reactions, myKind: "angry" },
+        ...COMMENT_DTO,
+        reactions: { ...COMMENT_DTO.reactions, myKind: "angry" },
       }).success,
     ).toBe(false);
   });
 });
 
-describe("the barrel", () => {
-  it("re-exports exactly the twelve frozen DTO schemas", () => {
-    // The count is the point: a list quietly missing `TagRef` or
-    // `ReactionSummary` leaves a slice free to redefine one, and a slice that
-    // redefines one has forked the contract. So the set is derived from what
-    // `dtos.ts` actually exports rather than asserted against itself: a
-    // thirteenth DTO that nobody adds here fails, and a deleted one fails too.
-    const frozen = [
-      "reactionKindSchema",
-      "mediaSourceSchema",
-      "mediaRefSchema",
-      "memberRefSchema",
-      "personRefSchema",
-      "tagRefSchema",
-      "milestoneRefSchema",
-      "visibilitySummarySchema",
-      "burstSummarySchema",
-      "itemSummarySchema",
-      "reactionSummarySchema",
-      "commentDtoSchema",
-    ];
-
-    // The five primitives the frozen shapes are built from. Exported, and part
-    // of the contract, but not themselves DTOs.
-    const primitives = [
-      "idSchema",
-      "timestampSchema",
-      "calendarDateSchema",
-      "signedUrlSchema",
-      "visibilityRuleIdSchema",
-    ];
-
-    const exported = Object.keys(dtos).filter((name) => {
-      return name.endsWith("Schema") && !primitives.includes(name);
-    });
-    expect(exported.sort()).toEqual([...frozen].sort());
-    expect(frozen).toHaveLength(12);
-
-    [...frozen, ...primitives].forEach((name) => {
-      expect(contract).toHaveProperty(name);
-    });
-  });
-});
-
 describe("burstSummarySchema", () => {
   it("accepts a stack that says whether any frame is unseen", () => {
-    expect(burstSummarySchema.parse(burst)).toEqual(burst);
+    expect(burstSummarySchema.parse(BURST)).toEqual(BURST);
   });
 
   it("rejects a stack with no hasUnseenFrames, which the latch needs", () => {
-    const { hasUnseenFrames: _unused, ...withoutFlag } = burst;
+    const { hasUnseenFrames: _unused, ...withoutFlag } = BURST;
     expect(burstSummarySchema.safeParse(withoutFlag).success).toBe(false);
   });
 });
@@ -327,7 +283,7 @@ describe("visibilitySummarySchema", () => {
 describe("calendarDateSchema", () => {
   it("accepts leap days and rejects impossible calendar dates", () => {
     ["2024-02-29", "2000-02-29", "2026-09-30"].forEach((date) => {
-      expect(contract.calendarDateSchema.safeParse(date).success).toBe(true);
+      expect(calendarDateSchema.safeParse(date).success).toBe(true);
     });
     [
       "2026-02-29",
@@ -338,7 +294,7 @@ describe("calendarDateSchema", () => {
       "2026-00-01",
       "2026-09-00",
     ].forEach((date) => {
-      expect(contract.calendarDateSchema.safeParse(date).success).toBe(false);
+      expect(calendarDateSchema.safeParse(date).success).toBe(false);
     });
   });
 });

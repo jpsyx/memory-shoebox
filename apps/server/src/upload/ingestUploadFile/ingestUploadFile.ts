@@ -1,4 +1,4 @@
-import { enqueueMediaProcessingWork } from "../../mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { enqueueMediaProcessingWork } from "../../mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 import type {
   IngestRendition,
   IngestUploadFileOptions,

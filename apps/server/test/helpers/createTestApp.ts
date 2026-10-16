@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "kysely";
-import { createApp, type AppDeps } from "../../src/createApp.ts";
+import { createApp, type AppDeps } from "../../src/createApp/createApp.ts";
 import type { Config } from "../../src/configHelpers.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";

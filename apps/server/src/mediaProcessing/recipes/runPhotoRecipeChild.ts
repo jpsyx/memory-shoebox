@@ -1,33 +1,45 @@
+import {
+  imageRecipeCandidateSchema,
+  type ImageRecipeCandidate,
+} from "./imageRecipeCandidateSchema.ts";
 import { copyFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import sharp, { type Sharp } from "sharp";
 import { z } from "zod";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import type { ProcessedRendition } from "./mediaRecipes.types.ts";
 
-const CANDIDATE = z.object({
-  purpose: z.enum(["thumb", "poster", "display_small", "display"]),
-  longEdge: z.number().int().positive().max(2048),
-  bytes: z
-    .number()
-    .positive()
-    .max(1.5 * 1024 ** 2),
-  webpPurpose: z.enum(["display_small_webp", "display_webp"]).optional(),
-});
 const OPTIONS = z.object({
   source: z.string(),
   outputDirectory: z.string(),
   measurementPath: z.string(),
-  candidates: z.array(CANDIDATE).min(1).max(3),
+  candidates: z.array(imageRecipeCandidateSchema).min(1).max(3),
 });
 const QUALITIES = [85, 75, 65, 55, 45] as const;
 type ChildOptions = z.infer<typeof OPTIONS>;
-type Candidate = z.infer<typeof CANDIDATE>;
 
-function _getImage(source: string, longEdge: number): Sharp {
+type PhotoCandidateMeasurement = {
+  purpose: ImageRecipeCandidate["purpose"];
+  jpegBytes: number;
+  webpBytes: number | null;
+  jpegMs: number;
+  elapsedMs: number;
+  quality: number | null;
+  targetBytes: number;
+  targetMet: boolean;
+  acceptedWebp: boolean;
+};
+
+function _getImage({
+  source,
+  longEdge,
+}: {
+  source: string;
+  longEdge: number;
+}): Sharp {
   return sharp(source, {
-    limitInputPixels: appConfig.mediaProcessing.photoPixels,
+    limitInputPixels: APP_CONFIG.mediaProcessing.photoPixels,
     failOn: "error",
     pages: 1,
     sequentialRead: true,
@@ -43,25 +55,35 @@ function _getImage(source: string, longEdge: number): Sharp {
     .toColourspace("srgb");
 }
 
-async function _encodeJpeg(
-  options: Readonly<ChildOptions>,
-  candidate: Readonly<Candidate>,
+async function _encodeJpeg({
+  options,
+  candidate,
   index = 0,
-): Promise<{ path: string; quality: number | null }> {
+}: {
+  options: Readonly<ChildOptions>;
+  candidate: Readonly<ImageRecipeCandidate>;
+  index?: number;
+}): Promise<{ path: string; quality: number }> {
   const path = join(options.outputDirectory, `${candidate.purpose}.jpg`);
   const quality = QUALITIES[index]!;
-  const result = await _getImage(options.source, candidate.longEdge)
+  const result = await _getImage({
+    source: options.source,
+    longEdge: candidate.longEdge,
+  })
     .jpeg({ quality, progressive: true, chromaSubsampling: "4:2:0" })
     .toFile(path);
   return result.size > candidate.bytes && index < QUALITIES.length - 1
-    ? _encodeJpeg(options, candidate, index + 1)
+    ? _encodeJpeg({ options, candidate, index: index + 1 })
     : { path, quality };
 }
 
-async function _makeJpeg(
-  options: Readonly<ChildOptions>,
-  candidate: Readonly<Candidate>,
-): Promise<{ path: string; quality: number | null }> {
+async function _makeJpeg({
+  options,
+  candidate,
+}: {
+  options: Readonly<ChildOptions>;
+  candidate: Readonly<ImageRecipeCandidate>;
+}): Promise<{ path: string; quality: number | undefined }> {
   const metadata = await sharp(options.source).metadata();
   const bytes = (await stat(options.source)).size;
   if (
@@ -73,16 +95,20 @@ async function _makeJpeg(
   ) {
     const path = join(options.outputDirectory, `${candidate.purpose}.jpg`);
     await copyFile(options.source, path);
-    return { path, quality: null };
+    return { path, quality: undefined };
   }
-  return _encodeJpeg(options, candidate);
+  return _encodeJpeg({ options, candidate });
 }
 
-async function _getRendition(
-  path: string,
-  purpose: ProcessedRendition["purpose"],
-  format: "jpeg" | "webp",
-): Promise<ProcessedRendition> {
+async function _getRendition({
+  path,
+  purpose,
+  format,
+}: {
+  path: string;
+  purpose: ProcessedRendition["purpose"];
+  format: "jpeg" | "webp";
+}): Promise<ProcessedRendition> {
   const metadata = await sharp(path).metadata();
   if (
     metadata.format !== format ||
@@ -103,13 +129,23 @@ async function _getRendition(
   };
 }
 
-async function _makeCandidate(
-  options: Readonly<ChildOptions>,
-  candidate: Readonly<Candidate>,
-) {
+async function _makeCandidate({
+  options,
+  candidate,
+}: Readonly<{
+  options: Readonly<ChildOptions>;
+  candidate: Readonly<ImageRecipeCandidate>;
+}>): Promise<{
+  renditions: ProcessedRendition[];
+  measurement: PhotoCandidateMeasurement;
+}> {
   const started = performance.now();
-  const encoded = await _makeJpeg(options, candidate);
-  const jpeg = await _getRendition(encoded.path, candidate.purpose, "jpeg");
+  const encoded = await _makeJpeg({ options, candidate });
+  const jpeg = await _getRendition({
+    path: encoded.path,
+    purpose: candidate.purpose,
+    format: "jpeg",
+  });
   const jpegMs = performance.now() - started;
   const webp =
     candidate.webpPurpose === undefined
@@ -127,7 +163,7 @@ async function _makeCandidate(
       webpBytes: webp?.byteSize ?? null,
       jpegMs,
       elapsedMs: performance.now() - started,
-      quality: encoded.quality,
+      quality: encoded.quality ?? null,
       targetBytes: candidate.bytes,
       targetMet: jpeg.byteSize <= candidate.bytes,
       acceptedWebp: accepted,
@@ -137,13 +173,17 @@ async function _makeCandidate(
 
 async function _makeWebp(
   options: Readonly<ChildOptions>,
-  candidate: Readonly<Candidate>,
+  candidate: Readonly<ImageRecipeCandidate>,
 ): Promise<ProcessedRendition> {
   const path = join(options.outputDirectory, `${candidate.webpPurpose!}.webp`);
-  await _getImage(options.source, candidate.longEdge)
+  await _getImage({ source: options.source, longEdge: candidate.longEdge })
     .webp({ quality: 82, effort: 4 })
     .toFile(path);
-  return _getRendition(path, candidate.webpPurpose!, "webp");
+  return _getRendition({
+    path,
+    purpose: candidate.webpPurpose!,
+    format: "webp",
+  });
 }
 
 async function _run(): Promise<void> {
@@ -151,7 +191,7 @@ async function _run(): Promise<void> {
   sharp.cache(false);
   const options = OPTIONS.parse(JSON.parse(process.argv[2] ?? ""));
   const metadata = await sharp(options.source, {
-    limitInputPixels: appConfig.mediaProcessing.photoPixels,
+    limitInputPixels: APP_CONFIG.mediaProcessing.photoPixels,
   }).metadata();
   if (
     !["jpeg", "png", "webp"].includes(metadata.format) ||
@@ -162,7 +202,9 @@ async function _run(): Promise<void> {
   const results: Array<Awaited<ReturnType<typeof _makeCandidate>>> = [];
   await options.candidates.reduce(async (previous, candidate) => {
     await previous;
-    results.push(await _makeCandidate(options, candidate));
+    results.push(
+      await _makeCandidate({ options: options, candidate: candidate }),
+    );
   }, Promise.resolve());
   await writeFile(
     options.measurementPath,

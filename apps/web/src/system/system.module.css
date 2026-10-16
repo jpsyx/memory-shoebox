@@ -310,54 +310,12 @@
   border-radius: 50%;
 }
 
-/*
- * Fill each row from left to right before wrapping. Prints keep their real
- * proportions and align at the top, so a sparse day uses the available width.
- *
- * A day that is nowhere near the viewport is not laid out, painted or
- * hit-tested. A day is skipped whole. `contain-intrinsic-size` is the height
- * the browser assumes for a skipped day. The screen-and-a-half estimate keeps
- * the scrollbar steady before an ordinary day of a few dozen prints renders.
- */
-.pile {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
-  align-items: start;
-  gap: var(--sp-2);
-  min-width: 0;
-  padding-bottom: var(--sp-5);
-  content-visibility: auto;
-  contain-intrinsic-size: auto 75rem;
-  /* Paint containment must leave room for tilted prints and hover scaling. */
-  overflow-clip-margin: var(--sp-4);
-}
-
-.pile > * {
-  min-width: 0;
-}
-
-/* The jump target must not occupy a photo slot or introduce an empty row. */
-.pile > .railSpacer {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline-start: 0;
-}
-
-:global([data-pile="messy"]) .pile {
-  column-gap: 2px;
-}
-
 .rail {
   display: grid;
   grid-column: 1 / -1;
   width: min(100%, 26rem);
   gap: 0.35rem;
   padding-bottom: var(--sp-5);
-}
-
-.railSpacer {
-  min-height: 0;
 }
 
 /*
@@ -405,312 +363,6 @@
 
 .filterStripEnd {
   margin-left: auto;
-}
-
-/* ---------------------------------------------------------------- print --- */
-.print {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 5px;
-  border: 0;
-  background: var(--print);
-  box-shadow: var(--shadow-print);
-  cursor: pointer;
-  font: inherit;
-  text-align: inherit;
-  transition: transform 140ms var(--ease);
-}
-
-.print:hover {
-  transform: translateY(-2px);
-  z-index: 2;
-}
-
-.print img {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: var(--panel-sunk);
-}
-
-/* Native missing/broken-image alt text cannot change a print's reserved media box. */
-.printMedia {
-  display: block;
-  position: relative;
-  width: 100%;
-}
-.printMedia img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.fan .printMedia,
-.timelineFan .printMedia {
-  width: auto;
-  height: 100%;
-}
-
-:global([data-pile="messy"]) .print {
-  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
-    scale(1.03);
-  z-index: var(--z, 1);
-}
-
-:global([data-pile="messy"]) .print:hover {
-  transform: rotate(var(--r, 0deg)) translate(var(--dx, 0px), var(--dy, 0px))
-    scale(1.07);
-  z-index: 20;
-}
-
-/* A video reads as one before you tap it. */
-.printRuntime {
-  position: absolute;
-  z-index: 2;
-  left: 10px;
-  bottom: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.45rem;
-  background: var(--chip-black);
-  color: var(--chip-white);
-  font-family: var(--font-label);
-  font-size: var(--micro);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.printRuntime svg {
-  width: 0.85rem;
-  height: 0.85rem;
-  fill: currentColor;
-}
-
-/* A 2px white ring keeps the dot legible over an arbitrary photograph. */
-.printUnseen {
-  position: absolute;
-  z-index: 2;
-  top: 10px;
-  right: 10px;
-  width: 0.7rem;
-  height: 0.7rem;
-  background: var(--accent-on-panel);
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--print);
-}
-
-/*
- * A restricted item, marked for the uploader and the admin who can see it.
- * Weight and a stroke, never a hue.
- */
-.printRestricted {
-  position: absolute;
-  z-index: 2;
-  left: 10px;
-  top: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.4rem;
-  background: var(--chip-black);
-  color: var(--chip-white);
-  font-family: var(--font-label);
-  font-size: var(--micro);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.printSelectable {
-  outline-offset: -5px;
-}
-
-.printSelected {
-  outline: 5px solid var(--ink-dark);
-  outline-offset: -5px;
-}
-
-/*
- * What a bulk edit did, on the print it did it to. Square, because this is
- * the software labelling a photograph rather than a person tagging one.
- */
-.printLabels {
-  position: absolute;
-  z-index: 3;
-  right: 10px;
-  bottom: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.15rem 0.4rem;
-  background: var(--chip-black);
-  color: var(--chip-white);
-  font-family: var(--font-figure);
-  font-size: var(--micro);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-/*
- * A selection has to be readable without comparing one print to another, so
- * it carries a mark as well as the outline.
- */
-.printTick {
-  animation: stamp 300ms var(--ease);
-  position: absolute;
-  z-index: 3;
-  left: 10px;
-  top: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  background: var(--chip-black);
-  color: var(--chip-white);
-}
-
-/* Timeline prints also carry access labels and video runtimes. */
-.printTimelineSelectable .printTick {
-  top: auto;
-  left: auto;
-  right: 10px;
-  bottom: 10px;
-}
-
-/* ---------------------------------------------------------------- stack --- */
-.stack {
-  position: relative;
-  scroll-margin-top: 6rem;
-}
-
-/* The prints underneath, showing as offset edges. */
-.stack::before,
-.stack::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--print);
-  box-shadow: var(--shadow-flat);
-}
-
-.stack::before {
-  transform: translate(10px, 7px) rotate(1.1deg);
-}
-
-.stack::after {
-  transform: translate(5px, 3px) rotate(-0.6deg);
-}
-
-.stack > .print {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-}
-
-:global([data-pile="messy"]) .stack > .print {
-  transform: rotate(var(--r, 0deg)) scale(1.02);
-}
-
-:global([data-pile="messy"]) .stack > .print:hover {
-  transform: rotate(var(--r, 0deg)) scale(1.07);
-}
-
-.stackCount {
-  position: absolute;
-  z-index: 3;
-  right: 10px;
-  bottom: 10px;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  background: var(--chip-black);
-  color: var(--chip-white);
-  font-family: var(--font-figure);
-  font-size: var(--step-1);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.stackCount small {
-  font-family: var(--font-label);
-  font-size: var(--micro);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Fanned: the stack opens in place rather than taking you somewhere else. */
-.stackOpen {
-  grid-column: 1 / -1;
-}
-
-.stackOpen::before,
-.stackOpen::after {
-  display: none;
-}
-
-.fan {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  row-gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-3);
-  background: var(--panel-sunk);
-}
-
-/*
- * The label and the way out ride with the fan: on a long burst the head would
- * otherwise scroll above the viewport, stranding anyone who does not think to
- * press Escape.
- */
-.fanHead {
-  position: sticky;
-  top: 4.5rem;
-  z-index: 25;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  width: 100%;
-  margin-bottom: var(--sp-2);
-  padding: var(--sp-1) var(--sp-2);
-  background: var(--panel-sunk);
-}
-
-.fanHeadLabel {
-  font-family: var(--font-figure);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  margin-right: auto;
-}
-
-/*
- * Overlapping, tilted, and keeping their real proportions: the burst stays
- * one object laid out in a run rather than resolving into forty tiles.
- */
-.fan .print {
-  flex: none;
-  width: auto;
-  height: 7.5rem;
-  padding: 4px;
-  margin-right: -1.6rem;
-  transform: rotate(var(--r, 0deg));
-  transform-origin: bottom center;
-}
-
-.fan .print:hover {
-  transform: rotate(var(--r, 0deg)) translateY(-4px) scale(1.06);
-  z-index: 20;
-}
-
-.fan .print img {
-  width: 100%;
-  height: 100%;
 }
 
 /*
@@ -800,16 +452,6 @@
 }
 
 /* --------------------------------------------------------------- viewer --- */
-.viewer {
-  max-width: 78rem;
-  margin-inline: auto;
-  padding: var(--sp-4) var(--sp-3) var(--sp-5);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 24rem;
-  gap: var(--sp-4);
-  align-items: start;
-}
-
 .frame {
   position: relative;
   padding: 10px;
@@ -818,8 +460,7 @@
 }
 
 .frame img,
-.frame video,
-.frame .framePlaceholder {
+.frame video {
   width: 100%;
   /*
    * The HTML width/height attributes act as CSS presentation hints, so
@@ -831,10 +472,6 @@
   object-fit: contain;
   background: var(--panel-sunk);
   margin-inline: auto;
-}
-
-.frame .framePlaceholder {
-  width: min(100%, calc(70vh * var(--media-aspect-ratio)));
 }
 
 .viewerMeta {
@@ -879,46 +516,6 @@
   margin: calc(var(--sp-2) - 5px) -5px 0;
   overflow-x: auto;
   padding: 5px 5px var(--sp-1);
-}
-
-.sibling {
-  flex: none;
-  width: 4.25rem;
-  height: 4.25rem;
-  padding: 3px;
-  border: 0;
-  background: var(--print);
-  box-shadow: var(--shadow-flat);
-  cursor: pointer;
-}
-
-.sibling[aria-current] {
-  outline: 3px solid var(--on-print);
-  outline-offset: 1px;
-}
-
-/*
- * The current frame is the strip's one tab stop, and its mark outranked the
- * focus ring, so focusing it changed nothing on screen. Focus wins here.
- */
-.sibling:focus-visible {
-  outline: 3px solid var(--accent-on-print);
-  outline-offset: 2px;
-}
-
-.sibling img,
-.sibling .siblingPlaceholder {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sibling .siblingPlaceholder {
-  font-family: var(--font-label);
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-  min-height: 0;
-  overflow: hidden;
 }
 
 /*
@@ -1840,69 +1437,6 @@
   margin-top: var(--sp-3);
 }
 
-/*
- * A person is a print with a name under it, because that is what a person is
- * in an archive: the photographs, not a profile.
- */
-/*
- * A card that goes somewhere, so it is an anchor rather than the button the
- * mockups used, and an anchor arrives carrying the browser's own blue and an
- * underline over both the name and the count. Reset here for the same reason
- * `.barLink` resets it: a fifth colour in a system that declares four inks.
- */
-.personCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.personFace {
-  display: block;
-  padding: 5px;
-  background: var(--print);
-  box-shadow: var(--shadow-print);
-}
-
-.personFace img {
-  width: 100%;
-  height: 9rem;
-  object-fit: cover;
-  background: var(--panel-sunk);
-}
-
-/* Somebody tagged but not photographed yet: the frame without the print. */
-.personFaceEmpty {
-  height: calc(9rem + 10px);
-  border: 5px solid var(--ghost);
-  background: var(--panel-wash);
-  box-shadow: none;
-  padding: 0;
-}
-
-.personName {
-  font-family: var(--font-figure);
-  font-size: var(--step-1);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.personCount {
-  color: var(--on-panel-quiet);
-  font-variant-numeric: tabular-nums;
-}
-
-.personCard:hover .personFace {
-  transform: translateY(-2px);
-}
-
 /* ----------------------------------------------------------- data lists --- */
 .defs dt {
   margin-top: var(--sp-3);
@@ -1943,12 +1477,6 @@
 }
 
 /* ----------------------------------------------------------- responsive --- */
-@media (max-width: 56rem) {
-  .viewer {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 44rem) {
   .archive {
     grid-template-columns: minmax(0, 1fr);
@@ -2001,23 +1529,12 @@
     margin: 0;
   }
 
-  .pile {
-    padding-block: var(--sp-2) var(--sp-4);
-  }
-
   .rail {
     padding-block: var(--sp-2) var(--sp-3);
   }
 
   .milestoneName {
     font-size: var(--step-2);
-  }
-}
-
-/* WebKit needs space inside the paint boundary instead of outside it. */
-@supports not (overflow-clip-margin: 1px) {
-  .pile {
-    padding: var(--sp-4);
   }
 }
 
@@ -2244,18 +1761,6 @@
   padding-inline-start: 0.75rem;
 }
 
-@keyframes stamp {
-  from {
-    opacity: 0;
-    scale: 1.6;
-    rotate: -12deg;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
-    rotate: 0deg;
-  }
-}
 @keyframes noteArrival {
   from {
     opacity: 0;
@@ -2265,97 +1770,4 @@
     opacity: 1;
     translate: 0 0;
   }
-}
-
-/* Only the virtualizer compensates scroll position as measured rows change. */
-.timelineWindow {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: subgrid;
-  position: relative;
-  overflow-anchor: none;
-}
-.timelineStart {
-  position: absolute;
-  top: 0;
-  height: 1px;
-}
-.timelineDay {
-  position: relative;
-}
-.timelineDesktopSpine {
-  position: sticky;
-  top: 5.5rem;
-}
-.timelineMobileSpine {
-  display: none;
-}
-.timelinePile {
-  position: relative;
-  min-width: 0;
-  align-self: stretch;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
-  column-gap: var(--sp-2);
-}
-.timelineRow {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
-  align-items: start;
-  gap: var(--sp-2);
-  padding-bottom: var(--sp-2);
-  min-height: 1px;
-  content-visibility: visible;
-}
-.timelineLastRow {
-  padding-bottom: var(--sp-5);
-}
-:global([data-pile="messy"]) .timelineRow,
-:global([data-pile="messy"]) .timelinePile {
-  column-gap: 2px;
-}
-.timelineFan {
-  display: flex;
-  flex-wrap: wrap;
-  background: var(--panel-sunk);
-  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);
-}
-.timelineFan .print {
-  flex: none;
-  width: auto;
-  height: 7.5rem;
-  padding: 4px;
-  margin-right: -1.6rem;
-  transform: rotate(var(--r, 0deg));
-  transform-origin: bottom center;
-}
-.timelineFan .print img {
-  width: 100%;
-  height: 100%;
-}
-@media (max-width: 44em) {
-  .timelineDesktopSpine {
-    display: none;
-  }
-  .timelineMobileSpine {
-    display: block;
-    grid-column: 1 / -1;
-  }
-  .timelinePile {
-    grid-column: 1 / -1;
-  }
-}
-.timelineFanGroup {
-  position: absolute;
-  left: 0;
-  right: 0;
-  background: var(--panel-sunk);
-}
-.timelineFanHeader {
-  position: sticky;
-  top: 4.5rem;
-  z-index: 25;
 }

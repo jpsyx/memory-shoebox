@@ -30,13 +30,13 @@ const FRAME_WAIT_MS = 500;
 
 /** Resolves on `eventName`, rejects on the element's `error`. */
 function _waitForMediaEvent(
-  functionOptions: Readonly<{
+  options: Readonly<{
     video: HTMLVideoElement;
     eventName: "loadedmetadata" | "seeked";
     signal: AbortSignal;
   }>,
 ): Promise<void> {
-  const { video, eventName, signal } = functionOptions;
+  const { video, eventName, signal } = options;
   signal.throwIfAborted();
   return new Promise((settle, fail) => {
     const cleanup = () => {
@@ -105,7 +105,7 @@ async function _makeDerivativeFromVideo(
  * derivatives when no drawable frame is available.
  */
 export async function capturePoster(
-  functionOptions: Readonly<{
+  options: Readonly<{
     video: HTMLVideoElement;
     signal: AbortSignal;
     purposes: ReadonlyArray<"thumb" | "poster">;
@@ -113,7 +113,7 @@ export async function capturePoster(
 ): Promise<VideoDerivativesResult> {
   // Seek to the poster frame before capturing its derivatives.
 
-  const { video, signal } = functionOptions;
+  const { video, signal } = options;
 
   await _waitForMediaEvent({
     video: video,
@@ -139,7 +139,7 @@ export async function capturePoster(
   }
   const sizes = getVideoDerivativeSizesFromSize(size);
   const quality = getJpegQualityFromEncoder(isWebKitEncoder);
-  const poster = functionOptions.purposes.includes("poster")
+  const poster = options.purposes.includes("poster")
     ? await _makeDerivativeFromVideo({
         purpose: "poster",
         size: sizes.poster,
@@ -148,7 +148,7 @@ export async function capturePoster(
         signal,
       })
     : [];
-  const thumb = functionOptions.purposes.includes("thumb")
+  const thumb = options.purposes.includes("thumb")
     ? await _makeDerivativeFromVideo({
         purpose: "thumb",
         size: sizes.thumb,

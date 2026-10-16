@@ -1,5 +1,6 @@
-import * as previewModule from "./createUploadPreviewQueue/createUploadPreviewQueue";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHeldUploadLifetime } from "./__tests__/renderHeldUploadLifetime";
+import { QueryClient } from "@tanstack/react-query";
+import { makeQueryWrapperFromClient } from "@/testing/makeQueryWrapperFromClient";
 import { makeViewerFromMeResponse } from "@/session/requireSignedIn/requireSignedIn";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
@@ -12,7 +13,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { StrictMode, type ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadSessionProvider } from "./UploadSessionProvider/UploadSessionProvider";
 import { useUploadSessionController } from "./UploadSessionProvider/useUploadSessionController";
 import { useUploadSnapshot } from "./UploadSessionProvider/useUploadSnapshot";
@@ -50,55 +51,79 @@ function Consumer(): ReactNode {
 function _renderWithQueryClient(content: ReactNode): ReturnType<typeof render> {
   const queryClient = new QueryClient();
   return render(content, {
-    wrapper: ({ children }) => {
-      return (
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      );
-    },
+    wrapper: makeQueryWrapperFromClient(queryClient),
   });
 }
 beforeEach(() => {
   vi.restoreAllMocks();
 });
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 describe("upload shell lifetime", () => {
-  it("shares one coordinator through the StrictMode lease and disposes only on owner retirement", async () => {
-    const harness = makeUploadControllerHarness();
-    const controllerFactory = vi
-      .spyOn(controllerModule, "createUploadSessionController")
-      .mockReturnValue(harness.controller);
-    const previewFactory = vi.spyOn(previewModule, "createUploadPreviewQueue");
-    let retainedPreviews:
-      | ReturnType<typeof useUploadSessionResources>["previews"]
-      | undefined;
-    const Probe = () => {
-      retainedPreviews = useUploadSessionResources().previews;
-      return null;
-    };
-    const view = _renderWithQueryClient(
-      <StrictMode>
-        <UploadSessionProvider viewer={viewer}>
-          <Probe />
-        </UploadSessionProvider>
-      </StrictMode>,
-    );
-    const retainedIndex = previewFactory.mock.results.findIndex((result) => {
-      return result.type === "return" && result.value === retainedPreviews;
-    });
-    const coordinator =
-      controllerFactory.mock.calls[retainedIndex]![0].decodeCoordinator!;
-    expect(coordinator).toBeDefined();
-    expect(
-      previewFactory.mock.calls[retainedIndex]![0]?.decodeCoordinator,
-    ).toBe(coordinator);
-    const dispose = vi.spyOn(coordinator, "dispose");
+  it("serializes preview and file checking through StrictMode and cancels queued work on retirement", async () => {
+    const lifetime = renderHeldUploadLifetime(viewer);
+    const { resources, decoders } = lifetime;
+    const file = new File(["photo"], "picked.jpg", { type: "image/jpeg" });
     await act(async () => {});
-    expect(dispose).not.toHaveBeenCalled();
-    view.unmount();
-    await waitFor(() => {
-      return expect(dispose).toHaveBeenCalledOnce();
+    resources.previews.requestPreview({
+      fileId: "first-preview",
+      file,
+      contentType: "image/jpeg",
+      size: { width: 4000, height: 3000 },
     });
+    const picking = resources.controller.pickFiles([file]);
+    await waitFor(() => {
+      expect(
+        decoders.factory.workers
+          .flatMap((worker) => {
+            return worker.requests;
+          })
+          .some((request) => {
+            return request.kind === "hash";
+          }),
+      ).toBe(true);
+    });
+    await act(async () => {});
+    expect(resources.controller.getSnapshot().phase).toBe("checking");
+    expect(decoders.decodeKinds).toEqual(["image-derivatives"]);
+    resources.previews.requestPreview({
+      fileId: "queued-preview",
+      file,
+      contentType: "image/jpeg",
+      size: { width: 4000, height: 3000 },
+    });
+    decoders.previewGate.resolve();
+    await waitFor(() => {
+      expect(decoders.decodeKinds).toEqual([
+        "image-derivatives",
+        "fingerprint",
+      ]);
+      expect(resources.previews.getPreview("first-preview")?.kind).toBe(
+        "unavailable",
+      );
+    });
+    expect(resources.previews.getPreview("queued-preview")?.kind).toBe(
+      "preparing",
+    );
+    lifetime.unmount();
+    await act(async () => {
+      await picking;
+    });
+    expect(resources.controller.getSnapshot().phase).toBe("idle");
+    expect(resources.previews.getPreview("queued-preview")).toBeUndefined();
+    expect(lifetime.api.putUploadManifest).not.toHaveBeenCalled();
+    expect(
+      decoders.factory.workers.every((worker) => {
+        return worker.isTerminated;
+      }),
+    ).toBe(true);
+    await act(async () => {
+      decoders.fingerprintGate.resolve();
+    });
+    expect(decoders.decodeKinds).toEqual(["image-derivatives", "fingerprint"]);
+    expect(resources.previews.getPreview("queued-preview")).toBeUndefined();
+    expect(lifetime.api.putUploadManifest).not.toHaveBeenCalled();
   });
 
   it("StrictMode keeps a local draft until leaving the upload screen", async () => {

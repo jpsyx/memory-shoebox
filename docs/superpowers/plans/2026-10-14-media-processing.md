@@ -1,6 +1,8 @@
 # Media Processing Implementation Plan
 
-Status: Tasks B1–B5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews remain pending. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+Status at the original M2 handoff: Tasks B1–B5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete; independent M2 and whole-branch reviews were pending at that handoff. Original task requirements below are unchanged; [operating evidence](../../media-loading-performance.md) records conditional decisions and unverified deployment prerequisites.
+
+Update, 15 October 2026: the [Avandar Auto review and fix pass](../../media-loading-code-review.md) is complete, including independent rechecks and targeted regression verification. The original task checklist below is retained as the implementation record; current review results and verification limits are in that report.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -77,7 +79,7 @@ Master focus 4 belongs here. Additional tests cover source replacement during pr
 
 ## Task B5: Lifecycle, Discovery, Fenced Publication, and Cleanup
 
-**Files:** Create `apps/server/src/mediaProcessing/createMediaProcessingJob.ts`, `queue/discoverMediaProcessingWork.ts`, `output/publishMediaRenditions.ts`, `createMediaDecodeCoordinator.ts`; tests `apps/server/test/mediaProcessing/lifecycle.test.ts`, `publication.test.ts`, and `e2e/media/processing.spec.ts`. Modify `apps/server/src/createApp.ts`, `maintenance/visualFingerprintBackfill/createVisualFingerprintBackfillJob.ts`, `upload/ingestUploadFile/ingestUploadFile.ts`, `archive/readMediaSources.ts`, `items/deleteItem/deleteItem.ts` below `apps/server/src`; update `docs/architecture.md`, `docs/server.md`, `docs/archive.md`, `docs/media-loading.md`.
+**Files:** Create `apps/server/src/mediaProcessing/createMediaProcessingJob.ts`, `queue/discoverMediaProcessingWork.ts`, `output/publishMediaRenditions.ts`, `createMediaDecodeCoordinator.ts`; tests `apps/server/test/mediaProcessing/lifecycle.test.ts`, `publication.test.ts`, and `e2e/media/processing.spec.ts`. Modify `apps/server/src/createApp/createApp.ts`, `maintenance/visualFingerprintBackfill/createVisualFingerprintBackfillJob.ts`, `upload/ingestUploadFile/ingestUploadFile.ts`, `archive/readMediaSources.ts`, `items/deleteItem/deleteItem.ts` below `apps/server/src`; update `docs/architecture.md`, `docs/server.md`, `docs/archive.md`, `docs/media-loading.md`.
 
 **Interfaces:** `createMediaDecodeCoordinator()` exposes `run<T>(work: () => Promise<T>, signal: AbortSignal): Promise<T>` for one heavy job at a time, shared with fingerprint backfill. `createMediaProcessingJob({ database, b2, clock, logger, signal, coordinator, runtime })` returns the existing job registry's `Job` type; use the exact registry type rather than a second scheduler. `discoverMediaProcessingWork({ database, now, limit: number }): Promise<{ scanned: number; hasMore: boolean }>` advances B1's durable cursor. `publishMediaRenditions({ database, claim, outputs: readonly { outputId: string; rendition: ProcessedRendition }[], now: string }): Promise<boolean>` uses B1's ownership and B2's cleanup gate; storage keys are read from owned output rows.
 

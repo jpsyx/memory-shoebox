@@ -1,6 +1,6 @@
 import type { PresignSingle, RenditionPurpose } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import { ApiError } from "../../http/ApiError.ts";
 
@@ -104,7 +104,7 @@ export async function presignDerivative(
     return context.b2.presignPut({
       key,
       contentType: DERIVATIVE_CONTENT_TYPE,
-      expiresInSeconds: appConfig.upload.presignTtlSeconds,
+      expiresInSeconds: APP_CONFIG.upload.presignTtlSeconds,
     });
   });
   await markUploadDerivativeActivity(context);

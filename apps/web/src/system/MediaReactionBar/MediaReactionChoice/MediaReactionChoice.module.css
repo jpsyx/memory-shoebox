@@ -1,0 +1,49 @@
+.mediaReactionChoice {
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  font-size: 24px !important;
+  width: 40px;
+  height: 42px;
+  padding: 0;
+}
+.mediaReactionChoice:hover:not(:disabled) {
+  background: var(--print-sunk);
+}
+@media (max-width: 1000px) {
+  .mediaReactionChoice {
+    width: 32px;
+  }
+}
+@media (max-width: 800px) {
+  .mediaReactionChoice {
+    width: 32px;
+    height: 38px;
+    font-size: 22px !important;
+  }
+}
+.mediaReactionChoice[aria-pressed="true"] {
+  background: var(--print-sunk);
+  outline: 2px solid var(--ink-dark);
+  outline-offset: -2px;
+}
+.mediaReactionChoiceEmoji {
+  display: inline-block;
+}
+.mediaReactionChoice[aria-pressed="true"] .mediaReactionChoiceEmoji {
+  animation: mediaReactionChoiceBloom 480ms var(--ease);
+}
+@keyframes mediaReactionChoiceBloom {
+  0% {
+    scale: 0.7;
+    rotate: -14deg;
+  }
+  45% {
+    scale: 1.25;
+    rotate: 7deg;
+  }
+  100% {
+    scale: 1;
+    rotate: 0deg;
+  }
+}

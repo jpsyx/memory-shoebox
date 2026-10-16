@@ -1,5 +1,5 @@
 import { posix } from "node:path";
-import { parseConfig } from "../../apps/server/src/configHelpers";
+import { makeConfigFromEnvironment } from "../../apps/server/src/configHelpers";
 import type { Environment } from "./environmentHelpers/environmentHelpers";
 
 /** Validates operator Fly choices before contacting the platform. */
@@ -63,7 +63,7 @@ function _getPathIssues(options: {
 function _getServerIssues(server: Environment): string[] {
   const issues: string[] = [];
   try {
-    parseConfig(server);
+    makeConfigFromEnvironment(server);
   } catch (error) {
     // Only names from the runtime validator cross this boundary.
     const names = String(error).matchAll(/- ([A-Z][A-Z0-9_]*):/g);

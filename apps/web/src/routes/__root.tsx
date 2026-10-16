@@ -1,23 +1,24 @@
+import type { ReactNode } from "react";
 import {
   applyNavigationBootstrap,
   bootstrapQueryOptions,
   cancelNavigationBootstrap,
   getBootstrapGenerationFromClient,
-} from "@/api/bootstrap/bootstrap";
+} from "@/api/bootstrapHelpers/bootstrapHelpers";
 import {
   retainBootstrapForRedirect,
   takeBootstrapForRedirect,
   type NavigationBootstrap,
-} from "@/api/bootstrap/bootstrapRedirect";
+} from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { ensureAccountReadProtection } from "@/api/me/ensureAccountReadProtection/ensureAccountReadProtection";
+import { ensureAccountReadProtection } from "@/api/me/accountReadProtectionHelpers/accountReadProtectionHelpers";
 import { meQueryOptions } from "@/api/me/me";
 import {
   setupProgressQueryOptions,
   setupStatusQueryOptions,
 } from "@/api/setup/setup";
 import { getSetupRedirectFromNavigation } from "@/session/getSetupRedirectFromNavigation/getSetupRedirectFromNavigation";
-import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
+import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronizationHelpers/settingsSynchronizationHelpers";
 import { SetupLoadError } from "@/surfaces/Setup/SetupLoadError";
 import type { BootstrapResponse } from "@memory-shoebox/shared";
 import { CancelledError, type QueryClient } from "@tanstack/react-query";
@@ -30,12 +31,21 @@ import {
   type ParsedLocation,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+type BootstrapNavigationOptions = {
+  queryClient: QueryClient;
+  navigation: NavigationBootstrap;
+  location: ParsedLocation;
+  buildLocation: AnyRouter["buildLocation"];
+};
 
 /** Discards private state whenever the current identity or role changes. */
-function _seedBootstrap(
-  queryClient: QueryClient,
-  bootstrap: BootstrapResponse,
-): void {
+function _seedBootstrap({
+  queryClient,
+  bootstrap,
+}: {
+  queryClient: QueryClient;
+  bootstrap: BootstrapResponse;
+}): void {
   const previous = queryClient.getQueryData(meQueryOptions.queryKey);
   const account = bootstrap.account;
   if (
@@ -62,12 +72,18 @@ function _seedBootstrap(
   }
 }
 
-/** Read failures never turn cached identity into current navigation authority. */
-async function _getBootstrap(
-  queryClient: QueryClient,
-  location: ParsedLocation,
-  signal: AbortSignal,
-): Promise<NavigationBootstrap> {
+/**
+ * Read failures never turn cached identity into current navigation authority.
+ */
+async function _getBootstrap({
+  queryClient,
+  location,
+  signal,
+}: {
+  queryClient: QueryClient;
+  location: ParsedLocation;
+  signal: AbortSignal;
+}): Promise<NavigationBootstrap> {
   ensureAccountReadProtection(queryClient);
   const generation = getBootstrapGenerationFromClient(queryClient);
   const receipt = takeBootstrapForRedirect({
@@ -86,11 +102,11 @@ async function _getBootstrap(
     const bootstrap =
       receipt?.bootstrap ??
       (await queryClient.fetchQuery(bootstrapQueryOptions));
-    await _applyCurrentBootstrap(
+    await _applyCurrentBootstrap({
       queryClient,
-      { bootstrap, generation },
+      navigation: { bootstrap, generation },
       signal,
-    );
+    });
     return { bootstrap, generation };
   } catch (error) {
     if (error instanceof ApiRequestError && [401, 403].includes(error.status)) {
@@ -102,11 +118,15 @@ async function _getBootstrap(
   }
 }
 
-async function _applyCurrentBootstrap(
-  queryClient: QueryClient,
-  navigation: NavigationBootstrap,
-  signal: AbortSignal,
-): Promise<void> {
+async function _applyCurrentBootstrap({
+  queryClient,
+  navigation,
+  signal,
+}: {
+  queryClient: QueryClient;
+  navigation: NavigationBootstrap;
+  signal: AbortSignal;
+}): Promise<void> {
   await queryClient.cancelQueries({
     queryKey: meQueryOptions.queryKey,
     exact: true,
@@ -118,18 +138,13 @@ async function _applyCurrentBootstrap(
     queryClient,
     ...navigation,
     apply: (response) => {
-      _seedBootstrap(queryClient, response);
+      _seedBootstrap({ queryClient, bootstrap: response });
     },
   });
 }
 
 function _redirectForBootstrap(
-  options: Readonly<{
-    queryClient: QueryClient;
-    navigation: NavigationBootstrap;
-    location: ParsedLocation;
-    buildLocation: AnyRouter["buildLocation"];
-  }>,
+  options: Readonly<BootstrapNavigationOptions>,
 ): void {
   const { queryClient, navigation, location, buildLocation } = options;
   const destination = getSetupRedirectFromNavigation({
@@ -185,11 +200,11 @@ export const Route = createRootRouteWithContext<{
           undefined,
       };
     }
-    const navigation = await _getBootstrap(
-      context.queryClient,
+    const navigation = await _getBootstrap({
+      queryClient: context.queryClient,
       location,
-      abortController.signal,
-    );
+      signal: abortController.signal,
+    });
     if (abortController.signal.aborted) {
       throw new CancelledError();
     }
@@ -205,7 +220,7 @@ export const Route = createRootRouteWithContext<{
   component: RootLayout,
 });
 
-function RootLayout() {
+function RootLayout(): ReactNode {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   useEffect(

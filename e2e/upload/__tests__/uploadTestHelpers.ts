@@ -2,7 +2,7 @@ import {
   request as playwrightRequest,
   expect,
   test as base,
-  type APIRequestContext,
+  type APIRequestContext as ApiRequestContext,
   type BrowserContext,
   type Page,
   type Route,
@@ -16,7 +16,7 @@ import {
   openUploadCaseDatabase,
   retireUploadCase,
   type UploadCaseOwnership,
-} from "../../support/retireUploadCase/retireUploadCase.ts";
+} from "../../support/uploadCaseRetirementHelpers/uploadCaseRetirementHelpers.ts";
 import { join } from "node:path";
 import { type UploadSessionDetail } from "@memory-shoebox/shared";
 
@@ -90,12 +90,17 @@ export const MEDIA_FIXTURE_PATHS = MEDIA_FIXTURE_NAMES.map((name) => {
   return join(UPLOAD_FIXTURE_DIRECTORY, name);
 });
 
-async function closeOwnedUploadSession(
-  request: APIRequestContext,
-  ownership: UploadCaseOwnership,
-): Promise<void> {
+async function _closeOwnedUploadSession({
+  request,
+  ownership,
+}: {
+  request: ApiRequestContext;
+  ownership: UploadCaseOwnership;
+}): Promise<void> {
   const current = await request.get("/api/upload-sessions/current");
-  if (current.status() === 204) return;
+  if (current.status() === 204) {
+    return;
+  }
   const detail = (await current.json()) as UploadSessionDetail;
   if (ownership.sessionIds.has(detail.sessionId)) {
     throw new Error("Cleanup refused a pre-existing upload batch");
@@ -114,10 +119,10 @@ export const test = base.extend<{ uploaderContext: BrowserContext }>({
     await closeOpenUploadSession(context.request);
     const database = openUploadCaseDatabase(E2E_DATABASE_PATH);
     try {
-      const ownership = await getUploadCaseOwnershipFromDatabase(
+      const ownership = await getUploadCaseOwnershipFromDatabase({
         database,
-        UPLOADER_EMAIL,
-      );
+        uploaderEmail: UPLOADER_EMAIL,
+      });
       try {
         await provide(context);
       } finally {
@@ -128,11 +133,11 @@ export const test = base.extend<{ uploaderContext: BrowserContext }>({
           storageState,
         });
         try {
-          await closeOwnedUploadSession(cleanup, ownership);
+          await _closeOwnedUploadSession({ request: cleanup, ownership });
         } finally {
           await cleanup.dispose();
         }
-        await retireUploadCase(database, ownership);
+        await retireUploadCase({ database, ownership });
       }
     } finally {
       await database.destroy();
@@ -156,7 +161,7 @@ export async function pickInTheHarness(
 /** One bulk tag on every file, planned before commit through the route. */
 export async function planOneTag(
   options: Readonly<{
-    request: APIRequestContext;
+    request: ApiRequestContext;
     sessionId: string;
     fileIds: readonly string[];
   }>,
@@ -338,7 +343,7 @@ export async function closeTheTabMidBatch(context: BrowserContext): Promise<{
   const { held } = await holdTheThirdCompletion(firstTab);
   await firstTab.evaluate(() => {
     (
-      window as unknown as { __uploadProof: { release: () => void } }
+      window as typeof window & { __uploadProof: { release: () => void } }
     ).__uploadProof.release();
   });
   const heldCompletion = await held;

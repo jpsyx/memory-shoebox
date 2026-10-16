@@ -127,7 +127,7 @@ describe("makeVideoDerivatives", () => {
     vi.mocked(isWebKitImageEncoder).mockResolvedValue(false);
     _setTabHidden(true);
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     expect(document.querySelector("video")).not.toBeNull();
     await _deliverSeekedFrame({ hasFrameCallback: false });
@@ -143,7 +143,7 @@ describe("makeVideoDerivatives", () => {
     _setTabHidden(true);
     await vi.advanceTimersByTimeAsync(HIDDEN_TAB_WAIT_MS + 1000);
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: false });
     await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
@@ -153,10 +153,10 @@ describe("makeVideoDerivatives", () => {
   });
 
   it("answers with no poster, and a fresh result, when the video never decodes", async () => {
-    const first = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const first = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
     const firstResult = await first;
-    const second = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const second = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await vi.advanceTimersByTimeAsync(OVERALL_TIMEOUT_MS);
     const secondResult = await second;
 
@@ -176,7 +176,7 @@ describe("makeVideoDerivatives", () => {
       });
     });
 
-    const made = makeVideoDerivativesFromFile(new Blob(["v"]));
+    const made = makeVideoDerivativesFromFile({ file: new Blob(["v"]) });
     await _settle();
     await _deliverSeekedFrame({ hasFrameCallback: false });
     await vi.advanceTimersByTimeAsync(FRAME_WAIT_MS);
@@ -197,7 +197,7 @@ describe("makeVideoDerivatives", () => {
     });
 
     await expect(
-      makeVideoDerivativesFromFile(new Blob(["v"])),
+      makeVideoDerivativesFromFile({ file: new Blob(["v"]) }),
     ).resolves.toEqual({
       derivatives: [],
       size: undefined,

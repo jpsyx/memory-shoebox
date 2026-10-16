@@ -1,6 +1,6 @@
 import { type Kysely } from "kysely";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 
@@ -69,10 +69,10 @@ export async function runUploadAbandonSweep(
 ): Promise<UploadAbandonSweepSummary> {
   const nowMs = Date.parse(options.now);
   const sessionsIdleBefore = new Date(
-    nowMs - appConfig.upload.abandonGraceMinutes * 60_000,
+    nowMs - APP_CONFIG.upload.abandonGraceMinutes * 60_000,
   ).toISOString();
   const draftsIdleBefore = new Date(
-    nowMs - appConfig.upload.draftExpiryHours * 3_600_000,
+    nowMs - APP_CONFIG.upload.draftExpiryHours * 3_600_000,
   ).toISOString();
 
   const committedHalf = await abandonIdleBatches({

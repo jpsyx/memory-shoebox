@@ -3,7 +3,7 @@ import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { Chip } from "@/system/Chip/Chip";
 
 type Props = {

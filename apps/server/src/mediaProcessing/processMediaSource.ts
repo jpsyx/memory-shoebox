@@ -3,7 +3,7 @@ import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import {
   createMediaRangeReader,
   type MediaRangeReader,
@@ -16,15 +16,24 @@ import { getMediaAdmissionFromProbe } from "./runtime/getMediaAdmissionFromProbe
 import { probeMedia } from "./runtime/probeMedia/probeMedia.ts";
 
 import type { MediaProbe } from "./runtime/mediaRuntime.types.ts";
+type RecipeRunOptions = {
+  options: Readonly<SourceOptions>;
+  reader: MediaRangeReader;
+  probe: MediaProbe;
+  signal: AbortSignal;
+};
 
 type SourceOptions = MediaProcessingSourceOptions & {
   runner: MediaProcessRunner;
 };
 
-async function _settle(
-  reader: MediaRangeReader,
-  signal: AbortSignal,
-): Promise<void> {
+async function _settle({
+  reader,
+  signal,
+}: {
+  reader: MediaRangeReader;
+  signal: AbortSignal;
+}): Promise<void> {
   await reader.awaitIdle(
     AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
   );
@@ -34,11 +43,15 @@ async function _settle(
   }
 }
 
-async function _savePhoto(
-  options: Readonly<SourceOptions>,
-  reader: MediaRangeReader,
-  signal: AbortSignal,
-): Promise<string> {
+async function _savePhoto({
+  options,
+  reader,
+  signal,
+}: {
+  options: Readonly<SourceOptions>;
+  reader: MediaRangeReader;
+  signal: AbortSignal;
+}): Promise<string> {
   const path = join(options.runner.scratchPath, "source-image");
   const response = await fetch(reader.url, { signal, redirect: "error" });
   if (response.status !== 200 || response.body === null) {
@@ -56,16 +69,19 @@ async function _savePhoto(
   return path;
 }
 
-async function _process(
-  options: Readonly<SourceOptions>,
-  reader: MediaRangeReader,
-): Promise<void> {
+async function _process({
+  options,
+  reader,
+}: {
+  options: Readonly<SourceOptions>;
+  reader: MediaRangeReader;
+}): Promise<void> {
   const probe = await probeMedia({
     inputUrl: reader.url,
     runner: options.runner,
     signal: options.signal,
   });
-  await _settle(reader, options.signal);
+  await _settle({ reader, signal: options.signal });
   const admission = getMediaAdmissionFromProbe({
     probe,
     sourceBytes: options.source.byteSize,
@@ -77,18 +93,18 @@ async function _process(
     throw new Error("processing_source_kind_changed");
   }
   reader.setPhaseByteLimit(undefined);
-  await _runBoundedRecipe(options, reader, probe);
+  await _runBoundedRecipe({ options, reader, probe });
 }
 
-async function _runRecipe(
-  options: Readonly<SourceOptions>,
-  reader: MediaRangeReader,
-  probe: MediaProbe,
-  signal: AbortSignal,
-): Promise<void> {
+async function _runRecipe({
+  options,
+  reader,
+  probe,
+  signal,
+}: RecipeRunOptions): Promise<void> {
   const sourcePathOrUrl =
     probe.kind === "photo"
-      ? await _savePhoto(options, reader, signal)
+      ? await _savePhoto({ options, reader, signal })
       : reader.url;
   const input = {
     sourcePathOrUrl,
@@ -101,24 +117,28 @@ async function _runRecipe(
   const outputs = await (probe.kind === "photo"
     ? makePhotoRenditionsFromSource(input)
     : makeVideoRenditionsFromSource(input));
-  await _settle(reader, signal);
+  await _settle({ reader, signal });
   signal.throwIfAborted();
   await options.publish(outputs);
 }
 
-async function _runBoundedRecipe(
-  options: Readonly<SourceOptions>,
-  reader: MediaRangeReader,
-  probe: MediaProbe,
-): Promise<void> {
+async function _runBoundedRecipe({
+  options,
+  reader,
+  probe,
+}: {
+  options: Readonly<SourceOptions>;
+  reader: MediaRangeReader;
+  probe: MediaProbe;
+}): Promise<void> {
   const deadline = AbortSignal.timeout(
     probe.kind === "photo"
-      ? appConfig.mediaProcessing.photoTimeoutMs
-      : appConfig.mediaProcessing.videoTimeoutMs,
+      ? APP_CONFIG.mediaProcessing.photoTimeoutMs
+      : APP_CONFIG.mediaProcessing.videoTimeoutMs,
   );
   const signal = AbortSignal.any([options.signal, deadline]);
   try {
-    await _runRecipe(options, reader, probe, signal);
+    await _runRecipe({ options, reader, probe, signal });
   } catch (error) {
     if (deadline.aborted && !options.signal.aborted) {
       throw new Error(`processing_${probe.kind}_timeout`);
@@ -127,7 +147,10 @@ async function _runBoundedRecipe(
   }
 }
 
-/** Retains the same meter across phases and drains reader and runner on every exit. */
+/**
+ * Retains the same meter across phases and drains reader and runner on every
+ * exit.
+ */
 export async function processMediaSource(
   options: Readonly<SourceOptions>,
 ): Promise<void> {
@@ -139,13 +162,14 @@ export async function processMediaSource(
       key: options.source.key,
       sourceBytes: options.source.byteSize,
       signal: options.signal,
-      phaseByteLimit: appConfig.mediaProcessing.probeInputBytes,
+      phaseByteLimit: APP_CONFIG.mediaProcessing.probeInputBytes,
     });
     try {
-      await _process(options, reader);
+      await _process({ options, reader });
     } catch (error) {
-      // Child exit can precede upstream failure delivery; inspect after settlement.
-      await _settle(reader, options.signal);
+      // Child exit can precede upstream failure delivery; inspect after
+      // settlement.
+      await _settle({ reader, signal: options.signal });
       throw error;
     }
   } catch (error) {

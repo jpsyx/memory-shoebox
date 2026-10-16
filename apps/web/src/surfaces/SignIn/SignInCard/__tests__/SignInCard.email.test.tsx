@@ -6,7 +6,7 @@ import {
   PUBLIC_SETTINGS,
   renderAt,
   respondWith,
-} from "./SignInCard.fixtures";
+} from "./signInCardTestHelpers";
 
 beforeEach(() => {
   vi.unstubAllGlobals();

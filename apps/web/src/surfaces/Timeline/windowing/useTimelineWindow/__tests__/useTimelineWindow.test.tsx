@@ -2,7 +2,7 @@ import { MantineProvider } from "@mantine/core";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { DayStream } from "../../../DayStream/DayStream";
-import { makeDay, makeItem } from "../../../timelineFixtures";
+import { makeDay, makeItem } from "../../../timelineFixtureHelpers";
 
 it("bounds a 1,000-item atomic day before any page can be evicted", () => {
   const items = Array.from({ length: 1000 }, (_, index) => {
@@ -30,8 +30,10 @@ it("bounds a 1,000-item atomic day before any page can be evicted", () => {
 });
 
 it("keeps committed rows and offers a retry when saved-cursor recovery fails", async () => {
-  const { createMediaLoadingResources, createMediaLoadingLifetime } =
+  const { createMediaLoadingResources } =
     await import("@/media/createMediaLoadingResources/createMediaLoadingResources");
+  const { createMediaLoadingLifetime } =
+    await import("@/media/createMediaLoadingResources/createMediaLoadingLifetime");
   const { MediaLoadingContext } = await import("@/media/MediaLoadingContext");
   const resources = createMediaLoadingResources({
     memberId: "member",
@@ -169,8 +171,10 @@ it("restores an evicted expanded fan only after positive intersection", () => {
 });
 
 it("finishes a missing-item restore at a surviving position without endless retry", async () => {
-  const { createMediaLoadingResources, createMediaLoadingLifetime } =
+  const { createMediaLoadingResources } =
     await import("@/media/createMediaLoadingResources/createMediaLoadingResources");
+  const { createMediaLoadingLifetime } =
+    await import("@/media/createMediaLoadingResources/createMediaLoadingLifetime");
   const { MediaLoadingContext } = await import("@/media/MediaLoadingContext");
   const resources = createMediaLoadingResources({
     memberId: "member",
@@ -218,8 +222,10 @@ it("finishes a missing-item restore at a surviving position without endless retr
 });
 
 it("restores a retained cursor position without another metadata read", async () => {
-  const { createMediaLoadingResources, createMediaLoadingLifetime } =
+  const { createMediaLoadingResources } =
     await import("@/media/createMediaLoadingResources/createMediaLoadingResources");
+  const { createMediaLoadingLifetime } =
+    await import("@/media/createMediaLoadingResources/createMediaLoadingLifetime");
   const { MediaLoadingContext } = await import("@/media/MediaLoadingContext");
   const resources = createMediaLoadingResources({
     memberId: "member",

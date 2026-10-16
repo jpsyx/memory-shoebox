@@ -1,0 +1,90 @@
+.printOverlaysUnseen {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--accent-on-panel);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--print);
+}
+
+/*
+ * A restricted item, marked for the uploader and the admin who can see it.
+ * Weight and a stroke, never a hue.
+ */
+.printOverlaysRestricted {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-label);
+  font-size: var(--micro);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.printOverlaysLabels {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A selection has to be readable without comparing one print to another, so
+ * it carries a mark as well as the outline.
+ */
+.printOverlaysTick {
+  animation: stamp 300ms var(--ease);
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+}
+
+/* Timeline prints also carry access labels and video runtimes. */
+:global([data-print-selection="timeline"]) .printOverlaysTick {
+  top: auto;
+  left: auto;
+  right: 10px;
+  bottom: 10px;
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    scale: 1.6;
+    rotate: -12deg;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    rotate: 0deg;
+  }
+}

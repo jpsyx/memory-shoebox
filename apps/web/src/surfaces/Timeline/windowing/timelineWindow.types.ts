@@ -11,7 +11,7 @@ export type TimelineAnchor = {
   itemId?: string;
   burstId?: string;
   offsetPx: number;
-  pageCursor: string | null;
+  pageCursor: string | undefined;
 };
 
 /** One measurable grid row, occasion header, or intrinsic-width burst line. */
@@ -30,10 +30,14 @@ export type TimelineRenderRow = {
   isLast?: boolean;
 };
 
-/** Compact expansion survives frame eviction without retaining media metadata. */
+/**
+ * Compact expansion survives frame eviction without retaining media metadata.
+ */
 export type TimelineExpansion = { height: number };
 
-/** A member-owned view holds scalar positions and at most twenty expanded IDs. */
+/**
+ * A member-owned view holds scalar positions and at most twenty expanded IDs.
+ */
 export type TimelineViewMemory = {
   anchor?: TimelineAnchor;
   expanded: Map<string, TimelineExpansion>;
@@ -48,7 +52,7 @@ export type TimelineWindowOptions = {
   tileWidth: number;
   isMobile: boolean;
   viewportWidth?: number;
-  pageCursors?: ReadonlyMap<string, string | null>;
+  pageCursors?: ReadonlyMap<string, string | undefined>;
   recoverPage?: (anchor: TimelineAnchor) => Promise<void>;
   restoreBurst?: (
     burstId: string,

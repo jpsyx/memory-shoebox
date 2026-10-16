@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 
 /**
  * The one place the end-to-end stack's shape is written.
@@ -12,10 +12,10 @@ import { fileURLToPath } from "node:url";
  * The repository root, found from this file rather than from `process.cwd()`.
  *
  * The test helpers and guarded local server share this exact absolute path.
- * The server now starts from the repository root; absolute coordinates also
+ * The server starts from the repository root; absolute coordinates also
  * keep imported helpers independent of a caller's working directory.
  */
-const REPOSITORY_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const REPOSITORY_ROOT = fileUrlToPath(new URL("../../", import.meta.url));
 
 /** Away from `pnpm dev`'s 8080, so a running dev server is not in the way. */
 export const E2E_PORT = 8099;
@@ -90,7 +90,7 @@ export const E2E_SERVER_ENVIRONMENT = {
   ENABLE_FAKE_EMAIL: "true",
   UPSTASH_REDIS_REST_URL: "",
   UPSTASH_REDIS_REST_TOKEN: "",
-};
+} satisfies NodeJS.ProcessEnv;
 
 /**
  * What the build half of the web server command reads.
@@ -103,4 +103,4 @@ export const E2E_SERVER_ENVIRONMENT = {
  */
 export const E2E_BUILD_ENVIRONMENT = {
   WEB_BUILD_UPLOAD_PROOF: "true",
-};
+} satisfies NodeJS.ProcessEnv;

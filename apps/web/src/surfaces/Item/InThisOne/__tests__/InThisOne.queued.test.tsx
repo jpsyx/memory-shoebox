@@ -15,7 +15,7 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 import type { PeopleResponse } from "@memory-shoebox/shared";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
 

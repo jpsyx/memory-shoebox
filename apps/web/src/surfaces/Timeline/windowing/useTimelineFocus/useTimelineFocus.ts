@@ -8,17 +8,48 @@ import {
   type RefObject,
 } from "react";
 import type { TimelineRenderRow } from "../timelineWindow.types";
+type TimelineFocusOptions = {
+  rows: readonly TimelineRenderRow[];
+  viewKey: string;
+  retirement: number;
+  element?: RefObject<HTMLElement | null>;
+};
 
-/** Keeps only the focused row's members when the containing page is evicted. */
-function _getFocusedSnapshot(row: TimelineRenderRow): TimelineRenderRow {
-  return { ...row, day: { ...row.day, items: [...row.items] } };
-}
+type FocusRetirementOptions = {
+  setFocus: React.Dispatch<
+    React.SetStateAction<FocusedTimelineItem | undefined>
+  >;
+  focus?: { itemId: string };
+  client: React.ContextType<typeof QueryClientContext>;
+  resources: React.ContextType<typeof MediaLoadingContext>;
+  element?: RefObject<HTMLElement | null>;
+  viewKey: string;
+  retirement: number;
+};
 
-function _sliceRow(
-  row: TimelineRenderRow,
-  start: number,
-  end: number,
-): TimelineRenderRow[] {
+type FocusedTimelineItem = {
+  itemId: string;
+  row: TimelineRenderRow;
+  viewKey: string;
+  retirement: number;
+};
+
+type TimelineFocus = {
+  focusedItemId?: string;
+  rows: readonly TimelineRenderRow[];
+  onFocus: (itemId: string | undefined) => void;
+  onBlur: () => void;
+};
+
+function _sliceRow({
+  row,
+  start,
+  end,
+}: {
+  row: TimelineRenderRow;
+  start: number;
+  end: number;
+}): TimelineRenderRow[] {
   if (start >= end) {
     return [];
   }
@@ -42,11 +73,17 @@ function _sliceRow(
   ];
 }
 
-/** Leaves one keyed row parent intact across responsive regrouping and paging eviction. */
-function _getRowsWithFocus(
-  rows: readonly TimelineRenderRow[],
-  pinned: TimelineRenderRow,
-): TimelineRenderRow[] {
+/**
+ * Leaves one keyed row parent intact across responsive regrouping and paging
+ * eviction.
+ */
+function _getRowsWithFocus({
+  rows,
+  pinned,
+}: {
+  rows: readonly TimelineRenderRow[];
+  pinned: TimelineRenderRow;
+}): TimelineRenderRow[] {
   const ids = new Set(pinned.itemIds);
   let inserted = false;
   const result = rows.flatMap((row) => {
@@ -63,8 +100,8 @@ function _getRowsWithFocus(
     const last = row.itemIds.findLastIndex((id) => {
       return ids.has(id);
     });
-    const before = _sliceRow(row, 0, first);
-    const after = _sliceRow(row, last + 1, row.itemIds.length);
+    const before = _sliceRow({ row, start: 0, end: first });
+    const after = _sliceRow({ row, start: last + 1, end: row.itemIds.length });
     if (inserted) {
       return [...before, ...after];
     }
@@ -80,24 +117,68 @@ function _getRowsWithFocus(
   return result;
 }
 
-/** Focus state contains one bounded row, retired by blur, view, or authoritative refresh. */
-export function useTimelineFocus(
-  rows: readonly TimelineRenderRow[],
-  viewKey: string,
-  retirement: number,
-  element?: RefObject<HTMLElement | null>,
-): {
-  focusedItemId?: string;
-  rows: readonly TimelineRenderRow[];
-  onFocus: (itemId: string | undefined) => void;
-  onBlur: () => void;
-} {
-  const [focus, setFocus] = useState<{
-    itemId: string;
-    row: TimelineRenderRow;
-    viewKey: string;
-    retirement: number;
-  }>();
+function useFocusRetirement(options: FocusRetirementOptions): void {
+  const { setFocus, focus, client, resources, element, viewKey, retirement } =
+    options;
+  useEffect(() => {
+    setFocus(undefined);
+  }, [viewKey, retirement, setFocus]);
+  useEffect(
+    function retireFocusForQueryChanges() {
+      return client?.getQueryCache().subscribe((event) => {
+        if (JSON.stringify(event.query.queryKey) !== viewKey) {
+          return;
+        }
+        const isDirectional =
+          event.query.state.fetchMeta?.fetchMore !== undefined;
+        if (
+          event.type === "removed" ||
+          (event.type === "updated" &&
+            (event.action.type === "invalidate" ||
+              (event.action.type === "success" &&
+                (!isDirectional || event.action.manual))))
+        ) {
+          setFocus(undefined);
+        }
+      });
+    },
+    [client, viewKey, setFocus],
+  );
+  useEffect(
+    function retireDeniedFocusedItem() {
+      if (!element?.current || !focus) {
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (resources?.leases.isDenied(focus.itemId)) {
+          setFocus(undefined);
+        }
+      });
+      observer.observe(element.current, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["src"],
+      });
+      return () => {
+        return observer.disconnect();
+      };
+    },
+    [element, focus, resources, setFocus],
+  );
+}
+
+/**
+ * Focus state contains one bounded row, retired by blur, view, or authoritative
+ * refresh.
+ */
+export function useTimelineFocus({
+  rows,
+  viewKey,
+  retirement,
+  element,
+}: Readonly<TimelineFocusOptions>): TimelineFocus {
+  const [focus, setFocus] = useState<FocusedTimelineItem>();
   const client = useContext(QueryClientContext);
   const resources = useContext(MediaLoadingContext);
   useFocusRetirement({
@@ -115,7 +196,7 @@ export function useTimelineFocus(
       : undefined;
   const focusedRow = current?.row;
   const focusedRows = useMemo(() => {
-    return focusedRow ? _getRowsWithFocus(rows, focusedRow) : rows;
+    return focusedRow ? _getRowsWithFocus({ rows, pinned: focusedRow }) : rows;
   }, [rows, focusedRow]);
   return {
     focusedItemId: current?.itemId,
@@ -126,7 +207,12 @@ export function useTimelineFocus(
       });
       setFocus(
         row && itemId
-          ? { itemId, row: _getFocusedSnapshot(row), viewKey, retirement }
+          ? {
+              itemId,
+              row: { ...row, day: { ...row.day, items: [...row.items] } },
+              viewKey,
+              retirement,
+            }
           : undefined,
       );
     },
@@ -134,67 +220,4 @@ export function useTimelineFocus(
       return setFocus(undefined);
     },
   };
-}
-
-function useFocusRetirement(options: {
-  setFocus: React.Dispatch<
-    React.SetStateAction<
-      | {
-          itemId: string;
-          row: TimelineRenderRow;
-          viewKey: string;
-          retirement: number;
-        }
-      | undefined
-    >
-  >;
-  focus?: { itemId: string };
-  client: React.ContextType<typeof QueryClientContext>;
-  resources: React.ContextType<typeof MediaLoadingContext>;
-  element?: RefObject<HTMLElement | null>;
-  viewKey: string;
-  retirement: number;
-}): void {
-  const { setFocus, focus, client, resources, element, viewKey, retirement } =
-    options;
-  useEffect(() => {
-    setFocus(undefined);
-  }, [viewKey, retirement, setFocus]);
-  useEffect(() => {
-    return client?.getQueryCache().subscribe((event) => {
-      if (JSON.stringify(event.query.queryKey) !== viewKey) {
-        return;
-      }
-      const isDirectional =
-        event.query.state.fetchMeta?.fetchMore !== undefined;
-      if (
-        event.type === "removed" ||
-        (event.type === "updated" &&
-          (event.action.type === "invalidate" ||
-            (event.action.type === "success" &&
-              (!isDirectional || event.action.manual))))
-      ) {
-        setFocus(undefined);
-      }
-    });
-  }, [client, viewKey, setFocus]);
-  useEffect(() => {
-    if (!element?.current || !focus) {
-      return;
-    }
-    const observer = new MutationObserver(() => {
-      if (resources?.leases.isDenied(focus.itemId)) {
-        setFocus(undefined);
-      }
-    });
-    observer.observe(element.current, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["src"],
-    });
-    return () => {
-      return observer.disconnect();
-    };
-  }, [element, focus, resources, setFocus]);
 }

@@ -208,7 +208,7 @@ which is drawn on the panel too. Whoever builds the next surface should check
 which of the two a piece of text is actually drawn on. The contrast sweep will
 say so if they get it wrong, but only once that surface is added to it: it
 runs over surfaces 1 and 9 in `e2e/contrast.spec.ts` and over surfaces 3 and 4
-in `e2e/item/item.contrast.spec.ts`, so surfaces 2, 5, 6 and 7 are still
+in `e2e/item/__tests__/item.contrast.spec.ts`, so surfaces 2, 5, 6 and 7 are still
 unswept, and it measures their text rather than their borders and outlines
 (`docs/e2e.md` § The contrast sweep).
 
@@ -1752,7 +1752,7 @@ measure itself again once a web font arrives. Neither ever fires.
 `testing/fetchStubHelpers` stubs `fetch` with canned answers keyed by
 `"METHOD /path"` and records every request with its method, address and body.
 It needs neither React nor the router, so the API modules' own suites use it
-directly. `testing/surfaceHarness` builds on it for a rendered surface, and
+directly. `testing/surfaceHarnessHelpers` builds on it for a rendered surface, and
 reads the record back as lines (`recordedRequests`, and
 `getRecordedCountFromLine` for how often one was sent) and as bodies
 (`getRecordedBodyFromRequest`). The item page needs both, because it has a
@@ -1762,8 +1762,7 @@ what a write sent, such as a people set carrying a known person by id and a
 new one by name. `testing/itemFixtureHelpers` builds an `ItemDetail`, a video,
 a burst's frames and the three sets of capabilities a viewer, another uploader
 and the item's own uploader hold; `testing/itemHarnessHelpers` is the item
-route's canned server, answering `GET /api/members` and `GET /api/groups` with
-the `404` they answer for now; `testing/itemWriteTestHelpers` is what each
+route's canned server, with member and group directory fixtures; `testing/itemWriteTestHelpers` is what each
 write hook's own suite renders it with, a client already holding the item.
 `testing/callQueryFn` runs a `queryOptions` result's query function directly,
 which is how the API modules' tests check what a response parses into.
@@ -1773,6 +1772,19 @@ and `File` alike. The upload engine reads every header and every hash slice
 through `blob.slice(start, end).arrayBuffer()`, so the shim reads the same
 bytes through jsdom's own `FileReader`, and stands down the day jsdom ships
 the method.
+
+Upload component tests inject controlled controller snapshots and commands.
+Date and occasion dialogs can then verify pending states, original retry
+targets, and preview retention without running the transfer engine. Controller
+tests separately exercise manifest refreshes, acknowledged edit chunks, and
+failed-write recovery. Browser tests own file selection, route/session changes,
+visibility choices, cancellation, and receipt navigation through the real app.
+
+Account mutation tests exercise the actual HTTP hooks with a QueryClient.
+Bootstrap recovery tests inject a controlled pending mutation to check private
+cache eviction and late-publication fences independently of the account form.
+Shared query/media wrapper factories provide stable React providers for these
+fixtures.
 
 **There is a second layer above this one.** Vitest renders a component against
 a mocked `apiFetch`; it cannot tell you that a cookie survived a reload, that
@@ -1904,3 +1916,12 @@ restart preserves current filters; each action retains the current Find state.
 Video reaction hints and the whole-video comment toggle use the standard print
 text color on the sunken print surface, retaining readable small-text contrast
 in both themes.
+
+### Media component ownership
+
+Print media, overlays, and runtime indicators own their styles separately.
+Photo-frame presentation, video player controls, and item conversation controls
+also import their own CSS modules. Parent modules retain layout rules; explicit
+data attributes preserve hover, portal, and nested-control selectors across
+component boundaries. The selected photo and registered video retain their
+existing decode and element lifetimes through these presentational boundaries.

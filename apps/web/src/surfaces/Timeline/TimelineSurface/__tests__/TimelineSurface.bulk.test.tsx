@@ -6,13 +6,13 @@ import {
   makeDay,
   makeItem,
   makeMediaSource,
-} from "@/surfaces/Timeline/timelineFixtures";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import {
   getRecordedBodyFromRequest,
   recordedRequests,
-} from "@/testing/surfaceHarness";
-import { renderTimeline, respondWith } from "./TimelineSurface.fixtures";
+} from "@/testing/surfaceHarnessHelpers";
+import { renderTimeline, respondWith } from "./timelineSurfaceTestHelpers";
 
 const FIRST_ID = makeItem().itemId;
 const SECOND_ID = "018f0000-0000-7000-8000-00000000a002";
@@ -20,7 +20,7 @@ const BULK_PATH = "POST /api/items/bulk-edit";
 
 function _answerTimeline(
   options: { role?: "admin" | "uploader" | "viewer"; failure?: boolean } = {},
-) {
+): void {
   respondWith({
     "GET /api/me": {
       body: createMeResponse({ role: options.role ?? "admin" }),
@@ -54,7 +54,7 @@ function _answerTimeline(
   });
 }
 
-async function _tickBoth() {
+async function _tickBoth(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", { name: "Select photos" }),
   );

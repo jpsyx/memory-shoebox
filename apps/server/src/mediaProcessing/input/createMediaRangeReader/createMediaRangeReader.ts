@@ -1,15 +1,17 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUuid } from "node:crypto";
 
 import { EventEmitter, once } from "node:events";
 
 import {
   createServer,
   type IncomingMessage,
-  type Server,
   type ServerResponse,
 } from "node:http";
 
-import type { AddressInfo } from "node:net";
+import {
+  makeMediaRangeReaderFromServer,
+  validateMediaRangePhaseLimit,
+} from "./mediaRangeReaderLifetimeHelpers.ts";
 
 import {
   type MediaRangeReader,
@@ -18,6 +20,12 @@ import {
   type ReaderState,
   type Transfer,
 } from "./createMediaRangeReader.types.ts";
+type RangeRequestOptions = {
+  request: IncomingMessage;
+  response: ServerResponse;
+  path: string;
+  state: ReaderState;
+};
 
 export type { MediaRangeReaderFailure } from "./createMediaRangeReader.types.ts";
 
@@ -51,7 +59,13 @@ function _getBudgetFailureFromRead(
   return undefined;
 }
 
-function _releaseReservation(state: ReaderState, bytes: number): void {
+function _releaseReservation({
+  state,
+  bytes,
+}: {
+  state: ReaderState;
+  bytes: number;
+}): void {
   state.reservedBytes -= bytes;
   state.capacityChanges.emit("change");
 }
@@ -79,10 +93,13 @@ async function _reserveSegment(transfer: Readonly<Transfer>): Promise<number> {
   }
 }
 
-function _recordFailure(
-  state: ReaderState,
-  failure: MediaRangeReaderFailure | undefined,
-): void {
+function _recordFailure({
+  state,
+  failure,
+}: {
+  state: ReaderState;
+  failure: MediaRangeReaderFailure | undefined;
+}): void {
   if (
     failure !== undefined &&
     (state.failure === undefined || !TERMINAL_FAILURES.has(state.failure))
@@ -91,40 +108,41 @@ function _recordFailure(
   }
 }
 
-async function _writeChunk(
-  response: ServerResponse,
-  chunk: Uint8Array,
-  signal: AbortSignal,
-): Promise<void> {
-  signal.throwIfAborted();
-  if (!response.write(chunk)) {
-    await once(response, "drain", { signal });
-  }
-}
-
-async function _copySegmentBody(
-  upstream: Response,
-  transfer: Readonly<Transfer>,
-): Promise<void> {
+async function _copySegmentBody({
+  upstream,
+  transfer,
+}: {
+  upstream: Response;
+  transfer: Readonly<Transfer>;
+}): Promise<void> {
   const { state, response, controller, start, end } = transfer;
   const body = upstream.body!.getReader();
   let receivedBytes = 0;
   try {
     while (true) {
-      const { value, done } = await runWithReadIdleTimeout(() => {
-        return body.read();
-      }, controller);
+      const { value, done } = await runWithReadIdleTimeout({
+        operation: () => {
+          return body.read();
+        },
+        controller,
+      });
       if (done) {
         break;
       }
-      // Charge real payload before downstream writes, including a disconnected child.
+      // Charge real payload before downstream writes, including a disconnected
+      // child.
       state.bytesRead += value.byteLength;
-      _releaseReservation(state, value.byteLength);
+      _releaseReservation({ state, bytes: value.byteLength });
       receivedBytes += value.byteLength;
       if (receivedBytes > end - start + 1) {
         throw new Error("processing_source_range_invalid");
       }
-      await _writeChunk(response, value, controller.signal);
+      await (async () => {
+        controller.signal.throwIfAborted();
+        if (!response.write(value)) {
+          await once(response, "drain", { signal: controller.signal });
+        }
+      })();
     }
     if (receivedBytes !== end - start + 1) {
       throw new Error("processing_source_truncated");
@@ -136,7 +154,7 @@ async function _copySegmentBody(
     throw error;
   } finally {
     await body.cancel().catch(() => {});
-    _releaseReservation(state, end - start + 1 - receivedBytes);
+    _releaseReservation({ state, bytes: end - start + 1 - receivedBytes });
   }
 }
 
@@ -147,29 +165,32 @@ async function _transferSegment(transfer: Readonly<Transfer>): Promise<number> {
   const segment = { ...transfer, end };
   let isBodyMetered = false;
   try {
-    const upstream = await runWithReadIdleTimeout(() => {
-      return fetch(state.upstreamUrl, {
-        headers: {
-          Range: `bytes=${start}-${end}`,
-          "Accept-Encoding": "identity",
-          ...(state.etag === undefined ? {} : { "If-Match": state.etag }),
-        },
-        signal: controller.signal,
-        redirect: "error",
-      });
-    }, controller);
+    const upstream = await runWithReadIdleTimeout({
+      operation: () => {
+        return fetch(state.upstreamUrl, {
+          headers: {
+            Range: `bytes=${start}-${end}`,
+            "Accept-Encoding": "identity",
+            ...(state.etag === undefined ? {} : { "If-Match": state.etag }),
+          },
+          signal: controller.signal,
+          redirect: "error",
+        });
+      },
+      controller,
+    });
     try {
-      validateMediaRangeResponse(upstream, segment);
+      validateMediaRangeResponse({ response: upstream, transfer: segment });
     } catch (error) {
       await upstream.body?.cancel();
       throw error;
     }
     isBodyMetered = true;
-    await _copySegmentBody(upstream, segment);
+    await _copySegmentBody({ upstream, transfer: segment });
     return end + 1;
   } finally {
     if (!isBodyMetered) {
-      _releaseReservation(state, length);
+      _releaseReservation({ state, bytes: length });
     }
   }
 }
@@ -196,7 +217,13 @@ async function _serveRange(transfer: Readonly<Transfer>): Promise<void> {
     }
     response.end();
   } catch (error) {
-    _recordFailure(state, getRangeFailureFromError(error, transfer.controller));
+    _recordFailure({
+      state,
+      failure: getRangeFailureFromError({
+        error,
+        controller: transfer.controller,
+      }),
+    });
     if (response.headersSent) {
       response.destroy();
     } else {
@@ -211,12 +238,7 @@ async function _serveRange(transfer: Readonly<Transfer>): Promise<void> {
   }
 }
 
-function _answerRequest(options: {
-  request: IncomingMessage;
-  response: ServerResponse;
-  path: string;
-  state: ReaderState;
-}): void {
+function _answerRequest(options: RangeRequestOptions): void {
   const { request, response, path, state } = options;
   if (request.url !== path) {
     response.writeHead(404).end();
@@ -235,7 +257,10 @@ function _answerRequest(options: {
     response.writeHead(405).end();
     return;
   }
-  const range = getRangeFromRequest(request, state.sourceBytes);
+  const range = getRangeFromRequest({
+    request,
+    sourceBytes: state.sourceBytes,
+  });
   if (range === undefined) {
     response
       .writeHead(416, { "content-range": `bytes */${state.sourceBytes}` })
@@ -247,7 +272,7 @@ function _answerRequest(options: {
       ? "concurrent_read_limit"
       : _getBudgetFailureFromRead(state);
   if (failure !== undefined) {
-    _recordFailure(state, failure);
+    _recordFailure({ state, failure });
     response.writeHead(429).end("processing_input_budget");
     return;
   }
@@ -259,91 +284,16 @@ function _answerRequest(options: {
   void _serveRange({ state, response, controller, ...range });
 }
 
-function _validateLimit(limit: number | undefined): void {
-  if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 0)) {
-    throw new Error("processing_phase_limit_invalid");
-  }
-}
-
-async function _awaitIdle(
-  state: ReaderState,
-  signal?: AbortSignal,
-): Promise<void> {
-  signal?.throwIfAborted();
-  while (state.active.size > 0) {
-    await once(state.capacityChanges, "settled", { signal });
-  }
-}
-
-function _makeCloseFromReader(
-  options: Readonly<{
-    server: Server;
-    signal: AbortSignal;
-    state: ReaderState;
-  }>,
-): () => Promise<void> {
-  const { server, signal, state } = options;
-  let closing: Promise<void> | undefined;
-  const close = (): Promise<void> => {
-    closing ??= new Promise<void>((resolve) => {
-      signal.removeEventListener("abort", onAbort);
-      for (const controller of state.active) {
-        controller.abort();
-      }
-      server.closeAllConnections();
-      server.close(() => {
-        void _awaitIdle(state).then(resolve);
-      });
-    });
-    return closing;
-  };
-  const onAbort = (): void => {
-    void close();
-  };
-  signal.addEventListener("abort", onAbort, { once: true });
-  return close;
-}
-
-function _makeReaderFromServer(options: {
-  server: Server;
-  signal: AbortSignal;
-  state: ReaderState;
-  path: string;
-}): MediaRangeReader {
-  const { server, signal, state, path } = options;
-  const close = _makeCloseFromReader({ server, signal, state });
-  return {
-    url: `http://127.0.0.1:${(server.address() as AddressInfo).port}${path}`,
-    getBytesRead: () => {
-      return state.bytesRead;
-    },
-    getFailure: () => {
-      return state.failure;
-    },
-    close,
-    awaitIdle: (waitSignal) => {
-      return _awaitIdle(state, waitSignal);
-    },
-    setPhaseByteLimit: (limit) => {
-      if (state.active.size > 0) {
-        throw new Error("processing_reads_active");
-      }
-      _validateLimit(limit);
-      state.phaseByteLimit = limit;
-      if (state.failure === "phase_byte_limit") {
-        state.failure = undefined;
-      }
-    },
-  };
-}
-
-/** Serves one private object on loopback, with shared byte/request caps and backpressure. */
+/**
+ * Serves one private object on loopback, with shared byte/request caps and
+ * backpressure.
+ */
 export async function createMediaRangeReader(
   options: Readonly<ReaderOptions>,
 ): Promise<MediaRangeReader> {
   const { b2, key, sourceBytes, signal, phaseByteLimit } = options;
   signal.throwIfAborted();
-  _validateLimit(phaseByteLimit);
+  validateMediaRangePhaseLimit(phaseByteLimit);
   if (!Number.isSafeInteger(sourceBytes) || sourceBytes <= 0) {
     throw new Error("processing_source_size_invalid");
   }
@@ -364,13 +314,18 @@ export async function createMediaRangeReader(
     failure: undefined,
   };
   signal.throwIfAborted();
-  const path = `/${randomUUID()}`;
+  const path = `/${randomUuid()}`;
   const server = createServer((request, response) => {
     _answerRequest({ request, response, path, state });
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
-  const reader = _makeReaderFromServer({ server, signal, state, path });
+  const reader = makeMediaRangeReaderFromServer({
+    server,
+    signal,
+    state,
+    path,
+  });
   if (signal.aborted) {
     await reader.close();
     signal.throwIfAborted();

@@ -1,4 +1,4 @@
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { SignedPart } from "../../b2/createB2Client/createB2Client.types.ts";
 
@@ -56,7 +56,7 @@ async function _openMultipart(
       key: options.storageKey,
       contentType: context.file.declared_content_type,
       partCount: options.partCount,
-      expiresInSeconds: appConfig.upload.presignTtlSeconds,
+      expiresInSeconds: APP_CONFIG.upload.presignTtlSeconds,
     });
   });
   return {
@@ -83,7 +83,7 @@ async function _resignParts(
       key: options.storageKey,
       uploadId: options.uploadId,
       partNumbers: options.partNumbers,
-      expiresInSeconds: appConfig.upload.presignTtlSeconds,
+      expiresInSeconds: APP_CONFIG.upload.presignTtlSeconds,
     });
   });
   return { uploadId: options.uploadId, openedUploadId: undefined, parts };
@@ -118,7 +118,7 @@ async function _signMultipartOriginal(options: {
       mode: "multipart",
       fileId: file.id,
       multipartUploadId: signed.uploadId,
-      partSizeBytes: appConfig.upload.multipartPartSizeBytes,
+      partSizeBytes: APP_CONFIG.upload.multipartPartSizeBytes,
       partCount,
       parts: signed.parts.map((part) => {
         return { ...part, expiresAt: context.expiresAt };
@@ -143,7 +143,7 @@ export async function signUploadOriginal(
     purpose: "original",
     declaredContentType: file.declared_content_type,
   });
-  if (file.declared_bytes >= appConfig.upload.multipartThresholdBytes) {
+  if (file.declared_bytes >= APP_CONFIG.upload.multipartThresholdBytes) {
     return _signMultipartOriginal({ context, storageKey });
   }
   if (context.input.partNumbers !== undefined) {
@@ -155,7 +155,7 @@ export async function signUploadOriginal(
     return context.b2.presignPut({
       key: storageKey,
       contentType: file.declared_content_type,
-      expiresInSeconds: appConfig.upload.presignTtlSeconds,
+      expiresInSeconds: APP_CONFIG.upload.presignTtlSeconds,
     });
   });
   return {

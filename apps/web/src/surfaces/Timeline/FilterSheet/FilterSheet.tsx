@@ -1,8 +1,8 @@
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
-import { isSelectionActive } from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { isSelectionActive } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import {
   makePeopleQueryOptionsFromSearchScope,
   makeTagsQueryOptionsFromSearchScope,
@@ -74,11 +74,13 @@ function useTypeahead(memberId?: string): TypeaheadState {
  * One function rather than one per dimension, because a tag and a person
  * toggle the exact same way: add the id if it is missing, drop it if not.
  */
-function _makeToggleSelection(options: {
-  onChange: (update: TimelineSelectionUpdate) => void;
-}): (dimension: "tags" | "people", id: string) => void {
-  const { onChange } = options;
-  return (dimension, id) => {
+function _makeToggleSelection(
+  onChange: (update: TimelineSelectionUpdate) => void,
+): ({
+  dimension,
+  id,
+}: Readonly<{ dimension: "tags" | "people"; id: string }>) => void {
+  return ({ dimension, id }) => {
     onChange((selection) => {
       const current = selection[dimension];
       return {
@@ -109,7 +111,7 @@ export function FilterSheet({
 }: Readonly<Props>): ReactNode {
   const { typed, onTyped, search, tags, people } = useTypeahead(memberId);
   const isActive = isSelectionActive(selection);
-  const toggleSelection = _makeToggleSelection({ onChange });
+  const toggleSelection = _makeToggleSelection(onChange);
 
   return (
     <Sheet wide label="Find something">
@@ -128,13 +130,13 @@ export function FilterSheet({
           facets={facets?.people ?? []}
           isActive={isActive}
           onToggle={(id) => {
-            toggleSelection("people", id);
+            toggleSelection({ dimension: "people", id: id });
           }}
         />
         <TagsFacetSection
           facets={facets?.tags ?? []}
           onToggle={(id) => {
-            toggleSelection("tags", id);
+            toggleSelection({ dimension: "tags", id: id });
           }}
         />
         <DateFields selection={selection} onChange={onChange} />

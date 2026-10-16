@@ -50,7 +50,7 @@ Completion evidence for this Auto revision:
 - `pnpm exec playwright test --config playwright.setup.config.ts e2e/setup/__tests__/setup.keyboard.spec.ts`:
   4 passed in both browsers after the component-layout moves. The earlier
   complete four-file setup run passed 44 tests, including responsive checks.
-- `pnpm exec playwright test --project=chromium e2e/item/item.uploader.spec.ts`:
+- `pnpm exec playwright test --project=chromium e2e/item/__tests__/item.uploader.spec.ts`:
   4 passed, with one existing parked case skipped. This checks the fake-bucket
   upload fixture and does not represent real-bucket acceptance.
 - Owned-app cleanup, invalid invitation fields and dotted setup account-field
@@ -266,9 +266,9 @@ not claimed pristine output.
   dates; adjacent presence interval helpers keep batched reads bounded.
 - `apps/server/test/setup/setupConcurrency.worker.ts`: Task 8's separate-process
   SQLite writer proof needs an owned worker and reliable readiness/closure.
-- `apps/web/src/testing/surfaceHarness.tsx`,
-  `apps/web/src/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures.tsx`
-  and `apps/web/src/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures.tsx`: Task 9's
+- `apps/web/src/testing/surfaceHarnessHelpers.tsx`,
+  `apps/web/src/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers.tsx`
+  and `apps/web/src/surfaces/SignIn/SignInCard/__tests__/signInCardTestHelpers.tsx`: Task 9's
   incumbent real-router consumers needed initialized setup/progress defaults.
 - `getSetupRedirectFromNavigation.ts` and its test replace the plan's helper
   filename so its single runtime export and module name agree.
@@ -284,7 +284,7 @@ not claimed pristine output.
 - `docs/prds/2026-09-27-memory-shoebox/tech-specs/apis/notifications.md`: Task 2
   documented current provider-refusal diagnosis and retained history; Task 7
   recorded actual identity/privacy and local-date observation semantics.
-- Task 10 `e2e/item/item.uploader.spec.ts`: its exact option selector now includes
+- Task 10 `e2e/item/__tests__/item.uploader.spec.ts`: its exact option selector now includes
   the real admin-directory role label, preserving visibility save/undo checks.
   This is an integration-selector repair, not a product change or feature RED.
   The parked full-picker case stays skipped.

@@ -1,5 +1,5 @@
-import type { TimelineView } from "@/api/timeline/selection/selection";
-import { readTimelinePageFromCursor } from "@/api/timeline/timeline";
+import type { TimelineView } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { readTimelinePageFromCursor } from "@/api/timelineHelpers/timelineHelpers";
 import { MediaLoadingContext } from "@/media/MediaLoadingContext";
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
@@ -23,67 +23,13 @@ type Recovery = {
   setRecoveringKey: (key: string | undefined) => void;
 };
 
-/** Exact-query recovery preserves old pages until a guarded atomic replacement succeeds. */
-export function useTimelineRecovery(options: Readonly<Options>): {
-  recoverPage: (anchor: TimelineAnchor) => Promise<void>;
-  isRecovering: boolean;
-  isPending: () => boolean;
-} {
-  const client = useQueryClient();
-  const resources = useContext(MediaLoadingContext);
-  const operation = useRef<AbortController | undefined>(undefined);
-  const [recoveringKey, setRecoveringKey] = useState<string>();
-  const key = JSON.stringify(options.queryKey);
-  const latest = useRef(options);
-  latest.current = options;
-  useEffect(() => {
-    return () => {
-      operation.current?.abort();
-      operation.current = undefined;
-    };
-  }, [key]);
-  const recoverPage = useCallback(
-    (anchor: TimelineAnchor) => {
-      return _recoverPage(
-        { key, client, resources, latest, operation, setRecoveringKey },
-        anchor,
-      );
-    },
-    [key, client, resources],
-  );
-  return {
-    recoverPage,
-    isRecovering: recoveringKey === key,
-    isPending: () => {
-      return operation.current !== undefined;
-    },
-  };
-}
-
-function _watchRecoveryQuery(
-  client: QueryClient,
-  key: string,
-  controller: AbortController,
-): () => void {
-  return client.getQueryCache().subscribe((event) => {
-    if (
-      JSON.stringify(event.query.queryKey) === key &&
-      (event.type === "added" ||
-        event.type === "removed" ||
-        (event.type === "updated" &&
-          ["invalidate", "fetch", "success", "setState"].includes(
-            event.action.type,
-          )))
-    ) {
-      controller.abort();
-    }
-  });
-}
-
-async function _recoverPage(
-  recovery: Recovery,
-  anchor: TimelineAnchor,
-): Promise<void> {
+async function _recoverPage({
+  recovery,
+  anchor,
+}: {
+  recovery: Recovery;
+  anchor: TimelineAnchor;
+}): Promise<void> {
   const { operation, setRecoveringKey, key, client } = recovery;
   operation.current?.abort();
   const controller = new AbortController();
@@ -95,7 +41,7 @@ async function _recoverPage(
   try {
     await client.cancelQueries({ queryKey: current.queryKey, exact: true });
     controller.signal.throwIfAborted();
-    unsubscribe = _watchRecoveryQuery(client, key, controller);
+    unsubscribe = _watchRecoveryQuery({ client, key, controller });
     const page = await readTimelinePageFromCursor({
       view: current.view,
       cursor: anchor.pageCursor,
@@ -114,9 +60,9 @@ async function _recoverPage(
     client.setQueryData(current.queryKey, {
       pages: [page],
       pageParams: [
-        page.requestCursor === undefined
-          ? anchor.pageCursor
-          : page.requestCursor,
+        page.requestCursorKnown || page.requestCursor !== undefined
+          ? page.requestCursor
+          : anchor.pageCursor,
       ],
     });
   } catch (error) {
@@ -130,4 +76,78 @@ async function _recoverPage(
       setRecoveringKey(undefined);
     }
   }
+}
+
+/**
+ * Exact-query recovery preserves old pages until a guarded atomic replacement
+ * succeeds.
+ */
+export function useTimelineRecovery(options: Readonly<Options>): {
+  recoverPage: (anchor: TimelineAnchor) => Promise<void>;
+  isRecovering: boolean;
+  isPending: () => boolean;
+} {
+  const client = useQueryClient();
+  const resources = useContext(MediaLoadingContext);
+  const operation = useRef<AbortController | undefined>(undefined);
+  const [recoveringKey, setRecoveringKey] = useState<string>();
+  const key = JSON.stringify(options.queryKey);
+  const latest = useRef(options);
+  latest.current = options;
+  useEffect(
+    function cancelRetiredTimelineRecovery() {
+      return () => {
+        operation.current?.abort();
+        operation.current = undefined;
+      };
+    },
+    [key],
+  );
+  const recoverPage = useCallback(
+    (anchor: TimelineAnchor) => {
+      return _recoverPage({
+        recovery: {
+          key,
+          client,
+          resources,
+          latest,
+          operation,
+          setRecoveringKey,
+        },
+        anchor,
+      });
+    },
+    [key, client, resources],
+  );
+  return {
+    recoverPage,
+    isRecovering: recoveringKey === key,
+    isPending: () => {
+      return operation.current !== undefined;
+    },
+  };
+}
+
+function _watchRecoveryQuery({
+  client,
+  key,
+  controller,
+}: {
+  client: QueryClient;
+  key: string;
+  controller: AbortController;
+}): () => void {
+  return client.getQueryCache().subscribe((event) => {
+    if (
+      JSON.stringify(event.query.queryKey) === key &&
+      (event.type === "added" ||
+        event.type === "removed" ||
+        (event.type === "updated" &&
+          ["invalidate", "fetch", "success", "setState"].includes(
+            event.action.type,
+          )))
+    ) {
+      controller.abort();
+    }
+  });
 }

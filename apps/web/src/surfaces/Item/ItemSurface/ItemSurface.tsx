@@ -1,3 +1,5 @@
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { ItemDetail } from "@memory-shoebox/shared";
 import { idSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
@@ -6,7 +8,7 @@ import type { ReactNode } from "react";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { itemQueryOptions } from "@/api/items/items";
 import { ItemFailed } from "@/surfaces/Item/ItemSurface/ItemFailed";
-import { ItemLoading } from "@/surfaces/Item/ItemSurface/ItemLoading";
+import { ItemLoading } from "@/surfaces/Item/ItemSurface/ItemLoading/ItemLoading";
 import { ItemNotHere } from "@/surfaces/Item/ItemSurface/ItemNotHere";
 import { ItemViewer } from "@/surfaces/Item/ItemViewer/ItemViewer";
 
@@ -14,15 +16,13 @@ type Props = {
   itemId: string;
 };
 
-/** Whether an answer means "not here": a 404, or a 400 for a malformed id. */
-function _isNotHere(error: unknown): boolean {
-  return (
-    error instanceof ApiRequestError &&
-    (error.status === 404 || error.status === 400)
-  );
-}
-
-function useSelectedItemDetail(itemId: string, isWellFormed: boolean) {
+function useSelectedItemDetail({
+  itemId,
+  isWellFormed,
+}: {
+  itemId: string;
+  isWellFormed: boolean;
+}): UseQueryResult<ItemDetail, Error> {
   const queryClient = useQueryClient();
   return useQuery({
     ...itemQueryOptions(itemId),
@@ -60,9 +60,13 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const resources = useMediaLoading();
   const selectedPreview = resources.previews.read(itemId);
   const isWellFormed = idSchema.safeParse(itemId).success;
-  const query = useSelectedItemDetail(itemId, isWellFormed);
+  const query = useSelectedItemDetail({ itemId, isWellFormed });
 
-  if (!isWellFormed || _isNotHere(query.error)) {
+  if (
+    !isWellFormed ||
+    (query.error instanceof ApiRequestError &&
+      [404, 400].includes(query.error.status))
+  ) {
     return <ItemNotHere />;
   }
   if (query.data === undefined) {

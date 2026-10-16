@@ -5,14 +5,10 @@ import { useVideoReadiness } from "@/media/useVideoReadiness/useVideoReadiness";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { MediaRef } from "@memory-shoebox/shared";
-import { Video } from "@videojs/react/video";
 import { useContext, type ReactNode } from "react";
 import type { VideoPlayback } from "../useVideoPlayback/useVideoPlayback";
-import {
-  useVideoSourceRenewal,
-  type VideoSourceRenewal,
-} from "../useVideoSourceRenewal/useVideoSourceRenewal";
-import { VideoSources } from "../VideoSources";
+import { useVideoSourceRenewal } from "../videoSourceRenewalHelpers/videoSourceRenewalHelpers";
+import { RegisteredVideoElement } from "./RegisteredVideoElement";
 
 type Props = {
   itemId: string;
@@ -21,7 +17,9 @@ type Props = {
   playback: VideoPlayback;
 };
 
-/** Metadata edits retain playback; only explicit retry replaces the media node. */
+/**
+ * Metadata edits retain playback; only explicit retry replaces the media node.
+ */
 export function RegisteredVideo({
   itemId,
   media: initialMedia,
@@ -43,7 +41,7 @@ export function RegisteredVideo({
   const renewal = useVideoSourceRenewal({
     itemId,
     videoRef: transport.videoRef,
-    source: media.playback,
+    source: media.playback ?? undefined,
     renew: lease.renew,
   });
   useMediaSourceOwnership({
@@ -57,65 +55,19 @@ export function RegisteredVideo({
     videoRef: transport.videoRef,
     onReady,
   });
-  if (media.playback === null) {
-    return (
-      <MediaPlaceholder
-        altText={media.altText}
-        width={media.width}
-        height={media.height}
-        state={media.previewState}
-      />
-    );
-  }
-  return _renderVideo({ media, transport, playback, renewal });
-}
-
-function _renderVideo({
-  media,
-  transport,
-  playback,
-  renewal,
-}: Readonly<
-  Omit<Props, "itemId"> & { renewal: VideoSourceRenewal }
->): ReactNode {
-  return (
-    <Video
-      ref={transport.videoRef}
-      aria-label={media.altText}
-      poster={media.poster?.url}
-      playsInline
-      preload="metadata"
-      onLoadedMetadata={(event) => {
-        playback.onLoaded(event.currentTarget);
-      }}
-      onTimeUpdate={(event) => {
-        playback.onTimeUpdate(event.currentTarget);
-      }}
-      onPlay={() => {
-        playback.setIsPlaying(true);
-      }}
-      onPause={() => {
-        playback.setIsPlaying(false);
-      }}
-      onEnded={() => {
-        playback.setIsPlaying(false);
-      }}
-      onSeeking={playback.onSeeking}
-      onSeeked={playback.onSeeked}
-      onError={() => {
-        void renewal.onSourceError().catch(() => {
-          playback.setHasError(true);
-        });
-      }}
-    >
-      <VideoSources
-        media={media}
-        onFailure={() => {
-          void renewal.onSourceError().catch(() => {
-            playback.setHasError(true);
-          });
-        }}
-      />
-    </Video>
+  return media.playback === null ? (
+    <MediaPlaceholder
+      altText={media.altText}
+      width={media.width}
+      height={media.height}
+      state={media.previewState}
+    />
+  ) : (
+    <RegisteredVideoElement
+      media={media}
+      transport={transport}
+      playback={playback}
+      renewal={renewal}
+    />
   );
 }

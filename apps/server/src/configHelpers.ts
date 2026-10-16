@@ -1,5 +1,5 @@
 import { hkdfSync } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { z } from "zod";
 
 /** Backblaze B2 credentials and bucket layout. */
@@ -9,7 +9,9 @@ export type B2Config = {
   /** Backblaze calls this the "applicationKey". Shown only once at creation. */
   applicationKey: string;
   bucket: string;
-  /** S3-compatible endpoint, for example https://s3.us-west-004.backblazeb2.com */
+  /**
+   * S3-compatible endpoint, for example https://s3.us-west-004.backblazeb2.com
+   */
   endpoint: string;
   /** S3-compatible region, for example us-west-004. */
   region: string;
@@ -72,7 +74,9 @@ export type Config = {
   isKnownNonProduction: boolean;
   port: number;
   host: string;
-  /** Filesystem path of the SQLite catalog. On Fly.io this lives on a volume. */
+  /**
+   * Filesystem path of the SQLite catalog. On Fly.io this lives on a volume.
+   */
   databasePath: string;
   /**
    * The one secret a self-hoster generates. At least 32 characters.
@@ -113,11 +117,6 @@ export type Config = {
   upstashRedisRestToken: string | undefined;
 };
 
-/** The built web app, relative to this file, when WEB_DIST_PATH is unset. */
-const DEFAULT_WEB_DIST_PATH = fileURLToPath(
-  new URL("../../web/dist", import.meta.url),
-);
-
 /**
  * An unfilled variable is absent, not empty.
  *
@@ -128,15 +127,6 @@ const DEFAULT_WEB_DIST_PATH = fileURLToPath(
 function _emptyToUndefined(value: string | undefined): string | undefined {
   return value === "" ? undefined : value;
 }
-
-/**
- * The environments a developer runs, and nothing else.
- *
- * Read from the raw environment rather than the parsed config, because the
- * schema defaults `NODE_ENV` to `development` and that default would make an
- * unset variable indistinguishable from a deliberate choice.
- */
-const NON_PRODUCTION_ENVIRONMENTS = new Set(["development", "test"]);
 
 /**
  * One or more path segments of lowercase letters, digits and hyphens, joined
@@ -160,7 +150,9 @@ const environmentSchema = z.object({
       32,
       "must be at least 32 characters; generate one with `openssl rand -hex 32`",
     ),
-  WEB_DIST_PATH: z.string().default(DEFAULT_WEB_DIST_PATH),
+  WEB_DIST_PATH: z
+    .string()
+    .default(fileUrlToPath(new URL("../../web/dist", import.meta.url))),
   MEDIA_PROCESSING_ENABLED: z
     .string()
     .optional()
@@ -205,34 +197,6 @@ const environmentSchema = z.object({
 });
 
 /**
- * The pepper every sign-in code is HMAC'd with, derived from the one secret a
- * self-hoster generates.
- *
- * `data-models.md` § `sign_in_codes` explains what it buys: six digits is a
- * 10^6 space, so a leaked table of plain SHA-256 hashes is reversed instantly
- * with a rainbow table of a million entries, and a read-only database leak (a
- * copied volume, a stray backup) yields nothing without this value.
- *
- * Derived rather than used raw so that a later use of `SESSION_SECRET` for
- * something else cannot also be a use of the pepper. Rotating the secret
- * invalidates every live code, which lasts ten minutes, and no session, because
- * a session is a row rather than a signed token.
- */
-function _makeSignInCodePepperFromSecret(secret: string): Buffer {
-  return Buffer.from(
-    hkdfSync("sha256", secret, "", "memory-shoebox:sign-in-code-pepper", 32),
-  );
-}
-
-/** Renders every Zod issue as `VARIABLE: reason`, one per line. */
-function _formatIssues(error: z.ZodError): string {
-  const lines = error.issues.map((issue) => {
-    return `  - ${issue.path.join(".")}: ${issue.message}`;
-  });
-  return `Invalid server configuration:\n${lines.join("\n")}`;
-}
-
-/**
  * Parses and validates server configuration from an environment map.
  *
  * Takes the environment explicitly rather than reading `process.env`, so tests
@@ -243,10 +207,15 @@ function _formatIssues(error: z.ZodError): string {
  * @throws If any variable is missing or malformed. The error names every
  *   offending variable at once, so a self-hoster fixes them in one pass.
  */
-export function parseConfig(env: Record<string, string | undefined>): Config {
+export function makeConfigFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>,
+): Config {
   const result = environmentSchema.safeParse(env);
   if (!result.success) {
-    throw new Error(_formatIssues(result.error));
+    const lines = result.error.issues.map((issue) => {
+      return `  - ${issue.path.join(".")}: ${issue.message}`;
+    });
+    throw new Error(`Invalid server configuration:\n${lines.join("\n")}`);
   }
 
   const parsed = result.data;
@@ -256,12 +225,21 @@ export function parseConfig(env: Record<string, string | undefined>): Config {
     isProduction,
     isKnownNonProduction:
       env.NODE_ENV !== undefined &&
-      NON_PRODUCTION_ENVIRONMENTS.has(env.NODE_ENV),
+      new Set(["development", "test"]).has(env.NODE_ENV),
     port: parsed.PORT,
     host: parsed.HOST,
     databasePath: parsed.DATABASE_PATH,
     sessionSecret: parsed.SESSION_SECRET,
-    signInCodePepper: _makeSignInCodePepperFromSecret(parsed.SESSION_SECRET),
+    // Domain separation prevents reuse of the raw session secret as a pepper.
+    signInCodePepper: Buffer.from(
+      hkdfSync(
+        "sha256",
+        parsed.SESSION_SECRET,
+        "",
+        "memory-shoebox:sign-in-code-pepper",
+        32,
+      ),
+    ),
     webDistPath: parsed.WEB_DIST_PATH,
     mediaProcessing: {
       enabled: parsed.MEDIA_PROCESSING_ENABLED,
@@ -288,6 +266,6 @@ let cachedConfig: Config | undefined;
 
 /** Returns the process-wide configuration, parsing `process.env` once. */
 export function getConfig(): Config {
-  cachedConfig ??= parseConfig(process.env);
+  cachedConfig ??= makeConfigFromEnvironment(process.env);
   return cachedConfig;
 }

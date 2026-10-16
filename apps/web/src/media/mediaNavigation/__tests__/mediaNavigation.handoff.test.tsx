@@ -1,20 +1,15 @@
-import { type ReactNode } from "react";
+import { MediaNavigationMove as Navigation } from "./MediaNavigationMove";
+import { MediaNavigationOwner as Owner } from "./MediaNavigationOwner";
+import { startHeldMediaLoading } from "./startHeldMediaLoading";
+import type { MediaRef } from "@memory-shoebox/shared";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-  type MediaLoadingResources,
-} from "../../createMediaLoadingResources/createMediaLoadingResources";
+import { type MediaLoadingResources } from "../../createMediaLoadingResources/createMediaLoadingResources";
 
 import { MediaLoadingProvider } from "../../MediaLoadingProvider/MediaLoadingProvider";
-
-import { useItemNavigationMove } from "@/surfaces/Item/ItemViewer/ItemNavigation/useItemNavigationMove";
-
-import { QueryClient } from "@tanstack/react-query";
 
 import { MediaLoadingContext } from "../../MediaLoadingContext";
 
@@ -22,7 +17,7 @@ import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
 
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 const injected = vi.hoisted(() => {
   return {
@@ -59,82 +54,7 @@ const media = {
   display: source,
   thumb: null,
   displayCandidates: [source],
-};
-
-function Owner({
-  resources,
-  itemId,
-}: {
-  resources: MediaLoadingResources;
-  itemId: string;
-}): ReactNode {
-  injected.resources = resources;
-  return (
-    <MediaLoadingProvider memberId="member" routeKey={`/items/${itemId}`}>
-      <PhotoFrame media={media} itemId={itemId} />
-    </MediaLoadingProvider>
-  );
-}
-
-function Navigation(): ReactNode {
-  const movement = useItemNavigationMove({
-    context: {
-      detail: makeItemDetail(),
-      selection: { tags: [], people: [] },
-      queryClient: new QueryClient(),
-      memberId: "member",
-    },
-    targets: { next: { itemId: "target" } },
-    isUnavailable: false,
-  });
-  return (
-    <>
-      <button
-        onClick={() => {
-          void movement.move("next");
-        }}
-      >
-        Move
-      </button>
-      <output>{movement.error}</output>
-    </>
-  );
-}
-
-async function _active() {
-  let signal: AbortSignal | undefined;
-  const resources = createMediaLoadingResources({
-    memberId: "member",
-    lifetime: createMediaLoadingLifetime(),
-    load: (_candidate, operationSignal) => {
-      signal = operationSignal;
-      return new Promise(() => {});
-    },
-  });
-  resources.navigation.viewport = {
-    cssWidth: 600,
-    cssHeight: 600,
-    devicePixelRatio: 1,
-    supportsWebp: true,
-  };
-  resources.scheduler.schedule(
-    [{ itemId: "target", source, kind: "photo", rank: 0, decode: true }],
-    {
-      memberId: "member",
-      selectionKey: "old",
-      visible: true,
-      saveData: false,
-      effectiveType: "4g",
-    },
-  );
-  await vi.advanceTimersByTimeAsync(250);
-  return {
-    resources,
-    getSignal: () => {
-      return signal!;
-    },
-  };
-}
+} satisfies MediaRef;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -144,11 +64,12 @@ afterEach(() => {
 describe("viewer promotion ownership", () => {
   it("transfers the existing lease to the exact PhotoFrame across route cleanup and releases on exit", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
     resources.navigation.prepare({ itemId: "target", source });
-    const view = render(<Owner resources={resources} itemId="target" />);
+    const view = render(<Owner media={media} itemId="target" />);
     expect(getSignal().aborted).toBe(false);
-    view.rerender(<Owner resources={resources} itemId="different" />);
+    view.rerender(<Owner media={media} itemId="different" />);
     await act(async () => {});
     expect(getSignal().aborted).toBe(true);
   });
@@ -156,7 +77,8 @@ describe("viewer promotion ownership", () => {
 describe("viewer promotion ownership", () => {
   it("keeps one source owned when pending preview becomes authorized detail", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
     resources.navigation.prepare({ itemId: "target", source });
     const view = render(
       <MediaLoadingContext value={resources}>
@@ -179,10 +101,13 @@ describe("viewer promotion ownership", () => {
 describe("viewer promotion ownership", () => {
   it("adopts successful movement before route cleanup and releases on actual exit", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
-    resources.previews.put([
-      { itemId: "target", kind: "photo", width: 960, height: 720, media },
-    ]);
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
+    resources.previews.put({
+      previews: [
+        { itemId: "target", kind: "photo", width: 960, height: 720, media },
+      ],
+    });
     injected.resources = resources;
     let finish = () => {};
     injected.router.navigate.mockReturnValueOnce(
@@ -213,18 +138,25 @@ describe("viewer promotion ownership", () => {
 describe("viewer promotion ownership", () => {
   it("preserves prepared ownership while a pending route awaits its committed destination", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
-    resources.previews.put([
-      { itemId: "target", kind: "photo", width: 960, height: 720, media },
-    ]);
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
+    resources.previews.put({
+      previews: [
+        { itemId: "target", kind: "photo", width: 960, height: 720, media },
+      ],
+    });
     injected.resources = resources;
     const navigation = Promise.withResolvers<void>();
     injected.router.navigate.mockReturnValueOnce(navigation.promise);
-    const tree = (
-      routeKey: string,
-      committedSurfaceKey: string,
-      hasTarget: boolean,
-    ) => {
+    const tree = ({
+      routeKey,
+      committedSurfaceKey,
+      hasTarget,
+    }: {
+      routeKey: string;
+      committedSurfaceKey: string;
+      hasTarget: boolean;
+    }) => {
       return (
         <MediaLoadingProvider
           memberId="member"
@@ -239,12 +171,30 @@ describe("viewer promotion ownership", () => {
         </MediaLoadingProvider>
       );
     };
-    const view = render(tree("/items/old", "/items/old", false));
+    const view = render(
+      tree({
+        routeKey: "/items/old",
+        committedSurfaceKey: "/items/old",
+        hasTarget: false,
+      }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Move" }));
-    view.rerender(tree("/items/target", "/items/old", false));
+    view.rerender(
+      tree({
+        routeKey: "/items/target",
+        committedSurfaceKey: "/items/old",
+        hasTarget: false,
+      }),
+    );
     await act(async () => {});
     expect(getSignal().aborted).toBe(false);
-    view.rerender(tree("/items/target", "/items/target", true));
+    view.rerender(
+      tree({
+        routeKey: "/items/target",
+        committedSurfaceKey: "/items/target",
+        hasTarget: true,
+      }),
+    );
     await act(async () => {
       navigation.resolve();
     });
@@ -257,10 +207,13 @@ describe("viewer promotion ownership", () => {
 describe("viewer promotion ownership", () => {
   it("settles movement without adoption even when the route key does not change", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
-    resources.previews.put([
-      { itemId: "target", kind: "photo", width: 960, height: 720, media },
-    ]);
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
+    resources.previews.put({
+      previews: [
+        { itemId: "target", kind: "photo", width: 960, height: 720, media },
+      ],
+    });
     injected.resources = resources;
     injected.router.navigate.mockResolvedValueOnce(undefined);
     render(
@@ -277,10 +230,13 @@ describe("viewer promotion ownership", () => {
 describe("viewer promotion ownership", () => {
   it("releases a rejected actual navigation promise through the movement consumer", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
-    resources.previews.put([
-      { itemId: "target", kind: "photo", width: 960, height: 720, media },
-    ]);
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
+    resources.previews.put({
+      previews: [
+        { itemId: "target", kind: "photo", width: 960, height: 720, media },
+      ],
+    });
     injected.resources = resources;
     injected.router.navigate.mockRejectedValueOnce(
       new Error("blocked navigation"),
@@ -291,16 +247,18 @@ describe("viewer promotion ownership", () => {
       </MediaLoadingProvider>,
     );
     // Provider mount clears old speculation; start the owned operation again.
-    resources.scheduler.schedule(
-      [{ itemId: "target", source, kind: "photo", rank: 0, decode: true }],
-      {
+    resources.scheduler.schedule({
+      candidates: [
+        { itemId: "target", source, kind: "photo", rank: 0, decode: true },
+      ],
+      environment: {
         memberId: "member",
         selectionKey: "old",
         visible: true,
         saveData: false,
         effectiveType: "4g",
       },
-    );
+    });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(250);
       fireEvent.click(screen.getByRole("button", { name: "Move" }));

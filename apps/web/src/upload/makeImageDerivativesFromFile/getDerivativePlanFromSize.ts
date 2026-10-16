@@ -1,18 +1,18 @@
-import { appConfig } from "../../../../../app.config";
-
-import { type PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
-
-import type { DerivativeTarget } from "./makeImageDerivativesFromFile.types";
+import type {
+  ImageDerivativesOptions,
+  DerivativeTarget,
+} from "./makeImageDerivativesFromFile.types";
+import { APP_CONFIG } from "../../../../../app.config";
 
 /** The two an image gets, largest first so one decode serves both. */
 const IMAGE_TARGETS: readonly DerivativeTarget[] = [
   {
     purpose: "display",
-    longEdgePx: appConfig.upload.derivatives.displayLongEdgePx,
+    longEdgePx: APP_CONFIG.upload.derivatives.displayLongEdgePx,
   },
   {
     purpose: "thumb",
-    longEdgePx: appConfig.upload.derivatives.thumbLongEdgePx,
+    longEdgePx: APP_CONFIG.upload.derivatives.thumbLongEdgePx,
   },
 ] as const;
 
@@ -31,12 +31,7 @@ const IMAGE_TARGETS: readonly DerivativeTarget[] = [
  *   none.
  */
 export function getDerivativePlanFromSize(
-  options: Readonly<{
-    contentType: string;
-    size: PixelSize | undefined;
-    file?: Blob;
-    purposes?: ReadonlyArray<"thumb" | "display">;
-  }>,
+  options: Readonly<Omit<ImageDerivativesOptions, "file"> & { file?: Blob }>,
 ): DerivativeTarget[] {
   const { size } = options;
   return IMAGE_TARGETS.filter((target) => {
@@ -46,7 +41,7 @@ export function getDerivativePlanFromSize(
     if (size === undefined || options.contentType !== "image/jpeg") {
       return true;
     }
-    const byteBudget = appConfig.mediaProcessing.photoCandidates.find(
+    const byteBudget = APP_CONFIG.mediaProcessing.photoCandidates.find(
       (candidate) => {
         return candidate.longEdge === target.longEdgePx;
       },

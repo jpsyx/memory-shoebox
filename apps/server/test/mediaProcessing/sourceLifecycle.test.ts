@@ -6,14 +6,14 @@ import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Cl
 import {
   createFixtureReader,
   createVerificationRunner,
-  getFixturePath,
+  makeFixturePathFromName,
 } from "./recipeTestHelpers.ts";
 
 it("carries one metered source through probe, admitted photo decode and publication", async () => {
   const runner = await createVerificationRunner();
-  const path = getFixturePath("oriented.jpg");
+  const path = makeFixturePathFromName("oriented.jpg");
   const bytes = await readFile(path);
-  const source = await createFixtureReader(path);
+  const source = await createFixtureReader({ path });
   const b2 = createFakeB2Client();
   b2.presignGet = async () => {
     return source.url;
@@ -54,7 +54,7 @@ it("produces a fingerprint for valid pixels and refuses corrupt bytes", async ()
   try {
     const fingerprint = await makeIsolatedFingerprintFromImage({
       runner,
-      bytes: await readFile(getFixturePath("oriented.jpg")),
+      bytes: await readFile(makeFixturePathFromName("oriented.jpg")),
       signal: new AbortController().signal,
     });
     expect(fingerprint).toMatch(/^v1:/);

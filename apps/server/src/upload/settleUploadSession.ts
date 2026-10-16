@@ -1,7 +1,7 @@
 import { rememberBurstMembership } from "../items/rememberBurstMembership.ts";
 import type { CaptureSource } from "@memory-shoebox/shared";
 import { sql, type SqlBool } from "kysely";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import { createId } from "../db/createId.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import {
@@ -104,8 +104,8 @@ async function _writeBurst(options: WriteBurstOptions): Promise<void> {
       captured_on: burst.capturedOn,
       starts_at: burst.startsAt,
       ends_at: burst.endsAt,
-      detector_version: appConfig.burst.detectorVersion,
-      threshold_seconds: appConfig.burst.maxGapSeconds,
+      detector_version: APP_CONFIG.burst.detectorVersion,
+      threshold_seconds: APP_CONFIG.burst.maxGapSeconds,
       detected_at: options.now,
       is_manual: 0,
       cover_item_id: null,
@@ -164,8 +164,8 @@ async function _writeBursts(options: {
 
   const bursts = makeBurstsFromCandidates({
     candidates,
-    maxGapSeconds: appConfig.burst.maxGapSeconds,
-    minimumFrameCount: appConfig.burst.minimumFrameCount,
+    maxGapSeconds: APP_CONFIG.burst.maxGapSeconds,
+    minimumFrameCount: APP_CONFIG.burst.minimumFrameCount,
   });
   await Promise.all(
     bursts.map((burst) => {

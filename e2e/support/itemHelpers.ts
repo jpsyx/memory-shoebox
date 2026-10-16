@@ -8,11 +8,16 @@ import { expect } from "./signedIn/signedIn.ts";
  * archivePlan.ts`).
  */
 
-/** Read the exact first frame from the response caused by opening its owned burst. */
-export async function getFirstFrameFromBurstOpening(options: {
-  page: Page;
-  activate: (cover: Locator) => Promise<void>;
-}): Promise<{ frame: Locator; itemId: string }> {
+/**
+ * Read the exact first frame from the response caused by opening its owned
+ * burst.
+ */
+export async function getFirstFrameFromBurstOpening(
+  options: Readonly<{
+    page: Page;
+    activate: (cover: Locator) => Promise<void>;
+  }>,
+): Promise<{ frame: Locator; itemId: string }> {
   const { page, activate } = options;
   const stack = page
     .locator("[data-burst-id]")
@@ -45,7 +50,9 @@ export async function getFirstFrameFromBurstOpening(options: {
   return { frame, itemId };
 }
 
-/** Opens 26 September's actual position-one frame without another detail read. */
+/**
+ * Opens 26 September's actual position-one frame without another detail read.
+ */
 export async function openFirstFrameOfBurst(page: Page): Promise<void> {
   await page.goto("/?at=2026-09-26");
   const { frame, itemId } = await getFirstFrameFromBurstOpening({
@@ -75,7 +82,10 @@ export async function openSeededVideo(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/items\/[0-9a-f-]+$/u);
 }
 
-/** Open the ancillary controls through the actual accessible photo details trigger. */
+/**
+ * Open the ancillary controls through the actual accessible photo details
+ * trigger.
+ */
 export async function openPhotoDetails(page: Page): Promise<void> {
   await page
     .getByRole("button", { name: "More photo details", exact: true })

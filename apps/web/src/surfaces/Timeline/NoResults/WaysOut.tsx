@@ -4,7 +4,7 @@ import type { PersonFacet, TagFacet } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { DropDatesButton } from "@/surfaces/Timeline/NoResults/DropDatesButton";
 import { DropPeopleButton } from "@/surfaces/Timeline/NoResults/DropPeopleButton";
 import { DropTagButtons } from "@/surfaces/Timeline/NoResults/DropTagButtons";

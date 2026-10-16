@@ -7,11 +7,11 @@ import {
   apiFetch,
   makePathFromSearchParams,
 } from "@/api/clientHelpers/clientHelpers";
-import { makeFramesPathFromBurstId } from "@/api/bursts/bursts";
+import { makeFramesPathFromBurstId } from "@/api/burstQueryHelpers/burstQueryHelpers";
 import {
   makeQueryFromSelection,
   type TimelineSelection,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 /** Follows every burst page so ticking a loaded stack never omits its tail. */
 export async function getBurstFramesForSelection(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import { createDatabase } from "../../../src/db/client.ts";
 import { migrateToLatest } from "../../../src/db/migrate.ts";
 import { makeViewer } from "../../helpers/makeViewer.ts";
@@ -194,7 +194,7 @@ describe("readItemDetail's burst strip", () => {
       uploadSessionId: sessionId,
       capturedOn: "2026-09-27",
     });
-    const frameCount = appConfig.items.burstStripMaxFrames + 1;
+    const frameCount = APP_CONFIG.items.burstStripMaxFrames + 1;
     const frameIds: string[] = [];
     for (let index = 1; index <= frameCount; index += 1) {
       const itemId = await insertItem(database, {
@@ -222,7 +222,7 @@ describe("readItemDetail's burst strip", () => {
 
     expect(detail.burst?.visibleFrameCount).toBe(frameCount);
     expect(detail.burstFrames).toHaveLength(
-      appConfig.items.burstStripMaxFrames,
+      APP_CONFIG.items.burstStripMaxFrames,
     );
     expect(detail.burstPosition).toBe(frameCount);
     expect(detail.burst?.startsAt).toBe(

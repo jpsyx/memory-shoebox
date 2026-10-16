@@ -1,26 +1,32 @@
-import { getViewFromSearch } from "@/api/timeline/selection/selection";
+import type { KnownMediaNeighborsResponse } from "@/media/readMediaNeighborsFromKnownQueries";
+import type {
+  ItemDirection,
+  ItemNavigationContext,
+  ItemNavigationState,
+} from "./itemNavigation.types";
+import type {
+  MediaPreview,
+  ItemDetail,
+  MediaNeighborsResponse,
+} from "@memory-shoebox/shared";
+import { getViewFromSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
 import { readMediaNeighborsFromKnownQueries } from "@/media/readMediaNeighborsFromKnownQueries";
 import { useNeighborPrefetch } from "@/media/useNeighborPrefetch";
-import type {
-  ItemDetail,
-  MediaNeighborsResponse,
-} from "@memory-shoebox/shared";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
-import type {
-  ItemNavigationContext,
-  ItemNavigationState,
-} from "./itemNavigation.types";
 import { useItemNavigationMove } from "./useItemNavigationMove";
 
-function _makeNeighboursQueryOptions(
-  context: Readonly<ItemNavigationContext>,
-  resources: MediaLoadingResources,
-) {
-  return queryOptions({
+function _makeNeighboursQueryOptions({
+  context,
+  resources,
+}: {
+  context: Readonly<ItemNavigationContext>;
+  resources: MediaLoadingResources;
+}): ReturnType<typeof queryOptions<KnownMediaNeighborsResponse>> {
+  return queryOptions<KnownMediaNeighborsResponse>({
     queryKey: [
       "timeline",
       context.memberId,
@@ -58,10 +64,13 @@ function _makeNeighboursQueryOptions(
   });
 }
 
-function _getTargetsFromNeighbors(
-  neighbors: MediaNeighborsResponse | undefined,
-  direction: "previous" | "next",
-) {
+function _getTargetsFromNeighbors({
+  neighbors,
+  direction,
+}: {
+  neighbors: MediaNeighborsResponse | undefined;
+  direction: "previous" | "next";
+}): Record<ItemDirection, MediaPreview | undefined> | undefined {
   return neighbors === undefined
     ? undefined
     : {
@@ -72,7 +81,9 @@ function _getTargetsFromNeighbors(
       };
 }
 
-function useNavigationSelection() {
+function useNavigationSelection(): ReturnType<
+  typeof getNavigationSelectionFromView
+> {
   const location = useLocation();
   return getNavigationSelectionFromView({
     selection:
@@ -81,7 +92,9 @@ function useNavigationSelection() {
   });
 }
 
-/** Loads neighbours and keeps moves serialized until the destination is drawn. */
+/**
+ * Loads neighbours and keeps moves serialized until the destination is drawn.
+ */
 export function useItemNavigation(
   options: Readonly<{
     detail: ItemDetail;
@@ -94,13 +107,13 @@ export function useItemNavigation(
   const selection = useNavigationSelection();
   const context = { ...options, selection, queryClient };
   const query = useQuery({
-    ..._makeNeighboursQueryOptions(context, resources),
+    ..._makeNeighboursQueryOptions({ context, resources }),
     enabled: !options.isPlaceholder,
   });
-  const targets = _getTargetsFromNeighbors(
-    query.data,
-    resources.navigation.direction,
-  );
+  const targets = _getTargetsFromNeighbors({
+    neighbors: query.data,
+    direction: resources.navigation.direction,
+  });
   useNeighborPrefetch({
     itemId: options.detail.itemId,
     enabled: !options.isPlaceholder,

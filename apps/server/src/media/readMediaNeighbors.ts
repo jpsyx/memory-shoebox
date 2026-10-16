@@ -16,7 +16,7 @@ import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
   sortsAfterFrame,
   sortsBeforeFrame,
-} from "../items/readBurstFrameRefs/frameSortKey.ts";
+} from "../items/readBurstFramePage/frameSortKey.ts";
 import { readMediaPreviews } from "./readMediaPreviews.ts";
 
 type ReadOptions = {
@@ -45,10 +45,13 @@ type StepOptions = SelectionOptions & {
   direction: "next" | "previous";
 };
 
-function _buildSelectedQuery(
-  options: Readonly<SelectionOptions>,
+function _buildSelectedQuery({
+  options,
   isTimeline = false,
-): SelectQueryBuilder<Database, "items", NeighborRow> {
+}: {
+  options: Readonly<SelectionOptions>;
+  isTimeline?: boolean;
+}): SelectQueryBuilder<Database, "items", NeighborRow> {
   // The visibility OR can otherwise force a whole-range sort at day edges.
   const table = sql<Database["items"]>`items`.as<"items">(
     isTimeline ? sql`items indexed by items_navigation_capture` : sql`items`,
@@ -66,29 +69,36 @@ function _buildSelectedQuery(
     .where(makeSelectionExpressionFromFilter(options));
 }
 
-/** One indexed sibling probe, including reverse null placement at burst edges. */
-async function _readFrame(
-  options: Readonly<StepOptions>,
-  isEdge: boolean,
-): Promise<NeighborRow | undefined> {
+/**
+ * One indexed sibling probe, including reverse null placement at burst edges.
+ */
+async function _readFrame({
+  options,
+  isEdge,
+}: {
+  options: Readonly<StepOptions>;
+  isEdge: boolean;
+}): Promise<NeighborRow | undefined> {
   if (options.current.burst_id === null) {
     return undefined;
   }
   const isNext = options.direction === "next";
-  let query = _buildSelectedQuery(options).where(
+  const selectedQuery = _buildSelectedQuery({ options }).where(
     "burst_id",
     "=",
     options.current.burst_id,
   );
-  if (!isEdge) {
-    const frame = {
-      itemId: options.current.id,
-      burstIndex: options.current.burst_index,
-    };
-    query = query.where(
-      isNext ? sortsAfterFrame(frame) : sortsBeforeFrame(frame),
-    );
-  }
+  const query = isEdge
+    ? selectedQuery
+    : (() => {
+        const frame = {
+          itemId: options.current.id,
+          burstIndex: options.current.burst_index,
+        };
+        return selectedQuery.where(
+          isNext ? sortsAfterFrame(frame) : sortsBeforeFrame(frame),
+        );
+      })();
   return query
     .orderBy("burst_index", (order) => {
       return isNext ? order.asc().nullsLast() : order.desc().nullsFirst();
@@ -98,7 +108,9 @@ async function _readFrame(
     .executeTakeFirst();
 }
 
-/** A collapsed stack occupies its earliest matching capture, never its cover. */
+/**
+ * A collapsed stack occupies its earliest matching capture, never its cover.
+ */
 async function _readAnchor(
   options: Readonly<StepOptions>,
 ): Promise<NeighborRow> {
@@ -106,7 +118,7 @@ async function _readAnchor(
     return options.current;
   }
   return (
-    (await _buildSelectedQuery(options)
+    (await _buildSelectedQuery({ options })
       .where("burst_id", "=", options.current.burst_id)
       .where("captured_on", "=", options.current.captured_on)
       .orderBy("captured_at")
@@ -117,7 +129,9 @@ async function _readAnchor(
   );
 }
 
-/** Only visible group representatives qualify; the correlated edge is LIMIT 1. */
+/**
+ * Only visible group representatives qualify; the correlated edge is LIMIT 1.
+ */
 function _buildTimelineQuery(
   options: Readonly<SelectionOptions>,
 ): SelectQueryBuilder<
@@ -126,7 +140,9 @@ function _buildTimelineQuery(
   NeighborRow
 > {
   return options.database
-    .selectFrom(_buildSelectedQuery(options, true).as("candidate"))
+    .selectFrom(
+      _buildSelectedQuery({ options, isTimeline: true }).as("candidate"),
+    )
     .selectAll("candidate")
     .where((eb) => {
       return eb.or([
@@ -183,7 +199,7 @@ async function _readTimelineNeighbor(
 async function _readStep(
   options: Readonly<StepOptions>,
 ): Promise<NeighborRow | undefined> {
-  const frame = await _readFrame(options, false);
+  const frame = await _readFrame({ options, isEdge: false });
   if (frame !== undefined) {
     return frame;
   }
@@ -191,13 +207,19 @@ async function _readStep(
   if (adjacent === undefined || adjacent.burst_id === null) {
     return adjacent;
   }
-  return _readFrame({ ...options, current: adjacent }, true);
+  return _readFrame({
+    options: { ...options, current: adjacent },
+    isEdge: true,
+  });
 }
 
-function _getPreviewsFromRows(
-  rows: readonly NeighborRow[],
-  previewsById: ReadonlyMap<string, MediaPreview>,
-): MediaPreview[] {
+function _getPreviewsFromRows({
+  rows,
+  previewsById,
+}: {
+  rows: readonly NeighborRow[];
+  previewsById: ReadonlyMap<string, MediaPreview>;
+}): MediaPreview[] {
   return rows.flatMap((row) => {
     const preview = previewsById.get(row.id);
     return preview === undefined ? [] : [preview];
@@ -225,12 +247,14 @@ async function _readPreviewsFromNeighbors(options: {
     }),
   );
   return {
-    ahead: _getPreviewsFromRows(options.ahead, previewsById),
-    behind: _getPreviewsFromRows(options.behind, previewsById),
+    ahead: _getPreviewsFromRows({ rows: options.ahead, previewsById }),
+    behind: _getPreviewsFromRows({ rows: options.behind, previewsById }),
   };
 }
 
-/** Reads at most three exact navigation targets without opening or seeing them. */
+/**
+ * Reads at most three exact navigation targets without opening or seeing them.
+ */
 export async function readMediaNeighbors(
   options: Readonly<ReadOptions>,
 ): Promise<MediaNeighborsResponse> {
@@ -240,7 +264,7 @@ export async function readMediaNeighbors(
     viewer: options.viewer,
     filter: makeTimelineFilterFromQuery(request.selection),
   };
-  const current = await _buildSelectedQuery(selection)
+  const current = await _buildSelectedQuery({ options: selection })
     .where("id", "=", request.itemId)
     .limit(1)
     .executeTakeFirst();

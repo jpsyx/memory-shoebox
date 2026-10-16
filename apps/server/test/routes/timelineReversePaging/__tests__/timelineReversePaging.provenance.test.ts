@@ -13,8 +13,8 @@ import { insertMilestone } from "../../../helpers/seedHelpers/seedHelpers.ts";
 import {
   insertDrawableItem,
   makeApp,
-} from "../../__tests__/timelineContractTestHelpers.ts";
-import { encodeCursor } from "./timelineReversePagingTestHelpers.ts";
+} from "../../timelineContractTestHelpers.ts";
+import { encodeCursor } from "./encodeCursor.ts";
 
 describe("bidirectional atomic-day timeline pages", () => {
   it("accepts unversioned older cursors and rejects invalid directions and selection digests", async () => {
@@ -73,18 +73,20 @@ describe("bidirectional atomic-day timeline pages", () => {
         });
       }
       // The web sends min(until, at) as the effective until, never raw at.
-      const read = async (cursor: string | null): Promise<TimelineResponse> => {
+      const read = async (
+        cursor: string | undefined,
+      ): Promise<TimelineResponse> => {
         const response = await fixture.app.inject({
           method: "GET",
           headers: { cookie },
-          url: `/api/timeline?until=2026-09-23&limit=2${cursor === null ? "" : `&cursor=${cursor}`}`,
+          url: `/api/timeline?until=2026-09-23&limit=2${cursor === undefined ? "" : `&cursor=${cursor}`}`,
         });
         expect(response.statusCode).toBe(200);
         return response.json();
       };
-      const first = await read(null);
-      const second = await read(first.nextCursor);
-      const restored = await read(second.previousCursor);
+      const first = await read(undefined);
+      const second = await read(first.nextCursor ?? undefined);
+      const restored = await read(second.previousCursor ?? undefined);
       const newerThanJumpDays = restored.days.filter((day) => {
         return day.capturedOn > "2026-09-23";
       });

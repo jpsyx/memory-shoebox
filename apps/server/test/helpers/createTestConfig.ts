@@ -1,4 +1,7 @@
-import { parseConfig, type Config } from "../../src/configHelpers.ts";
+import {
+  makeConfigFromEnvironment,
+  type Config,
+} from "../../src/configHelpers.ts";
 
 /**
  * A parsed `Config` carrying placeholder credentials.
@@ -18,7 +21,7 @@ import { parseConfig, type Config } from "../../src/configHelpers.ts";
 export function createTestConfig(
   environment: Record<string, string | undefined> = {},
 ): Config {
-  return parseConfig({
+  return makeConfigFromEnvironment({
     // Named rather than left to the schema's default, because the fake email
     // gate asks whether the environment was explicitly identified and treats
     // an unset `NODE_ENV` as production. This is what the runner sets anyway.

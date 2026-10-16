@@ -19,8 +19,9 @@ test("navigation uses one bootstrap, no speculative bootstrap and no duplicate m
         "/api/setup",
         "/api/setup/progress",
       ].includes(path)
-    )
+    ) {
       authorityRequests.push(path);
+    }
   });
   await page.clock.install();
   await settings.hover();
@@ -37,7 +38,7 @@ test("navigation uses one bootstrap, no speculative bootstrap and no duplicate m
   expect(authorityRequests).toEqual(["/api/bootstrap"]);
 });
 
-for (const kind of ["settings", "groups"] as const) {
+(["settings", "groups"] as const).forEach((kind) => {
   test(`committed ${kind} survives failed navigation without cached writable authority or a repeated write`, async ({
     page,
   }, testInfo) => {
@@ -48,8 +49,9 @@ for (const kind of ["settings", "groups"] as const) {
         exact: true,
       })
       .click();
-    if (kind === "groups")
+    if (kind === "groups") {
       await page.getByRole("link", { name: "Groups", exact: true }).click();
+    }
     const initialControl =
       kind === "settings"
         ? page.getByLabel("Shoebox name")
@@ -60,8 +62,9 @@ for (const kind of ["settings", "groups"] as const) {
       if (
         new URL(request.url()).pathname === `/api/${kind}` &&
         request.method() === (kind === "settings" ? "PATCH" : "POST")
-      )
+      ) {
         writeCount += 1;
+      }
     });
     await page.route("**/api/me", (route) => {
       return route.fulfill({
@@ -113,7 +116,7 @@ for (const kind of ["settings", "groups"] as const) {
     await expect(initialControl).toBeEnabled();
     expect(writeCount).toBe(1);
   });
-}
+});
 
 test("removal preview and decline links keep SPA navigation and history", async ({
   page,
@@ -127,8 +130,9 @@ test("removal preview and decline links keep SPA navigation and history", async 
   expect(href).toMatch(/^\/items\//);
   let documentNavigationCount = 0;
   page.on("request", (request) => {
-    if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
       documentNavigationCount += 1;
+    }
   });
   await preview.click();
   await expect(page).toHaveURL(new RegExp(`${href}$`));

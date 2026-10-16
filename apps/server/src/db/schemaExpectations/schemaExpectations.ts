@@ -5,9 +5,9 @@ import type {
 import type { Database } from "../types/db.types.ts";
 import {
   CATALOG_FOREIGN_KEYS,
-  CATALOG_INDEXES,
   CATALOG_UNIQUE_CONSTRAINTS,
-} from "./catalog.ts";
+} from "./catalog/catalog.constants.ts";
+import { CATALOG_INDEXES } from "./catalog/catalogIndexes.constants.ts";
 import {
   IDENTITY_AND_ACCESS_FOREIGN_KEYS,
   IDENTITY_AND_ACCESS_INDEXES,

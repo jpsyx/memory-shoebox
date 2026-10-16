@@ -1,7 +1,7 @@
 import { createClient, startStubBucket } from "./clientTestHelpers.ts";
 
 import { describe, expect, it } from "vitest";
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 describe("createB2Client", () => {
   it("signs a GET for one object", async () => {
@@ -108,7 +108,7 @@ describe("createB2Client", () => {
     });
 
     expect(new URL(url).searchParams.get("X-Amz-Expires")).toBe(
-      String(appConfig.upload.presignTtlSeconds),
+      String(APP_CONFIG.upload.presignTtlSeconds),
     );
   });
 
@@ -249,7 +249,7 @@ describe("signParts", () => {
     expect(third.searchParams.get("uploadId")).toBe("upload-1");
     expect(third.searchParams.get("partNumber")).toBe("3");
     expect(third.searchParams.get("X-Amz-Expires")).toBe(
-      String(appConfig.upload.presignTtlSeconds),
+      String(APP_CONFIG.upload.presignTtlSeconds),
     );
     // The same rule as `presignPut`: a part URL must not assert a checksum
     // for bytes the server never saw.

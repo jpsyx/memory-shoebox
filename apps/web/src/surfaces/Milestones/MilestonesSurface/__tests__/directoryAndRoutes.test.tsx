@@ -1,5 +1,5 @@
 import { createMeResponse } from "@/testing/createMeResponse";
-import { recordedRequests, renderAt } from "@/testing/surfaceHarness";
+import { recordedRequests, renderAt } from "@/testing/surfaceHarnessHelpers";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";

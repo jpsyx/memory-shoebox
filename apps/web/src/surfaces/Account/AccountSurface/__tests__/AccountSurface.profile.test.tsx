@@ -5,11 +5,11 @@ import { createMeResponse } from "@/testing/createMeResponse";
 import {
   ADMIN,
   countCallsTo,
-  getBodiesSentTo,
+  getBodiesFromRecordedRequests,
   renderAccount,
   respondLikeAServer,
   respondWith,
-} from "./AccountSurface.fixtures";
+} from "./accountSurfaceTestHelpers";
 
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -36,9 +36,9 @@ describe("surface 9", () => {
     await user.click(screen.getByRole("button", { name: "Save your name" }));
 
     await waitFor(() => {
-      expect(getBodiesSentTo("PATCH", "/api/me")).toEqual([
-        { displayName: "Abuela" },
-      ]);
+      expect(
+        getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/me" }),
+      ).toEqual([{ displayName: "Abuela" }]);
     });
     expect(await screen.findByText("Saved.")).toBeVisible();
   });
@@ -53,7 +53,9 @@ describe("surface 9", () => {
     );
 
     await waitFor(() => {
-      expect(getBodiesSentTo("PATCH", "/api/me")).toEqual([
+      expect(
+        getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/me" }),
+      ).toEqual([
         {
           notify: {
             onUpload: false,
@@ -147,7 +149,7 @@ describe("surface 9", () => {
       ).toBeEnabled();
     });
 
-    expect(countCallsTo("PATCH", "/api/me")).toBe(2);
+    expect(countCallsTo({ method: "PATCH", path: "/api/me" })).toBe(2);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Abuela, in My Shoebox.",
     );

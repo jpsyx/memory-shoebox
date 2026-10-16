@@ -30,7 +30,7 @@ describe("fake media delivery", () => {
     const started = server.getLedger();
     const entry = started.requests.at(-1)!;
     expect(entry.requestId).toBe(before.nextRequestId);
-    expect(entry.terminal).toBeNull();
+    expect(entry.terminal).toBeUndefined();
     expect(entry.bodyBytes).toBe(0);
     await pending;
     await expect
@@ -50,7 +50,7 @@ describe("fake media delivery", () => {
         return total + chunk.bodyBytes;
       }, 0),
     ).toBe(BODY.length);
-    expect(entry.terminal).toBeNull();
+    expect(entry.terminal).toBeUndefined();
     expect(entry.bodyBytes).toBe(0);
   });
 });

@@ -3,13 +3,16 @@ import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport/g
 import {
   getPhotoCandidatesFromMedia,
   getPhotoViewportFromElement,
-} from "./photoViewport";
+} from "./photoViewportHelpers";
 
 /** Shares exact source choice between navigation ownership and rendering. */
-export function getSelectedSourceFromPreview(
-  preview: Readonly<MediaPreview> | undefined,
+export function getSelectedSourceFromPreview({
+  preview,
   viewport = getPhotoViewportFromElement(),
-): MediaSource | undefined {
+}: {
+  preview: Readonly<MediaPreview> | undefined;
+  viewport?: import("./photoViewportHelpers").PhotoViewport;
+}): MediaSource | undefined {
   if (preview === undefined) {
     return undefined;
   }

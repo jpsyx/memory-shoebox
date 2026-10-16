@@ -1,0 +1,10 @@
+.uploadDateReviewHeaderHeading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: color-mix(in oklab, var(--accent-on-print) 80%, var(--on-print));
+}
+
+.uploadDateReviewHeaderProse {
+  color: var(--on-print);
+}

@@ -23,7 +23,7 @@ import {
 import {
   respondWith,
   type Answer,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 
 /** A used group with distinct Only and Except consequences. */
 export const GROUP: AdminGroupDto = {

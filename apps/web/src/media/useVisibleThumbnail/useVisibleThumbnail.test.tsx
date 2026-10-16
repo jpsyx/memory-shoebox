@@ -1,14 +1,17 @@
-import { makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import type { RenderResult } from "@testing-library/react";
+import type { MediaLoadingResources } from "../createMediaLoadingResources/createMediaLoadingResources";
+import { makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { PileItems } from "@/system/Pile/PileItems/PileItems";
 import { act, render } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { MediaLoadingContext } from "../MediaLoadingContext";
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "../createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingResources } from "../createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "../createMediaLoadingResources/createMediaLoadingLifetime";
 
-function _setup() {
+function _setup(): RenderResult & {
+  resources: MediaLoadingResources;
+  intersect: (ratio: number) => void;
+} {
   const observers: Array<{
     callback: IntersectionObserverCallback;
     nodes: Set<Element>;
@@ -46,7 +49,7 @@ function _setup() {
       <PileItems items={items.slice(8)} />
     </MediaLoadingContext>,
   );
-  function intersect(ratio: number) {
+  const intersect = (ratio: number) => {
     act(() => {
       observers.forEach(({ callback, nodes }) => {
         return callback(
@@ -61,7 +64,7 @@ function _setup() {
         );
       });
     });
-  }
+  };
   return { ...view, resources, intersect };
 }
 

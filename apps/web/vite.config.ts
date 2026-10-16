@@ -1,6 +1,6 @@
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import { precompressStaticAssets } from "./build/precompressStaticAssets.ts";
 
@@ -8,7 +8,7 @@ import { precompressStaticAssets } from "./build/precompressStaticAssets.ts";
 const DEV_API_TARGET = "http://localhost:8080";
 
 /** The app itself: the one page every build emits. */
-const APP_PAGE = fileURLToPath(new URL("./index.html", import.meta.url));
+const APP_PAGE = fileUrlToPath(new URL("./index.html", import.meta.url));
 
 /**
  * Whether this build emits the upload harness beside the app.
@@ -27,8 +27,8 @@ const IS_UPLOAD_PROOF_BUILD = process.env.WEB_BUILD_UPLOAD_PROOF === "true";
  * Fails the build if the upload proof harness reached it.
  *
  * `vite build` takes `index.html` alone unless an input says otherwise, so
- * `upload-proof.html` and `src/upload/proof/` stay out by default (decision
- * 10). This turns that default into a rule: a later input list that names the
+ * `upload-proof.html` and `src/upload/proof/` stay out by default. The build
+ * enforces this boundary: a later input list that names the
  * harness by accident fails here instead of shipping a page that uploads
  * whatever it is given.
  */
@@ -59,7 +59,7 @@ function _refuseUploadProofInBuild(): Plugin {
   };
 }
 
-// https://vite.dev/config/
+/** Client SPA build and development server, with an isolated proof build. */
 export default defineConfig({
   plugins: [
     tanstackRouter({
@@ -117,7 +117,7 @@ export default defineConfig({
       input: IS_UPLOAD_PROOF_BUILD
         ? {
             main: APP_PAGE,
-            uploadProof: fileURLToPath(
+            uploadProof: fileUrlToPath(
               new URL("./upload-proof.html", import.meta.url),
             ),
           }

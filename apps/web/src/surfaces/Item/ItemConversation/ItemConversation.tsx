@@ -9,26 +9,31 @@ type Props = ComponentProps<typeof ItemDetails> & {
   conversation: ReactNode;
 };
 
-/** Shared white surface, heading, More drawer and responsive media/comment grid. */
+/**
+ * Shared white surface, heading, More drawer and responsive media/comment grid.
+ */
 export function ItemConversation({
   media,
   conversation,
   ...details
 }: Readonly<Props>): ReactNode {
   return (
-    <main className={classes.itemPage}>
-      <div className={classes.surface}>
-        <header className={classes.header}>
+    <main className={classes.itemConversation}>
+      <div
+        className={classes.itemConversationSurface}
+        data-item-conversation-surface
+      >
+        <header className={classes.itemConversationHeader}>
           <div>
             <h1>{itemHeading(details.detail)}</h1>
             <ItemMeta detail={details.detail} timezone={details.timezone} />
           </div>
           <ItemDetails key={details.detail.itemId} {...details} />
         </header>
-        <div className={classes.watchGrid}>
-          <div className={classes.mediaColumn}>{media}</div>
+        <div className={classes.itemConversationGrid}>
+          <div className={classes.itemConversationMediaColumn}>{media}</div>
           <div
-            className={classes.conversationColumn}
+            className={classes.itemConversationCommentsColumn}
             key={details.detail.itemId}
             inert={details.isPlaceholder}
           >

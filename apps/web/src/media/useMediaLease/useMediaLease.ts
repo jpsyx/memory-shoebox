@@ -29,11 +29,15 @@ type Options = {
   purpose: MediaPreviewRequest["purpose"];
   isVisible: boolean;
 };
-function useLeaseRegistration(
-  options: Readonly<Options>,
-  resources: MediaLoadingResources | undefined,
-  setSnapshot: Dispatch<SetStateAction<Snapshot | undefined>>,
-): () => Promise<MediaRef | undefined> {
+function useLeaseRegistration({
+  options,
+  resources,
+  setSnapshot,
+}: {
+  options: Readonly<Options>;
+  resources: MediaLoadingResources | undefined;
+  setSnapshot: Dispatch<SetStateAction<Snapshot | undefined>>;
+}): () => Promise<MediaRef | undefined> {
   const { itemId, initialMedia, purpose, isVisible } = options;
   const registration = useRef<MediaLeaseRegistration | undefined>(undefined);
   const initial = useRef({ media: initialMedia, isVisible });
@@ -74,7 +78,7 @@ export function useMediaLease(
   const resources = useContext(MediaLoadingContext);
   const { itemId, initialMedia } = options;
   const [snapshot, setSnapshot] = useState<Snapshot>();
-  const renew = useLeaseRegistration(options, resources, setSnapshot);
+  const renew = useLeaseRegistration({ options, resources, setSnapshot });
   const lease =
     snapshot !== undefined &&
     snapshot.owner === resources &&

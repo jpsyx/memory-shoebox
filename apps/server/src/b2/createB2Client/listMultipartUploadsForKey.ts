@@ -5,14 +5,17 @@ import {
 import type { B2OperationContext } from "./createB2Client.types.ts";
 import { makeBucketKeyFromKey } from "./makeBucketKeyFromKey.ts";
 
-/** Lists every unfinished upload for exactly one key inside this client's prefix. */
+/**
+ * Lists every unfinished upload for exactly one key inside this client's
+ * prefix.
+ */
 export async function* listMultipartUploadsForKey(
-  input: Readonly<{ context: B2OperationContext; key: string }>,
+  options: Readonly<{ context: B2OperationContext; key: string }>,
 ): AsyncGenerator<{ uploadId: string }> {
-  const { context } = input;
+  const { context } = options;
   const key = makeBucketKeyFromKey({
     keyPrefix: context.keyPrefix,
-    key: input.key,
+    key: options.key,
   });
   let keyMarker: string | undefined;
   let uploadIdMarker: string | undefined;
@@ -27,11 +30,11 @@ export async function* listMultipartUploadsForKey(
         MaxUploads: 1000,
       }),
     );
-    for (const upload of page.Uploads ?? []) {
-      if (upload.Key === key && upload.UploadId !== undefined) {
-        yield { uploadId: upload.UploadId };
-      }
-    }
+    yield* (page.Uploads ?? []).values().flatMap((upload) => {
+      return upload.Key === key && upload.UploadId !== undefined
+        ? [{ uploadId: upload.UploadId }]
+        : [];
+    });
     if (page.IsTruncated !== true) {
       return;
     }

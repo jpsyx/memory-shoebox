@@ -1,5 +1,9 @@
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { renderAt, respondWith, type Answer } from "@/testing/surfaceHarness";
+import {
+  renderAt,
+  respondWith,
+  type Answer,
+} from "@/testing/surfaceHarnessHelpers";
 
 /**
  * The canned server and the render for the item route, shared by every suite
@@ -21,24 +25,27 @@ export function respondWithItem(
   }>,
 ): void {
   const { detail, routes = {} } = options;
-  respondWith(routes, {
-    [`GET /api/items/${detail.itemId}`]: { body: detail, status: 200 },
-    [`GET /api/items/${detail.itemId}/video-reactions`]: {
-      body: [],
-      status: 200,
-    },
-    "GET /api/people": {
-      body: { people: [], nextCursor: null, peopleCount: 0 },
-      status: 200,
-    },
-    "GET /api/tags": { body: { tags: [], nextCursor: null }, status: 200 },
-    "GET /api/members": {
-      body: { error: "not_found", message: "No such route." },
-      status: 404,
-    },
-    "GET /api/groups": {
-      body: { error: "not_found", message: "No such route." },
-      status: 404,
+  respondWith({
+    routes: routes,
+    extraDefaults: {
+      [`GET /api/items/${detail.itemId}`]: { body: detail, status: 200 },
+      [`GET /api/items/${detail.itemId}/video-reactions`]: {
+        body: [],
+        status: 200,
+      },
+      "GET /api/people": {
+        body: { people: [], nextCursor: null, peopleCount: 0 },
+        status: 200,
+      },
+      "GET /api/tags": { body: { tags: [], nextCursor: null }, status: 200 },
+      "GET /api/members": {
+        body: { error: "not_found", message: "No such route." },
+        status: 404,
+      },
+      "GET /api/groups": {
+        body: { error: "not_found", message: "No such route." },
+        status: 404,
+      },
     },
   });
 }
@@ -53,4 +60,4 @@ export {
   getRecordedBodyFromRequest,
   recordedRequests,
   recordedUrls,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";

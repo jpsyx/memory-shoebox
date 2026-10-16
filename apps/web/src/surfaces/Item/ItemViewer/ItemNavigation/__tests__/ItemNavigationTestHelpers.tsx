@@ -1,8 +1,9 @@
+import type { ItemDetail } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 
 import { expect, vi } from "vitest";
 
-import { makeDay } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 import {
   makeFrameIdFromPosition,
@@ -12,7 +13,7 @@ import {
 
 import { respondWithItem } from "@/testing/itemHarnessHelpers";
 
-import { type Answer } from "@/testing/surfaceHarness";
+import { type Answer } from "@/testing/surfaceHarnessHelpers";
 
 /** First photo in the default three-item navigation sequence. */
 export const FIRST = makeItemDetail({ itemId: makeFrameIdFromPosition(1) });
@@ -20,11 +21,17 @@ export const FIRST = makeItemDetail({ itemId: makeFrameIdFromPosition(1) });
 export const MIDDLE = makeVideoDetail({ itemId: makeFrameIdFromPosition(2) });
 /** Last photo in the default three-item navigation sequence. */
 export const LAST = makeItemDetail({ itemId: makeFrameIdFromPosition(3) });
-/** Installs actual-detail/timeline responses plus direction-aware neighbor previews derived from the supplied order, preserving route overrides. */
-export function respondWithNavigationItems(
-  routes: Record<string, Answer> = {},
+/**
+ * Installs actual-detail/timeline responses plus direction-aware neighbor
+ * previews derived from the supplied order, preserving route overrides.
+ */
+export function respondWithNavigationItems({
+  routes = {},
   order = [FIRST, MIDDLE, LAST],
-): void {
+}: Readonly<{
+  routes?: Readonly<Record<string, Answer>>;
+  order?: readonly ItemDetail[];
+}> = {}): void {
   respondWithItem({
     detail: FIRST,
     routes: {
@@ -91,7 +98,10 @@ export function respondWithNavigationItems(
     });
   });
 }
-/** Waits for the next-item control to exist and become enabled, then returns that control. */
+/**
+ * Waits for the next-item control to exist and become enabled, then returns
+ * that control.
+ */
 export async function waitForNavigationReady(): Promise<HTMLElement> {
   const nextButton = await screen.findByRole("button", {
     name: "Next photo or video",

@@ -1,7 +1,7 @@
 import type { UploadedFileRecord } from "../uploadCatalogHelpers.ts";
 import { expect } from "@playwright/test";
 
-import { appConfig } from "../../../app.config.ts";
+import { APP_CONFIG } from "../../../app.config.ts";
 
 import type { FakeS3Request } from "../createFakeS3Server/createFakeS3Server.types.ts";
 
@@ -54,7 +54,7 @@ export function expectTheTransferPaths(
     }).fileId,
   });
   const partCount = Math.ceil(
-    options.multipartBytes / appConfig.upload.multipartPartSizeBytes,
+    options.multipartBytes / APP_CONFIG.upload.multipartPartSizeBytes,
   );
   const storedParts = big.filter((request) => {
     return request.operation === "UploadPart" && request.status === 200;

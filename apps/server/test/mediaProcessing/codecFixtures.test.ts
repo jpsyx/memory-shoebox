@@ -7,16 +7,16 @@ import { makeVideoRenditionsFromSource } from "../../src/mediaProcessing/recipes
 import {
   createDockerVerificationRunner,
   createVerificationRunner,
-  getFixturePath,
+  makeFixturePathFromName,
   getMetadataFromFile,
-  getVideoProbe,
+  getVideoProbeFromFile,
 } from "./recipeTestHelpers.ts";
 
 it("retains JPEG fallback and only accepts economical WebP with intact color/detail", async () => {
   const runner = await createVerificationRunner();
   try {
     const source = join(runner.scratchPath, "source.png");
-    await copyFile(getFixturePath("detail.png"), source);
+    await copyFile(makeFixturePathFromName("detail.png"), source);
     const outputs = await makePhotoRenditionsFromSource({
       sourcePathOrUrl: source,
       sourceBytes: (await stat(source)).size,
@@ -24,9 +24,9 @@ it("retains JPEG fallback and only accepts economical WebP with intact color/det
         kind: "photo",
         width: 2400,
         height: 1600,
-        frameRate: null,
+        frameRate: undefined,
         bitDepth: 8,
-        durationMs: null,
+        durationMs: undefined,
         hasAudio: false,
         transfer: "sdr",
         rotationDegrees: 0,
@@ -48,7 +48,7 @@ it("retains JPEG fallback and only accepts economical WebP with intact color/det
     const { data, info } = await sharp(webp.path)
       .raw()
       .toBuffer({ resolveWithObject: true });
-    const pixel = (x: number, y: number) => {
+    const pixel = ({ x, y }: { x: number; y: number }) => {
       return [
         ...data.subarray(
           (y * info.width + x) * 3,
@@ -56,10 +56,10 @@ it("retains JPEG fallback and only accepts economical WebP with intact color/det
         ),
       ];
     };
-    expect(pixel(100, 100)[0]).toBeGreaterThan(200);
-    expect(pixel(1500, 100)[1]).toBeGreaterThan(185);
-    expect(pixel(2, 1100)[0]).toBeGreaterThan(200);
-    expect(pixel(7, 1100)[0]).toBeLessThan(80);
+    expect(pixel({ x: 100, y: 100 })[0]).toBeGreaterThan(200);
+    expect(pixel({ x: 1500, y: 100 })[1]).toBeGreaterThan(185);
+    expect(pixel({ x: 2, y: 1100 })[0]).toBeGreaterThan(200);
+    expect(pixel({ x: 7, y: 1100 })[0]).toBeLessThan(80);
     const measurements = JSON.parse(
       await readFile(
         join(runner.scratchPath, "photo-measurements.json"),
@@ -82,13 +82,13 @@ it
   .each(["pq.mp4", "hlg.mp4"])(
   "tone maps actual %s to decoded SDR with intact color",
   async (name) => {
-    const path = getFixturePath(name);
+    const path = makeFixturePathFromName(name);
     const runner = await createDockerVerificationRunner(path);
     try {
       const outputs = await makeVideoRenditionsFromSource({
         sourcePathOrUrl: "http://127.0.0.1:39717/source",
         sourceBytes: (await stat(path)).size,
-        probe: await getVideoProbe(path),
+        probe: await getVideoProbeFromFile(path),
         runner,
         scratchDirectory: runner.scratchPath,
         signal: new AbortController().signal,
@@ -130,14 +130,14 @@ it
 it.runIf(process.env.MEDIA_TEST_CODECS === "docker")(
   "rejects HDR with unknown colorimetry instead of accepting an invented conversion",
   async () => {
-    const path = getFixturePath("untagged.mp4");
+    const path = makeFixturePathFromName("untagged.mp4");
     const runner = await createDockerVerificationRunner(path);
     try {
       await expect(
         makeVideoRenditionsFromSource({
           sourcePathOrUrl: "http://127.0.0.1:39717/source",
           sourceBytes: (await stat(path)).size,
-          probe: { ...(await getVideoProbe(path)), transfer: "pq" },
+          probe: { ...(await getVideoProbeFromFile(path)), transfer: "pq" },
           runner,
           scratchDirectory: runner.scratchPath,
           signal: new AbortController().signal,

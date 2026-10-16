@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
   countCallsTo,
-  getBodiesSentTo,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+  getBodiesFromRecordedRequests,
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   SETTINGS,
   IMPACT,
@@ -113,9 +113,9 @@ it("saves an edited name explicitly and cancels to the saved name", async () => 
   await user.type(name, "Family");
   await user.click(screen.getByRole("button", { name: "Save the new name" }));
   expect(await screen.findByText("The new name has been saved.")).toBeVisible();
-  expect(getBodiesSentTo("PATCH", "/api/settings")).toEqual([
-    { shoebox: { name: "Family" } },
-  ]);
+  expect(
+    getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/settings" }),
+  ).toEqual([{ shoebox: { name: "Family" } }]);
   await user.type(name, " draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(name).toHaveValue("Family");
@@ -143,7 +143,9 @@ it("submits arrangement and sender separately and retains refused drafts", async
   );
   expect(await screen.findAllByText("Sender refused.")).toHaveLength(2);
   expect(sender).toHaveValue("family@example.com");
-  expect(getBodiesSentTo("PATCH", "/api/settings")).toEqual([
+  expect(
+    getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/settings" }),
+  ).toEqual([
     { pile: { arrangement: "tidy" } },
     { mail: { fromAddress: "family@example.com" } },
   ]);
@@ -165,7 +167,7 @@ it("requires preview then deliberate confirmation and displays recomputed save i
   );
   expect(await screen.findByText(/34 items would move/)).toBeVisible();
   expect(screen.getByText(/3 items would leave their bursts/)).toBeVisible();
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
   await user.click(
     screen.getByRole("button", { name: "Confirm timezone change" }),
   );
@@ -221,7 +223,7 @@ it("clears a preview on candidate change and never saves when preview fails", as
   );
   expect(await screen.findByText("Preview unavailable.")).toBeVisible();
   expect(zone).toHaveValue("Pacific/Chatham");
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
 });
 it.each(["uploader", "viewer"] as const)(
   "refuses privileged settings and mail-health reads for %s",
@@ -229,15 +231,15 @@ it.each(["uploader", "viewer"] as const)(
     const { queryClient } = renderSettings({ role });
     await screen.findByText("Only an admin can manage Shoebox settings.");
     expect(screen.queryByText(/Version:/)).not.toBeInTheDocument();
-    expect(countCallsTo("GET", "/api/settings")).toBe(0);
-    expect(countCallsTo("GET", "/api/mail/health")).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/settings" })).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/mail/health" })).toBe(0);
     await act(async () => {
       return queryClient.setQueryData(
         meQueryOptions.queryKey,
         createMeResponse({ role: "viewer" }),
       );
     });
-    expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+    expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
   },
 );
 it("recovers a failed settings read through Retry", async () => {

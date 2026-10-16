@@ -6,20 +6,29 @@ import type { MediaRef } from "@memory-shoebox/shared";
 
 import { makeVideoDetail } from "@/testing/itemFixtureHelpers";
 
-import { MediaLoadingContext } from "../../MediaLoadingContext";
+import { makeMediaWrapperFromResources } from "@/testing/makeMediaWrapperFromResources";
 
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "../../createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingResources } from "../../createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "../../createMediaLoadingResources/createMediaLoadingLifetime";
+type LeaseHarness = {
+  resources: ReturnType<typeof createMediaLoadingResources>;
+  requests: Array<{ itemIds: string[]; purpose: string }>;
+  fetcher: ReturnType<
+    typeof vi.fn<(_url: string, init: RequestInit) => Promise<Response>>
+  >;
+  wrapper: (props: { children: ReactNode }) => ReactNode;
+};
 
 /** Authorized video detail used as the baseline lease source identities. */
 export const detail = makeVideoDetail();
-/** Returns video media with configurable expiry and URL identity for renewal tests, keeping poster absent. */
-export function makeMediaFromExpiry(
-  expires = 120_000,
+/**
+ * Returns video media with configurable expiry and URL identity for renewal
+ * tests, keeping poster absent.
+ */
+export function makeMediaFromExpiry({
+  expires = 120000,
   suffix = "old",
-): MediaRef {
+}: Readonly<{ expires?: number; suffix?: string }> = {}): MediaRef {
   return {
     ...detail.media,
     thumb: {
@@ -35,15 +44,12 @@ export function makeMediaFromExpiry(
     },
   };
 }
-/** Creates member-scoped loading resources and a context wrapper with recorded fake preview responses; callers own resource disposal and the lifecycle restores fetch. */
-export function createLeaseHarness(): {
-  resources: ReturnType<typeof createMediaLoadingResources>;
-  requests: Array<{ itemIds: string[]; purpose: string }>;
-  fetcher: ReturnType<
-    typeof vi.fn<(_url: string, init: RequestInit) => Promise<Response>>
-  >;
-  wrapper: (props: { children: ReactNode }) => ReactNode;
-} {
+/**
+ * Creates member-scoped loading resources and a context wrapper with recorded
+ * fake preview responses; callers own resource disposal and the lifecycle
+ * restores fetch.
+ */
+export function createLeaseHarness(): LeaseHarness {
   const resources = createMediaLoadingResources({
     memberId: "first",
     lifetime: createMediaLoadingLifetime(),
@@ -63,21 +69,20 @@ export function createLeaseHarness(): {
             kind: "video",
             width: 1600,
             height: 1067,
-            media: makeMediaFromExpiry(3_600_000, "renewed"),
+            media: makeMediaFromExpiry({ expires: 3600000, suffix: "renewed" }),
           };
         }),
       }),
     );
   });
   vi.stubGlobal("fetch", fetcher);
-  const wrapper = ({ children }: { children: ReactNode }) => {
-    return (
-      <MediaLoadingContext value={resources}>{children}</MediaLoadingContext>
-    );
-  };
+  const wrapper = makeMediaWrapperFromResources(resources);
   return { resources, requests, fetcher, wrapper };
 }
-/** Starts each lease scenario visible at fake time zero, then restores real timers and stubbed globals. */
+/**
+ * Starts each lease scenario visible at fake time zero, then restores real
+ * timers and stubbed globals.
+ */
 export function installUseMediaLeaseTestLifecycle(): void {
   beforeEach(() => {
     vi.useFakeTimers();

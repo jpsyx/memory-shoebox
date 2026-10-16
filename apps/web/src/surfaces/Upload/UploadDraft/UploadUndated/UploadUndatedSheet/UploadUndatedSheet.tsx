@@ -7,8 +7,8 @@ import type {
 import type { UploadDateReview } from "@/upload/getUploadDateReviewFromDetail/getUploadDateReviewFromDetail";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { UploadDateReviewHeader } from "./UploadDateReviewHeader";
-import { UploadDateReviewRow } from "./UploadDateReviewRow";
+import { UploadDateReviewHeader } from "./UploadDateReviewHeader/UploadDateReviewHeader";
+import { UploadDateReviewRow } from "./UploadDateReviewRow/UploadDateReviewRow";
 import { useUploadDateReviewBatchForm } from "./useUploadDateReviewBatchForm";
 import classes from "./UploadUndatedSheet.module.css";
 
@@ -32,14 +32,18 @@ export function UploadUndatedSheet({
     isDisabled: snapshot.isBusy,
   });
   return (
-    <Sheet wide label="Review capture dates" className={classes.reviewSheet}>
+    <Sheet
+      wide
+      label="Review capture dates"
+      className={classes.uploadUndatedSheet}
+    >
       <Stack gap="sm">
         <UploadDateReviewHeader
-          count={rows.length}
+          unconfirmedDateCount={rows.length}
           form={form}
           isDisabled={snapshot.isBusy}
         />
-        <div className={classes.reviewRows}>
+        <div className={classes.uploadUndatedSheetRows}>
           {rows.map((row) => {
             return (
               <UploadDateReviewRow

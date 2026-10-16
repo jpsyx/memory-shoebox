@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { PhotoThumbnail } from "./PhotoThumbnail";
 
 it("keeps an explicit unavailable fallback for an unsupported AVIF thumbnail", () => {

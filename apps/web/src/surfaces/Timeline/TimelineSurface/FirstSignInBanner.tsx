@@ -1,7 +1,7 @@
 import { IconInfoCircle } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { RailDay } from "@memory-shoebox/shared";
-import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
+import { getArchiveTotalsFromRail } from "@/api/timelineHelpers/timelineHelpers";
 import { Banner } from "@/system/Chrome/Banner";
 import { ICON_PROPS } from "@/system/icons";
 

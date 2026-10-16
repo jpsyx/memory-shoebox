@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { createLifecycleFixture } from "../../lifecycleTestHelpers.ts";
+import { createLifecycleFixture } from "../../createLifecycleFixture.ts";
 
 it("archives independently, discovers later and publishes every required output", async () => {
   const fixture = await createLifecycleFixture();

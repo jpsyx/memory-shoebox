@@ -48,7 +48,7 @@ it("account replacement discards the prior member's private data", async () => {
     path: "/people",
     client,
     answer: () => {
-      return bootstrap(replacement);
+      return bootstrap({ account: replacement });
     },
   });
   await router.load();
@@ -74,10 +74,11 @@ it("an unchanged account poll fences an overlapping bootstrap and leaves a fresh
   vi.mocked(fetch).mockImplementation(async (input) => {
     const path = String(input);
     paths.push(path);
-    if (path === "/api/me") {
-      return Response.json(ADMIN);
-    }
-    return paths.length === 1 ? staleRead : Response.json(bootstrap().body);
+    return path === "/api/me"
+      ? Response.json(ADMIN)
+      : paths.length === 1
+        ? staleRead
+        : Response.json(bootstrap().body);
   });
   const loading = router.load();
   await vi.waitFor(() => {

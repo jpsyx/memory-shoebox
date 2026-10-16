@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { ArchiveTotals } from "@/api/timeline/timeline";
+import type { ArchiveTotals } from "@/api/timelineHelpers/timelineHelpers";
 import { dayLabel } from "@/system/labelHelpers/labelHelpers";
 import { LabelText } from "@/system/typography/LabelText";
 import classes from "@/system/system.module.css";

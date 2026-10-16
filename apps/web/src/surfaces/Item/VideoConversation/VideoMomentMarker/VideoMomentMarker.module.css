@@ -1,0 +1,9 @@
+.videoMomentMarkerPopover {
+  display: flex;
+  flex-direction: column;
+}
+:global([data-video-player])[role="group"]
+  .videoMomentMarkerPopover
+  button:focus-visible {
+  outline-color: var(--accent-on-print);
+}

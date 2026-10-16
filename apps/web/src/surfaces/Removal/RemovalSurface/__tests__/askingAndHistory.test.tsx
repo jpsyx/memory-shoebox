@@ -1,6 +1,10 @@
 import { makeRemovalRequestFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { getRecordedRequests } from "@/testing/fetchStubHelpers";
-import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
+import {
+  recordedUrls,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarnessHelpers";
 import type { MediaRef, RemovalRequestDto } from "@memory-shoebox/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -42,14 +46,18 @@ function _installRemovesStaleAnswerControlsWhenTheConfirmedAnswers0(): RemovesSt
     media,
   };
 
-  respondWith({ [`GET ${HISTORY}`]: { status: 200, body: RESPONSE } });
+  respondWith({
+    routes: { [`GET ${HISTORY}`]: { status: 200, body: RESPONSE } },
+  });
   return Object.assign(responseState, { created, media, current });
 }
 
 it("accepts a blank reason, records the returned request, and never counts an item open", async () => {
   respondWith({
-    [`GET ${HISTORY}`]: { status: 200, body: RESPONSE },
-    [`POST ${HISTORY}`]: { status: 200, body: OWN },
+    routes: {
+      [`GET ${HISTORY}`]: { status: 200, body: RESPONSE },
+      [`POST ${HISTORY}`]: { status: 200, body: OWN },
+    },
   });
   renderAt(`/items/${ITEM.itemId}/removal`);
   await userEvent.click(
@@ -76,9 +84,11 @@ it.each(["missing", "malformed", "inaccessible"] as const)(
   async (address) => {
     const itemId = address === "malformed" ? "abc" : ITEM.itemId;
     respondWith({
-      [`GET /api/items/${itemId}/removal-requests`]: {
-        status: 404,
-        body: { error: "item_not_found", message: "Not here" },
+      routes: {
+        [`GET /api/items/${itemId}/removal-requests`]: {
+          status: 404,
+          body: { error: "item_not_found", message: "Not here" },
+        },
       },
     });
     renderAt(`/items/${itemId}/removal`);
@@ -93,10 +103,12 @@ it.each(["missing", "malformed", "inaccessible"] as const)(
 );
 it("preserves failed words and refuses a trimmed 4,001 character reason", async () => {
   respondWith({
-    [`GET ${HISTORY}`]: { status: 200, body: RESPONSE },
-    [`POST ${HISTORY}`]: {
-      status: 400,
-      body: { error: "validation_error", message: "Bad reason" },
+    routes: {
+      [`GET ${HISTORY}`]: { status: 200, body: RESPONSE },
+      [`POST ${HISTORY}`]: {
+        status: 400,
+        body: { error: "validation_error", message: "Bad reason" },
+      },
     },
   });
   renderAt(`/items/${ITEM.itemId}/removal`);
@@ -130,17 +142,19 @@ it("restores a surviving asking-page destination after declining removes its tri
     canDecline: true,
   });
   respondWith({
-    [`GET ${HISTORY}`]: {
-      status: 200,
-      body: { ...RESPONSE, removalRequests: [incoming] },
-    },
-    [`POST /api/removal-requests/${incoming.requestId}/decline`]: {
-      status: 200,
-      body: {
-        ...incoming,
-        state: "declined",
-        canDecline: false,
-        declineReason: "Keeping it for now.",
+    routes: {
+      [`GET ${HISTORY}`]: {
+        status: 200,
+        body: { ...RESPONSE, removalRequests: [incoming] },
+      },
+      [`POST /api/removal-requests/${incoming.requestId}/decline`]: {
+        status: 200,
+        body: {
+          ...incoming,
+          state: "declined",
+          canDecline: false,
+          declineReason: "Keeping it for now.",
+        },
       },
     },
   });

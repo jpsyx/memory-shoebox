@@ -2,7 +2,11 @@ import { openItemDetails } from "@/testing/openItemDetails";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { renderAt, respondWith, recordedUrls } from "@/testing/surfaceHarness";
+import {
+  renderAt,
+  respondWith,
+  recordedUrls,
+} from "@/testing/surfaceHarnessHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { makeItemDetail, ITEM_ID } from "@/testing/itemFixtureHelpers";
 import {
@@ -19,34 +23,36 @@ function _respondWithDistinctViewerFacts(): void {
     openCount: 23,
   };
   respondWith({
-    [`GET /api/items/${ITEM_ID}/viewers`]: {
-      status: 200,
-      body: {
-        viewers: [
-          base,
-          {
-            ...base,
-            member: { memberId: ITEM_ID, displayName: "Inés" },
-            hasOpened: false,
-            firstSeenAt: base.firstOpenedAt,
-            firstOpenedAt: null,
-            lastOpenedAt: null,
-            openCount: 0,
-          },
-          {
-            ...base,
-            member: {
-              memberId: "018f0000-0000-7000-8000-000000000099",
-              displayName: "Tomás",
+    routes: {
+      [`GET /api/items/${ITEM_ID}/viewers`]: {
+        status: 200,
+        body: {
+          viewers: [
+            base,
+            {
+              ...base,
+              member: { memberId: ITEM_ID, displayName: "Inés" },
+              hasOpened: false,
+              firstSeenAt: base.firstOpenedAt,
+              firstOpenedAt: null,
+              lastOpenedAt: null,
+              openCount: 0,
             },
-            hasOpened: false,
-            firstSeenAt: null,
-            firstOpenedAt: null,
-            lastOpenedAt: null,
-            openCount: 0,
-          },
-        ],
-        nextCursor: null,
+            {
+              ...base,
+              member: {
+                memberId: "018f0000-0000-7000-8000-000000000099",
+                displayName: "Tomás",
+              },
+              hasOpened: false,
+              firstSeenAt: null,
+              firstOpenedAt: null,
+              lastOpenedAt: null,
+              openCount: 0,
+            },
+          ],
+          nextCursor: null,
+        },
       },
     },
   });
@@ -55,21 +61,23 @@ function _respondWithDistinctViewerFacts(): void {
 describe("Presence", () => {
   it("preserves server order and shows never-arrived members and zero facts", async () => {
     respondWith({
-      "GET /api/presence": {
-        status: 200,
-        body: {
-          presence: [
-            makePresenceRowFromOverrides(),
-            makePresenceRowFromOverrides({
-              member: { memberId: ITEM_ID, displayName: "Rosa" },
-              status: "active",
-              activeDaysCount: 84,
-              itemsOpenedCount: 1912,
-              lastSignedInAt: "2026-09-01T10:00:00.000Z",
-              lastSeenAt: "2026-09-16T10:00:00.000Z",
-            }),
-          ],
-          nextCursor: null,
+      routes: {
+        "GET /api/presence": {
+          status: 200,
+          body: {
+            presence: [
+              makePresenceRowFromOverrides(),
+              makePresenceRowFromOverrides({
+                member: { memberId: ITEM_ID, displayName: "Rosa" },
+                status: "active",
+                activeDaysCount: 84,
+                itemsOpenedCount: 1912,
+                lastSignedInAt: "2026-09-01T10:00:00.000Z",
+                lastSeenAt: "2026-09-16T10:00:00.000Z",
+              }),
+            ],
+            nextCursor: null,
+          },
         },
       },
     });
@@ -117,7 +125,9 @@ describe("Presence", () => {
     "refuses %s without fetching privileged observations",
     async (role) => {
       respondWith({
-        "GET /api/me": { status: 200, body: createMeResponse({ role }) },
+        routes: {
+          "GET /api/me": { status: 200, body: createMeResponse({ role }) },
+        },
       });
       renderAt(`/presence?itemId=${ITEM_ID}`);
       expect(
@@ -136,17 +146,21 @@ describe("Presence", () => {
   );
   it("offers retry for an unavailable member read", async () => {
     respondWith({
-      "GET /api/presence": {
-        status: 503,
-        body: { error: "unavailable", message: "No" },
+      routes: {
+        "GET /api/presence": {
+          status: 503,
+          body: { error: "unavailable", message: "No" },
+        },
       },
     });
     renderAt("/presence");
     await screen.findByRole("button", { name: "Retry" });
     respondWith({
-      "GET /api/presence": {
-        status: 200,
-        body: { presence: [], nextCursor: null },
+      routes: {
+        "GET /api/presence": {
+          status: 200,
+          body: { presence: [], nextCursor: null },
+        },
       },
     });
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -161,7 +175,7 @@ describe("Presence", () => {
         body: { viewers: [], nextCursor: null },
       },
     };
-    respondWith(answers);
+    respondWith({ routes: answers });
     const firstVisit = renderAt(`/presence?itemId=${ITEM_ID}`);
     expect(
       await screen.findByText("No eligible viewer records to show."),
@@ -173,7 +187,7 @@ describe("Presence", () => {
       screen.getByRole("link", { name: "Open this item" }),
     ).toHaveAttribute("href", `/items/${ITEM_ID}`);
     firstVisit.unmount();
-    respondWith(answers);
+    respondWith({ routes: answers });
     renderAt(`/presence?itemId=${ITEM_ID}`);
     expect(
       await screen.findByText("No eligible viewer records to show."),
@@ -183,7 +197,9 @@ describe("Presence", () => {
     expect(screen.queryByRole("img")).toBeNull();
     expect(screen.queryByText("Sep 14, 2026, 6:41 AM")).toBeNull();
     respondWith({
-      [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
+      routes: {
+        [`GET /api/items/${ITEM_ID}`]: { status: 200, body: makeItemDetail() },
+      },
     });
     await userEvent.click(screen.getByRole("link", { name: "Open this item" }));
     await openItemDetails();
@@ -195,9 +211,11 @@ describe("Presence", () => {
   it("reuses a cached real preview without a counting item GET", async () => {
     const detail = makeItemDetail();
     respondWith({
-      [`GET /api/items/${ITEM_ID}/viewers`]: {
-        status: 200,
-        body: { viewers: [], nextCursor: null },
+      routes: {
+        [`GET /api/items/${ITEM_ID}/viewers`]: {
+          status: 200,
+          body: { viewers: [], nextCursor: null },
+        },
       },
     });
     const { router } = renderAt(`/presence?itemId=${ITEM_ID}`);
@@ -217,9 +235,11 @@ describe("Presence", () => {
   });
   it("retries only unavailable viewers without opening an uncached item", async () => {
     respondWith({
-      [`GET /api/items/${ITEM_ID}/viewers`]: {
-        status: 503,
-        body: { error: "unavailable", message: "No" },
+      routes: {
+        [`GET /api/items/${ITEM_ID}/viewers`]: {
+          status: 503,
+          body: { error: "unavailable", message: "No" },
+        },
       },
     });
     renderAt(`/presence?itemId=${ITEM_ID}`);
@@ -228,9 +248,11 @@ describe("Presence", () => {
     expect(recordedUrls()).not.toContain(`/api/items/${ITEM_ID}`);
     expect(screen.queryByText(/0 of 0/)).toBeNull();
     respondWith({
-      [`GET /api/items/${ITEM_ID}/viewers`]: {
-        status: 200,
-        body: { viewers: [], nextCursor: null },
+      routes: {
+        [`GET /api/items/${ITEM_ID}/viewers`]: {
+          status: 200,
+          body: { viewers: [], nextCursor: null },
+        },
       },
     });
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));

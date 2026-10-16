@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { expectCurrentPhotoDecoded } from "./measurements.ts";
+import { expectCurrentPhotoDecoded } from "./mediaMeasurementHelpers.ts";
 import { expect, test } from "./media.fixtures.ts";
 
 test.use({ catalogSize: 80 });

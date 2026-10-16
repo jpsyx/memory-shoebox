@@ -2,12 +2,12 @@ import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFi
 import {
   getRecordedBodyFromRequest,
   recordedRequests,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { DirectoryPerson } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderTimeline } from "./TimelineSurface.fixtures";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import {
   answerBulkTimeline,
   BULK_ITEM_IDS,

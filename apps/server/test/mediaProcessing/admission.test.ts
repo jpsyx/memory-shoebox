@@ -1,3 +1,4 @@
+import type { FfprobeMetadata } from "../../src/mediaProcessing/runtime/probeMedia/probeMediaHelpers.ts";
 import { describe, expect, it } from "vitest";
 import { getMediaAdmissionFromProbe } from "../../src/mediaProcessing/runtime/getMediaAdmissionFromProbe.ts";
 import type { MediaProbe } from "../../src/mediaProcessing/runtime/mediaRuntime.types.ts";
@@ -6,9 +7,9 @@ const PHOTO: MediaProbe = {
   kind: "photo",
   width: 6000,
   height: 4000,
-  frameRate: null,
+  frameRate: undefined,
   bitDepth: 8,
-  durationMs: null,
+  durationMs: undefined,
   hasAudio: false,
   transfer: "sdr",
   rotationDegrees: 0,
@@ -39,29 +40,32 @@ describe("media admission", () => {
     ["invalid rotation", { rotationDegrees: 45 }, 1024, false],
     ["unknown transfer", { transfer: "unsupported" }, 1024, false],
     ["empty source", {}, 0, false],
-  ] as const)("handles photo %s", (_label, changes, sourceBytes, admitted) => {
-    const result = getMediaAdmissionFromProbe({
-      probe: { ...PHOTO, ...changes },
-      sourceBytes,
-    });
-    expect(result.admitted).toBe(admitted);
-    expect(result.reason === null).toBe(admitted);
-  });
+  ] as const)(
+    "photo %s (%j, %s bytes) is admitted: %s",
+    (_label, changes, sourceBytes, admitted) => {
+      const result = getMediaAdmissionFromProbe({
+        probe: { ...PHOTO, ...changes },
+        sourceBytes,
+      });
+      expect(result.admitted).toBe(admitted);
+      expect(result.reason === undefined).toBe(admitted);
+    },
+  );
 
   it.each([
     ["landscape 4K", {}, true],
     ["portrait 4K", { width: 2160, height: 3840 }, true],
     ["larger HEVC", { width: 4096, height: 2160 }, false],
     ["over 60 fps", { frameRate: 60.01 }, false],
-    ["missing frame rate", { frameRate: null }, false],
+    ["missing frame rate", { frameRate: undefined }, false],
     ["over 10 bits", { bitDepth: 12 }, false],
     ["over 30 minutes", { durationMs: 1_800_001 }, false],
-    ["missing duration", { durationMs: null }, false],
+    ["missing duration", { durationMs: undefined }, false],
     ["invalid duration", { durationMs: Number.NaN }, false],
     ["unsupported HDR", { transfer: "unsupported" }, false],
     ["PQ HDR", { transfer: "pq" }, true],
     ["HLG HDR", { transfer: "hlg" }, true],
-  ] as const)("handles video %s", (_label, changes, admitted) => {
+  ] as const)("video %s (%j) is admitted: %s", (_label, changes, admitted) => {
     expect(
       getMediaAdmissionFromProbe({
         probe: { ...VIDEO, ...changes },
@@ -72,10 +76,10 @@ describe("media admission", () => {
 });
 
 import {
-  getMediaInputArguments,
+  makeMediaArgumentsFromInput,
   getProbeFromFfprobe,
   getProbeFromHeifInfo,
-} from "../../src/mediaProcessing/runtime/probeMedia/probeMedia.helpers.ts";
+} from "../../src/mediaProcessing/runtime/probeMedia/probeMediaHelpers.ts";
 const VIDEO_METADATA = {
   streams: [
     {
@@ -93,7 +97,7 @@ const VIDEO_METADATA = {
     { codec_type: "audio", codec_name: "aac" },
   ],
   format: { duration: "10" },
-};
+} satisfies FfprobeMetadata;
 describe("bounded probe metadata", () => {
   it("extracts actual portrait HEVC and HDR metadata", () => {
     expect(
@@ -168,7 +172,7 @@ describe("bounded probe metadata", () => {
     }).toThrow("processing_photo_not_still");
   });
   it("restricts MOV demuxing and disables external references", () => {
-    const args = getMediaInputArguments({
+    const args = makeMediaArgumentsFromInput({
       format: "mov",
       input: "http://127.0.0.1:1234/opaque",
     });
@@ -181,7 +185,7 @@ describe("bounded probe metadata", () => {
       ),
     ).toEqual(["-enable_drefs", "0"]);
     expect(() => {
-      return getMediaInputArguments({
+      return makeMediaArgumentsFromInput({
         format: "mov",
         input: "https://private.invalid/secret",
       });
@@ -218,7 +222,7 @@ describe("whole-media duration admission", () => {
       undefined,
       ["12"],
       undefined,
-      null,
+      undefined,
       false,
     ],
     [
@@ -226,16 +230,16 @@ describe("whole-media duration admission", () => {
       "10",
       [undefined],
       undefined,
-      null,
+      undefined,
       false,
     ],
-    ["nonnumeric audio duration", "10", ["N/A"], "12", null, false],
-    ["negative audio duration", "10", ["-1"], "12", null, false],
-    ["nonfinite audio duration", "10", ["Infinity"], "12", null, false],
-    ["nonnumeric container duration", "10", ["11"], "NaN", null, false],
-    ["no known duration", undefined, [], undefined, null, false],
+    ["nonnumeric audio duration", "10", ["N/A"], "12", undefined, false],
+    ["negative audio duration", "10", ["-1"], "12", undefined, false],
+    ["nonfinite audio duration", "10", ["Infinity"], "12", undefined, false],
+    ["nonnumeric container duration", "10", ["11"], "NaN", undefined, false],
+    ["no known duration", undefined, [], undefined, undefined, false],
   ] as const)(
-    "handles %s",
+    "for %s (video %s, audio %j, container %s), duration is %s ms and admitted is %s",
     (
       _label,
       videoDuration,

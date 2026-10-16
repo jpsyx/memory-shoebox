@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import {
   getPartCountFromByteSize,
   makeUploadStorageKeyFromRendition,
@@ -40,7 +40,7 @@ describe("makeUploadStorageKeyFromRendition", () => {
 
 describe("getPartCountFromByteSize", () => {
   it("cuts at the configured part size, the last part taking what is left", () => {
-    const partSizeBytes = appConfig.upload.multipartPartSizeBytes;
+    const partSizeBytes = APP_CONFIG.upload.multipartPartSizeBytes;
 
     expect(getPartCountFromByteSize(1)).toBe(1);
     expect(getPartCountFromByteSize(partSizeBytes)).toBe(1);

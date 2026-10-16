@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 import { makeUploadSessionDetail } from "@/testing/makeUploadSessionDetail";
 import {
   makeWorkerAnswerFromRequest,
@@ -226,7 +226,7 @@ describe("draft visual duplicate checking", () => {
     );
     await controller.pickFiles(
       Array.from(
-        { length: appConfig.upload.heicWorkerRecycleCount * 2 + 1 },
+        { length: APP_CONFIG.upload.heicWorkerRecycleCount * 2 + 1 },
         (_, index) => {
           return new File(["heic"], `${index}.heic`, { type: "image/heic" });
         },
@@ -238,7 +238,7 @@ describe("draft visual duplicate checking", () => {
         return (
           worker.requests.filter((request) => {
             return request.kind === "fingerprint";
-          }).length <= appConfig.upload.heicWorkerRecycleCount
+          }).length <= APP_CONFIG.upload.heicWorkerRecycleCount
         );
       }),
     ).toBe(true);

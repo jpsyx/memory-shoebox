@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createLifecycleFixture } from "./lifecycleTestHelpers.ts";
+import { createLifecycleFixture } from "./createLifecycleFixture.ts";
 import { runDelete } from "../helpers/runDelete.ts";
 
 it("queues unpublished attempts and preserves published tombstones when an item is deleted", async () => {

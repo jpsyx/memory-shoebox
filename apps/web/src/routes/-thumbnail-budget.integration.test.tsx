@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";

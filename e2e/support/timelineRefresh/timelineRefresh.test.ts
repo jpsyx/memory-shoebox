@@ -2,7 +2,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   readTimelineAdapterFromBundle,
   type TimelineIntegrationPage,
-} from "../../../apps/web/src/testing/timelineAdapter/readTimelineAdapterFromBundle.ts";
+} from "../../../apps/web/src/testing/timelineAdapter/timelineAdapterHelpers.ts";
 import {
   makeTimelineRefreshHarness,
   restoreNewestTimelinePages,
@@ -82,9 +82,9 @@ describe("production timeline adapter against the real server", () => {
           selectionResultCount: 0,
           nextCursor: null,
           previousCursor: null,
-          requestCursor: null,
+          requestCursor: undefined,
         });
-        expect(after.data!.pageParams).toEqual([null]);
+        expect(after.data!.pageParams).toEqual([undefined]);
         expect(after.hasNextPage).toBe(false);
         expect(after.hasPreviousPage).toBe(false);
         expect(harness.requests.slice(requestStart)).toHaveLength(2);
@@ -107,14 +107,13 @@ describe("production timeline adapter against the real server", () => {
         .execute();
       let releaseOldRestart: (() => void) | undefined;
       harness.hold((path, response) => {
-        if (new URL(path, "http://localhost").searchParams.has("cursor")) {
-          return Promise.resolve(response);
-        }
-        return new Promise<Response>((finish) => {
-          releaseOldRestart = () => {
-            finish(response);
-          };
-        });
+        return new URL(path, "http://localhost").searchParams.has("cursor")
+          ? Promise.resolve(response)
+          : new Promise<Response>((finish) => {
+              releaseOldRestart = () => {
+                finish(response);
+              };
+            });
       });
       const oldRefresh = harness.observer.refetch();
       await vi.waitFor(() => {
@@ -127,7 +126,7 @@ describe("production timeline adapter against the real server", () => {
       });
       expect(oldRestartSignal?.aborted).toBe(true);
       harness.hold(undefined);
-      await harness.insert(28);
+      await harness.insert({ day: 28 });
       await harness.observer.refetch();
       const replacement = harness.observer.getCurrentResult().data!;
       expect(replacement.pages[0]!.days[0]!.capturedOn).toBe("2026-09-28");
@@ -198,7 +197,7 @@ describe("production timeline adapter against the real server", () => {
         "2026-09-23",
         "2026-09-22",
       ]);
-      expect(refreshed.data!.pageParams[0]).toBeNull();
+      expect(refreshed.data!.pageParams[0]).toBeUndefined();
       expect(
         refreshed.data!.pages.every((page) => {
           return page.selectionResultCount === 6;
@@ -224,19 +223,20 @@ describe("production timeline adapter against the real server", () => {
       const containingIndex = 2;
       const containingCursor = refreshed.data!.pageParams[containingIndex];
       const replayPath = `/api/timeline?tags=${new URL(refreshRequests[1]!.path, "http://localhost").searchParams.get("tags")}&until=2026-09-30&limit=1${containingCursor === null ? "" : `&cursor=${containingCursor}`}`;
-      // Replay through the same authenticated transport and compare the actual containing day.
+      // Replay through the same authenticated transport and compare the actual
+      // containing day.
       const replayed = await fetch(replayPath).then((response) => {
         return response.json();
       });
       expect(replayed.days).toEqual(
         refreshed.data!.pages[containingIndex]!.days,
       );
-      await harness.insert(28);
+      await harness.insert({ day: 28 });
       const secondStart = harness.requests.length;
       await harness.observer.refetch();
       const second = harness.observer.getCurrentResult().data!;
       expect(second.pages[0]!.days[0]!.capturedOn).toBe("2026-09-28");
-      expect(second.pageParams[0]).toBeNull();
+      expect(second.pageParams[0]).toBeUndefined();
       expect(harness.requests.slice(secondStart)).toHaveLength(5);
       expect(
         new URL(

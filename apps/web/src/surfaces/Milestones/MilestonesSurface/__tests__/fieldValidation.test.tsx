@@ -3,7 +3,7 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,20 +13,22 @@ function _installAssociatesServerNameAndDateRefusalsWithAnswers0(): {
 } {
   const path = `/api/milestones/${detail.milestone.milestoneId}`;
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
-    },
-    [`GET ${path}`]: { status: 200, body: detail },
-    [`PATCH ${path}`]: {
-      status: 400,
-      body: {
-        error: "invalid_request",
-        message: "Invalid",
-        details: {
-          fieldErrors: {
-            name: ["Choose a more specific name."],
-            endsOn: ["Choose the last day again."],
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
+      },
+      [`GET ${path}`]: { status: 200, body: detail },
+      [`PATCH ${path}`]: {
+        status: 400,
+        body: {
+          error: "invalid_request",
+          message: "Invalid",
+          details: {
+            fieldErrors: {
+              name: ["Choose a more specific name."],
+              endsOn: ["Choose the last day again."],
+            },
           },
         },
       },
@@ -47,11 +49,13 @@ afterEach(() => {
 
 it("addresses an unfinished local date, retains words and saves after deliberate correction", async () => {
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [], nextCursor: null },
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [], nextCursor: null },
+      },
+      "POST /api/milestones": { status: 201, body: detail },
     },
-    "POST /api/milestones": { status: 201, body: detail },
   });
   renderAt("/milestones?mode=create");
   await userEvent.type(
@@ -118,12 +122,14 @@ it("associates server name and date refusals with retained controls and allows c
     (await screen.findAllByRole("button", { name: /\d+ \w+ 2026/ }))[16]!,
   );
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
+      },
+      [`GET ${responses0.path}`]: { status: 200, body: detail },
+      [`PATCH ${responses0.path}`]: { status: 200, body: detail },
     },
-    [`GET ${responses0.path}`]: { status: 200, body: detail },
-    [`PATCH ${responses0.path}`]: { status: 200, body: detail },
   });
   await userEvent.click(
     screen.getByRole("button", { name: "Save the changes" }),

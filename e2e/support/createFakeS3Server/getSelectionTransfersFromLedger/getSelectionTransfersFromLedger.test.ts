@@ -5,11 +5,15 @@ import type {
 } from "../createFakeS3Server.types.ts";
 import { getSelectionTransfersFromLedger } from "./getSelectionTransfersFromLedger.ts";
 
-function _request(
-  requestId: number,
-  objectId: string,
-  bodyBytes: number,
-): FakeS3RequestEvidence {
+function _request({
+  requestId,
+  objectId,
+  bodyBytes,
+}: {
+  requestId: number;
+  objectId: string;
+  bodyBytes: number;
+}): FakeS3RequestEvidence {
   return {
     requestId,
     objectId,
@@ -32,9 +36,9 @@ const ledger: FakeS3LedgerSnapshot = {
   activeRequests: 0,
   bodyBytes: 3816,
   requests: [
-    _request(5, "target/display", 2),
-    _request(8, "target/thumb", 3809),
-    _request(9, "other/thumb", 5),
+    _request({ requestId: 5, objectId: "target/display", bodyBytes: 2 }),
+    _request({ requestId: 8, objectId: "target/thumb", bodyBytes: 3809 }),
+    _request({ requestId: 9, objectId: "other/thumb", bodyBytes: 5 }),
   ],
 };
 const options = {
@@ -42,7 +46,10 @@ const options = {
   objectIds: ["target/thumb", "target/display"],
   sequenceAtSelection: 12,
   activeRequestIds: [],
-};
+} satisfies Omit<
+  Parameters<typeof getSelectionTransfersFromLedger>[0],
+  "requestStartWatermark" | "nextSelectionWatermark"
+>;
 
 test("attributes a later thumbnail only to its repeated-ID visit, retaining bytes completed after the next selection", () => {
   const firstVisit = getSelectionTransfersFromLedger({

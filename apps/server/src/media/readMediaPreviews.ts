@@ -4,7 +4,7 @@ import {
   type MediaPreviewRequest,
   type MediaSource,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import { makeMediaRefFromSources } from "../archive/makeMediaRefFromSources.ts";
 import { readMediaSources } from "../archive/readMediaSources.ts";
 import {
@@ -46,7 +46,7 @@ function _makePreviewFromRow(options: {
       width: row.width,
       height: row.height,
       previewState: options.previewState,
-      durationMs: row.duration_ms,
+      durationMs: row.duration_ms ?? undefined,
       altText: row.alt_text ?? (kind === "photo" ? "Photo" : "Video"),
       sources,
     }),
@@ -76,7 +76,7 @@ export async function readMediaPreviews(
         return [row.id, request.purpose];
       }),
     ),
-    ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+    ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
   });
   const previews = new Map(
     rows.map((row) => {

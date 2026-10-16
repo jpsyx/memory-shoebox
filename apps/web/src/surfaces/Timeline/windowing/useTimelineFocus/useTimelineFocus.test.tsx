@@ -1,10 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { makeDay, makeItem } from "../../timelineFixtures";
+import { makeDay, makeItem } from "../../timelineFixtureHelpers";
 import { getTimelineRowsFromDays } from "../getTimelineRowsFromDays/getTimelineRowsFromDays";
 import { useTimelineFocus } from "./useTimelineFocus";
 
-it("keeps a focused row's node identity and bounded snapshot through regrouping and eviction", () => {
+it("keeps a focused row's reference and bounded snapshot through regrouping and eviction", () => {
   const day = makeDay({
     items: Array.from({ length: 12 }, (_, index) => {
       return makeItem({ itemId: `item-${index}` });
@@ -13,7 +13,7 @@ it("keeps a focused row's node identity and bounded snapshot through regrouping 
   const original = getTimelineRowsFromDays({ days: [day], columns: 3 });
   const hook = renderHook(
     ({ rows }) => {
-      return useTimelineFocus(rows, "view", 0);
+      return useTimelineFocus({ rows, viewKey: "view", retirement: 0 });
     },
     {
       initialProps: { rows: original },
@@ -76,7 +76,11 @@ it("retires a focused private snapshot on authoritative publication after direct
   const unsubscribe = observer.subscribe(() => {});
   const hook = renderHook(
     () => {
-      return useTimelineFocus(rows, JSON.stringify(queryKey), 0);
+      return useTimelineFocus({
+        rows,
+        viewKey: JSON.stringify(queryKey),
+        retirement: 0,
+      });
     },
     {
       wrapper: ({ children }) => {

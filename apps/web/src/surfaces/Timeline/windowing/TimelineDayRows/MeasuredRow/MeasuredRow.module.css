@@ -1,0 +1,29 @@
+.measuredRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--tile)), 1fr));
+  align-items: start;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
+  min-height: 1px;
+  content-visibility: visible;
+}
+.measuredRowLast {
+  padding-bottom: var(--sp-5);
+}
+:global([data-pile="messy"]) .measuredRow {
+  column-gap: 2px;
+}
+.measuredRowFan {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--panel-sunk);
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);
+}
+.measuredRowFanHeader {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 25;
+}

@@ -38,7 +38,7 @@ first, because each removes a decision:
 | `apps/server/src/db/client.ts`                               | `PRAGMA foreign_keys = ON`, so every cascade a sweep relies on is enforced behaviour                                                       |
 | `packages/shared/src/settings.ts`                            | `SETTING_DEFINITIONS` and `getSettingValueFromStoredValue`, which already returns a key's default when no row exists or the row is corrupt |
 | `packages/shared/src/errors.ts`                              | `apiErrorSchema` and `apiErrorDetailsSchema`, with `fieldErrors`, `retryAfterSeconds` and `attemptsRemaining` already on it                |
-| `apps/server/src/web/staticSpa.ts`                           | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                                         |
+| `apps/server/src/web/registerStaticSpa.ts`                   | The JSON 404 for an unmatched `/api/` path, which the error handler must not fight                                                         |
 
 ## Decisions
 

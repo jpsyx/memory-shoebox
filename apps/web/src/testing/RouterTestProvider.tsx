@@ -6,10 +6,10 @@ import {
   RouterContextProvider,
 } from "@tanstack/react-router";
 
+type Props = { children: ReactNode };
+
 /** Supplies real link semantics to isolated component presentation tests. */
-export function RouterTestProvider({
-  children,
-}: Readonly<{ children: ReactNode }>): ReactNode {
+export function RouterTestProvider({ children }: Readonly<Props>): ReactNode {
   const [router] = useState(() => {
     return createRouter({
       routeTree: createRootRoute(),

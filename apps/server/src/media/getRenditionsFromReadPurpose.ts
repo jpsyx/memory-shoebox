@@ -24,12 +24,19 @@ function _isImage(row: Readonly<RenditionRow>): boolean {
   );
 }
 
-/** Browser-decodable stills within a purpose's oriented dimensions and byte budget. */
-function _isEconomicalImage(
-  row: Readonly<RenditionRow>,
-  maxDimension: number,
-  maxBytes: number,
-): boolean {
+/**
+ * Browser-decodable stills within a purpose's oriented dimensions and byte
+ * budget.
+ */
+function _isEconomicalImage({
+  row,
+  maxDimension,
+  maxBytes,
+}: {
+  row: Readonly<RenditionRow>;
+  maxDimension: number;
+  maxBytes: number;
+}): boolean {
   return (
     _isImage(row) &&
     Math.max(row.width, row.height) <= maxDimension &&
@@ -37,10 +44,13 @@ function _isEconomicalImage(
   );
 }
 
-function _getThumbnailFromRows(
-  rows: readonly RenditionRow[],
-  kind: "photo" | "video",
-): RenditionRow | undefined {
+function _getThumbnailFromRows({
+  rows,
+  kind,
+}: {
+  rows: readonly RenditionRow[];
+  kind: "photo" | "video";
+}): RenditionRow | undefined {
   const purposes: RenditionPurpose[] =
     kind === "photo"
       ? [
@@ -60,7 +70,7 @@ function _getThumbnailFromRows(
     })
     .find((row) => {
       return row.purpose === "original"
-        ? _isEconomicalImage(row, 480, 128 * 1024)
+        ? _isEconomicalImage({ row, maxDimension: 480, maxBytes: 128 * 1024 })
         : _isImage(row) &&
             (row.purpose === "thumb" || Math.max(row.width, row.height) <= 480);
     });
@@ -80,16 +90,23 @@ function _getDisplaysFromRows(rows: readonly RenditionRow[]): RenditionRow[] {
   const original = rows.find((row) => {
     return (
       row.purpose === "original" &&
-      _isEconomicalImage(row, 2048, 1.5 * 1024 * 1024)
+      _isEconomicalImage({
+        row,
+        maxDimension: 2048,
+        maxBytes: 1.5 * 1024 * 1024,
+      })
     );
   });
   return original === undefined ? [] : [original];
 }
 
-function _getPlaybackFromRows(
-  rows: readonly RenditionRow[],
-  purpose: MediaReadPurpose,
-): RenditionRow | undefined {
+function _getPlaybackFromRows({
+  rows,
+  purpose,
+}: {
+  rows: readonly RenditionRow[];
+  purpose: MediaReadPurpose;
+}): RenditionRow | undefined {
   return (
     rows.find((row) => {
       return row.purpose === "video_mp4" && row.contentType === "video/mp4";
@@ -111,12 +128,17 @@ function _getPlaybackFromRows(
  * Selects economical previews before signing. Only selected videos may use an
  * original playback fallback; thumbnail reads never sign unused displays.
  */
-export function getRenditionsFromReadPurpose(options: {
-  rows: readonly RenditionRow[];
-  kind: "photo" | "video";
-  purpose: MediaReadPurpose;
-}): readonly RenditionRow[] {
-  const thumbnail = _getThumbnailFromRows(options.rows, options.kind);
+export function getRenditionsFromReadPurpose(
+  options: Readonly<{
+    rows: readonly RenditionRow[];
+    kind: "photo" | "video";
+    purpose: MediaReadPurpose;
+  }>,
+): RenditionRow[] {
+  const thumbnail = _getThumbnailFromRows({
+    rows: options.rows,
+    kind: options.kind,
+  });
   const selected = new Set<RenditionRow>(
     thumbnail === undefined ? [] : [thumbnail],
   );
@@ -129,7 +151,10 @@ export function getRenditionsFromReadPurpose(options: {
       const poster = options.rows.find((row) => {
         return row.purpose === "poster" && _isImage(row);
       });
-      const playback = _getPlaybackFromRows(options.rows, options.purpose);
+      const playback = _getPlaybackFromRows({
+        rows: options.rows,
+        purpose: options.purpose,
+      });
       if (poster !== undefined) {
         selected.add(poster);
       }

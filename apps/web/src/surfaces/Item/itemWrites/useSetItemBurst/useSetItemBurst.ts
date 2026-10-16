@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { useRef } from "react";
 import { itemQueryOptions, setItemBurst } from "@/api/items/items";
-import { TIMELINE_QUERY_KEY } from "@/api/timeline/timeline";
+import { TIMELINE_QUERY_KEY } from "@/api/timelineHelpers/timelineHelpers";
 import { itemWriteFailure } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import {
   makeWriteScopeFromItemId,
@@ -38,7 +38,9 @@ async function _refreshBurstReads(
   ]);
 }
 
-/** Writes one photo's membership and refreshes the pile without counting opens. */
+/**
+ * Writes one photo's membership and refreshes the pile without counting opens.
+ */
 export function useSetItemBurst(
   itemId: string,
   action: "remove" | "restore",

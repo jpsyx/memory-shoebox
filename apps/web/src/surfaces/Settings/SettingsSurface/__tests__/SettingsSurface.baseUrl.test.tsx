@@ -4,8 +4,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { publicSettingsQueryOptions } from "@/api/publicSettings/publicSettings";
 import {
   countCallsTo,
-  getBodiesSentTo,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+  getBodiesFromRecordedRequests,
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   renderSettings,
   makeSavedSettingsResponseFromOverrides,
@@ -32,16 +32,16 @@ it("saves only the base URL and uses the saved URL for later cancellation", asyn
   expect(input).toHaveValue("https://shoebox.example.com");
   await user.clear(input);
   await user.type(input, " https://family.example.com ");
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
   await user.click(screen.getByRole("button", { name: "Save base URL" }));
   expect(await screen.findByText("The base URL has been saved.")).toBeVisible();
   await waitFor(() => {
     expect(input).toBeEnabled();
   });
   expect(input).toHaveValue("https://family.example.com");
-  expect(getBodiesSentTo("PATCH", "/api/settings")).toEqual([
-    { public: { baseUrl: "https://family.example.com" } },
-  ]);
+  expect(
+    getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/settings" }),
+  ).toEqual([{ public: { baseUrl: "https://family.example.com" } }]);
   expect(queryClient.getQueryData(publicSettingsQueryOptions.queryKey)).toEqual(
     {
       shoeboxName: "My Shoebox",
@@ -51,7 +51,7 @@ it("saves only the base URL and uses the saved URL for later cancellation", asyn
   await user.type(input, "/draft");
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   expect(input).toHaveValue("https://family.example.com");
-  expect(countCallsTo("PATCH", "/api/settings")).toBe(1);
+  expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(1);
 });
 
 it.each(["/relative", "ftp://family.example.com", "invalid"])(
@@ -69,7 +69,7 @@ it.each(["/relative", "ftp://family.example.com", "invalid"])(
       ),
     ).toBeVisible();
     expect(input).toHaveValue(draft);
-    expect(countCallsTo("PATCH", "/api/settings")).toBe(0);
+    expect(countCallsTo({ method: "PATCH", path: "/api/settings" })).toBe(0);
   },
 );
 

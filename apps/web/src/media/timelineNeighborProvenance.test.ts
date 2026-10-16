@@ -1,17 +1,18 @@
+import type { TimelineSelection } from "@memory-shoebox/shared";
 import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
-import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeTimelineQueryOptionsFromView } from "@/api/timelineHelpers/timelineHelpers";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { makeFrameIdFromPosition } from "@/testing/itemFixtureHelpers";
 import { getKnownMediaNeighborWindowFromQueries } from "./getKnownMediaNeighborWindowFromQueries";
 
-const selection = { tags: [], people: [] };
+const SELECTION = { tags: [], people: [] } satisfies TimelineSelection;
 const items = Array.from({ length: 8 }, (_unused, index) => {
   return makeItem({ itemId: makeFrameIdFromPosition(index + 1) });
 });
 const options = makeTimelineQueryOptionsFromView({
   memberId: "member",
-  view: { selection, at: undefined },
+  view: { selection: SELECTION, at: undefined },
 });
 
 afterEach(() => {
@@ -30,7 +31,7 @@ describe("retained timeline page authority", () => {
         nextCursor: "older-1",
         previousCursor: null,
         resultCount: null,
-        selectionResultCount: null,
+        selectionResultCount: undefined,
         metadataUpdatedAt: 1_000_000,
       };
       const leading =
@@ -59,7 +60,11 @@ describe("retained timeline page authority", () => {
         const window = getKnownMediaNeighborWindowFromQueries({
           queryClient,
           memberId: "member",
-          request: { itemId: items[0]!.itemId, selection, direction: "next" },
+          request: {
+            itemId: items[0]!.itemId,
+            selection: SELECTION,
+            direction: "next",
+          },
         });
         if (scenario === "adjacent") {
           expect(
@@ -102,7 +107,7 @@ describe("retained timeline page authority", () => {
           memberId: "member",
           request: {
             itemId: items[position]!.itemId,
-            selection,
+            selection: SELECTION,
             direction: "next",
           },
         });
@@ -122,11 +127,11 @@ describe("retained timeline page authority", () => {
         expect(queryClient.getQueryState(options.queryKey)?.dataUpdatedAt).toBe(
           1_000_000 + elapsed,
         );
-        for (const position of [1, 3]) {
+        [1, 3].forEach((position) => {
           expect(getWindow(position)?.metadataUpdatedAt).toBe(
             elapsed > 30_000 ? undefined : 1_000_000,
           );
-        }
+        });
         expect(getWindow(5)?.metadataUpdatedAt).toBe(1_000_000 + elapsed);
       } finally {
         observer.destroy();
@@ -146,13 +151,17 @@ describe("retained timeline page authority", () => {
           resultCount: null,
         },
       ],
-      pageParams: [null],
+      pageParams: [undefined],
     });
     expect(
       getKnownMediaNeighborWindowFromQueries({
         queryClient,
         memberId: "member",
-        request: { itemId: items[1]!.itemId, selection, direction: "next" },
+        request: {
+          itemId: items[1]!.itemId,
+          selection: SELECTION,
+          direction: "next",
+        },
       }),
     ).toBeUndefined();
     queryClient.clear();
@@ -164,7 +173,7 @@ describe("retained timeline page authority", () => {
       vi.spyOn(Date, "now").mockReturnValue(1_031_000);
       const queryClient = new QueryClient();
       const fresh = {
-        selectionResultCount: null,
+        selectionResultCount: undefined,
         previousCursor: null,
         days: [makeDay({ items: items.slice(0, 2) })],
         metadataUpdatedAt: 1_031_000,
@@ -209,7 +218,7 @@ describe("retained timeline page authority", () => {
           memberId: "member",
           request: {
             itemId: items[position === "leading" ? 0 : 1]!.itemId,
-            selection,
+            selection: SELECTION,
             direction: "next",
           },
         }),

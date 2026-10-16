@@ -210,11 +210,13 @@ function useSightingBuffer(options: {
  *   batch.
  * @returns A ref for the element containing the prints.
  */
-export function useSeenLatch(options: {
-  ownerKey: string;
-  unseenById: ReadonlyMap<string, boolean>;
-  onLatch: (body: ItemsSeenRequest) => void;
-}): RefCallback<HTMLElement> {
+export function useSeenLatch(
+  options: Readonly<{
+    ownerKey: string;
+    unseenById: ReadonlyMap<string, boolean>;
+    onLatch: (body: ItemsSeenRequest) => void;
+  }>,
+): RefCallback<HTMLElement> {
   const { onEntries, cancel } = useSightingBuffer(options);
 
   return useCallback(

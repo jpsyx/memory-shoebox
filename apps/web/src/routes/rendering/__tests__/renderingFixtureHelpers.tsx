@@ -1,4 +1,5 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { renderAt as renderSurfaceAt } from "@/testing/surfaceHarnessHelpers";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import type {
   MailHealthResponse,
   GetSettingsResponse,
@@ -167,31 +168,7 @@ export function signOutRenderingFixture(): void {
 
 /** Renders the real router and returns it without waiting for a heading. */
 export function renderRouterAt(path: string): Router<typeof routeTree> {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const router = createRouter({
-    routeTree,
-    context: { queryClient },
-    history: createMemoryHistory({ initialEntries: [path] }),
-  });
-  installBootstrapRedirectTracking({
-    router,
-    client: router.options.context!.queryClient,
-  });
-
-  render(
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider
-        theme={theme}
-        cssVariablesResolver={cssVariablesResolver}
-      >
-        <RouterProvider router={router as never} />
-      </MantineProvider>
-    </QueryClientProvider>,
-  );
-
-  return router;
+  return renderSurfaceAt(path).router;
 }
 
 /** Opens the addressed route and returns its visible level-one heading. */

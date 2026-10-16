@@ -2,13 +2,9 @@ import { Popover } from "@mantine/core";
 import { IconMessageCircle, IconMoodSmile } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import classes from "./MediaReactionBar.module.css";
+import type { Choice } from "./MediaReactionBar.types";
+import { MediaReactionChoice } from "./MediaReactionChoice/MediaReactionChoice";
 
-type Choice<Value extends string> = {
-  value: Value;
-  emoji: string;
-  label: string;
-  title?: string;
-};
 type Props<Value extends string> = {
   choices: ReadonlyArray<Choice<Value>>;
   label: string;
@@ -23,7 +19,9 @@ type Props<Value extends string> = {
   onComment: () => void;
 };
 
-/** Shared emoji choices and Comment action for photos and timed video reactions. */
+/**
+ * Shared emoji choices and Comment action for photos and timed video reactions.
+ */
 export function MediaReactionBar<Value extends string>({
   choices,
   label,
@@ -36,51 +34,53 @@ export function MediaReactionBar<Value extends string>({
   onReact,
   onComment,
 }: Readonly<Props<Value>>): ReactNode {
-  const renderChoice = (choice: Choice<Value>) => {
-    return (
-      <button
-        className={classes.emojiButton}
-        key={choice.value}
-        type="button"
-        aria-label={`React: ${choice.label}`}
-        title={choice.title ?? choice.label}
-        aria-pressed={
-          chosen === undefined ? undefined : chosen === choice.value
-        }
-        disabled={disabled}
-        onClick={() => {
-          onReact(choice.value);
-        }}
-      >
-        <span className={classes.emoji} aria-hidden="true">
-          {choice.emoji}
-        </span>
-      </button>
-    );
-  };
   return (
-    <div className={classes.reactionArea}>
-      <div className={classes.reactionControls}>
-        <div className={classes.reactionBar} role="group" aria-label={label}>
-          {choices.slice(0, 6).map(renderChoice)}
+    <div className={classes.mediaReactionBarArea}>
+      <div className={classes.mediaReactionBarControls}>
+        <div
+          className={classes.mediaReactionBar}
+          role="group"
+          aria-label={label}
+        >
+          {choices.slice(0, 6).map((choice) => {
+            return (
+              <MediaReactionChoice
+                key={choice.value}
+                choice={choice}
+                chosen={chosen}
+                disabled={disabled}
+                onReact={onReact}
+              />
+            );
+          })}
           {choices.length <= 6 ? null : (
             <Popover position="top" withinPortal>
               <Popover.Target>
                 <button
-                  className={classes.moreButton}
+                  className={classes.mediaReactionBarMoreButton}
                   type="button"
                   aria-label="More reactions"
                 >
                   <IconMoodSmile size={22} />
                 </button>
               </Popover.Target>
-              <Popover.Dropdown className={classes.reactionDropdown}>
-                {choices.slice(6).map(renderChoice)}
+              <Popover.Dropdown className={classes.mediaReactionBarDropdown}>
+                {choices.slice(6).map((choice) => {
+                  return (
+                    <MediaReactionChoice
+                      key={choice.value}
+                      choice={choice}
+                      chosen={chosen}
+                      disabled={disabled}
+                      onReact={onReact}
+                    />
+                  );
+                })}
               </Popover.Dropdown>
             </Popover>
           )}
           <button
-            className={classes.commentAction}
+            className={classes.mediaReactionBarCommentAction}
             type="button"
             aria-label={commentLabel}
             onClick={onComment}
@@ -92,7 +92,7 @@ export function MediaReactionBar<Value extends string>({
         {summary}
       </div>
       {hint === undefined ? null : (
-        <p className={classes.reactionHint}>{hint}</p>
+        <p className={classes.mediaReactionBarHint}>{hint}</p>
       )}
       {children}
     </div>

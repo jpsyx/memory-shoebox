@@ -44,7 +44,7 @@ nothing to measure.
 | `apps/web/src/routes/_app/index.tsx`    | The search schema: `tag`, `person`, `from`, `until` and `find`, with `_oneOrMany` already handling `?tag=a` and `?tag=a&tag=b` alike                    |
 | `apps/web/src/api/client/client.ts`     | `apiFetch`, the error envelope, `jsonInit`, and `z.void()` for a `204`                                                                                  |
 | `apps/server/scripts/seedMember.ts`     | The pattern a seed script follows, and the second-handle-on-the-catalog approach `e2e/support/database.ts` reuses                                       |
-| `e2e/support/signIn.ts`                 | The per-IP mint budget, counted against `RATE_LIMIT_RULES` rather than a comment                                                                        |
+| `e2e/support/signInHelpers.ts`          | The per-IP mint budget, counted against `RATE_LIMIT_RULES` rather than a comment                                                                        |
 
 `apps/web/src/system/Pile/timeline.types.ts` is now redundant: it says in its
 own doc comment that it is a transcription to be deleted once
@@ -311,7 +311,7 @@ keyboard pair at the foot of `account.spec.ts` are moved onto it, which is the
 same thing they already do by hand. It goes in as its own commit, before any new
 spec, so that the budget is falling rather than rising when the surfaces arrive.
 
-The mint counter in `e2e/support/signIn.ts` stays exactly as it is. It is the
+The mint counter in `e2e/support/signInHelpers.ts` stays exactly as it is. It is the
 guard that made this visible in the first place, and a fixture is a way of
 spending fewer mints, not a reason to stop counting them.
 

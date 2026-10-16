@@ -17,7 +17,7 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 
 const DETAIL = makeBurstDetail({
   position: 7,

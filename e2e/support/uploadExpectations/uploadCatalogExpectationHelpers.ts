@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test";
 
-import { appConfig } from "../../../app.config.ts";
+import { APP_CONFIG } from "../../../app.config.ts";
 
 import type { FakeS3Request } from "../createFakeS3Server/createFakeS3Server.types.ts";
 
@@ -176,7 +176,7 @@ function _getLongEdgeFromRendition(
 export function expectTheDerivatives(
   files: readonly UploadedFileRecord[],
 ): void {
-  const { displayLongEdgePx, thumbLongEdgePx } = appConfig.upload.derivatives;
+  const { displayLongEdgePx, thumbLongEdgePx } = APP_CONFIG.upload.derivatives;
   (
     [
       "portrait-orientation-6.jpg",

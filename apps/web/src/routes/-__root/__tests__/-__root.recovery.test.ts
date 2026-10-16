@@ -1,4 +1,4 @@
-import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronization/settingsSynchronization";
+import { startSettingsSynchronization } from "@/surfaces/Settings/settingsSynchronizationHelpers/settingsSynchronizationHelpers";
 
 import { createMeResponse } from "@/testing/createMeResponse";
 
@@ -60,7 +60,7 @@ it("late private reads cannot restore retired data after current authority loss"
     path: "/sign-in",
     client,
     answer: () => {
-      return bootstrap(null);
+      return bootstrap({ account: null });
     },
   });
   await router.load();
@@ -96,7 +96,7 @@ it.each(["before", "during", "reconciliation", "publication"])(
       vi.fn(() => {
         return ++readCount === 1
           ? deferredRead
-          : Promise.resolve(Response.json(bootstrap(saved).body));
+          : Promise.resolve(Response.json(bootstrap({ account: saved }).body));
       }),
     );
     let finishSave: () => void = () => {};

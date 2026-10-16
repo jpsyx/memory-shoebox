@@ -39,7 +39,7 @@ function _joinNames(names: readonly string[]): string {
  * @param options.capturedAt The instant the shutter fired.
  * @param options.timezone The `shoebox.timezone` setting.
  */
-export function makeAltTextFromItem(options: {
+export function itemAltText(options: {
   altTextOverride: string | null;
   personNames: readonly string[];
   capturedAt: string;

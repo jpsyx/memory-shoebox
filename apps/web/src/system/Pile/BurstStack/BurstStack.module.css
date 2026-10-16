@@ -1,0 +1,31 @@
+.burstStack {
+  position: relative;
+  scroll-margin-top: 6rem;
+}
+
+/* The prints underneath, showing as offset edges. */
+.burstStack::before,
+.burstStack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--print);
+  box-shadow: var(--shadow-flat);
+}
+
+.burstStack::before {
+  transform: translate(10px, 7px) rotate(1.1deg);
+}
+
+.burstStack::after {
+  transform: translate(5px, 3px) rotate(-0.6deg);
+}
+
+.burstStackOpen {
+  grid-column: 1 / -1;
+}
+
+.burstStackOpen::before,
+.burstStackOpen::after {
+  display: none;
+}

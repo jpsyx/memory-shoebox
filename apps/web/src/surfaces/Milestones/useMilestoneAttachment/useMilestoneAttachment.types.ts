@@ -5,7 +5,7 @@ import type {
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { MilestoneAttachmentEntry } from "../milestoneAttachmentHelpers/milestoneAttachmentHelpers";
 /** Picker identity and optional current selected-detail authority. */

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { MediaLoadingProvider } from "@/media/MediaLoadingProvider/MediaLoadingProvider";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
 import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
@@ -12,6 +13,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+/**
+ * Signed-in routes with account authority and shared application navigation.
+ */
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
     const me = context.setupMe;
@@ -28,7 +32,7 @@ export const Route = createFileRoute("/_app")({
  * response's settings, and `sign-in.tsx` reads its own from
  * `GET /api/public-settings`, the one route an anonymous caller may reach.
  */
-function AppShell() {
+function AppShell(): ReactNode {
   const { viewer, settings } = Route.useRouteContext();
   const matches = useMatches();
   const routeKey = useLocation({

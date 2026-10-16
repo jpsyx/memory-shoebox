@@ -1,14 +1,15 @@
+import type { MediaSource, MediaRef } from "@memory-shoebox/shared";
+import type { RenderResult } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { MediaRef } from "@memory-shoebox/shared";
 import { useRef, useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { VideoFrame, type TransportMark } from "@/system/VideoFrame/VideoFrame";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-function _source(url: string) {
+function _source(url: string): MediaSource {
   return {
     issuedAt: "2026-09-27T10:00:00.000Z",
     renditionId: "fixture-source",
@@ -78,7 +79,7 @@ function Harness({
   );
 }
 
-function _render(node: ReactNode) {
+function _render(node: ReactNode): RenderResult {
   return render(
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
       {node}

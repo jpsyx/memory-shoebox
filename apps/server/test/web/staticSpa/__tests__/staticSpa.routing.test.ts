@@ -8,7 +8,7 @@ import Fastify from "fastify";
 
 import { expect, it } from "vitest";
 
-import { registerStaticSpa } from "../../../../src/web/staticSpa.ts";
+import { registerStaticSpa } from "../../../../src/web/registerStaticSpa.ts";
 import {
   HTML,
   JAVASCRIPT,
@@ -34,7 +34,10 @@ it("closes discarded static file streams without reading their bodies and leaves
     reply.raw.setHeader("ETag", 'W/"api-validator"');
     return reply.send("api body");
   });
-  await registerStaticSpa(lifecycleApp, { distPath: directory });
+  await registerStaticSpa({
+    app: lifecycleApp,
+    options: { distPath: directory },
+  });
   const initial = await lifecycleApp.inject("/assets/main-Da_0-abc.js");
   await Promise.all(
     Array.from({ length: 25 }, async () => {

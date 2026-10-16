@@ -3454,9 +3454,9 @@ git commit -m "test: an end-to-end harness that can read a sign-in code"
 **Files:**
 
 - Create: `e2e/account.spec.ts`
-- Create: `e2e/support/signIn.ts`
+- Create: `e2e/support/signInHelpers.ts`
 
-- [ ] **Step 1: Write `e2e/support/signIn.ts`**
+- [ ] **Step 1: Write `e2e/support/signInHelpers.ts`**
 
 One helper that drives a `Page` through the real sign-in and returns once the
 pile is showing, so no account test restates the flow:

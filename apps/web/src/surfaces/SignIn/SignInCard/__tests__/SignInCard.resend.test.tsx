@@ -8,7 +8,7 @@ import {
   respondWith,
   SENT,
   WRONG_CODE,
-} from "./SignInCard.fixtures";
+} from "./signInCardTestHelpers";
 
 /**
  * Asking for another code, and the three cases that each press a button

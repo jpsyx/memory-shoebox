@@ -1,8 +1,8 @@
 import { expect, it, onTestFinished, vi } from "vitest";
 
-import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 
-import { createLifecycleFixture } from "../../lifecycleTestHelpers.ts";
+import { createLifecycleFixture } from "../../createLifecycleFixture.ts";
 
 import { createMediaProcessingQueue } from "../../../../src/mediaProcessing/queue/createMediaProcessingQueue.ts";
 

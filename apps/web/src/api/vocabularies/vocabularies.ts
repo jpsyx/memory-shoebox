@@ -5,7 +5,7 @@ import {
 import {
   makeQueryFromSelection,
   type TimelineSelection,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import {
   filterFacetsResponseSchema,
   peopleResponseSchema,

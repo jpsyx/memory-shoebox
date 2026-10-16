@@ -95,7 +95,7 @@ into the viewer and made the fan parse what 5a's frames route really returns.
 
 - **Once 8a has merged, one parked end-to-end case.** The visibility picker
   offering the Shoebox's members and groups is `fixme` in
-  `e2e/item/item.uploader.spec.ts`. `apps/web/src/api/members/` and
+  `e2e/item/__tests__/item.uploader.spec.ts`. `apps/web/src/api/members/` and
   `api/groups/` are written against `administration.md` with schemas local to
   `apps/web`. 8a's administration slice is server-only; its first-run setup is the explicit
   frontend addition. The next frontend step that touches the

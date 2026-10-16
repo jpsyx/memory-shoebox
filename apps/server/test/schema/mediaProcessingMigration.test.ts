@@ -14,15 +14,16 @@ import {
   insertMember,
   insertRendition,
 } from "../helpers/seedHelpers/seedHelpers.ts";
-
-async function _openHistoricalCatalog(): Promise<{
+type HistoricalCatalog = {
   database: ReturnType<typeof createDatabase>;
   directory: string;
   path: string;
   sources: Awaited<ReturnType<typeof getMigrationSourcesFromFiles>>;
   itemId: string;
   renditionId: string;
-}> {
+};
+
+async function _openHistoricalCatalog(): Promise<HistoricalCatalog> {
   const directory = mkdtempSync(join(tmpdir(), "processing-upgrade-"));
   const path = join(directory, "catalog.db");
   const database = createDatabase(path);
@@ -126,7 +127,9 @@ it("backs up the populated catalog before rebuilding and keeps existing checksum
     }),
   ).toEqual(["0017_media_processing", "0018_timeline_uploader_capture"]);
   const backupNames = readdirSync(join(directory, "backups")).filter((name) => {
-    if (existingBackups.includes(name)) return false;
+    if (existingBackups.includes(name)) {
+      return false;
+    }
     const backup = new SQLite(join(directory, "backups", name), {
       readonly: true,
     });

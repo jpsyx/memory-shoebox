@@ -3,7 +3,7 @@ import {
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { B2Client, B2OperationContext } from "./createB2Client.types.ts";
 import { makeBucketKeyFromKey } from "./makeBucketKeyFromKey.ts";
@@ -20,7 +20,7 @@ export async function startMultipartUpload(
     key,
     contentType,
     partCount,
-    expiresInSeconds = appConfig.upload.presignTtlSeconds,
+    expiresInSeconds = APP_CONFIG.upload.presignTtlSeconds,
   } = input.options;
 
   const created = await s3.send(

@@ -3,7 +3,7 @@ import {
   getRecordedBodyFromRequest,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,18 +13,20 @@ const PATH = `/api/items/${ITEM.itemId}/removal-requests` satisfies string;
 describe("optional request words", () => {
   it("retains the original refused draft while sending trimmed optional words", async () => {
     respondWith({
-      [`GET ${PATH}`]: {
-        status: 200,
-        body: {
-          item: ITEM,
-          nextCursor: null,
-          removalRequests: [],
-          canRequestRemoval: true,
+      routes: {
+        [`GET ${PATH}`]: {
+          status: 200,
+          body: {
+            item: ITEM,
+            nextCursor: null,
+            removalRequests: [],
+            canRequestRemoval: true,
+          },
         },
-      },
-      [`POST ${PATH}`]: {
-        status: 400,
-        body: { error: "validation_error", message: "Invalid" },
+        [`POST ${PATH}`]: {
+          status: 400,
+          body: { error: "validation_error", message: "Invalid" },
+        },
       },
     });
     renderAt(`/items/${ITEM.itemId}/removal`);

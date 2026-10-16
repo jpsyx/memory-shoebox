@@ -2,8 +2,10 @@ import {
   makeQueryFromView,
   type TimelineSelection,
   type TimelineView,
-} from "@/api/timeline/selection/selection";
-/** Canonical filters and the originating view's effective inclusive boundary. */
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+/**
+ * Canonical filters and the originating view's effective inclusive boundary.
+ */
 export function getNavigationSelectionFromView(
   view: Readonly<TimelineView>,
 ): TimelineSelection {

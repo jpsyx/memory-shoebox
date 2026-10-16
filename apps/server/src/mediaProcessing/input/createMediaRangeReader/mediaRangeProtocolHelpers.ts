@@ -10,11 +10,17 @@ import {
   READ_IDLE_MS,
 } from "./createMediaRangeReader.constants.ts";
 
-/** Maps upstream errors to sanitized failure codes; ordinary cancellation is not a failure, while idle-timeout aborts remain observable. */
-export function getRangeFailureFromError(
-  error: unknown,
-  controller: AbortController,
-): MediaRangeReaderFailure | undefined {
+/**
+ * Maps upstream errors to sanitized failure codes; ordinary cancellation is not
+ * a failure, while idle-timeout aborts remain observable.
+ */
+export function getRangeFailureFromError({
+  error,
+  controller,
+}: {
+  error: unknown;
+  controller: AbortController;
+}): MediaRangeReaderFailure | undefined {
   if (controller.signal.aborted) {
     return controller.signal.reason instanceof Error &&
       controller.signal.reason.message === "processing_upstream_timeout"
@@ -28,11 +34,17 @@ export function getRangeFailureFromError(
   );
 }
 
-/** Parses one explicit, open-ended or suffix byte range into inclusive source bounds; malformed or unsatisfiable ranges return undefined. */
-export function getRangeFromRequest(
-  request: IncomingMessage,
-  sourceBytes: number,
-): { start: number; end: number } | undefined {
+/**
+ * Parses one explicit, open-ended or suffix byte range into inclusive source
+ * bounds; malformed or unsatisfiable ranges return undefined.
+ */
+export function getRangeFromRequest({
+  request,
+  sourceBytes,
+}: {
+  request: IncomingMessage;
+  sourceBytes: number;
+}): { start: number; end: number } | undefined {
   if (request.headers.range === undefined) {
     return { start: 0, end: sourceBytes - 1 };
   }
@@ -57,11 +69,17 @@ export function getRangeFromRequest(
     : undefined;
 }
 
-/** Aborts the shared transfer controller if one upstream read exceeds the idle deadline, and always clears its timer. */
-export async function runWithReadIdleTimeout<Result>(
-  operation: () => Promise<Result>,
-  controller: AbortController,
-): Promise<Result> {
+/**
+ * Aborts the shared transfer controller if one upstream read exceeds the idle
+ * deadline, and always clears its timer.
+ */
+export async function runWithReadIdleTimeout<Result>({
+  operation,
+  controller,
+}: {
+  operation: () => Promise<Result>;
+  controller: AbortController;
+}): Promise<Result> {
   const timeout = setTimeout(() => {
     controller.abort(new Error("processing_upstream_timeout"));
   }, READ_IDLE_MS);
@@ -72,11 +90,18 @@ export async function runWithReadIdleTimeout<Result>(
   }
 }
 
-/** Requires an exact identity-encoded 206 range and stable source size/ETag, storing the first ETag for subsequent reads. Throws sanitized upstream/source failures. */
-export function validateMediaRangeResponse(
-  response: Response,
-  transfer: Readonly<Transfer>,
-): void {
+/**
+ * Requires an exact identity-encoded 206 range and stable source size/ETag,
+ * storing the first ETag for subsequent reads. Throws sanitized upstream/source
+ * failures.
+ */
+export function validateMediaRangeResponse({
+  response,
+  transfer,
+}: {
+  response: Response;
+  transfer: Readonly<Transfer>;
+}): void {
   const { state, start, end } = transfer;
   if ([408, 429].includes(response.status) || response.status >= 500) {
     throw new Error("processing_upstream_unavailable");

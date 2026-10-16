@@ -1,5 +1,5 @@
-import type { Answer } from "@/testing/surfaceHarness";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
+import { renderAt, respondWith } from "@/testing/surfaceHarnessHelpers";
 
 /**
  * The canned server and the render for the one suite beside this file.
@@ -23,7 +23,7 @@ function _peopleAnswers(): Record<string, Answer> {
 export function respondWithPeople(
   routes: Readonly<Record<string, Answer>> = {},
 ): void {
-  respondWith(routes, _peopleAnswers());
+  respondWith({ routes: routes, extraDefaults: _peopleAnswers() });
 }
 
 /** The directory at one address. Defaults to the whole of it. */
@@ -33,4 +33,4 @@ export function renderPeople(
   return renderAt(initialPath);
 }
 
-export { recordedUrls } from "@/testing/surfaceHarness";
+export { recordedUrls } from "@/testing/surfaceHarnessHelpers";

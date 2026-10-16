@@ -2,16 +2,16 @@ import { expect, it, onTestFinished } from "vitest";
 
 import { createDatabase } from "../../../../src/db/client.ts";
 
-import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { discoverMediaProcessingWork } from "../../../../src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 
 import {
   insertItem,
   insertRendition,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
 
-import { createLifecycleFixture } from "../../lifecycleTestHelpers.ts";
+import { createLifecycleFixture } from "../../createLifecycleFixture.ts";
 
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 import { join } from "node:path";
 
@@ -23,11 +23,11 @@ it("requalifies unavailable work only after configured recipe policy changes", a
   };
   await fixture.makeJob().run();
   fixture.runtime.processSource = process;
-  const previousLimit = appConfig.mediaProcessing.photoPixels;
+  const previousLimit = APP_CONFIG.mediaProcessing.photoPixels;
   onTestFinished(() => {
-    Object.assign(appConfig.mediaProcessing, { photoPixels: previousLimit });
+    Object.assign(APP_CONFIG.mediaProcessing, { photoPixels: previousLimit });
   });
-  Object.assign(appConfig.mediaProcessing, { photoPixels: previousLimit - 1 });
+  Object.assign(APP_CONFIG.mediaProcessing, { photoPixels: previousLimit - 1 });
   await fixture.makeJob().run();
   const jobs = await fixture.database
     .selectFrom("media_processing_jobs")

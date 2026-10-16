@@ -1,16 +1,16 @@
-import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
-import { respondWith } from "./TimelineSurface.fixtures";
+import { respondWith } from "./timelineSurfaceTestHelpers";
 
 /** Fixed landed identities shared by the bulk interaction regressions. */
 export const BULK_ITEM_IDS = [
   "018f0000-0000-7000-8000-00000000a001",
   "018f0000-0000-7000-8000-00000000a002",
-];
+] as const;
 
 /** Installs a real routed timeline with two individually selectable photos. */
 export function answerBulkTimeline(

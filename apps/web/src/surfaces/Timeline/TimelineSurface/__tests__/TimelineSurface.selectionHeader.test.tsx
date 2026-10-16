@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderTimeline } from "./TimelineSurface.fixtures";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import { answerBulkTimeline } from "./timelineBulkTestHelpers";
 
 afterEach(() => {

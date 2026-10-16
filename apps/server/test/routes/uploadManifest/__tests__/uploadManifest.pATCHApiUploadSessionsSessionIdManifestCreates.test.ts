@@ -9,7 +9,7 @@ import {
 
 import { describe, expect, it } from "vitest";
 import { type PutUploadManifestResponse } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 import { getCaptureDateFromEvidence } from "../../../../src/upload/captureDateLadderHelpers/captureDateLadderHelpers.ts";
 
@@ -103,7 +103,7 @@ describe("PATCH /api/upload-sessions/:sessionId/manifest", () => {
         clientRef: "huge",
         originalFilename: "long.mov",
         declaredContentType: "video/quicktime",
-        declaredBytes: appConfig.upload.maxFileBytes + 1,
+        declaredBytes: APP_CONFIG.upload.maxFileBytes + 1,
       }),
       makeEntry({
         clientRef: "video",

@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { itemIdParamsSchema, type ItemDetail } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import { latchItemsSeen } from "../../archive/latchItemsSeen.ts";
 import { ApiError } from "../../http/ApiError.ts";
 import { requireViewer } from "../../http/requestContextHelpers.ts";
@@ -105,7 +105,7 @@ export async function getItemOriginal(
       "location",
       await request.server.b2.presignGet({
         key: rendition.storageKey,
-        expiresInSeconds: appConfig.media.signedUrlTtlSeconds,
+        expiresInSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
         downloadFilename: item.originalFilename ?? `${item.itemId}.jpg`,
       }),
     )

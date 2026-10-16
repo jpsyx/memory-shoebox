@@ -4,6 +4,12 @@ import {
   makeSelectionExpressionFromFilter,
   type TimelineFilter,
 } from "./selectionFilterHelpers.ts";
+type ItemsForDaysOptions = {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  filter: Readonly<TimelineFilter>;
+  days: readonly string[];
+};
 
 /** One visible item, as the day stream reads it before it becomes a DTO. */
 export type ItemRow = {
@@ -23,20 +29,12 @@ export type ItemRow = {
 };
 
 /** One joined row as an `ItemRow`, ready for burst grouping and the DTO. */
-function _makeItemRowFromRow(row: {
-  width: number;
-  height: number;
-  itemId: string;
-  kind: string;
-  capturedAt: string;
-  capturedOn: string;
-  durationMs: number | null;
-  altTextOverride: string | null;
-  visibilityRuleId: string;
-  uploadedBy: string;
-  burstId: string | null;
-  seenItemId: string | null;
-}): ItemRow {
+function _makeItemRowFromRow(
+  row: Omit<ItemRow, "kind" | "isUnseen"> & {
+    kind: string;
+    seenItemId: string | null;
+  },
+): ItemRow {
   return {
     itemId: row.itemId,
     width: row.width,
@@ -73,12 +71,9 @@ function _makeItemRowFromRow(row: {
  * @param options.filter The normalised selection.
  * @param options.days The days this page returns.
  */
-export async function readItemsForDays(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  filter: Readonly<TimelineFilter>;
-  days: readonly string[];
-}): Promise<ItemRow[]> {
+export async function readItemsForDays(
+  options: Readonly<ItemsForDaysOptions>,
+): Promise<ItemRow[]> {
   if (options.days.length === 0) {
     return [];
   }

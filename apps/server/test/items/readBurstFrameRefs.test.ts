@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { getPageStateFromBurstFrameCursor } from "../../src/items/burstFrameCursorHelpers.ts";
-import { readBurstFramePage } from "../../src/items/readBurstFrameRefs/readBurstFrameRefs.ts";
+import { readBurstFramePage } from "../../src/items/readBurstFramePage/readBurstFramePage.ts";
 import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
@@ -143,7 +143,7 @@ describe("readBurstFramePage", () => {
         now: new Date(NOW),
         limit: 200,
       }),
-    ).toEqual({ frames: [], nextCursor: null, rowCount: 0 });
+    ).toEqual({ frames: [], nextCursor: undefined, rowCount: 0 });
     await database.destroy();
   });
 
@@ -282,14 +282,14 @@ describe("readBurstFramePage", () => {
         return [frame.itemId, frame.position];
       }),
     ).toEqual([[nullIndexItemId, 2]]);
-    expect(secondPage.nextCursor).toBeNull();
+    expect(secondPage.nextCursor).toBeUndefined();
     await database.destroy();
   });
 
   it("costs the same number of queries for three frames as for twelve", async () => {
-    async function _countQueriesForFrameCount(
+    const _countQueriesForFrameCount = async (
       frameCount: number,
-    ): Promise<number> {
+    ): Promise<number> => {
       const counting = makeQueryCountingDatabaseFromDatabase(
         createDatabase(":memory:"),
       );
@@ -328,7 +328,7 @@ describe("readBurstFramePage", () => {
       const queryCount = counting.getQueryCount();
       await counting.database.destroy();
       return queryCount;
-    }
+    };
 
     const threeFrameQueries = await _countQueriesForFrameCount(3);
     const twelveFrameQueries = await _countQueriesForFrameCount(12);

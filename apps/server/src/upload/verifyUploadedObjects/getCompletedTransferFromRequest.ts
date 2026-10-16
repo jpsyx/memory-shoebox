@@ -4,7 +4,7 @@ import type {
   UploadedRendition,
 } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 import type { UploadedPart } from "../../b2/createB2Client/createB2Client.types.ts";
 
@@ -49,7 +49,7 @@ function _getReportedRenditions(
       renditions: ["Report display, thumb and poster at most once each."],
     });
   }
-  const maxBytes = appConfig.upload.derivatives.maxBytes;
+  const maxBytes = APP_CONFIG.upload.derivatives.maxBytes;
   return derivatives.map((rendition) => {
     return _makeReportedRenditionFromUploadRendition({ rendition, maxBytes });
   });

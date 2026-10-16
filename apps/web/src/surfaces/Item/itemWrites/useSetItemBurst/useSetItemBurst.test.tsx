@@ -2,11 +2,11 @@ import { act } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useSetItemBurst } from "./useSetItemBurst";
 import { itemQueryOptions } from "@/api/items/items";
-import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { burstFramesQueryOptions } from "@/api/burstQueryHelpers/burstQueryHelpers";
 import {
   BURST_ID,
   ITEM_ID,
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeItemDetail,
   makeFrameIdFromPosition,
 } from "@/testing/itemFixtureHelpers";
@@ -41,7 +41,7 @@ describe("burst membership writes", () => {
     stubFetch({
       [BURST_WRITE]: { body: detail, status: 200 },
       [`GET /api/bursts/${BURST_ID}/frames`]: {
-        body: { frames: [makeBurstFrame(2)], nextCursor: null },
+        body: { frames: [makeBurstFrameFromPosition(2)], nextCursor: null },
         status: 200,
       },
     });

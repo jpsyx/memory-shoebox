@@ -1,9 +1,15 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { appConfig } from "../../../../../app.config.ts";
-import type { MediaCgroup } from "./mediaCgroup/mediaCgroup.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
+import type { MediaCgroup } from "./createMediaCgroup/createMediaCgroup.ts";
 import type { MediaChildOptions } from "./mediaRuntime.types.ts";
+type ChildOutputWatchOptions = {
+  child: ChildProcessWithoutNullStreams;
+  state: ChildState;
+  options: Readonly<MediaChildOptions>;
+  group: Readonly<MediaCgroup>;
+};
 
-const LIMITS = appConfig.mediaProcessing;
+const LIMITS = APP_CONFIG.mediaProcessing;
 type ChildContext = {
   group: MediaCgroup;
   scratchPath: string;
@@ -19,11 +25,15 @@ type ChildState = {
   child: ChildProcessWithoutNullStreams;
 };
 
-function _stopChild(
-  state: ChildState,
-  group: Readonly<MediaCgroup>,
-  reason?: string,
-): void {
+function _stopChild({
+  state,
+  group,
+  reason,
+}: {
+  state: ChildState;
+  group: Readonly<MediaCgroup>;
+  reason?: string;
+}): void {
   state.failure ??= reason;
   state.child.kill("SIGKILL");
   state.kill ??= group.kill().catch(() => {
@@ -31,16 +41,16 @@ function _stopChild(
   });
 }
 
-function _watchOutput(
-  child: ChildProcessWithoutNullStreams,
-  state: ChildState,
-  options: Readonly<MediaChildOptions>,
-  group: Readonly<MediaCgroup>,
-): void {
+function _watchOutput({
+  child,
+  state,
+  options,
+  group,
+}: ChildOutputWatchOptions): void {
   child.stdout.on("data", (chunk: Buffer) => {
     state.stdoutBytes += chunk.length;
     if (state.stdoutBytes > options.stdoutLimitBytes) {
-      _stopChild(state, group, "processing_stdout_limit");
+      _stopChild({ state, group, reason: "processing_stdout_limit" });
     } else {
       state.stdout.push(chunk);
     }
@@ -55,10 +65,13 @@ function _watchOutput(
   });
 }
 
-function _spawnInGroup(
-  options: Readonly<MediaChildOptions>,
-  context: Readonly<ChildContext>,
-): ChildProcessWithoutNullStreams {
+function _spawnInGroup({
+  options,
+  context,
+}: {
+  options: Readonly<MediaChildOptions>;
+  context: Readonly<ChildContext>;
+}): ChildProcessWithoutNullStreams {
   // Shell builtins join before exec loads Node, FFmpeg or libheif code.
   return spawn(
     "/bin/sh",
@@ -86,19 +99,27 @@ function _spawnInGroup(
   );
 }
 
-function _monitor(
-  state: ChildState,
-  options: Readonly<MediaChildOptions>,
-  context: Readonly<ChildContext>,
-): () => Promise<void> {
+function _monitor({
+  state,
+  options,
+  context,
+}: {
+  state: ChildState;
+  options: Readonly<MediaChildOptions>;
+  context: Readonly<ChildContext>;
+}): () => Promise<void> {
   const deadline = context.clock() + options.timeoutMs;
   const timer = setTimeout(() => {
-    return _stopChild(state, context.group, "processing_timeout");
+    return _stopChild({
+      state,
+      group: context.group,
+      reason: "processing_timeout",
+    });
   }, options.timeoutMs);
   let diskCheck: Promise<void> | undefined;
   const monitor = setInterval(() => {
     if (context.clock() >= deadline) {
-      _stopChild(state, context.group, "processing_timeout");
+      _stopChild({ state, group: context.group, reason: "processing_timeout" });
     }
     if (diskCheck !== undefined) {
       return;
@@ -106,7 +127,11 @@ function _monitor(
     diskCheck = context
       .checkDisk()
       .catch(() => {
-        return _stopChild(state, context.group, "processing_disk_limit");
+        return _stopChild({
+          state,
+          group: context.group,
+          reason: "processing_disk_limit",
+        });
       })
       .finally(() => {
         diskCheck = undefined;
@@ -119,18 +144,21 @@ function _monitor(
   };
 }
 
-function _waitForChildExit(
-  state: ChildState,
-  group: Readonly<MediaCgroup>,
-): Promise<number> {
+function _waitForChildExit({
+  state,
+  group,
+}: {
+  state: ChildState;
+  group: Readonly<MediaCgroup>;
+}): Promise<number> {
   const child = state.child;
   return new Promise<number>((resolve) => {
     child.on("error", () => {
-      _stopChild(state, group, "processing_child_failed");
+      _stopChild({ state, group, reason: "processing_child_failed" });
       resolve(-1);
     });
     child.on("exit", () => {
-      return _stopChild(state, group);
+      return _stopChild({ state, group });
     });
     child.on("close", (code) => {
       return resolve(code ?? -1);
@@ -138,13 +166,18 @@ function _waitForChildExit(
   });
 }
 
-/** Runs a bounded child; all descendants are killed before command settlement. */
-export async function runMediaChild(
-  options: Readonly<MediaChildOptions>,
-  context: Readonly<ChildContext>,
-): Promise<{ stdout: string; exitCode: number }> {
+/**
+ * Runs a bounded child; all descendants are killed before command settlement.
+ */
+export async function runMediaChild({
+  options,
+  context,
+}: {
+  options: Readonly<MediaChildOptions>;
+  context: Readonly<ChildContext>;
+}): Promise<{ stdout: string; exitCode: number }> {
   const beforeOomKills = await context.group.getOomKills();
-  const child = _spawnInGroup(options, context);
+  const child = _spawnInGroup({ options, context });
   const state: ChildState = {
     stdout: [],
     stdoutBytes: 0,
@@ -154,16 +187,20 @@ export async function runMediaChild(
     child,
   };
   const onAbort = () => {
-    return _stopChild(state, context.group, "processing_cancelled");
+    return _stopChild({
+      state,
+      group: context.group,
+      reason: "processing_cancelled",
+    });
   };
-  _watchOutput(child, state, options, context.group);
+  _watchOutput({ child, state, options, group: context.group });
   child.stdin.end();
   options.signal.addEventListener("abort", onAbort, { once: true });
   if (options.signal.aborted) {
     onAbort();
   }
-  const stopMonitor = _monitor(state, options, context);
-  const exitCode = await _waitForChildExit(state, context.group);
+  const stopMonitor = _monitor({ state, options, context });
+  const exitCode = await _waitForChildExit({ state, group: context.group });
   await stopMonitor();
   options.signal.removeEventListener("abort", onAbort);
   await state.kill;

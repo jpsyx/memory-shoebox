@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
-import type { Page } from "@playwright/test";
+import type { VisualRoutingPage } from "./visualPage.types.ts";
 /** Serve retained generated artwork without an external reference server. */
-export async function routeLocalVisualMedia(page: Page): Promise<void> {
+export async function routeLocalVisualMedia(
+  page: Readonly<VisualRoutingPage>,
+): Promise<void> {
   await page.route("https://visual-media.invalid/**", async (route) => {
     const file = new URL(route.request().url()).pathname.endsWith("-thumb.jpg")
       ? "highChair-thumb.jpg"

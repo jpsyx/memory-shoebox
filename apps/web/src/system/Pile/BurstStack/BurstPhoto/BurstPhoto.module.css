@@ -1,0 +1,30 @@
+.burstPhoto {
+  position: relative;
+  flex: none;
+  margin-right: -1.6rem;
+}
+
+.burstPhoto > button[data-item-id] {
+  margin-right: 0;
+}
+
+.burstPhoto:hover,
+.burstPhoto:focus-within {
+  z-index: 20;
+}
+
+.burstPhotoOptions[data-variant="default"] {
+  position: absolute;
+  inset-inline-start: 4px;
+  inset-block-end: 4px;
+  z-index: 21;
+  min-width: 3rem;
+  min-height: 3rem;
+  background-color: var(--print);
+  color: var(--on-print);
+}
+
+.burstPhotoOptions[data-variant="default"]:hover {
+  background-color: var(--print-sunk);
+  color: var(--on-print);
+}

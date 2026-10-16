@@ -3,10 +3,13 @@ import {
   getRenditionsFromReadPurpose,
   type RenditionRow,
 } from "../../src/media/getRenditionsFromReadPurpose.ts";
-function _makeRenditionFromPurpose(
-  purpose: RenditionRow["purpose"],
-  overrides: Partial<RenditionRow> = {},
-): RenditionRow {
+function _makeRenditionFromPurpose({
+  purpose,
+  overrides = {},
+}: {
+  purpose: RenditionRow["purpose"];
+  overrides?: Partial<RenditionRow>;
+}): RenditionRow {
   return {
     renditionId: purpose,
     purpose,
@@ -20,9 +23,12 @@ function _makeRenditionFromPurpose(
 }
 describe("getRenditionsFromReadPurpose", () => {
   it("restricts original video fallback to the selected view", () => {
-    const original = _makeRenditionFromPurpose("original", {
-      contentType: "video/mp4",
-      byteSize: 20 * 1024 * 1024,
+    const original = _makeRenditionFromPurpose({
+      purpose: "original",
+      overrides: {
+        contentType: "video/mp4",
+        byteSize: 20 * 1024 * 1024,
+      },
     });
     expect(
       getRenditionsFromReadPurpose({
@@ -47,11 +53,17 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([original]);
   });
   it("chooses optimized playback instead of signing the original", () => {
-    const original = _makeRenditionFromPurpose("original", {
-      contentType: "video/mp4",
+    const original = _makeRenditionFromPurpose({
+      purpose: "original",
+      overrides: {
+        contentType: "video/mp4",
+      },
     });
-    const mp4 = _makeRenditionFromPurpose("video_mp4", {
-      contentType: "video/mp4",
+    const mp4 = _makeRenditionFromPurpose({
+      purpose: "video_mp4",
+      overrides: {
+        contentType: "video/mp4",
+      },
     });
     expect(
       getRenditionsFromReadPurpose({
@@ -69,12 +81,18 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([mp4]);
   });
   it("does not sign unused displays or oversized originals for a thumbnail", () => {
-    const thumb = _makeRenditionFromPurpose("thumb");
+    const thumb = _makeRenditionFromPurpose({ purpose: "thumb" });
     expect(
       getRenditionsFromReadPurpose({
         rows: [
-          _makeRenditionFromPurpose("original", { byteSize: 20 * 1024 * 1024 }),
-          _makeRenditionFromPurpose("display", { width: 2048 }),
+          _makeRenditionFromPurpose({
+            purpose: "original",
+            overrides: { byteSize: 20 * 1024 * 1024 },
+          }),
+          _makeRenditionFromPurpose({
+            purpose: "display",
+            overrides: { width: 2048 },
+          }),
           thumb,
         ],
         kind: "photo",
@@ -83,7 +101,7 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([thumb]);
   });
   it("allows an original only within the requested image budget", () => {
-    const original = _makeRenditionFromPurpose("original");
+    const original = _makeRenditionFromPurpose({ purpose: "original" });
     expect(
       getRenditionsFromReadPurpose({
         rows: [original],
@@ -91,11 +109,20 @@ describe("getRenditionsFromReadPurpose", () => {
         purpose: "thumbnail",
       }),
     ).toEqual([original]);
-    for (const incompatible of [
-      _makeRenditionFromPurpose("original", { contentType: "image/heic" }),
-      _makeRenditionFromPurpose("original", { width: 481 }),
-      _makeRenditionFromPurpose("original", { byteSize: 128 * 1024 + 1 }),
-    ]) {
+    [
+      _makeRenditionFromPurpose({
+        purpose: "original",
+        overrides: { contentType: "image/heic" },
+      }),
+      _makeRenditionFromPurpose({
+        purpose: "original",
+        overrides: { width: 481 },
+      }),
+      _makeRenditionFromPurpose({
+        purpose: "original",
+        overrides: { byteSize: 128 * 1024 + 1 },
+      }),
+    ].forEach((incompatible) => {
       expect(
         getRenditionsFromReadPurpose({
           rows: [incompatible],
@@ -103,12 +130,18 @@ describe("getRenditionsFromReadPurpose", () => {
           purpose: "thumbnail",
         }),
       ).toEqual([]);
-    }
+    });
   });
   it("retains a generated preview over its JPEG target while rejecting the same original", () => {
-    const thumb = _makeRenditionFromPurpose("thumb", { byteSize: 200 * 1024 });
-    const original = _makeRenditionFromPurpose("original", {
-      byteSize: 200 * 1024,
+    const thumb = _makeRenditionFromPurpose({
+      purpose: "thumb",
+      overrides: { byteSize: 200 * 1024 },
+    });
+    const original = _makeRenditionFromPurpose({
+      purpose: "original",
+      overrides: {
+        byteSize: 200 * 1024,
+      },
     });
     expect(
       getRenditionsFromReadPurpose({
@@ -126,17 +159,26 @@ describe("getRenditionsFromReadPurpose", () => {
     ).toEqual([]);
   });
   it("returns display candidates and JPEG fallback for a selected photo", () => {
-    const thumb = _makeRenditionFromPurpose("thumb"),
-      small = _makeRenditionFromPurpose("display_small", { width: 960 }),
-      display = _makeRenditionFromPurpose("display", { width: 2048 }),
-      webp = _makeRenditionFromPurpose("display_webp", {
-        width: 2048,
-        contentType: "image/webp",
+    const thumb = _makeRenditionFromPurpose({ purpose: "thumb" }),
+      small = _makeRenditionFromPurpose({
+        purpose: "display_small",
+        overrides: { width: 960 },
+      }),
+      display = _makeRenditionFromPurpose({
+        purpose: "display",
+        overrides: { width: 2048 },
+      }),
+      webp = _makeRenditionFromPurpose({
+        purpose: "display_webp",
+        overrides: {
+          width: 2048,
+          contentType: "image/webp",
+        },
       });
     expect(
       getRenditionsFromReadPurpose({
         rows: [
-          _makeRenditionFromPurpose("original"),
+          _makeRenditionFromPurpose({ purpose: "original" }),
           thumb,
           small,
           display,

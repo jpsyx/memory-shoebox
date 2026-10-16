@@ -2,7 +2,7 @@ import { expect, vi } from "vitest";
 import { createTestApp } from "../../../apps/server/test/helpers/createTestApp.ts";
 import { createTestConfig } from "../../../apps/server/test/helpers/createTestConfig.ts";
 import { insertSignedInMember } from "../../../apps/server/test/helpers/insertSignedInMember.ts";
-import { insertDrawableItem } from "../../../apps/server/test/routes/__tests__/timelineContractTestHelpers.ts";
+import { insertDrawableItem } from "../../../apps/server/test/routes/timelineContractTestHelpers.ts";
 import {
   insertItemTag,
   insertMember,
@@ -15,7 +15,13 @@ import {
   makeTimelineIntegrationClient,
   makeTimelineObserverFromOptions,
   type TimelineIntegrationPage,
-} from "../../../apps/web/src/testing/timelineAdapter/readTimelineAdapterFromBundle.ts";
+} from "../../../apps/web/src/testing/timelineAdapter/timelineAdapterHelpers.ts";
+type TimelineItemInserterOptions = {
+  fixture: TestApp;
+  uploader: string;
+  tagId: string;
+  hiddenRule: string;
+};
 
 type TestApp = Awaited<ReturnType<typeof createTestApp>>;
 type ResponseHold = (path: string, response: Response) => Promise<Response>;
@@ -45,17 +51,15 @@ type TimelineHarness = TimelineSeed &
   };
 
 function _makeItemInserterFromSeed(
-  options: Readonly<{
-    fixture: TestApp;
-    uploader: string;
-    tagId: string;
-    hiddenRule: string;
-  }>,
-): (
-  day: number,
-  flags?: { isHidden?: boolean; isTagged?: boolean },
-) => Promise<string> {
-  return async (day, flags = {}) => {
+  options: Readonly<TimelineItemInserterOptions>,
+): ({
+  day,
+  flags,
+}: Readonly<{
+  day: number;
+  flags?: { isHidden?: boolean; isTagged?: boolean };
+}>) => Promise<string> {
+  return async ({ day, flags = {} }) => {
     const itemId = await insertDrawableItem(options.fixture.database, {
       uploadedBy: options.uploader,
       seq: day,
@@ -89,10 +93,10 @@ async function _seedTimelineFixture(fixture: TestApp): Promise<TimelineSeed> {
   });
   const itemIds: string[] = [];
   for (let day = 27; day >= 21; day -= 1) {
-    itemIds.push(await insert(day));
+    itemIds.push(await insert({ day: day }));
   }
-  await insert(29, { isTagged: false });
-  await insert(30, { isHidden: true });
+  await insert({ day: 29, flags: { isTagged: false } });
+  await insert({ day: 30, flags: { isHidden: true } });
   const outside = await insertDrawableItem(fixture.database, {
     uploadedBy: uploader,
     seq: 100,
@@ -145,7 +149,9 @@ function _installTimelineTransport(
   };
 }
 
-/** Real in-memory server and production query adapter with a bounded fixture. */
+/**
+ * Real in-memory server and production query adapter with a bounded fixture.
+ */
 export async function makeTimelineRefreshHarness(
   adapter: Awaited<ReturnType<typeof readTimelineAdapterFromBundle>>,
 ): Promise<TimelineHarness> {

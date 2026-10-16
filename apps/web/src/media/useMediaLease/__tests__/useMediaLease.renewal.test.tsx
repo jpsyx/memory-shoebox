@@ -35,9 +35,10 @@ it("does not overwrite a newly authorized rendition with an older renewal comple
     await vi.advanceTimersByTimeAsync(60_001);
   });
   const newMedia = {
-    ...makeMediaFromExpiry(3_600_000, "new-rendition"),
+    ...makeMediaFromExpiry({ expires: 3600000, suffix: "new-rendition" }),
     playback: {
-      ...makeMediaFromExpiry(3_600_000, "new-rendition").playback!,
+      ...makeMediaFromExpiry({ expires: 3600000, suffix: "new-rendition" })
+        .playback!,
       renditionId: "new-rendition",
     },
   };
@@ -52,7 +53,10 @@ it("does not overwrite a newly authorized rendition with an older renewal comple
               kind: "video",
               width: 1600,
               height: 1067,
-              media: makeMediaFromExpiry(3_600_000, "old-completion"),
+              media: makeMediaFromExpiry({
+                expires: 3600000,
+                suffix: "old-completion",
+              }),
             },
           ],
         }),
@@ -88,7 +92,8 @@ it("reschedules a visible lease when an unrelated denial invalidates its in-flig
   await act(async () => {
     await vi.advanceTimersByTimeAsync(60_001);
   });
-  // Removing another refused item invalidates all already captured write tokens.
+  // Removing another refused item invalidates all already captured write
+  // tokens.
   setup.resources.previews.remove("another-item");
   await act(async () => {
     finish(
@@ -100,7 +105,10 @@ it("reschedules a visible lease when an unrelated denial invalidates its in-flig
               kind: "video",
               width: 1600,
               height: 1067,
-              media: makeMediaFromExpiry(3_600_000, "discarded"),
+              media: makeMediaFromExpiry({
+                expires: 3600000,
+                suffix: "discarded",
+              }),
             },
           ],
         }),
@@ -158,7 +166,10 @@ it.each([
                 kind: "video",
                 width: 1600,
                 height: 1067,
-                media: makeMediaFromExpiry(180_000, "recovered"),
+                media: makeMediaFromExpiry({
+                  expires: 180000,
+                  suffix: "recovered",
+                }),
               },
             ],
           }),

@@ -175,19 +175,27 @@ describe("draft bulk edits", () => {
       }),
     ).toBe(true);
   });
-  it("explicit attachment keeps its original targets and the newer selection", async () => {
+  it("explicit milestone attachment refreshes the catalog and preserves the newer selection", async () => {
     const harness = await _harness();
     const [first, second] = harness.serverDetail.files;
     harness.controller.clearSelection();
     harness.controller.toggleFile(second!.fileId);
+    const readCount = harness.api.getUploadSession.mock.calls.length;
     await harness.controller.applyEditAttempt({
       sessionId: harness.serverDetail.sessionId,
       targetFileIds: [first!.fileId],
-      labels: [{ kind: "tag", labelSnapshot: "submitted" }],
+      labels: [
+        {
+          kind: "milestone",
+          milestoneId: makeUploadFileFromPosition(4000).fileId,
+        },
+      ],
     });
     expect(
       harness.api.createUploadEdit.mock.calls[0]![0].body.targetFileIds,
     ).toEqual([first!.fileId]);
+    expect(harness.api.getUploadSession).toHaveBeenCalledTimes(readCount + 1);
+    expect(harness.controller.getSnapshot().detail!.edits).toHaveLength(1);
     expect([...harness.controller.getSnapshot().selectedFileIds]).toEqual([
       second!.fileId,
     ]);

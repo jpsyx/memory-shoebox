@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { useEffect } from "react";
 import { act, render, screen } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";

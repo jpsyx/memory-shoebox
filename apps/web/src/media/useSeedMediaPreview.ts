@@ -17,34 +17,39 @@ export function useSeedMediaPreview(
 ): void {
   const resources = useContext(MediaLoadingContext);
   const { itemId, media, kind } = options;
-  useEffect(() => {
-    if (
-      resources === undefined ||
-      itemId === undefined ||
-      resources.leases.isDenied(itemId) ||
-      resources.previews.read(itemId) !== undefined
-    ) {
-      return;
-    }
-    resources.previews.put([
-      {
-        itemId,
-        kind:
-          kind ??
-          (media.durationMs !== undefined && media.durationMs !== null
-            ? "video"
-            : "photo"),
-        width: media.width,
-        height: media.height,
-        media: {
-          display: null,
-          displayCandidates: [],
-          poster: null,
-          playback: null,
-          durationMs: null,
-          ...media,
-        },
-      },
-    ]);
-  }, [resources, itemId, media, kind]);
+  useEffect(
+    function seedMediaPreview() {
+      if (
+        resources === undefined ||
+        itemId === undefined ||
+        resources.leases.isDenied(itemId) ||
+        resources.previews.read(itemId) !== undefined
+      ) {
+        return;
+      }
+      resources.previews.put({
+        previews: [
+          {
+            itemId,
+            kind:
+              kind ??
+              (media.durationMs !== undefined && media.durationMs !== null
+                ? "video"
+                : "photo"),
+            width: media.width,
+            height: media.height,
+            media: {
+              display: null,
+              displayCandidates: [],
+              poster: null,
+              playback: null,
+              durationMs: null,
+              ...media,
+            },
+          },
+        ],
+      });
+    },
+    [resources, itemId, media, kind],
+  );
 }

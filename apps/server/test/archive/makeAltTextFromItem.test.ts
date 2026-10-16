@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { makeAltTextFromItem } from "../../src/archive/makeAltTextFromItem.ts";
+import { itemAltText } from "../../src/archive/makeAltTextFromItem.ts";
 
 const CAPTURED_AT = "2026-09-14T21:30:00.000Z";
 
 describe("makeAltTextFromItem", () => {
   it("is the date alone with nobody tagged", () => {
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: null,
         personNames: [],
         capturedAt: CAPTURED_AT,
@@ -17,7 +17,7 @@ describe("makeAltTextFromItem", () => {
 
   it("names one person before the date", () => {
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: null,
         personNames: ["Mateo"],
         capturedAt: CAPTURED_AT,
@@ -28,7 +28,7 @@ describe("makeAltTextFromItem", () => {
 
   it("joins the rest with commas and a final and", () => {
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: null,
         personNames: ["Mateo", "Papá", "Mamá"],
         capturedAt: CAPTURED_AT,
@@ -40,7 +40,7 @@ describe("makeAltTextFromItem", () => {
   it("renders the date in the Shoebox's zone, not the server's", () => {
     // 21:30 UTC on the 14th is already the 15th in Sydney.
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: null,
         personNames: [],
         capturedAt: CAPTURED_AT,
@@ -51,7 +51,7 @@ describe("makeAltTextFromItem", () => {
 
   it("lets a typed description win outright", () => {
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: "Mateo asleep on his father's chest",
         personNames: ["Mateo"],
         capturedAt: CAPTURED_AT,
@@ -62,7 +62,7 @@ describe("makeAltTextFromItem", () => {
 
   it("treats a blank override as no override", () => {
     expect(
-      makeAltTextFromItem({
+      itemAltText({
         altTextOverride: "   ",
         personNames: [],
         capturedAt: CAPTURED_AT,

@@ -1,19 +1,8 @@
-.reviewSheet {
+.uploadUndatedSheet {
   border: 1px solid var(--accent-on-print);
   background: color-mix(in oklab, var(--accent-on-print) 7%, var(--print));
 }
 
-.reviewHeading {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-  color: color-mix(in oklab, var(--accent-on-print) 80%, var(--on-print));
-}
-
-.reviewRows {
+.uploadUndatedSheetRows {
   display: grid;
-}
-
-.reviewProse {
-  color: var(--on-print);
 }

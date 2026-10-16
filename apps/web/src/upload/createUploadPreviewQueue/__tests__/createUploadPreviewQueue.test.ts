@@ -1,9 +1,9 @@
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 import type { MediaWorkerResponse } from "../../mediaWorker/mediaWorkerProtocol.types";
 import { createUploadPreviewQueue } from "../createUploadPreviewQueue";
-import { makePreviewHarnessFromOptions } from "./uploadPreviewTestHelpers";
+import { makePreviewHarnessFromOptions } from "./makePreviewHarnessFromOptions";
 
 afterEach(() => {
   return vi.restoreAllMocks();
@@ -148,7 +148,7 @@ describe("upload preview ownership", () => {
   it("HEIC recycling follows config", async () => {
     const harness = makePreviewHarnessFromOptions();
     await Array.from({
-      length: appConfig.upload.heicWorkerRecycleCount,
+      length: APP_CONFIG.upload.heicWorkerRecycleCount,
     }).reduce(async (previous, _, index) => {
       await previous;
       harness.request(`${index}`);

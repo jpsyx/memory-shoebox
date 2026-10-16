@@ -10,7 +10,9 @@
 
 **Spec:** [Approved design](../specs/2026-10-14-media-loading-design.md).
 
-Status: M1 and Tasks A1–A6, B1–B5 and C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete on `feat/media-loading`; independent M2 and whole-branch reviews remain pending. The historical pre-product baseline is `1ec228b0`, with 4,359 passing tests. See [operating evidence and limits](../../media-loading-performance.md) for measured outcomes and unverified deployment prerequisites.
+Status at the original M2 handoff: M1 and Tasks A1–A6, B1–B5 and C1–C5 are implemented and independently reviewed. M2 implementation and local current-source integrated verification are complete on `feat/media-loading`; independent M2 and whole-branch reviews were pending at that handoff. The historical pre-product baseline is `1ec228b0`, with 4,359 passing tests. See [operating evidence and limits](../../media-loading-performance.md) for measured outcomes and unverified deployment prerequisites.
+
+Update, 15 October 2026: the [Avandar Auto review and fix pass](../../media-loading-code-review.md) is complete, including independent rechecks and targeted regression verification. The original task checklist below is retained as the implementation record; current review results and verification limits are in that report.
 
 ## Global Constraints
 
@@ -59,7 +61,7 @@ An executor may add focused helper/test files beside the named unit when require
 
 ## Task M1: Local HTTP Cache and Range Evidence
 
-**Files:** Modify `e2e/support/createFakeS3Server/createFakeS3Server.ts`, `createFakeS3Server.types.ts`, `fakeS3ObjectHandlersHelpers.ts`, and `fakeS3MultipartHandlersHelpers.ts` in that directory. Create `e2e/support/createFakeS3Server/mediaDelivery.test.ts`, `e2e/support/createMediaAcceptanceCatalog.ts`, `e2e/media/media.fixtures.ts`, `e2e/media/cache.spec.ts`, `e2e/media/measurements.ts`, `playwright.media.config.ts`. Update `docs/e2e.md`.
+**Files:** Modify `e2e/support/createFakeS3Server/createFakeS3Server.ts`, `createFakeS3Server.types.ts`, `fakeS3ObjectHandlersHelpers.ts`, and `fakeS3MultipartHandlersHelpers.ts` in that directory. Create `e2e/support/createFakeS3Server/mediaDelivery.test.ts`, `e2e/support/createMediaAcceptanceCatalog.ts`, `e2e/media/media.fixtures.ts`, `e2e/media/cache.spec.ts`, `e2e/media/mediaMeasurementHelpers.ts`, `playwright.media.config.ts`. Update `docs/e2e.md`.
 
 **Interfaces:** Extend the fake bucket factory with injected clock and configurable signature-date/expiry enforcement; preserve its current upload behavior. `createMediaAcceptanceCatalog(): Promise<{ origin: string; database: Kysely<Database>; memberId: string; itemIds: readonly string[]; getTransfers(): readonly { objectId: string; status: number; bodyBytes: number }[]; close(): Promise<void> }>` owns an ephemeral catalog and bucket, uses the real signer, and exposes sanitized transfer records. Define it in the new support file, using existing acceptance catalog/session seeding helpers. `measureMediaNavigation(page: Page): Promise<{ firstImageMs: number; navigationMs: readonly number[]; videoStartupMs: number; longTasksMs: readonly number[]; maxMediaNodes: number }>` lives in `measurements.ts`.
 
@@ -81,12 +83,12 @@ An executor may add focused helper/test files beside the named unit when require
 - [ ] **Verify:** `pnpm check`, `pnpm exec playwright test -c playwright.media.config.ts`, `pnpm test:e2e:video`, `pnpm test:e2e:admin`, and the upload browser suites selected by C4. Run the full ordinary E2E suite once after those targeted checks. Require successful exits; document any unavailable engine/container as unverified. Review branch-wide spec compliance and code after tests; correct material findings and rerun affected checks.
 - [x] **Document and commit:** Record outcomes, limitations, disabled resource prerequisites, browser-cache eviction/signature-renewal limits, and manual actual-iPhone/B2 Range checks. Document optional `FLY_MIN_MACHINES_RUNNING=1` and a cold-start comparison without changing deployment settings. Evaluate Start only for a remaining cold-deep-link discovery waterfall, CDN only for measured geography/renewal misses, and HLS only for remaining video startup/rebuffering problems. Commit `docs: record media loading performance evidence` with the acceptance tests. Do not claim production timings from local measurements.
 
-Local M2 verification is complete: `pnpm check` passed 5,025 tests, current media
+At the original M2 handoff, local verification was complete: `pnpm check` passed 5,025 tests, current media
 76/76, video40/40, built static28/28 and full ordinary370 cases with one existing
 fixme skipped. Earlier full admin118/118 and upload89/89 evidence remains recorded
-with its source provenance. The Verify checkbox and whole-branch review checklist
-remain open solely for the controller's independent reviews and any resulting
-corrections. Requirements and resource limits above are unchanged.
+with its source provenance. At that handoff, the Verify checkbox and whole-branch review checklist
+were still open for independent reviews and resulting corrections. The dated
+review update above records the subsequent Auto review. Requirements and resource limits above are unchanged.
 
 ## Coverage and Completion Checklist
 

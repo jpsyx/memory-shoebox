@@ -1,3 +1,4 @@
+import type { MilestoneDayWindow } from "./readOverlappingMilestones.ts";
 import type { MilestoneRef } from "@memory-shoebox/shared";
 import { getDaysFromMilestone } from "./milestoneSpanHelpers/milestoneSpanHelpers.ts";
 import type { CandidateDay } from "./readItemDays.ts";
@@ -17,15 +18,11 @@ import type { CandidateDay } from "./readItemDays.ts";
  * @param options.afterDay The newer cursor's exclusive lower bound.
  * @param options.throughDay The newer window's inclusive ceiling.
  */
-export function getUnionDaysFromMilestones(options: {
-  milestones: readonly MilestoneRef[];
-  fromDay: string | undefined;
-  untilDay: string | undefined;
-  beforeDay: string | undefined;
-  sinceDay: string | undefined;
-  afterDay?: string;
-  throughDay?: string;
-}): string[] {
+export function getUnionDaysFromMilestones(
+  options: Readonly<
+    MilestoneDayWindow & { milestones: readonly MilestoneRef[] }
+  >,
+): string[] {
   const days = options.milestones.flatMap((milestone) => {
     return getDaysFromMilestone(milestone);
   });
@@ -50,17 +47,16 @@ export function getUnionDaysFromMilestones(options: {
  * With fewer than that there are no more item days at all, so there is no
  * far edge.
  *
- * The index is only reached once the length check has already proven it is
- * in range, so a miss there is a bug worth a thrown error, not a silent
- * `undefined`.
- *
  * @param options.itemDays The item days, read with `limit + 1`.
  * @param options.limit Days per page.
  */
-export function getWindowBoundaryFromItemDays(options: {
-  itemDays: readonly CandidateDay[];
-  limit: number;
-}): string | undefined {
+export function getWindowBoundaryFromItemDays(
+  options: Readonly<{
+    itemDays: readonly CandidateDay[];
+    limit: number;
+  }>,
+): string | undefined {
+  // The length check proves that the boundary index exists.
   return options.itemDays.length > options.limit
     ? options.itemDays[options.limit]!.capturedOn
     : undefined;
@@ -77,11 +73,13 @@ export function getWindowBoundaryFromItemDays(options: {
  * @param options.milestoneDays The days a covering occasion contributes.
  * @param options.direction Nearest days first; older when omitted.
  */
-export function makeMergedDays(options: {
-  itemDays: readonly CandidateDay[];
-  milestoneDays: readonly string[];
-  direction?: "older" | "newer";
-}): CandidateDay[] {
+export function makeMergedDaysFromItemAndMilestoneDays(
+  options: Readonly<{
+    itemDays: readonly CandidateDay[];
+    milestoneDays: readonly string[];
+    direction?: "older" | "newer";
+  }>,
+): CandidateDay[] {
   const itemDates = new Set(
     options.itemDays.map((day) => {
       return day.capturedOn;
@@ -125,11 +123,13 @@ export function makeMergedDays(options: {
  * @param options.limit Days per page.
  * @param options.itemBudget `appConfig.timeline.pageItemBudget`.
  */
-export function makeDayPageFromCandidates(options: {
-  candidates: readonly CandidateDay[];
-  limit: number;
-  itemBudget: number;
-}): { days: CandidateDay[]; hasMore: boolean } {
+export function makeDayPageFromCandidates(
+  options: Readonly<{
+    candidates: readonly CandidateDay[];
+    limit: number;
+    itemBudget: number;
+  }>,
+): { days: CandidateDay[]; hasMore: boolean } {
   const taken = options.candidates.reduce<{
     days: CandidateDay[];
     items: number;

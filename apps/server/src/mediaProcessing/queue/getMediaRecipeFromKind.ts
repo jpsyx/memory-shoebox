@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 
 /** Identity includes every admission budget and approved encoding policy. */
 export function getMediaRecipeFromKind(kind: string): string {
   const policy = {
-    limits: appConfig.mediaProcessing,
+    limits: APP_CONFIG.mediaProcessing,
     input:
       "jpeg-png-still-webp-heic-primary;mp4-mov-h264-hevc;forced-demux-no-external",
     photo:

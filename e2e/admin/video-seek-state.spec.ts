@@ -8,7 +8,13 @@ type SeekAction = {
   dialog?: Locator;
 };
 
-async function _seedMoments(page: Page, videoId: string): Promise<void> {
+async function _seedMoments({
+  page,
+  videoId,
+}: {
+  page: Page;
+  videoId: string;
+}): Promise<void> {
   const comment = await page.request.post(`/api/items/${videoId}/comments`, {
     data: { body: "A moment worth revisiting", atSeconds: 2 },
   });
@@ -28,11 +34,15 @@ async function _seedMoments(page: Page, videoId: string): Promise<void> {
   });
 }
 
-async function _expectSeekState(
-  video: Locator,
-  atSeconds: number,
-  isPaused: boolean,
-): Promise<void> {
+async function _expectSeekState({
+  video,
+  atSeconds,
+  isPaused,
+}: {
+  video: Locator;
+  atSeconds: number;
+  isPaused: boolean;
+}): Promise<void> {
   await expect
     .poll(() => {
       return video.evaluate((element: HTMLVideoElement) => {
@@ -142,7 +152,7 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
     await expect(page).toHaveURL(`${catalog.origin}/items/${catalog.videoId}`);
     const video = page.locator("video");
     await expect(video).toBeAttached();
-    await _seedMoments(page, catalog.videoId);
+    await _seedMoments({ page, videoId: catalog.videoId });
     await page.reload();
     await page.getByRole("button", { name: "Play video", exact: true }).click();
     await expect
@@ -166,7 +176,11 @@ function _makeSeekActionsFromPage(page: Page): SeekAction[] {
           page.getByRole("slider", { name: "Where in the video" }),
         ).toHaveAttribute("aria-valuenow", /^(0|0\.\d+)$/);
         await action.run();
-        await _expectSeekState(video, action.atSeconds, isPaused);
+        await _expectSeekState({
+          video,
+          atSeconds: action.atSeconds,
+          isPaused,
+        });
         if (action.dialog !== undefined) {
           await expect(action.dialog).toBeVisible();
           await action.dialog.press("Escape");

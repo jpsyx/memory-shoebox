@@ -1,10 +1,11 @@
+import type {
+  ImageDerivativesOptions,
+  ImageDerivativesResult,
+} from "./makeImageDerivativesFromFile.types";
 import {
   getJpegQualityFromEncoder,
   isWebKitImageEncoder,
-  type PixelSize,
 } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
-
-import type { ImageDerivativesResult } from "./makeImageDerivativesFromFile.types";
 
 import { getDecodeSizeFromPlan } from "./getDecodeSizeFromPlan";
 
@@ -12,13 +13,53 @@ import { getDerivativePlanFromSize } from "./getDerivativePlanFromSize";
 
 import { decodeImage, encodeEach } from "./makeImageDerivativesSupportHelpers";
 
+/** Encodes the derivative plan from a decoded bitmap. */
+async function _makeDerivativesFromDecodedBitmap(
+  options: Readonly<{
+    options: Parameters<typeof makeImageDerivativesFromFile>[0];
+    attempt: Extract<
+      Awaited<ReturnType<typeof decodeImage>>,
+      { kind: "decoded" }
+    >;
+    plan: ReturnType<typeof getDerivativePlanFromSize>;
+  }>,
+): Promise<ImageDerivativesResult> {
+  const { options: derivativeOptions, attempt, plan } = options;
+  const { bitmap, originalSize } = attempt.image;
+
+  // With no header size the plan is made again from the decoded one.
+  const decodedPlan =
+    derivativeOptions.size === undefined
+      ? getDerivativePlanFromSize({
+          ...derivativeOptions,
+          size: originalSize,
+        })
+      : plan;
+  const quality = getJpegQualityFromEncoder(await isWebKitImageEncoder());
+  const { derivatives, droppedPurposes } = await encodeEach({
+    bitmap,
+    plan: decodedPlan,
+    quality,
+  });
+  return {
+    derivatives,
+    usedWasmDecoder: attempt.usedWasmDecoder,
+    originalSize,
+    ...(droppedPurposes.length === 0
+      ? {}
+      : {
+          dropDetail: `the browser could not encode the JPEG for: ${droppedPurposes.join(", ")}`,
+        }),
+  };
+}
+
 /**
  * A photograph's `display` and `thumb` JPEGs, made in the worker.
  *
  * **A derivative that cannot be made is dropped, never
- * thrown**: the file still uploads with a shorter renditions list, and
- * `MediaRef` resolves the missing purpose to the original (Ruling 1). The
- * result's `dropDetail` says why, so a caller can tell a drop from a skip.
+ * thrown**: the file still uploads with a shorter renditions list. Serving
+ * may use an original photo only when it meets the requested size and byte
+ * budgets. The result's `dropDetail` distinguishes a drop from a skip.
  *
  *
  * @param options.file The picked image.
@@ -27,12 +68,7 @@ import { decodeImage, encodeEach } from "./makeImageDerivativesSupportHelpers";
  * @param options.purposes The requested sizes; defaults to display and thumb.
  */
 export async function makeImageDerivativesFromFile(
-  options: Readonly<{
-    file: Blob;
-    contentType: string;
-    size: PixelSize | undefined;
-    purposes?: ReadonlyArray<"thumb" | "display">;
-  }>,
+  options: Readonly<ImageDerivativesOptions>,
 ): Promise<ImageDerivativesResult> {
   // Decode once at the largest needed derivative size when the header supplies
   // dimensions, then draw each derivative from that bitmap.
@@ -64,44 +100,4 @@ export async function makeImageDerivativesFromFile(
   } finally {
     bitmap.close();
   }
-}
-
-/** Encodes the derivative plan from a decoded bitmap. */
-async function _makeDerivativesFromDecodedBitmap(
-  input: Readonly<{
-    options: Parameters<typeof makeImageDerivativesFromFile>[0];
-    attempt: Extract<
-      Awaited<ReturnType<typeof decodeImage>>,
-      { kind: "decoded" }
-    >;
-    plan: ReturnType<typeof getDerivativePlanFromSize>;
-  }>,
-): Promise<ImageDerivativesResult> {
-  const { options, attempt, plan } = input;
-  const { bitmap, originalSize } = attempt.image;
-
-  // With no header size the plan is made again from the decoded one.
-  const decodedPlan =
-    options.size === undefined
-      ? getDerivativePlanFromSize({
-          ...options,
-          size: originalSize,
-        })
-      : plan;
-  const quality = getJpegQualityFromEncoder(await isWebKitImageEncoder());
-  const { derivatives, droppedPurposes } = await encodeEach({
-    bitmap,
-    plan: decodedPlan,
-    quality,
-  });
-  return {
-    derivatives,
-    usedWasmDecoder: attempt.usedWasmDecoder,
-    originalSize,
-    ...(droppedPurposes.length === 0
-      ? {}
-      : {
-          dropDetail: `the browser could not encode the JPEG for: ${droppedPurposes.join(", ")}`,
-        }),
-  };
 }

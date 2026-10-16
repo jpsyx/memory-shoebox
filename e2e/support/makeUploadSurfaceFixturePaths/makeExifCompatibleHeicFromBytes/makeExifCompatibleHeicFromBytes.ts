@@ -1,6 +1,18 @@
+type BoxReadOptions = {
+  bytes: Buffer;
+  start: number;
+  end: number;
+  kind: string;
+};
 type Cursor = { bytes: Buffer; position: number; end: number };
 
-function _readNumber(cursor: Cursor, width: number): number {
+function _readNumber({
+  cursor,
+  width,
+}: {
+  cursor: Cursor;
+  width: number;
+}): number {
   if (cursor.position + width > cursor.end || ![2, 4].includes(width)) {
     throw new Error("Unsupported generated HEIC offset field");
   }
@@ -9,12 +21,10 @@ function _readNumber(cursor: Cursor, width: number): number {
   return value;
 }
 
-function _getBoxFromBytes(options: {
-  bytes: Buffer;
+function _getBoxFromBytes(options: BoxReadOptions): {
   start: number;
   end: number;
-  kind: string;
-}): { start: number; end: number } {
+} {
   const { bytes, start, end, kind } = options;
   if (start + 8 > end) {
     throw new Error(`Generated HEIC lacks ${kind}`);
@@ -29,17 +39,17 @@ function _getBoxFromBytes(options: {
 }
 
 function _normalizeItemOffsets(cursor: Cursor): void {
-  _readNumber(cursor, 2); // Item id.
-  if (_readNumber(cursor, 2) !== 0) {
+  _readNumber({ cursor, width: 2 }); // Item id.
+  if (_readNumber({ cursor, width: 2 }) !== 0) {
     throw new Error("External HEIC data references are unsupported");
   }
   const basePosition = cursor.position;
-  const base = _readNumber(cursor, 4);
-  const extentCount = _readNumber(cursor, 2);
+  const base = _readNumber({ cursor, width: 4 });
+  const extentCount = _readNumber({ cursor, width: 2 });
   Array.from({ length: extentCount }).forEach(() => {
     const offsetPosition = cursor.position;
-    const offset = _readNumber(cursor, 4);
-    const length = _readNumber(cursor, 4);
+    const offset = _readNumber({ cursor, width: 4 });
+    const length = _readNumber({ cursor, width: 4 });
     const absolute = base + offset;
     if (absolute > 0xffffffff || absolute + length > cursor.bytes.length) {
       throw new Error("Generated HEIC extent is outside its file");
@@ -69,13 +79,16 @@ export function makeExifCompatibleHeicFromBytes(source: Buffer): Buffer {
     kind: "iloc",
   });
   const cursor = { bytes, position: location.start, end: location.end };
-  if (_readNumber(cursor, 4) !== 0 || _readNumber(cursor, 2) !== 0x4440) {
+  if (
+    _readNumber({ cursor, width: 4 }) !== 0 ||
+    _readNumber({ cursor, width: 2 }) !== 0x4440
+  ) {
     throw new Error(
       "Unsupported generated HEIC iloc version, construction mode or field widths",
     );
   }
-  const count = _readNumber(cursor, 2);
-  Array.from({ length: count }).forEach(() => {
+  const itemCount = _readNumber({ cursor, width: 2 });
+  Array.from({ length: itemCount }).forEach(() => {
     return _normalizeItemOffsets(cursor);
   });
   if (cursor.position !== cursor.end) {

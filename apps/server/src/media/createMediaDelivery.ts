@@ -1,8 +1,14 @@
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import type {
   MediaLeaseRequest,
   SignedMediaLease,
 } from "./mediaDelivery.types.ts";
+type SigningOptions = {
+  entries: Map<string, LeaseEntry>;
+  cacheKey: string;
+  request: MediaLeaseRequest;
+  sign: (request: MediaLeaseRequest) => Promise<SignedMediaLease>;
+};
 
 /** Pending signing work or its completed lease, owned by the cache. */
 type LeaseEntry = {
@@ -11,10 +17,13 @@ type LeaseEntry = {
   expiresAtMs: number;
 };
 
-function _makeCacheKeyFromRequest(
-  namespace: string,
-  request: Readonly<MediaLeaseRequest>,
-): string {
+function _makeCacheKeyFromRequest({
+  namespace,
+  request,
+}: {
+  namespace: string;
+  request: Readonly<MediaLeaseRequest>;
+}): string {
   return JSON.stringify([
     namespace,
     request.key,
@@ -24,21 +33,7 @@ function _makeCacheKeyFromRequest(
   ]);
 }
 
-function _isReusableEntry(entry: Readonly<LeaseEntry>, now: number): boolean {
-  return (
-    now >= entry.issuedAtMs &&
-    now < entry.expiresAtMs - appConfig.media.leaseRenewalMarginSeconds * 1000
-  );
-}
-
-function _startSigning(
-  options: Readonly<{
-    entries: Map<string, LeaseEntry>;
-    cacheKey: string;
-    request: MediaLeaseRequest;
-    sign: (request: MediaLeaseRequest) => Promise<SignedMediaLease>;
-  }>,
-): LeaseEntry {
+function _startSigning(options: Readonly<SigningOptions>): LeaseEntry {
   const issuedAtMs = Math.floor(options.request.now.getTime() / 1000) * 1000;
   const entry: LeaseEntry = {
     issuedAtMs,
@@ -66,7 +61,7 @@ function _startSigning(
 
 // Expired hits are replaced; overflow prunes the least recently used entry.
 function _pruneEntries(entries: Map<string, LeaseEntry>): void {
-  if (entries.size > appConfig.media.leaseCacheMaxEntries) {
+  if (entries.size > APP_CONFIG.media.leaseCacheMaxEntries) {
     const oldestKey = entries.keys().next().value;
     if (oldestKey !== undefined) {
       entries.delete(oldestKey);
@@ -93,11 +88,17 @@ export function createMediaDelivery(
         entries.clear();
       }
       lastRequestAt = now;
-      const cacheKey = _makeCacheKeyFromRequest(options.namespace, request);
+      const cacheKey = _makeCacheKeyFromRequest({
+        namespace: options.namespace,
+        request,
+      });
       const cached = entries.get(cacheKey);
       entries.delete(cacheKey);
       const entry =
-        cached !== undefined && _isReusableEntry(cached, now)
+        cached !== undefined &&
+        now >= cached.issuedAtMs &&
+        now <
+          cached.expiresAtMs - APP_CONFIG.media.leaseRenewalMarginSeconds * 1000
           ? cached
           : _startSigning({ entries, cacheKey, request, sign: options.sign });
       entries.set(cacheKey, entry);

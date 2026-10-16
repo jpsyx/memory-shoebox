@@ -1,0 +1,16 @@
+.videoSpeedSelect {
+  margin-left: auto;
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+.videoSpeedSelectInput {
+  font: inherit;
+  font-size: var(--micro);
+  border: 0;
+  color: var(--chip-white);
+  background: var(--chip-black);
+  border-radius: 0;
+}
+.videoSpeedSelectSection {
+  color: var(--chip-white);
+}

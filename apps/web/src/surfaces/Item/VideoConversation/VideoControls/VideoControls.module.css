@@ -1,0 +1,44 @@
+.videoControls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.videoControls button {
+  color: var(--chip-white);
+  background: transparent;
+  border: 0;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 0;
+}
+.videoControls button:hover {
+  background: color-mix(in oklab, var(--chip-white) 14%, transparent);
+}
+.videoControls svg {
+  width: 20px;
+  height: 20px;
+}
+.videoControls button[data-paused] .videoControlsPauseIcon,
+.videoControls button:not([data-paused]) .videoControlsPlayIcon,
+.videoControls button[data-muted] .videoControlsVolumeIcon,
+.videoControls button:not([data-muted]) .videoControlsMutedIcon {
+  display: none;
+}
+.videoControlsClock {
+  font-size: var(--micro);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 24em) {
+  .videoControls {
+    flex-wrap: wrap;
+  }
+  .videoControlsClock {
+    order: -1;
+    flex-basis: 100%;
+  }
+}

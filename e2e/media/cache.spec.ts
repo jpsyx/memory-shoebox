@@ -5,8 +5,8 @@ import { test, expect } from "./media.fixtures.ts";
 import {
   measureMediaNavigation,
   expectCurrentPhotoDecoded,
-} from "./measurements.ts";
-import type { MediaAcceptanceCatalog } from "../support/createMediaAcceptanceCatalog.ts";
+} from "./mediaMeasurementHelpers.ts";
+import type { MediaAcceptanceCatalog } from "../support/createMediaAcceptanceCatalog/createMediaAcceptanceCatalog.ts";
 
 const ARTIFACT_PATH: string = "tmp/media-loading/baseline.json";
 
@@ -15,22 +15,24 @@ async function _writeBaseline(
 ): Promise<void> {
   await mkdir("tmp/media-loading", { recursive: true });
   await writeFile("tmp/media-loading/.gitignore", "*\n");
-  let previous: { runs: Array<Record<string, unknown>> } = { runs: [] };
-  try {
-    previous = JSON.parse(
-      await readFile(ARTIFACT_PATH, "utf8"),
-    ) as typeof previous;
-  } catch (failure) {
-    if (
-      !(
+  const previous = await (async (): Promise<{
+    runs: Array<Record<string, unknown>>;
+  }> => {
+    try {
+      return JSON.parse(await readFile(ARTIFACT_PATH, "utf8")) as {
+        runs: Array<Record<string, unknown>>;
+      };
+    } catch (failure) {
+      if (
         failure instanceof Error &&
         "code" in failure &&
         failure.code === "ENOENT"
-      )
-    ) {
+      ) {
+        return { runs: [] };
+      }
       throw failure;
     }
-  }
+  })();
   await writeFile(
     ARTIFACT_PATH,
     `${JSON.stringify({ ...previous, runs: [...previous.runs, measurement] }, null, 2)}\n`,
@@ -183,13 +185,13 @@ test("reuses signed media on ordinary reload while recording cache, range and na
   browserName,
 }) => {
   await page.goto("/api/media-evidence/session");
-  const count = await catalog.database
+  const itemCountRow = await catalog.database
     .selectFrom("items")
     .select((expression) => {
       return expression.fn.countAll<number>().as("total");
     })
     .executeTakeFirstOrThrow();
-  expect(count.total).toBe(5000);
+  expect(itemCountRow.total).toBe(5000);
   const day = await catalog.database
     .selectFrom("items")
     .select((expression) => {

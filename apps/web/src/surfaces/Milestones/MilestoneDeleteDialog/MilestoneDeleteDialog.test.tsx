@@ -3,21 +3,23 @@ import {
   recordedRequests,
   renderAt,
   respondWith,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 function _installAnnouncesSuccessWhenSelectedDetail404sBeforeAnswers0(): void {
   respondWith({
-    "GET /api/milestones": {
-      body: { milestones: [detail], nextCursor: null },
-      status: 200,
-    },
-    [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-    [`DELETE /api/milestones/${milestoneId}`]: {
-      body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
-      status: 200,
+    routes: {
+      "GET /api/milestones": {
+        body: { milestones: [detail], nextCursor: null },
+        status: 200,
+      },
+      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+      [`DELETE /api/milestones/${milestoneId}`]: {
+        body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
+        status: 200,
+      },
     },
   });
 }
@@ -86,19 +88,21 @@ function _installLateDeletionCannotNavigateADifferentOccasionsAnswers2(): {
     responseState.finish = settle;
   });
   respondWith({
-    "GET /api/milestones": {
-      body: { milestones: [detail, otherDetail], nextCursor: null },
-      status: 200,
-    },
-    [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-    [`GET /api/milestones/${OTHER_MILESTONE_ID}`]: {
-      body: otherDetail,
-      status: 200,
-    },
-    [`DELETE /api/milestones/${milestoneId}`]: {
-      body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
-      status: 200,
-      waitFor: reply,
+    routes: {
+      "GET /api/milestones": {
+        body: { milestones: [detail, otherDetail], nextCursor: null },
+        status: 200,
+      },
+      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+      [`GET /api/milestones/${OTHER_MILESTONE_ID}`]: {
+        body: otherDetail,
+        status: 200,
+      },
+      [`DELETE /api/milestones/${milestoneId}`]: {
+        body: { milestoneId, name: "Deleted Home", detachedItemCount: 1 },
+        status: 200,
+        waitFor: reply,
+      },
     },
   });
   return Object.assign(responseState, { OTHER_MILESTONE_ID });
@@ -109,14 +113,16 @@ const milestoneId = detail.milestone.milestoneId satisfies string;
 describe("label-only deletion", () => {
   it("uses only milestone DELETE and announces returned name/count", async () => {
     respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [detail], nextCursor: null },
-        status: 200,
-      },
-      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-      [`DELETE /api/milestones/${milestoneId}`]: {
-        body: { milestoneId, name: "Returned name", detachedItemCount: 3 },
-        status: 200,
+      routes: {
+        "GET /api/milestones": {
+          body: { milestones: [detail], nextCursor: null },
+          status: 200,
+        },
+        [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+        [`DELETE /api/milestones/${milestoneId}`]: {
+          body: { milestoneId, name: "Returned name", detachedItemCount: 3 },
+          status: 200,
+        },
       },
     });
     renderAt(`/milestones?milestone=${milestoneId}&mode=delete`);
@@ -148,14 +154,16 @@ describe("label-only deletion", () => {
 describe("delete failure and uncertainty", () => {
   it("retains confirmation after refusal", async () => {
     respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [detail], nextCursor: null },
-        status: 200,
-      },
-      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-      [`DELETE /api/milestones/${milestoneId}`]: {
-        body: { error: "milestone_forbidden", message: "No" },
-        status: 403,
+      routes: {
+        "GET /api/milestones": {
+          body: { milestones: [detail], nextCursor: null },
+          status: 200,
+        },
+        [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+        [`DELETE /api/milestones/${milestoneId}`]: {
+          body: { error: "milestone_forbidden", message: "No" },
+          status: 403,
+        },
       },
     });
     renderAt(`/milestones?milestone=${milestoneId}&mode=delete`);
@@ -167,14 +175,16 @@ describe("delete failure and uncertainty", () => {
   });
   it("blocks another delete after schema uncertainty until authoritative refresh", async () => {
     respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [detail], nextCursor: null },
-        status: 200,
-      },
-      [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
-      [`DELETE /api/milestones/${milestoneId}`]: {
-        body: { invalid: true },
-        status: 200,
+      routes: {
+        "GET /api/milestones": {
+          body: { milestones: [detail], nextCursor: null },
+          status: 200,
+        },
+        [`GET /api/milestones/${milestoneId}`]: { body: detail, status: 200 },
+        [`DELETE /api/milestones/${milestoneId}`]: {
+          body: { invalid: true },
+          status: 200,
+        },
       },
     });
     renderAt(`/milestones?milestone=${milestoneId}&mode=delete`);

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
 import { createProcessingAcceptance } from "../support/createProcessingAcceptance.ts";
 import { createMediaProcessingQueue } from "../../apps/server/src/mediaProcessing/queue/createMediaProcessingQueue.ts";
-import { discoverMediaProcessingWork } from "../../apps/server/src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { discoverMediaProcessingWork } from "../../apps/server/src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 
 // Actual local bucket and codecs; this proves lifecycle, never OS isolation.
 test("new upload and reopened repair publish without delaying original archival", async ({

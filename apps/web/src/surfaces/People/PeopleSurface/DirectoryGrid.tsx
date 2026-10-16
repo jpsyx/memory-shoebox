@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { DirectoryPerson } from "@memory-shoebox/shared";
-import { PersonCard } from "@/surfaces/People/PersonCard";
+import { PersonCard } from "@/surfaces/People/PersonCard/PersonCard";
 import { LabelText } from "@/system/typography/LabelText";
 import classes from "@/system/system.module.css";
 

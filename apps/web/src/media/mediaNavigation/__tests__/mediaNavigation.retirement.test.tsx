@@ -1,22 +1,16 @@
-import { type ReactNode } from "react";
+import { MediaNavigationOwner as Owner } from "./MediaNavigationOwner";
+import { startHeldMediaLoading } from "./startHeldMediaLoading";
+import type { MediaRef } from "@memory-shoebox/shared";
 
 import { act, render } from "@testing-library/react";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-  type MediaLoadingResources,
-} from "../../createMediaLoadingResources/createMediaLoadingResources";
-
-import { MediaLoadingProvider } from "../../MediaLoadingProvider/MediaLoadingProvider";
-
-import { PhotoFrame } from "@/surfaces/Item/ItemViewer/PhotoFrame/PhotoFrame";
+import { type MediaLoadingResources } from "../../createMediaLoadingResources/createMediaLoadingResources";
 
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 const injected = vi.hoisted(() => {
   return {
@@ -53,57 +47,7 @@ const media = {
   display: source,
   thumb: null,
   displayCandidates: [source],
-};
-
-function Owner({
-  resources,
-  itemId,
-}: {
-  resources: MediaLoadingResources;
-  itemId: string;
-}): ReactNode {
-  injected.resources = resources;
-  return (
-    <MediaLoadingProvider memberId="member" routeKey={`/items/${itemId}`}>
-      <PhotoFrame media={media} itemId={itemId} />
-    </MediaLoadingProvider>
-  );
-}
-
-async function _active() {
-  let signal: AbortSignal | undefined;
-  const resources = createMediaLoadingResources({
-    memberId: "member",
-    lifetime: createMediaLoadingLifetime(),
-    load: (_candidate, operationSignal) => {
-      signal = operationSignal;
-      return new Promise(() => {});
-    },
-  });
-  resources.navigation.viewport = {
-    cssWidth: 600,
-    cssHeight: 600,
-    devicePixelRatio: 1,
-    supportsWebp: true,
-  };
-  resources.scheduler.schedule(
-    [{ itemId: "target", source, kind: "photo", rank: 0, decode: true }],
-    {
-      memberId: "member",
-      selectionKey: "old",
-      visible: true,
-      saveData: false,
-      effectiveType: "4g",
-    },
-  );
-  await vi.advanceTimersByTimeAsync(250);
-  return {
-    resources,
-    getSignal: () => {
-      return signal!;
-    },
-  };
-}
+} satisfies MediaRef;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -113,7 +57,8 @@ afterEach(() => {
 describe("viewer promotion ownership", () => {
   it("replaces a pending same-rendition lease before releasing stale callbacks", async () => {
     vi.useFakeTimers();
-    const { resources, getSignal } = await _active();
+    const { resources, getSignal } = await startHeldMediaLoading(source);
+    injected.resources = resources;
     const staleRelease = resources.navigation.prepare({
       itemId: "target",
       source,
@@ -126,7 +71,7 @@ describe("viewer promotion ownership", () => {
     staleRelease();
     resources.navigation.complete(staleRelease);
     expect(getSignal().aborted).toBe(false);
-    const view = render(<Owner resources={resources} itemId="target" />);
+    const view = render(<Owner media={media} itemId="target" />);
     resources.navigation.complete(currentRelease);
     staleRelease();
     resources.clearWork();
@@ -141,7 +86,8 @@ describe("viewer promotion ownership", () => {
     "releases %s navigation without an orphan lease",
     async (reason) => {
       vi.useFakeTimers();
-      const { resources, getSignal } = await _active();
+      const { resources, getSignal } = await startHeldMediaLoading(source);
+      injected.resources = resources;
       const cancel = resources.navigation.prepare({ itemId: "target", source });
       resources.clearWork();
       expect(getSignal().aborted).toBe(false);
@@ -150,7 +96,7 @@ describe("viewer promotion ownership", () => {
           cancel();
         }
         if (reason === "redirected") {
-          render(<Owner resources={resources} itemId="redirect" />);
+          render(<Owner media={media} itemId="redirect" />);
         }
         if (reason === "unadopted") {
           resources.navigation.finishRoute();

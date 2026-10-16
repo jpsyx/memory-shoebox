@@ -11,7 +11,7 @@ import {
 } from "./transferUploadFileTestHelpers";
 
 import { describe, expect, it } from "vitest";
-import { appConfig } from "../../../../../../app.config";
+import { APP_CONFIG } from "../../../../../../app.config";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
 import { transferUploadFile } from "@/upload/transferUploadFile/transferUploadFile";
@@ -235,7 +235,7 @@ describe("transferUploadFile", () => {
     ]);
     const transport = makeUploadTransportFromAnswers([]);
     const oversized = new Blob([
-      new Uint8Array(appConfig.upload.derivatives.maxBytes + 1),
+      new Uint8Array(APP_CONFIG.upload.derivatives.maxBytes + 1),
     ]);
 
     const outcome = await transferUploadFile(

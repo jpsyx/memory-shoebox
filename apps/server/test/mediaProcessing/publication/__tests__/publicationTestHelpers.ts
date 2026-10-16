@@ -21,10 +21,14 @@ import {
   insertMember,
   insertRendition,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
-/** Fixed initial clock for publication claims and uploaded output rows. */
-export const NOW = "2026-10-14T12:00:00.000Z";
-/** Creates a migrated in-memory catalog, claimed photo job and uploaded outputs with controlled clock/cancellation; registers database cleanup. */
-export async function createPublicationFixture(): Promise<{
+type PublicationState = {
+  renditions: Array<Selectable<Database["item_renditions"]>>;
+  outputs: Array<Selectable<Database["media_processing_outputs"]>>;
+  jobs: Array<Selectable<Database["media_processing_jobs"]>>;
+  deletions: Array<Selectable<Database["pending_object_deletions"]>>;
+};
+
+type PublicationFixture = {
   database: ReturnType<typeof createDatabase>;
   queue: ReturnType<typeof createMediaProcessingQueue>;
   claim: ProcessingClaim;
@@ -36,7 +40,15 @@ export async function createPublicationFixture(): Promise<{
   signal: AbortSignal;
   advance: () => void;
   publish: () => ReturnType<typeof publishMediaRenditions>;
-}> {
+};
+
+/** Fixed initial clock for publication claims and uploaded output rows. */
+export const NOW = "2026-10-14T12:00:00.000Z";
+/**
+ * Creates a migrated in-memory catalog, claimed photo job and uploaded outputs
+ * with controlled clock/cancellation; registers database cleanup.
+ */
+export async function createPublicationFixture(): Promise<PublicationFixture> {
   const database = createDatabase(":memory:");
   onTestFinished(() => {
     return database.destroy();
@@ -44,7 +56,7 @@ export async function createPublicationFixture(): Promise<{
   await migrateToLatest(database);
   const memberId = await insertMember(database);
   const itemId = await insertItem(database, { uploadedBy: memberId });
-  const sourceRenditionId = await seedRenditions(database, itemId);
+  const sourceRenditionId = await seedRenditions({ database, itemId });
   let now = NOW;
   const clock = () => {
     return new Date(now);
@@ -58,7 +70,7 @@ export async function createPublicationFixture(): Promise<{
     priority: 100,
   });
   const claim = (await queue.claim())!;
-  const outputs = await seedOutputs(database, claim);
+  const outputs = await seedOutputs({ database: database, claim: claim });
   return {
     database,
     queue,
@@ -83,11 +95,17 @@ export async function createPublicationFixture(): Promise<{
     },
   };
 }
-/** Seeds the original and an older display rendition, returning the original source ID for fencing tests. */
-export async function seedRenditions(
-  database: ReturnType<typeof createDatabase>,
-  itemId: string,
-): Promise<string> {
+/**
+ * Seeds the original and an older display rendition, returning the original
+ * source ID for fencing tests.
+ */
+export async function seedRenditions({
+  database,
+  itemId,
+}: Readonly<{
+  database: ReturnType<typeof createDatabase>;
+  itemId: string;
+}>): Promise<string> {
   const sourceRenditionId = await insertRendition(database, {
     itemId,
     purpose: "original",
@@ -100,11 +118,17 @@ export async function seedRenditions(
   });
   return sourceRenditionId;
 }
-/** Seeds three uploaded derivative ownership rows for the claim and returns their rendition descriptors. */
-export async function seedOutputs(
-  database: ReturnType<typeof createDatabase>,
-  claim: ProcessingClaim,
-): Promise<Array<{ outputId: string; rendition: ProcessedRendition }>> {
+/**
+ * Seeds three uploaded derivative ownership rows for the claim and returns
+ * their rendition descriptors.
+ */
+export async function seedOutputs({
+  database,
+  claim,
+}: Readonly<{
+  database: ReturnType<typeof createDatabase>;
+  claim: Readonly<ProcessingClaim>;
+}>): Promise<Array<{ outputId: string; rendition: ProcessedRendition }>> {
   const outputs = ["thumb", "display_small", "display"].map((purpose) => {
     return {
       outputId: `new-${purpose}`,
@@ -139,17 +163,18 @@ export async function seedOutputs(
     .execute();
   return outputs;
 }
-/** Owned publication context returned by the fixture, including clock, cancellation and output state. */
+/**
+ * Owned publication context returned by the fixture, including clock,
+ * cancellation and output state.
+ */
 export type Fixture = Awaited<ReturnType<typeof createPublicationFixture>>;
-/** Reads deterministically ordered rendition, output, job and pending-deletion rows for atomicity comparisons. */
+/**
+ * Reads deterministically ordered rendition, output, job and pending-deletion
+ * rows for atomicity comparisons.
+ */
 export async function readPublicationState(
   database: Fixture["database"],
-): Promise<{
-  renditions: Array<Selectable<Database["item_renditions"]>>;
-  outputs: Array<Selectable<Database["media_processing_outputs"]>>;
-  jobs: Array<Selectable<Database["media_processing_jobs"]>>;
-  deletions: Array<Selectable<Database["pending_object_deletions"]>>;
-}> {
+): Promise<PublicationState> {
   return {
     renditions: await database
       .selectFrom("item_renditions")
@@ -173,12 +198,19 @@ export async function readPublicationState(
       .execute(),
   };
 }
-/** Runs publication or reservation with the same claim, outputs and cancellation against the selected database. */
-export function runOutputTransition(
-  fixture: Fixture,
-  operation: "publish" | "reserve",
+/**
+ * Runs publication or reservation with the same claim, outputs and cancellation
+ * against the selected database.
+ */
+export function runOutputTransition({
+  fixture,
+  operation,
   database = fixture.database,
-):
+}: Readonly<{
+  fixture: Fixture;
+  operation: "publish" | "reserve";
+  database?: import("kysely").Kysely<Database>;
+}>):
   | ReturnType<typeof publishMediaRenditions>
   | ReturnType<typeof reserveMediaOutputs> {
   const options = { ...fixture, database };
@@ -191,34 +223,50 @@ export function runOutputTransition(
         }),
       });
 }
-/** Invalidates the fixture attempt by advancing past its lease or aborting its shutdown signal. */
-export function interruptAttempt(
-  fixture: Fixture,
-  interruption: "expire" | "abort",
-): void {
+/**
+ * Invalidates the fixture attempt by advancing past its lease or aborting its
+ * shutdown signal.
+ */
+export function interruptAttempt({
+  fixture,
+  interruption,
+}: Readonly<{ fixture: Fixture; interruption: "expire" | "abort" }>): void {
   if (interruption === "expire") {
     fixture.advance();
   } else {
     fixture.shutdown.abort(new Error("shutdown"));
   }
 }
-/** Checks the operation-specific refusal contract: false publication or ownership-lost reservation failure. */
-export async function expectRefused(
-  work: ReturnType<typeof runOutputTransition>,
-  operation: "publish" | "reserve",
-): Promise<void> {
+/**
+ * Checks the operation-specific refusal contract: false publication or
+ * ownership-lost reservation failure.
+ */
+export async function expectRefused({
+  work,
+  operation,
+}: Readonly<{
+  work: ReturnType<typeof runOutputTransition>;
+  operation: "publish" | "reserve";
+}>): Promise<void> {
   if (operation === "publish") {
     expect(await work).toBe(false);
   } else {
     await expect(work).rejects.toThrow("processing_output_ownership_lost");
   }
 }
-/** Wraps the fixture database with a plugin that invalidates the attempt immediately after a matching write and reports whether it fired. */
-export function makeInterruptedDatabase(
-  fixture: Fixture,
-  target: string,
-  interruption: "expire" | "abort",
-): { database: Fixture["database"]; didInterrupt: () => boolean } {
+/**
+ * Wraps the fixture database with a plugin that invalidates the attempt
+ * immediately after a matching write and reports whether it fired.
+ */
+export function makeInterruptedDatabaseFromFixture({
+  fixture,
+  target,
+  interruption,
+}: Readonly<{
+  fixture: Fixture;
+  target: string;
+  interruption: "expire" | "abort";
+}>): { database: Fixture["database"]; didInterrupt: () => boolean } {
   const writes = new Set<QueryId>();
   let interrupted = false;
   const database = fixture.database.withPlugin({
@@ -234,7 +282,7 @@ export function makeInterruptedDatabase(
     transformResult: async (args) => {
       if (writes.delete(args.queryId)) {
         interrupted = true;
-        interruptAttempt(fixture, interruption);
+        interruptAttempt({ fixture, interruption });
       }
       return args.result;
     },

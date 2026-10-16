@@ -1,5 +1,5 @@
-import type { TimelineSearch } from "@/api/timeline/selection/selection";
-import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
+import type { TimelineSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { getArchiveTotalsFromRail } from "@/api/timelineHelpers/timelineHelpers";
 import { ArchiveBody } from "@/surfaces/Timeline/TimelineSurface/ArchiveBody";
 import { FilterMain } from "@/surfaces/Timeline/TimelineSurface/FilterMain";
 import { SelectionStrip } from "@/surfaces/Timeline/TimelineSurface/SelectionStrip";
@@ -21,9 +21,6 @@ type Props = {
  * and the pile becomes a plain section under it: two `<main>` elements on one
  * page is invalid and gives a screen reader two "main" landmarks to choose
  * between.
- *
- * Split out of `TimelineSurface` so that function stays a plain dispatch
- * between the empty states and this one.
  */
 export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
   return (
@@ -31,7 +28,7 @@ export function TimelinePile({ data, search }: Readonly<Props>): ReactNode {
       {data.isFiltered ? (
         <SelectionStrip
           selection={data.selection}
-          count={data.filterCount}
+          selectedItemCount={data.filterCount}
           facets={data.facets}
           onChange={data.onSelectionChange}
           onClear={data.onClearFilters}

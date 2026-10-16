@@ -1,0 +1,48 @@
+.uploadPrintMarkersLabels {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+  font-family: var(--font-figure);
+  font-size: var(--micro);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A selection has to be readable without comparing one print to another, so
+ * it carries a mark as well as the outline.
+ */
+.uploadPrintMarkersTick {
+  animation: stamp 300ms var(--ease);
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: var(--chip-black);
+  color: var(--chip-white);
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    scale: 1.6;
+    rotate: -12deg;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    rotate: 0deg;
+  }
+}

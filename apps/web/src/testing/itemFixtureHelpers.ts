@@ -8,7 +8,7 @@ import type {
   ReactionSummary,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 /**
  * Canned item payloads, shared by every test that draws surface 3 or 4, and by
@@ -194,7 +194,7 @@ export function makeFrameIdFromPosition(position: number): string {
 }
 
 /** One frame in the strip. */
-export function makeBurstFrame(position: number): BurstFrameRef {
+export function makeBurstFrameFromPosition(position: number): BurstFrameRef {
   return {
     itemId: makeFrameIdFromPosition(position),
     position,
@@ -246,7 +246,7 @@ export function makeBurstDetail(
     burstFrames: Array.from(
       { length: Math.min(frameCount, 60) },
       (_unused, index) => {
-        return makeBurstFrame(index + 1);
+        return makeBurstFrameFromPosition(index + 1);
       },
     ),
     ...overrides,

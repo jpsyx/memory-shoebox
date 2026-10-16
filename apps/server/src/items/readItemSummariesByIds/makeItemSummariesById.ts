@@ -1,10 +1,10 @@
 import type { FastifyBaseLogger } from "fastify";
 import type { BurstSummary, ItemSummary } from "@memory-shoebox/shared";
-import { makeAltTextFromItem } from "../../archive/makeAltTextFromItem.ts";
+import { itemAltText } from "../../archive/makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "../../archive/makeMediaRefFromSources.ts";
 import { makeBurstSummaryFromRows } from "../makeBurstSummaryFromRows.ts";
-import { makeBurstFrameTotalsFromRows } from "../readBurstFrameRefs/readBurstFrameTotals.ts";
-import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
+import { makeBurstFrameTotalsFromRows } from "../readBurstFramePage/readBurstFrameTotals.ts";
+import type { BurstFrameRow } from "../readBurstFramePage/readBurstFrameRows.ts";
 import type { ItemSummaryParts } from "./readItemSummaryParts.ts";
 import type { ItemSummaryRow } from "./readItemSummaryRows.ts";
 
@@ -25,7 +25,7 @@ function _makeBurstSummaryForRow(options: {
   burstId: string;
   siblings: readonly BurstFrameRow[];
   storedCoverItemId: string | undefined;
-}): BurstSummary | null {
+}): BurstSummary | undefined {
   return makeBurstSummaryFromRows({
     burstId: options.burstId,
     rows: options.siblings,
@@ -34,20 +34,19 @@ function _makeBurstSummaryForRow(options: {
   });
 }
 
-/** This row's burst summary, or null when it sits outside one. */
+/** This row's burst summary, or undefined when it sits outside one. */
 function _getBurstSummaryForRow(options: {
   row: ItemSummaryRow;
   parts: Readonly<ItemSummaryParts>;
-}): BurstSummary | null {
+}): BurstSummary | undefined {
   const { row, parts } = options;
-  if (row.burstId === null) {
-    return null;
-  }
-  return _makeBurstSummaryForRow({
-    burstId: row.burstId,
-    siblings: parts.siblingsByBurstId.get(row.burstId) ?? [],
-    storedCoverItemId: parts.covers.get(row.burstId),
-  });
+  return row.burstId === null
+    ? undefined
+    : _makeBurstSummaryForRow({
+        burstId: row.burstId,
+        siblings: parts.siblingsByBurstId.get(row.burstId) ?? [],
+        storedCoverItemId: parts.covers.get(row.burstId),
+      });
 }
 
 /** One visible print, including an explicit unavailable preview. */
@@ -64,8 +63,8 @@ function _makeItemSummaryFromRow(options: {
     previewState:
       parts.mediaSources.previewStatesByItemId.get(row.itemId) ?? "unavailable",
     sources: parts.mediaSources.sourcesByItemId.get(row.itemId) ?? new Map(),
-    durationMs: row.durationMs,
-    altText: makeAltTextFromItem({
+    durationMs: row.durationMs ?? undefined,
+    altText: itemAltText({
       altTextOverride: row.altTextOverride,
       personNames: people.map((person) => {
         return person.displayName;
@@ -92,7 +91,7 @@ function _makeItemSummaryFromRow(options: {
       label: null,
       subjects: [],
     },
-    burst: _getBurstSummaryForRow({ row, parts }),
+    burst: _getBurstSummaryForRow({ row, parts }) ?? null,
   };
 }
 
@@ -102,11 +101,13 @@ function _makeItemSummaryFromRow(options: {
  * @param options.rows The requested items, already visibility-filtered.
  * @param options.parts Every read the summaries are composed from.
  */
-export function makeItemSummariesById(options: {
-  rows: readonly ItemSummaryRow[];
-  parts: Readonly<ItemSummaryParts>;
-  logger?: FastifyBaseLogger;
-}): Map<string, ItemSummary> {
+export function makeItemSummariesByIdFromRows(
+  options: Readonly<{
+    rows: readonly ItemSummaryRow[];
+    parts: Readonly<ItemSummaryParts>;
+    logger?: FastifyBaseLogger;
+  }>,
+): Map<string, ItemSummary> {
   return options.rows.reduce<Map<string, ItemSummary>>((byId, row) => {
     const summary = _makeItemSummaryFromRow({ row, parts: options.parts });
     byId.set(row.itemId, summary);

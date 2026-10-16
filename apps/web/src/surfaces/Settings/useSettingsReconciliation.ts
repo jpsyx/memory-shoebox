@@ -1,4 +1,4 @@
-import { notifySettingsChanged } from "./settingsSynchronization/settingsSynchronization";
+import { notifySettingsChanged } from "./settingsSynchronizationHelpers/settingsSynchronizationHelpers";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import type { UpdateSettingsResponse } from "@memory-shoebox/shared";

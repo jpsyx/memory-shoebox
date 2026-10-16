@@ -1,0 +1,30 @@
+.conversationPlayer[role="group"] :is(button, input, select):focus-visible {
+  outline-color: var(--chip-white);
+}
+.conversationPlayer {
+  background: var(--chip-black);
+  position: relative;
+  aspect-ratio: 16/10;
+  border-radius: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.conversationPlayer video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.conversationPlayer:fullscreen {
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+.conversationPlayer:fullscreen video {
+  height: 100vh;
+}
+@media (max-width: 800px) {
+  .conversationPlayer {
+    aspect-ratio: 4/3;
+    border-radius: 0;
+  }
+}

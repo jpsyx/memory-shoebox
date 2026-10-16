@@ -14,11 +14,27 @@ import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport/g
 import {
   getPhotoCandidatesFromMedia,
   type PhotoViewport,
-} from "./photoViewport";
+} from "./photoViewportHelpers";
 import { useMediaSourceOwnership } from "./useMediaSourceOwnership";
 import { usePhotoViewport } from "./usePhotoViewport";
+type SelectedPhotoOptions = {
+  media: MediaRef;
+  itemId: string;
+  sourceEpoch?: number;
+  presentation?: "preview" | "selected";
+};
 
-/** Exact selected pixels, with decode guarded against stale asynchronous work. */
+type PhotoDecodeOptions = {
+  itemId: string;
+  source: MediaSource | undefined;
+  viewport: PhotoViewport | undefined;
+  sourceEpoch?: number;
+  onDecoded: () => void;
+};
+
+/**
+ * Exact selected pixels, with decode guarded against stale asynchronous work.
+ */
 export type SelectedPhoto = {
   frame: RefObject<HTMLDivElement | null>;
   source: MediaSource | undefined;
@@ -33,13 +49,7 @@ export type SelectedPhoto = {
 };
 
 function usePhotoDecode(
-  options: Readonly<{
-    itemId: string;
-    source: MediaSource | undefined;
-    viewport: PhotoViewport | undefined;
-    sourceEpoch?: number;
-    onDecoded: () => void;
-  }>,
+  options: Readonly<PhotoDecodeOptions>,
 ): Pick<SelectedPhoto, "sourceKey" | "isReady" | "onLoad" | "image"> {
   const { itemId, source, viewport } = options;
   const sourceKey = `${itemId}:${source?.renditionId}:${source?.url}:${viewport?.devicePixelRatio}:${options.sourceEpoch ?? 0}`;
@@ -89,23 +99,21 @@ function usePhotoDecode(
   return { sourceKey, isReady, onLoad, image };
 }
 
-/** Measures before requesting display bytes and shares selection with warming. */
+/**
+ * Measures before requesting display bytes and shares selection with warming.
+ */
 export function useSelectedPhoto(
-  options: Readonly<{
-    media: MediaRef;
-    itemId: string;
-    sourceEpoch?: number;
-    presentation?: "preview" | "selected";
-  }>,
+  options: Readonly<SelectedPhotoOptions>,
 ): SelectedPhoto {
   const { media, itemId } = options;
   const frame = usePhotoArrival<HTMLDivElement>(itemId, media.thumb?.url ?? "");
   const resources = useContext(MediaLoadingContext);
-  const viewport = usePhotoViewport(
-    frame,
-    resources?.navigation.getPreparedViewport(itemId) ??
+  const viewport = usePhotoViewport({
+    reference: frame,
+    initial:
+      resources?.navigation.getPreparedViewport(itemId) ??
       resources?.navigation.viewport,
-  );
+  });
   const source =
     viewport === undefined
       ? undefined

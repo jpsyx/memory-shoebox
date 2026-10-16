@@ -1,5 +1,5 @@
 import { clamp } from "@mantine/hooks";
-import { SiblingLink } from "./SiblingLink";
+import { SiblingLink } from "./SiblingLink/SiblingLink";
 import {
   useEffect,
   useRef,

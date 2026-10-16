@@ -1,8 +1,9 @@
+import type { MediaPreview } from "@memory-shoebox/shared";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { describe, expect, it } from "vitest";
 import { createMediaPreviewStore } from "./createMediaPreviewStore";
 
-function _preview(itemId: string) {
+function _preview(itemId: string): MediaPreview {
   const detail = makeItemDetail({ itemId });
   return {
     itemId,
@@ -16,13 +17,13 @@ function _preview(itemId: string) {
 describe("member preview store", () => {
   it("evicts the least recently read entry after 64 entries and supports removal", () => {
     const store = createMediaPreviewStore("member");
-    store.put(
-      Array.from({ length: 64 }, (_, index) => {
+    store.put({
+      previews: Array.from({ length: 64 }, (_, index) => {
         return _preview(String(index));
       }),
-    );
+    });
     expect(store.read("0")?.itemId).toBe("0");
-    store.put([_preview("64")]);
+    store.put({ previews: [_preview("64")] });
     expect(store.read("1")).toBeUndefined();
     expect(store.read("0")?.itemId).toBe("0");
     store.remove("0");
@@ -40,8 +41,8 @@ describe("member preview store", () => {
     const epoch = oldStore.captureEpoch();
     let activeStore = oldStore;
     const pending = response.then((previews) => {
-      activeStore.put(previews, epoch);
-      oldStore.put(previews, epoch);
+      activeStore.put({ previews: previews, epoch: epoch });
+      oldStore.put({ previews: previews, epoch: epoch });
     });
     oldStore.clear();
     activeStore = createMediaPreviewStore("second");
@@ -54,15 +55,18 @@ describe("member preview store", () => {
   it("invalidates work after clear while allowing the new epoch", () => {
     const store = createMediaPreviewStore("member");
     const oldEpoch = store.captureEpoch();
-    store.put([_preview("seed")]);
+    store.put({ previews: [_preview("seed")] });
     store.clear();
-    store.put([_preview("late")], oldEpoch);
-    store.put([_preview("fresh")], store.captureEpoch());
+    store.put({ previews: [_preview("late")], epoch: oldEpoch });
+    store.put({ previews: [_preview("fresh")], epoch: store.captureEpoch() });
     expect(store.read("seed")).toBeUndefined();
     expect(store.read("late")).toBeUndefined();
     expect(store.read("fresh")?.itemId).toBe("fresh");
     const replacement = createMediaPreviewStore("member");
-    replacement.put([_preview("late")], store.captureEpoch());
+    replacement.put({
+      previews: [_preview("late")],
+      epoch: store.captureEpoch(),
+    });
     expect(replacement.read("late")).toBeUndefined();
   });
 });

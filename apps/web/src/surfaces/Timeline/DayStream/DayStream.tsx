@@ -1,15 +1,23 @@
+import {
+  type RefObject,
+  useContext,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import { MediaLoadingContext } from "@/media/MediaLoadingContext";
 
-import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
-
-import { useContext, useMemo, useRef, type ReactNode } from "react";
+import {
+  PileSelectionContext,
+  type PileSelection,
+} from "@/system/Pile/PileSelection/PileSelection";
 
 import { getTimelineRowsFromDays } from "../windowing/getTimelineRowsFromDays/getTimelineRowsFromDays";
 
 import {
   useTimelineExpansionSizes,
   useTimelineFanRestoration,
-} from "../windowing/useTimelineFans";
+} from "../windowing/timelineFanHelpers";
 
 import { useTimelineFocus } from "../windowing/useTimelineFocus/useTimelineFocus";
 
@@ -21,9 +29,28 @@ import { useTimelinePosition } from "../windowing/useTimelinePosition";
 
 import { useTimelineWindow } from "../windowing/useTimelineWindow/useTimelineWindow";
 import type { Props, RootRef } from "./DayStream.types";
-import { StreamBody } from "./StreamBody";
+import { StreamBody } from "./StreamBody/StreamBody";
+type BurstCollapseOptions = {
+  props: Readonly<Props>;
+  stream: Stream;
+  element: RootRef;
+  burstId: string;
+};
 
-function useStreamRows(props: Readonly<Props>, element: RootRef) {
+type StreamRows = {
+  layout: ReturnType<typeof useTimelineLayout>;
+  selection: PileSelection | undefined;
+  focus: ReturnType<typeof useTimelineFocus>;
+  rows: ReturnType<typeof useTimelineFocus>["rows"];
+};
+
+function useStreamRows({
+  props,
+  element,
+}: {
+  props: Readonly<Props>;
+  element: RootRef;
+}): StreamRows {
   const layout = useTimelineLayout(element);
   const selection = useContext(PileSelectionContext);
   const selectedFrames = selection?.framesByBurstId;
@@ -46,18 +73,21 @@ function useStreamRows(props: Readonly<Props>, element: RootRef) {
       expanded,
     });
   }, [props.days, layout, frames, expanded]);
-  const focus = useTimelineFocus(
-    mappedRows,
-    props.viewKey ?? "timeline",
-    props.focusRetirement ?? 0,
+  const focus = useTimelineFocus({
+    rows: mappedRows,
+    viewKey: props.viewKey ?? "timeline",
+    retirement: props.focusRetirement ?? 0,
     element,
-  );
+  });
   const rows = focus.rows;
   return { layout, selection, focus, rows };
 }
 
-function useStream(props: Readonly<Props>, element: RootRef) {
-  const { rows, layout, focus, selection } = useStreamRows(props, element);
+function useStream({
+  props,
+  element,
+}: Readonly<{ props: Readonly<Props>; element: RootRef }>): Stream {
+  const { rows, layout, focus, selection } = useStreamRows({ props, element });
   const windowing = useTimelineWindow({
     rows,
     viewKey: props.viewKey ?? "timeline",
@@ -78,9 +108,15 @@ function useStream(props: Readonly<Props>, element: RootRef) {
 }
 
 /** Measured row and restoration ownership shared by stream children. */
-export type Stream = ReturnType<typeof useStream>;
+export type Stream = StreamRows & {
+  windowing: ReturnType<typeof useTimelineWindow>;
+  position: ReturnType<typeof useTimelinePosition>;
+};
 
-function useStreamPaging(props: Readonly<Props>) {
+function useStreamPaging(props: Readonly<Props>): {
+  sentinelRef: RefObject<HTMLDivElement | null>;
+  startRef: RefObject<HTMLDivElement | null>;
+} {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLDivElement>(null);
   useTimelinePagingSentinel({
@@ -98,12 +134,12 @@ function useStreamPaging(props: Readonly<Props>) {
   return { sentinelRef, startRef };
 }
 
-function _collapseBurst(
-  props: Readonly<Props>,
-  stream: Stream,
-  element: RootRef,
-  burstId: string,
-): void {
+function _collapseBurst({
+  props,
+  stream,
+  element,
+  burstId,
+}: BurstCollapseOptions): void {
   const { rows, focus, windowing } = stream;
 
   const row = rows.find((candidate) => {
@@ -124,7 +160,7 @@ function _collapseBurst(
       capturedOn: row.day.capturedOn,
       itemId: row.items[0]?.itemId,
       offsetPx,
-      pageCursor: props.pageCursors?.get(row.day.capturedOn) ?? null,
+      pageCursor: props.pageCursors?.get(row.day.capturedOn),
     })
     .then(() => {
       [
@@ -140,9 +176,46 @@ function _collapseBurst(
 }
 
 /** The retained pages stay atomic while only measured media rows mount. */
-export function DayStream(props: Readonly<Props>): ReactNode {
+export function DayStream({
+  days,
+  countLabel,
+  framesByBurstId,
+  onOpenBurst,
+  onOpenItem,
+  onReachEnd,
+  hasMore,
+  isFetching,
+  hasPrevious,
+  onReachStart,
+  viewKey,
+  pageCursors,
+  recoverPage,
+  restoreBurst,
+  expanded,
+  onCollapseBurst,
+  focusRetirement,
+}: Readonly<Props>): ReactNode {
+  const props: Props = {
+    days,
+    countLabel,
+    framesByBurstId,
+    onOpenBurst,
+    onOpenItem,
+    onReachEnd,
+    hasMore,
+    isFetching,
+    hasPrevious,
+    onReachStart,
+    viewKey,
+    pageCursors,
+    recoverPage,
+    restoreBurst,
+    expanded,
+    onCollapseBurst,
+    focusRetirement,
+  };
   const element = useRef<HTMLDivElement>(null);
-  const stream = useStream(props, element);
+  const stream = useStream({ props: props, element: element });
   const paging = useStreamPaging(props);
   const resources = useContext(MediaLoadingContext);
   useTimelineFanRestoration({
@@ -166,7 +239,7 @@ export function DayStream(props: Readonly<Props>): ReactNode {
       element={element}
       {...paging}
       onCollapseBurst={(id) => {
-        _collapseBurst(props, stream, element, id);
+        _collapseBurst({ props, stream, element, burstId: id });
       }}
     />
   );

@@ -4,7 +4,7 @@ import type { PersonFacet } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { nameList } from "@/surfaces/Timeline/pileCopy/pileCopy";
 
 type Props = {

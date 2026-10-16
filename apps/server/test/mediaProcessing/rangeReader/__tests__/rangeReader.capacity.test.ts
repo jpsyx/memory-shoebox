@@ -20,7 +20,7 @@ it("waits for reserved probe capacity and proceeds when the competing read cance
       makeHeldRangeResponseFromSize(sourceBytes)(request, response);
       return;
     }
-    makeRangeResponseFromSize(sourceBytes)(request, response);
+    makeRangeResponseFromSize({ size: sourceBytes })(request, response);
   });
   const reader = await createOwnedRangeReader({
     b2,
@@ -29,17 +29,17 @@ it("waits for reserved probe capacity and proceeds when the competing read cance
     phaseByteLimit: 16 * MIB,
     signal: new AbortController().signal,
   });
-  await readRange(reader.url, `bytes=0-${8 * MIB - 1}`);
+  await readRange({ url: reader.url, range: `bytes=0-${8 * MIB - 1}` });
   const first = await fetch(reader.url, {
     headers: { range: `bytes=0-${8 * MIB - 1}` },
   });
   const body = first.body!.getReader();
   await body.read();
   let hasSecondFinished = false;
-  const second = readRange(
-    reader.url,
-    `bytes=${16 * MIB}-${18 * MIB - 1}`,
-  ).then((result) => {
+  const second = readRange({
+    url: reader.url,
+    range: `bytes=${16 * MIB}-${18 * MIB - 1}`,
+  }).then((result) => {
     hasSecondFinished = true;
     return result;
   });
@@ -68,7 +68,7 @@ it("cancels a capacity waiter and releases its active slot before another reques
       makeHeldRangeResponseFromSize(sourceBytes)(request, response);
       return;
     }
-    makeRangeResponseFromSize(sourceBytes)(request, response);
+    makeRangeResponseFromSize({ size: sourceBytes })(request, response);
   });
   const reader = await createOwnedRangeReader({
     b2,
@@ -96,7 +96,7 @@ it("cancels a capacity waiter and releases its active slot before another reques
   await new Promise((resolve) => {
     setTimeout(resolve, 40);
   });
-  const replacement = readRange(reader.url, "bytes=0-7");
+  const replacement = readRange({ url: reader.url, range: "bytes=0-7" });
   await body.cancel();
   expect((await replacement).status).toBe(206);
   expect(upstreamRequests).toBe(2);

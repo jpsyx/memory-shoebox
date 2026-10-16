@@ -3,9 +3,9 @@ export type MediaProbe = {
   kind: "photo" | "video";
   width: number;
   height: number;
-  frameRate: number | null;
+  frameRate: number | undefined;
   bitDepth: number;
-  durationMs: number | null;
+  durationMs: number | undefined;
   hasAudio: boolean;
   transfer: "sdr" | "pq" | "hlg" | "unsupported";
   rotationDegrees: number;
@@ -15,7 +15,7 @@ export type MediaProbe = {
 /** Automatic work requires every runtime prerequisite. */
 export type MediaRuntimeCapabilities = {
   available: boolean;
-  reason: string | null;
+  reason: string | undefined;
 };
 
 /** One bounded command inside an existing job context. */

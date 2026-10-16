@@ -6,7 +6,7 @@ import {
   makeSearchFromSelection,
   type TimelineSearch,
   type TimelineSelection,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 import { spineCountLabel } from "@/surfaces/Timeline/pileCopy/pileCopy";
 
@@ -23,7 +23,9 @@ import {
   type TimelineData,
 } from "./useTimelineData.types";
 
-/** No tag, person or date restriction; used when clearing the active selection. */
+/**
+ * No tag, person or date restriction; used when clearing the active selection.
+ */
 export const EMPTY_SELECTION: TimelineSelection = {
   tags: [],
   people: [],
@@ -31,7 +33,10 @@ export const EMPTY_SELECTION: TimelineSelection = {
   until: undefined,
 };
 
-/** Copies readonly tag/person arrays into mutable router search arrays without changing their values. */
+/**
+ * Copies readonly tag/person arrays into mutable router search arrays without
+ * changing their values.
+ */
 export function makeRouteSearchFromTimelineSearch(
   search: Readonly<TimelineSearch>,
 ): Omit<TimelineSearch, "tag" | "person"> & {
@@ -45,11 +50,17 @@ export function makeRouteSearchFromTimelineSearch(
   };
 }
 
-/** Creates navigation handlers that compose search updates against the router's current pending search. Selection changes drop jumps; clear-all preserves them, and item opens carry the effective selection. */
-export function makeTimelineHandlersFromOptions(options: {
-  navigate: ReturnType<typeof useNavigate>;
-  search: TimelineSearch;
-}): Pick<
+/**
+ * Creates navigation handlers that compose search updates against the router's
+ * current pending search. Selection changes drop jumps; clear-all preserves
+ * them, and item opens carry the effective selection.
+ */
+export function makeTimelineHandlersFromOptions(
+  options: Readonly<{
+    navigate: ReturnType<typeof useNavigate>;
+    search: TimelineSearch;
+  }>,
+): Pick<
   TimelineData,
   "onSelectionChange" | "onClearFilters" | "onRestart" | "onOpenItem"
 > {
@@ -109,16 +120,22 @@ export function makeTimelineHandlersFromOptions(options: {
   };
 }
 
-/** Flattens retained timeline pages in their existing order; an unanswered query yields no days. */
+/**
+ * Flattens retained timeline pages in their existing order; an unanswered query
+ * yields no days.
+ */
 export function getDaysFromTimelinePages(
-  pages: readonly TimelineResponse[] | undefined,
+  pages: readonly TimelineResponse[] = [],
 ): TimelineDay[] {
-  return (pages ?? []).flatMap((page) => {
+  return pages.flatMap((page) => {
     return page.days;
   });
 }
 
-/** Indexes available person facets by ID for filter labels; missing facets yield an empty map. */
+/**
+ * Indexes available person facets by ID for filter labels; missing facets yield
+ * an empty map.
+ */
 export function getPersonNamesFromFacets(
   facets: FilterFacetsResponse | undefined,
 ): Map<string, string> {
@@ -129,7 +146,10 @@ export function getPersonNamesFromFacets(
   );
 }
 
-/** Indexes standalone items by item ID and burst covers by burst ID with their aggregate unseen state. */
+/**
+ * Indexes standalone items by item ID and burst covers by burst ID with their
+ * aggregate unseen state.
+ */
 export function getUnseenStateFromDays(
   days: readonly TimelineDay[],
 ): Map<string, boolean> {
@@ -144,7 +164,10 @@ export function getUnseenStateFromDays(
   );
 }
 
-/** Combines settled stream, facet and selection inputs into display data; route and burst ownership stay with the hook. */
+/**
+ * Combines settled stream, facet and selection inputs into display data; route
+ * and burst ownership stay with the hook.
+ */
 export function makeTimelineDataFromQuery(
   options: Readonly<MakeTimelineDataOptions>,
 ): Omit<

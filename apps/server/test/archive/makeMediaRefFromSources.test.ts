@@ -18,14 +18,14 @@ function _makeMediaSourceFromOverrides(
     ...overrides,
   };
 }
-const photo = {
+const PHOTO = {
   kind: "photo" as const,
   width: 4000,
   height: 3000,
   previewState: "unavailable" as const,
-  durationMs: null,
+  durationMs: undefined,
   altText: "A photograph",
-};
+} satisfies Omit<Parameters<typeof makeMediaRefFromSources>[0], "sources">;
 
 describe("makeMediaRefFromSources", () => {
   it("never turns original video into an image", () => {
@@ -34,7 +34,7 @@ describe("makeMediaRefFromSources", () => {
       contentType: "video/mp4",
     });
     const ref = makeMediaRefFromSources({
-      ...photo,
+      ...PHOTO,
       kind: "video",
       sources: new Map([["original", original]]),
     });
@@ -50,7 +50,7 @@ describe("makeMediaRefFromSources", () => {
       height: 3000,
     });
     const ref = makeMediaRefFromSources({
-      ...photo,
+      ...PHOTO,
       sources: new Map([["original", original]]),
     });
     expect(ref.thumb).toBeNull();
@@ -59,7 +59,7 @@ describe("makeMediaRefFromSources", () => {
   it("allows a compatible small original to substitute", () => {
     const original = _makeMediaSourceFromOverrides({ purpose: "original" });
     const ref = makeMediaRefFromSources({
-      ...photo,
+      ...PHOTO,
       sources: new Map([["original", original]]),
     });
     expect(ref.thumb).toEqual(original);
@@ -67,10 +67,11 @@ describe("makeMediaRefFromSources", () => {
     expect(ref.previewState).toBe("ready");
   });
   it("preserves catalog layout and unavailable state without renditions", () => {
-    const ref = makeMediaRefFromSources({ ...photo, sources: new Map() });
-    const { kind: _kind, ...layout } = photo;
+    const ref = makeMediaRefFromSources({ ...PHOTO, sources: new Map() });
+    const { kind: _kind, ...layout } = PHOTO;
     expect(ref).toEqual({
       ...layout,
+      durationMs: null,
       thumb: null,
       display: null,
       displayCandidates: [],
@@ -81,7 +82,7 @@ describe("makeMediaRefFromSources", () => {
   it("keeps pending explicit when no rendition is ready", () => {
     expect(
       makeMediaRefFromSources({
-        ...photo,
+        ...PHOTO,
         previewState: "pending",
         sources: new Map(),
       }).previewState,
@@ -100,7 +101,7 @@ describe("makeMediaRefFromSources", () => {
       height: 720,
     });
     const ref = makeMediaRefFromSources({
-      ...photo,
+      ...PHOTO,
       sources: new Map([
         ["display", jpeg],
         ["display_small_webp", webp],

@@ -1,4 +1,4 @@
-import { sql, type Kysely } from "kysely";
+import { type Selectable, sql, type Kysely } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
 import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
@@ -14,12 +14,10 @@ import {
 type DrainOneOptions = {
   database: Kysely<Database>;
   b2: B2Client;
-  row: {
-    id: string;
-    storage_key: string;
-    created_at: string;
-    last_attempted_at: string | null;
-  };
+  row: Pick<
+    Selectable<Database["pending_object_deletions"]>,
+    "id" | "storage_key" | "created_at" | "last_attempted_at"
+  >;
   now: string;
 };
 
@@ -92,7 +90,9 @@ async function _isProcessingCleanupKey(
   );
 }
 
-/** Successful transfer cleanup stays as a tombstone for future late completions. */
+/**
+ * Successful transfer cleanup stays as a tombstone for future late completions.
+ */
 async function _recordDeletedObject(options: DrainOneOptions): Promise<void> {
   const { database, row, now } = options;
   if (
@@ -263,11 +263,13 @@ async function _drainOne(
  * to the same `BATCH_SIZE` permanently failing keys on every run, and an object
  * enqueued behind them would never be attempted at all.
  */
-export async function runObjectDeletionDrain(options: {
-  database: Kysely<Database>;
-  b2: B2Client;
-  now: string;
-}): Promise<ObjectDeletionDrainSummary> {
+export async function runObjectDeletionDrain(
+  options: Readonly<{
+    database: Kysely<Database>;
+    b2: B2Client;
+    now: string;
+  }>,
+): Promise<ObjectDeletionDrainSummary> {
   const pending = await _getPendingDeletionsFromDatabase(options);
 
   let deletedCount = 0;

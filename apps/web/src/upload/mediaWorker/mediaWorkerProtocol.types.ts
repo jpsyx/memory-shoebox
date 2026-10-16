@@ -1,3 +1,4 @@
+import type { ImageDerivativesOptions } from "../makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import type {
   MadeDerivative,
   PixelSize,
@@ -20,14 +21,9 @@ import type {
 export type HashRequest = { kind: "hash"; requestId: number; file: Blob };
 
 /** Make one image's derivatives. Answered by `image-derivatives-made`. */
-export type ImageDerivativesRequest = {
+export type ImageDerivativesRequest = ImageDerivativesOptions & {
   kind: "image-derivatives";
   requestId: number;
-  file: Blob;
-  contentType: string;
-  /** Post-orientation, from the header, so the decode can resize. */
-  size: PixelSize | undefined;
-  purposes?: ReadonlyArray<"thumb" | "display">;
 };
 
 /** Read photo identity without encoding any derivative. */

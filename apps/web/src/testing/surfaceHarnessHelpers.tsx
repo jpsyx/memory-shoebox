@@ -1,0 +1,175 @@
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
+import { MantineProvider } from "@mantine/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRouter,
+  RouterProvider,
+  type Router,
+} from "@tanstack/react-router";
+import { render, type RenderResult } from "@testing-library/react";
+import { routeTree } from "@/routeTree.gen";
+import { createMeResponse } from "@/testing/createMeResponse";
+import {
+  getRecordedLines,
+  getRecordedRequests,
+  stubFetch,
+  type Answer,
+} from "@/testing/fetchStubHelpers";
+import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
+import { theme } from "@/theme/theme";
+
+export type { Answer } from "@/testing/fetchStubHelpers";
+
+/**
+ * Every request as `"METHOD /path?query"` since `respondWith` was last called.
+ *
+ * `recordedUrls` cannot tell a read from a write at one address, and the item
+ * page has exactly that pair: `GET /api/items/:itemId` counts an open, while
+ * `PATCH /api/items/:itemId` saves a description and counts nothing.
+ */
+export function recordedRequests(): string[] {
+  return getRecordedLines();
+}
+
+/** How many times one `"METHOD /path?query"` line was sent. */
+export function getRecordedCountFromLine(line: string): number {
+  return recordedRequests().filter((recordedLine) => {
+    return recordedLine === line;
+  }).length;
+}
+
+/**
+ * The body last sent with one `"METHOD /path?query"` request, or undefined.
+ *
+ * The key is the same line `recordedRequests` records. A body that parses as
+ * JSON comes back parsed, and any other string body comes back as it was sent.
+ * What a write sent is the assertion most of the item page's tests make: a
+ * people set that carries a known person by id and a new one by name, a
+ * capture date that leaves the clock alone.
+ */
+export function getRecordedBodyFromRequest(requestLine: string): unknown {
+  return getRecordedRequests()
+    .filter((request) => {
+      return `${request.method} ${request.url}` === requestLine;
+    })
+    .at(-1)?.body;
+}
+
+/** Every URL the app has asked for since `respondWith` was last called. */
+export function recordedUrls(): string[] {
+  return getRecordedRequests().map((request) => {
+    return request.url;
+  });
+}
+
+/** What every surface needs before it draws anything at all. */
+function _shellAnswers(): Record<string, Answer> {
+  return {
+    "GET /api/setup": { body: { isRequired: false }, status: 200 },
+    "GET /api/setup/progress": {
+      body: { needsInvitations: false },
+      status: 200,
+    },
+    "GET /api/me": { body: createMeResponse(), status: 200 },
+    "GET /api/health": {
+      body: { status: "ok", version: "0.0.0", uptimeSeconds: 1 },
+      status: 200,
+    },
+    "GET /api/public-settings": {
+      body: { shoeboxName: "My Shoebox", baseUrl: "http://localhost:5173" },
+      status: 200,
+    },
+  };
+}
+
+/**
+ * Stubs `fetch` with a map of canned answers, and forgets what was asked
+ * before.
+ *
+ * The canned server half of this harness, for the surfaces that read several
+ * routes. It is here rather than in a `__tests__` folder because the timeline
+ * and the people directory both use it, and a fixture reached across two
+ * surface folders is a fixture that belongs to neither.
+ *
+ * **Answers are keyed by the path before the `?`.** Every route in the archive
+ * read path carries a query string, and keying on the whole URL would mean
+ * writing the exact parameter order into every test. The full URLs are recorded
+ * separately, so a test that cares what was asked for can still assert it.
+ *
+ * @param routes Answers keyed by `"METHOD /path"`, with no query string.
+ * @param extraDefaults Answers every case in a file wants, such as a timeline.
+ */
+export function respondWith({
+  routes = {},
+  extraDefaults = {},
+}: Readonly<{
+  routes?: Readonly<Record<string, Answer>>;
+  extraDefaults?: Readonly<Record<string, Answer>>;
+}> = {}): void {
+  const baseAnswers = { ..._shellAnswers(), ...extraDefaults, ...routes };
+  const account = baseAnswers["GET /api/me"]!;
+  const answers = {
+    ...baseAnswers,
+    "GET /api/bootstrap":
+      baseAnswers["GET /api/bootstrap"] ??
+      (account.status >= 400 && account.status !== 401
+        ? account
+        : {
+            status: 200,
+            body: {
+              setup: baseAnswers["GET /api/setup"]!.body,
+              account: account.status === 401 ? null : account.body,
+              progress:
+                (account.body as ReturnType<typeof createMeResponse>)?.me
+                  ?.role === "admin"
+                  ? baseAnswers["GET /api/setup/progress"]!.body
+                  : null,
+            },
+          }),
+  };
+  stubFetch(answers);
+}
+
+/**
+ * Renders the app at one address, through the real router.
+ *
+ * One `QueryClient` for the router context and the provider both, which is what
+ * `main.tsx` does and what the guard depends on: it puts the account in the
+ * cache and the surface reads that same entry.
+ *
+ * @param initialPath Where to start, for example `/?tag=t1`.
+ * @returns The render result and the router, so a case can assert where it
+ *   ended up. Synchronous, like `renderAccount`: a case waits with `findBy`
+ *   rather than on the router.
+ */
+export function renderAt(
+  initialPath: string,
+): RenderResult & { router: Router<typeof routeTree> } {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
+  });
+  installBootstrapRedirectTracking({
+    router,
+    client: router.options.context!.queryClient,
+  });
+  const result = render(
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider
+        theme={theme}
+        cssVariablesResolver={cssVariablesResolver}
+      >
+        {/* The cast is what `renderAccount` already does: the generated route
+            tree and a router built from it do not line up structurally under
+            `RouterProvider`'s props. */}
+        <RouterProvider router={router as never} />
+      </MantineProvider>
+    </QueryClientProvider>,
+  );
+  return { ...result, router };
+}

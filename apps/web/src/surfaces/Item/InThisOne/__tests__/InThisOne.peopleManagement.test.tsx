@@ -16,7 +16,7 @@ import {
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 
 const OPTIONS_GET = `GET /api/items/${ITEM_ID}/people/options`;
 const PERSON_PATCH = `PATCH /api/items/${ITEM_ID}/people/${PERSON_MATEO_ID}`;

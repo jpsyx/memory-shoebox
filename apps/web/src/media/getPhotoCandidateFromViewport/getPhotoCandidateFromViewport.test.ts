@@ -1,4 +1,4 @@
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { describe, expect, it } from "vitest";
 import { getPhotoCandidateFromViewport } from "./getPhotoCandidateFromViewport";
 

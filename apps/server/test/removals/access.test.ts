@@ -1,3 +1,4 @@
+import type { ListRemovalRequestsResponse } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
 import { createTestApp } from "../helpers/createTestApp.ts";
 import { insertSignedInMember } from "../helpers/insertSignedInMember.ts";
@@ -68,30 +69,8 @@ type CountsSnapshotUploaderScopeIncludesDeletedHistory2State2 =
     counted: ReturnType<typeof makeQueryCountingDatabaseFromDatabase>;
     viewer: ReturnType<typeof makeViewer>;
     read: (
-      limit: number,
-      cursor?: string | undefined,
-    ) => Promise<{
-      removalRequests: Array<{
-        requestId: string;
-        state: "open" | "deleted" | "declined" | "withdrawn";
-        itemId: string | null;
-        requestedBy: { memberId: string; displayName: string };
-        reason: string | null;
-        declineReason: string | null;
-        createdAt: string;
-        resolvedAt: string | null;
-        resolvedBy: { memberId: string; displayName: string } | null;
-        uploadedBy: { memberId: string; displayName: string };
-        itemCapturedAt: string | null;
-        media: import("@memory-shoebox/shared").MediaRef | null;
-        canWithdraw: boolean;
-        canDecline: boolean;
-        canDeleteItem: boolean;
-      }>;
-      nextCursor: string | null;
-      openCount: number;
-      settledCount: number;
-    }>;
+      options: Readonly<{ limit: number; cursor?: string | undefined }>,
+    ) => Promise<ListRemovalRequestsResponse>;
     small: Awaited<ReturnType<typeof readRemovalRequests>>;
   };
 type CountsSnapshotUploaderScopeIncludesDeletedHistory2State3 =
@@ -101,8 +80,6 @@ type CountsSnapshotUploaderScopeIncludesDeletedHistory2State3 =
     pagedIds: string[];
     cursor: string | null;
   };
-type CountsSnapshotUploaderScopeIncludesDeletedHistory2State4 =
-  CountsSnapshotUploaderScopeIncludesDeletedHistory2State3;
 
 async function _retainsRequesterControlWithoutMediaAfterAccess1Stage1(
   state: Readonly<RetainsRequesterControlWithoutMediaAfterAccess1State0>,
@@ -251,7 +228,10 @@ async function _countsSnapshotUploaderScopeIncludesDeletedHistory2Stage2(
   );
   const counted = makeQueryCountingDatabaseFromDatabase(database);
   const viewer = makeViewer({ memberId: uploader });
-  const read = (limit: number, cursor?: string) => {
+  const read = ({
+    limit,
+    cursor,
+  }: Readonly<{ limit: number; cursor?: string }>) => {
     return readRemovalRequests({
       database: counted.database,
       b2,
@@ -261,7 +241,7 @@ async function _countsSnapshotUploaderScopeIncludesDeletedHistory2Stage2(
     });
   };
   counted.reset();
-  const small = await read(1);
+  const small = await read({ limit: 1 });
   return { ...state, askIds, counted, viewer, read, small };
 }
 
@@ -272,7 +252,7 @@ async function _countsSnapshotUploaderScopeIncludesDeletedHistory2Stage3(
   const smallCount = counted.getQueryCount();
 
   counted.reset();
-  const large = await read(20);
+  const large = await read({ limit: 20 });
   expect(counted.getQueryCount()).toBe(smallCount);
   expect(large).toMatchObject({
     openCount: 0,
@@ -295,11 +275,11 @@ async function _countsSnapshotUploaderScopeIncludesDeletedHistory2Stage3(
 
 async function _countsSnapshotUploaderScopeIncludesDeletedHistory2Stage4(
   state: Readonly<CountsSnapshotUploaderScopeIncludesDeletedHistory2State3>,
-): Promise<CountsSnapshotUploaderScopeIncludesDeletedHistory2State4> {
+): Promise<CountsSnapshotUploaderScopeIncludesDeletedHistory2State3> {
   const { read, pagedIds, askIds, deletedId } = state;
   let cursor = state.cursor;
   while (cursor !== null) {
-    const page = await read(1, cursor);
+    const page = await read({ limit: 1, cursor: cursor });
     pagedIds.push(
       ...page.removalRequests.map((row) => {
         return row.requestId;

@@ -1,0 +1,25 @@
+@media (min-width: 1100px) {
+  .itemMediaColumnFooter {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--sp-2);
+  }
+  .itemMediaColumnFooter > nav {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+  }
+  /* The header already shows the frame count; the nav keeps its full label. */
+  .itemMediaColumnFooter > nav > p {
+    display: none;
+  }
+  .itemMediaColumnFooter > nav > div {
+    margin: 0;
+    padding: 5px;
+  }
+  .itemMediaColumnFooter > nav a {
+    width: var(--tap);
+    height: var(--tap);
+  }
+}

@@ -64,7 +64,7 @@ export type UploadEngineEvent =
     }
   /**
    * Presign found these bytes in another file of the batch and cancelled this
-   * one (design decision 15). It ends the file as the two above do, and
+   * one. It ends the file as the two above do, and
    * nothing else is sent for it.
    */
   | { kind: "file-skipped"; fileId: string; reason: "duplicate" }
@@ -95,7 +95,9 @@ export type UploadEngine = {
 /** What `createUploadEngine` takes. Everything but two has a default. */
 export type CreateUploadEngineOptions = {
   sessionId: string;
-  /** Session-owned costly decoder slot; hashing and transfers stay independent. */
+  /**
+   * Session-owned costly decoder slot; hashing and transfers stay independent.
+   */
   decodeCoordinator?: UploadDecodeCoordinator;
   /** Files in flight at once. `appConfig.upload.maxParallelTransfers`. */
   concurrency?: number;

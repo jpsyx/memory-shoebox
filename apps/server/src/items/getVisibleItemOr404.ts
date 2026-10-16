@@ -3,6 +3,12 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { applyVisibilityFilter } from "../visibility/applyVisibilityFilter.ts";
+type VisibleItemOptions = {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  itemId: string;
+  code?: ItemsErrorCode;
+};
 
 /**
  * One item, with every column the routes in this slice read from it.
@@ -52,12 +58,9 @@ export type VisibleItem = {
  * @param options.code The resource the caller addressed. `item_not_found`
  *   unless the route took a comment id, where the code names the comment.
  */
-export async function getVisibleItemOr404(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  itemId: string;
-  code?: ItemsErrorCode;
-}): Promise<VisibleItem> {
+export async function getVisibleItemOr404(
+  options: Readonly<VisibleItemOptions>,
+): Promise<VisibleItem> {
   const row = await applyVisibilityFilter({
     viewer: options.viewer,
     query: options.database

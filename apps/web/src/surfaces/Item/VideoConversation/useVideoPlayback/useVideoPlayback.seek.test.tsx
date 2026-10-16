@@ -1,11 +1,18 @@
 import { makeVideoDetail } from "@/testing/itemFixtureHelpers";
 import { act, renderHook } from "@testing-library/react";
-import type { MouseEvent } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useVideoTransport } from "../../ItemViewer/useVideoTransport";
-import { onVideoPlay } from "../onVideoPlay";
-import { useVideoSourceRenewal } from "../useVideoSourceRenewal/useVideoSourceRenewal";
+import { onVideoPlay } from "../videoPlaybackHelpers";
+import { useVideoSourceRenewal } from "../videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 import { useVideoPlayback } from "./useVideoPlayback";
+import type { RenderHookResult } from "@testing-library/react";
+import type { MediaSource } from "@memory-shoebox/shared";
+
+type Props = {
+  itemId: string;
+  video: HTMLVideoElement;
+  source: MediaSource;
+};
 
 const media = makeVideoDetail().media;
 function _video(paused = true): HTMLVideoElement {
@@ -24,7 +31,17 @@ function _video(paused = true): HTMLVideoElement {
   video.play = vi.fn().mockResolvedValue(undefined);
   return video;
 }
-function _render(video = _video()) {
+function _render(video = _video()): {
+  view: RenderHookResult<
+    {
+      transport: ReturnType<typeof useVideoTransport>;
+      playback: ReturnType<typeof useVideoPlayback>;
+    },
+    Props
+  >;
+  video: HTMLVideoElement;
+  pendingProps: Props;
+} {
   const initialProps = { itemId: "first", video, source: media.playback! };
   const view = renderHook(
     (props: typeof initialProps) => {
@@ -66,11 +83,11 @@ describe("owned logical video seeking", () => {
       });
     });
     act(() => {
-      view.result.current.playback.seek(3, true);
+      view.result.current.playback.seek({ seconds: 3, shouldPlay: true });
     });
     const pauseEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
     onVideoPlay({
-      event: pauseEvent as unknown as MouseEvent,
+      event: pauseEvent,
       video,
       onFailure: vi.fn(),
     });
@@ -89,7 +106,7 @@ describe("owned logical video seeking", () => {
         event: {
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-        } as unknown as MouseEvent,
+        },
         video,
         onFailure: vi.fn(),
       });
@@ -106,7 +123,7 @@ describe("owned logical video seeking", () => {
       });
     });
     act(() => {
-      view.result.current.playback.seek(3, true);
+      view.result.current.playback.seek({ seconds: 3, shouldPlay: true });
       view.result.current.transport.pause();
     });
     const onFailure = vi.fn();
@@ -115,7 +132,7 @@ describe("owned logical video seeking", () => {
         event: {
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-        } as unknown as MouseEvent,
+        },
         video,
         onFailure,
       });
@@ -139,7 +156,7 @@ describe("owned logical video seeking", () => {
         event: {
           preventDefault: vi.fn(),
           stopPropagation: vi.fn(),
-        } as unknown as MouseEvent,
+        },
         video,
         onFailure,
       });
@@ -178,9 +195,9 @@ describe("owned logical video seeking", () => {
       const writes = vi.spyOn(video, "currentTime", "set");
       for (let step = 0; step < 3; step += 1) {
         act(() => {
-          view.result.current.playback.seek(
-            view.result.current.transport.position + 1,
-          );
+          view.result.current.playback.seek({
+            seconds: view.result.current.transport.position + 1,
+          });
         });
       }
       expect(view.result.current.transport.position).toBe(3);
@@ -218,7 +235,7 @@ describe("owned logical video seeking", () => {
     async (owner) => {
       const { view, video, pendingProps } = _render();
       act(() => {
-        view.result.current.playback.seek(3, true);
+        view.result.current.playback.seek({ seconds: 3, shouldPlay: true });
       });
       const replacement = owner === "node" ? _video() : video;
       if (owner === "unmount") {

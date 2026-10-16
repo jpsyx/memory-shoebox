@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalisedEmailSchema } from "@memory-shoebox/shared";
 import { createSessionForMember } from "../../../apps/server/src/auth/createSessionForMember";
-import { parseConfig } from "../../../apps/server/src/configHelpers";
+import { makeConfigFromEnvironment } from "../../../apps/server/src/configHelpers";
 import { createDatabase } from "../../../apps/server/src/db/client";
 
 /**
@@ -79,7 +79,7 @@ function _getCatalogPathFromEnvironment(
     serverDirectory: string;
   }>,
 ): string {
-  const config = parseConfig(options.env);
+  const config = makeConfigFromEnvironment(options.env);
   if (!config.isKnownNonProduction) {
     throw new Error(
       `Refusing to run: NODE_ENV is ${options.env.NODE_ENV ?? "unset"}. pnpm upload:proof mints sessions straight into the catalog, so it runs only where NODE_ENV is exactly development or test.`,

@@ -1,0 +1,21 @@
+.conversationControls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 52px 16px 9px;
+  background: linear-gradient(
+    transparent,
+    color-mix(in oklab, var(--chip-black) 92%, transparent)
+  );
+  color: var(--chip-white);
+  pointer-events: none;
+}
+.conversationControls > * {
+  pointer-events: auto;
+}
+@media (max-width: 800px) {
+  .conversationControls {
+    padding: 40px 10px 6px;
+  }
+}

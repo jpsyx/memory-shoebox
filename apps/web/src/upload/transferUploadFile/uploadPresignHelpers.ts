@@ -16,7 +16,7 @@ import { UploadTransferError } from "./UploadTransferError";
 
 /** Presigns one rendition of this file, with the API's retry. */
 export function getPresignFromTransferContext(
-  functionOptions: Readonly<{
+  options: Readonly<{
     context: TransferContext;
     body: Readonly<{
       purpose: PresignUploadFileRequest["purpose"];
@@ -25,7 +25,7 @@ export function getPresignFromTransferContext(
     }>;
   }>,
 ): Promise<PresignUploadFileResponse> {
-  const { context, body } = functionOptions;
+  const { context, body } = options;
 
   return callUploadApiWithRetry({
     state: context,
@@ -47,12 +47,12 @@ export function getPresignFromTransferContext(
  * chose multipart.
  */
 export function getSingleLeaseFromPresign(
-  functionOptions: Readonly<{
+  options: Readonly<{
     context: Readonly<Pick<TransferContext, "now">>;
     presigned: PresignUploadFileResponse;
   }>,
 ): SingleLease {
-  const { context, presigned } = functionOptions;
+  const { context, presigned } = options;
 
   if (presigned.mode !== "single") {
     throw new UploadTransferError({
@@ -69,12 +69,12 @@ export function getSingleLeaseFromPresign(
 
 /** A fresh single-PUT URL for this file's original or one derivative. */
 export async function getSingleLeaseFromTransferContext(
-  functionOptions: Readonly<{
+  options: Readonly<{
     context: TransferContext;
     purpose: PresignUploadFileRequest["purpose"];
   }>,
 ): Promise<SingleLease> {
-  const { context, purpose } = functionOptions;
+  const { context, purpose } = options;
 
   return getSingleLeaseFromPresign({
     context: context,

@@ -7,7 +7,7 @@ import {
 } from "./verifyUploadedObjectsTestHelpers.ts";
 import { describe, expect, it } from "vitest";
 import type { CompleteUploadFileRequest } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 import { getCompletedTransferFromRequest } from "../../../../src/upload/verifyUploadedObjects/getCompletedTransferFromRequest.ts";
 import { verifyUploadedObjects } from "../../../../src/upload/verifyUploadedObjects/verifyUploadedObjects.ts";
@@ -139,7 +139,7 @@ describe("getCompletedTransferFromRequest", () => {
   });
 
   it("refuses a derivative larger than the derivative cap, before any network", () => {
-    const maxBytes = appConfig.upload.derivatives.maxBytes;
+    const maxBytes = APP_CONFIG.upload.derivatives.maxBytes;
     const display = (byteSize: number) => {
       return {
         purpose: "display" as const,
@@ -234,7 +234,7 @@ describe("getCompletedTransferFromRequest", () => {
   });
 
   describe("a multipart file's parts", () => {
-    const partSizeBytes = appConfig.upload.multipartPartSizeBytes;
+    const partSizeBytes = APP_CONFIG.upload.multipartPartSizeBytes;
     // Two and a bit parts' worth of bytes, so three parts.
     const multipartFile = makeFile({
       multipart_upload_id: "upload-1",

@@ -13,13 +13,21 @@ it("segments reads at eight MiB and preserves byte order", async () => {
   const sourceBytes = 17 * MIB;
   const reader = await createOwnedRangeReader({
     b2: await createRangeSource(
-      makeRangeResponseFromSize(sourceBytes, lengths),
+      makeRangeResponseFromSize({
+        size: sourceBytes,
+        onRange: (length) => {
+          lengths.push(length);
+        },
+      }),
     ),
     key: "source",
     sourceBytes,
     signal: new AbortController().signal,
   });
-  const result = await readRange(reader.url, `bytes=0-${sourceBytes - 1}`);
+  const result = await readRange({
+    url: reader.url,
+    range: `bytes=0-${sourceBytes - 1}`,
+  });
   expect(result.status).toBe(206);
   expect(result.body.byteLength).toBe(sourceBytes);
   expect(
@@ -79,9 +87,13 @@ it("meters truncated source bodies before rejecting and keeps their charge", asy
     sourceBytes: 1000,
     signal: new AbortController().signal,
   });
-  await expect(readRange(reader.url, "bytes=0-999")).rejects.toThrow();
+  await expect(
+    readRange({ url: reader.url, range: "bytes=0-999" }),
+  ).rejects.toThrow();
   expect(reader.getBytesRead()).toBe(250);
-  await expect(readRange(reader.url, "bytes=0-999")).rejects.toThrow();
+  await expect(
+    readRange({ url: reader.url, range: "bytes=0-999" }),
+  ).rejects.toThrow();
   expect(reader.getBytesRead()).toBe(500);
   expect(reader.getFailure()).toBe("source_truncated");
 });
@@ -107,11 +119,17 @@ it("rejects a changed validator even when source size stays the same", async () 
     sourceBytes: 4,
     signal: new AbortController().signal,
   });
-  expect((await readRange(reader.url, "bytes=0-3")).status).toBe(206);
-  expect((await readRange(reader.url, "bytes=0-3")).status).toBe(502);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-3" })).status,
+  ).toBe(206);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-3" })).status,
+  ).toBe(502);
   expect(reader.getBytesRead()).toBe(4);
   expect(reader.getFailure()).toBe("source_changed");
-  expect((await readRange(reader.url, "bytes=0-3")).status).toBe(502);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-3" })).status,
+  ).toBe(502);
   reader.setPhaseByteLimit(undefined);
   expect(reader.getFailure()).toBe("source_changed");
 });
@@ -126,6 +144,8 @@ it("exposes transient provider failures independently of decoder stderr", async 
     sourceBytes: 4,
     signal: new AbortController().signal,
   });
-  expect((await readRange(reader.url, "bytes=0-3")).status).toBe(502);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-3" })).status,
+  ).toBe(502);
   expect(reader.getFailure()).toBe("upstream_unavailable");
 });

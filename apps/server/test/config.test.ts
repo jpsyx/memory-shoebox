@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseConfig } from "../src/configHelpers.ts";
+import { makeConfigFromEnvironment } from "../src/configHelpers.ts";
 
 /** A complete set of environment variables, used as the base for each case. */
 function validEnv(): Record<string, string | undefined> {
@@ -15,7 +15,7 @@ function validEnv(): Record<string, string | undefined> {
 
 describe("parseConfig", () => {
   it("parses a complete environment", () => {
-    const config = parseConfig(validEnv());
+    const config = makeConfigFromEnvironment(validEnv());
 
     expect(config.b2).toEqual({
       keyId: "key-id",
@@ -30,7 +30,7 @@ describe("parseConfig", () => {
   });
 
   it("applies defaults for every optional variable", () => {
-    const config = parseConfig(validEnv());
+    const config = makeConfigFromEnvironment(validEnv());
 
     expect(config.port).toBe(8080);
     expect(config.host).toBe("0.0.0.0");
@@ -39,19 +39,22 @@ describe("parseConfig", () => {
   });
 
   it("coerces PORT to a number", () => {
-    const config = parseConfig({ ...validEnv(), PORT: "3000" });
+    const config = makeConfigFromEnvironment({ ...validEnv(), PORT: "3000" });
 
     expect(config.port).toBe(3000);
   });
 
   it("marks the config as production when NODE_ENV says so", () => {
-    const config = parseConfig({ ...validEnv(), NODE_ENV: "production" });
+    const config = makeConfigFromEnvironment({
+      ...validEnv(),
+      NODE_ENV: "production",
+    });
 
     expect(config.isProduction).toBe(true);
   });
 
   it("strips a trailing slash from the thumbnail prefix", () => {
-    const config = parseConfig({
+    const config = makeConfigFromEnvironment({
       ...validEnv(),
       B2_THUMBNAIL_PREFIX: "thumbnails/",
     });
@@ -65,26 +68,32 @@ describe("parseConfig", () => {
     delete env["SESSION_SECRET"];
 
     expect(() => {
-      return parseConfig(env);
+      return makeConfigFromEnvironment(env);
     }).toThrow(/B2_BUCKET[\s\S]*SESSION_SECRET|SESSION_SECRET[\s\S]*B2_BUCKET/);
   });
 
   it("rejects a session secret shorter than 32 characters", () => {
     expect(() => {
-      return parseConfig({ ...validEnv(), SESSION_SECRET: "too-short" });
+      return makeConfigFromEnvironment({
+        ...validEnv(),
+        SESSION_SECRET: "too-short",
+      });
     }).toThrow(/SESSION_SECRET/);
   });
 
   it("rejects a non-numeric PORT", () => {
     expect(() => {
-      return parseConfig({ ...validEnv(), PORT: "not-a-number" });
+      return makeConfigFromEnvironment({ ...validEnv(), PORT: "not-a-number" });
     }).toThrow(/PORT/);
   });
 });
 
 describe("parseConfig, the B2 key prefix", () => {
   it("defaults to production when NODE_ENV is production", () => {
-    const config = parseConfig({ ...validEnv(), NODE_ENV: "production" });
+    const config = makeConfigFromEnvironment({
+      ...validEnv(),
+      NODE_ENV: "production",
+    });
 
     expect(config.b2.keyPrefix).toBe("production");
   });
@@ -94,13 +103,13 @@ describe("parseConfig, the B2 key prefix", () => {
     ["test", { NODE_ENV: "test" }],
     ["unset", {}],
   ])("defaults to test when NODE_ENV is %s", (_label, environment) => {
-    const config = parseConfig({ ...validEnv(), ...environment });
+    const config = makeConfigFromEnvironment({ ...validEnv(), ...environment });
 
     expect(config.b2.keyPrefix).toBe("test");
   });
 
   it("takes B2_KEY_PREFIX over either default", () => {
-    const config = parseConfig({
+    const config = makeConfigFromEnvironment({
       ...validEnv(),
       NODE_ENV: "production",
       B2_KEY_PREFIX: "family-2026",
@@ -110,7 +119,7 @@ describe("parseConfig, the B2 key prefix", () => {
   });
 
   it("accepts a prefix of several path segments", () => {
-    const config = parseConfig({
+    const config = makeConfigFromEnvironment({
       ...validEnv(),
       B2_KEY_PREFIX: "shoebox/test-1",
     });
@@ -130,20 +139,20 @@ describe("parseConfig, the B2 key prefix", () => {
     ["an underscore", "my_test"],
   ])("refuses B2_KEY_PREFIX with %s, naming the variable", (_label, value) => {
     expect(() => {
-      return parseConfig({ ...validEnv(), B2_KEY_PREFIX: value });
+      return makeConfigFromEnvironment({ ...validEnv(), B2_KEY_PREFIX: value });
     }).toThrow(/B2_KEY_PREFIX/);
   });
 
   it("explains the rule when it refuses an empty B2_KEY_PREFIX", () => {
     expect(() => {
-      return parseConfig({ ...validEnv(), B2_KEY_PREFIX: "" });
+      return makeConfigFromEnvironment({ ...validEnv(), B2_KEY_PREFIX: "" });
     }).toThrow(/must not be empty/);
   });
 });
 
 it("treats RESEND_API_KEY as optional, so an unconfigured instance still boots", () => {
   expect(
-    parseConfig({
+    makeConfigFromEnvironment({
       SESSION_SECRET: "a".repeat(32),
       B2_KEY_ID: "key-id",
       B2_APPLICATION_KEY: "application-key",
@@ -156,31 +165,33 @@ it("treats RESEND_API_KEY as optional, so an unconfigured instance still boots",
 
 it("reads an unfilled RESEND_API_KEY= as no key rather than a bad one", () => {
   expect(
-    parseConfig({ ...validEnv(), RESEND_API_KEY: "" }).resendApiKey,
+    makeConfigFromEnvironment({ ...validEnv(), RESEND_API_KEY: "" })
+      .resendApiKey,
   ).toBeUndefined();
 });
 
 it("keeps a RESEND_API_KEY that is actually set", () => {
   expect(
-    parseConfig({ ...validEnv(), RESEND_API_KEY: "re_test" }).resendApiKey,
+    makeConfigFromEnvironment({ ...validEnv(), RESEND_API_KEY: "re_test" })
+      .resendApiKey,
   ).toBe("re_test");
 });
 
 describe("signInCodePepper", () => {
   it("is 32 bytes derived from the session secret", () => {
-    const config = parseConfig(validEnv());
+    const config = makeConfigFromEnvironment(validEnv());
     expect(config.signInCodePepper).toHaveLength(32);
   });
 
   it("is the same for the same secret", () => {
-    const first = parseConfig(validEnv());
-    const second = parseConfig(validEnv());
+    const first = makeConfigFromEnvironment(validEnv());
+    const second = makeConfigFromEnvironment(validEnv());
     expect(first.signInCodePepper.equals(second.signInCodePepper)).toBe(true);
   });
 
   it("is not the secret itself, and differs with it", () => {
-    const config = parseConfig(validEnv());
-    const other = parseConfig({
+    const config = makeConfigFromEnvironment(validEnv());
+    const other = makeConfigFromEnvironment({
       ...validEnv(),
       SESSION_SECRET: "b".repeat(32),
     });
@@ -193,20 +204,22 @@ describe("signInCodePepper", () => {
 
 describe("the email variables", () => {
   it("leaves fake email off when nothing says otherwise", () => {
-    expect(parseConfig(validEnv()).enableFakeEmail).toBe(false);
+    expect(makeConfigFromEnvironment(validEnv()).enableFakeEmail).toBe(false);
   });
 
   it("reads fake email as on only for the exact string", () => {
     expect(
-      parseConfig({ ...validEnv(), ENABLE_FAKE_EMAIL: "true" }).enableFakeEmail,
+      makeConfigFromEnvironment({ ...validEnv(), ENABLE_FAKE_EMAIL: "true" })
+        .enableFakeEmail,
     ).toBe(true);
     expect(
-      parseConfig({ ...validEnv(), ENABLE_FAKE_EMAIL: "1" }).enableFakeEmail,
+      makeConfigFromEnvironment({ ...validEnv(), ENABLE_FAKE_EMAIL: "1" })
+        .enableFakeEmail,
     ).toBe(false);
   });
 
   it("treats an unfilled Upstash variable as absent, not as empty", () => {
-    const config = parseConfig({
+    const config = makeConfigFromEnvironment({
       ...validEnv(),
       UPSTASH_REDIS_REST_URL: "",
       UPSTASH_REDIS_REST_TOKEN: "",
@@ -217,7 +230,7 @@ describe("the email variables", () => {
   });
 
   it("reads the Upstash credentials when they are filled in", () => {
-    const config = parseConfig({
+    const config = makeConfigFromEnvironment({
       ...validEnv(),
       UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
       UPSTASH_REDIS_REST_TOKEN: "a-token",

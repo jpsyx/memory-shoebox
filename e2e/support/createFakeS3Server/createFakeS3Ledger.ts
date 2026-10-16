@@ -4,7 +4,9 @@ import type {
   FakeS3RequestEvidence,
 } from "./createFakeS3Server.types.ts";
 
-/** Records sanitized lifecycle events before body reads, independently of close. */
+/**
+ * Records sanitized lifecycle events before body reads, independently of close.
+ */
 export function createFakeS3Ledger(): {
   start: (options: {
     objectId: string;
@@ -25,18 +27,18 @@ export function createFakeS3Ledger(): {
         method,
         startSequence: ++sequence,
         startedAtMs: performance.now(),
-        terminalSequence: null,
-        terminatedAtMs: null,
-        closedAtMs: null,
-        terminal: null,
-        status: null,
+        terminalSequence: undefined,
+        terminatedAtMs: undefined,
+        closedAtMs: undefined,
+        terminal: undefined,
+        status: undefined,
         bodyBytes: 0,
         chunks: [],
       };
       requests.push(entry);
       activeRequests += 1;
       const finish = (terminal: "finished" | "closed-before-finish") => {
-        if (entry.terminal !== null) {
+        if (entry.terminal !== undefined) {
           return;
         }
         entry.terminal = terminal;

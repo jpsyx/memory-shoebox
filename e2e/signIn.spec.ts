@@ -9,7 +9,7 @@ import {
   CODE_LABEL,
   EMAIL_LABEL,
   OPEN_THE_PHOTOS,
-} from "./support/signIn.ts";
+} from "./support/signInHelpers.ts";
 
 /**
  * Surface 1 against the real server: the arrival flow, and the four refusals

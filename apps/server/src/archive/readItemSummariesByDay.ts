@@ -4,13 +4,13 @@ import type {
   MemberRef,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import {
   makeDrawnEntriesFromItemRows,
   type DrawnEntry,
 } from "./makeDrawnEntriesFromItemRows.ts";
-import { makeAltTextFromItem } from "./makeAltTextFromItem.ts";
+import { itemAltText } from "./makeAltTextFromItem.ts";
 import { makeMediaRefFromSources } from "./makeMediaRefFromSources.ts";
 import { readBurstCovers } from "./readBurstCovers.ts";
 import { readItemsForDays } from "./readItemsForDays.ts";
@@ -71,7 +71,7 @@ async function _readDrawnItemLookups(options: {
           }),
         ),
         now: options.pageOptions.now,
-        ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+        ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
       }),
       readPeopleNamesByItemId({
         database: options.pageOptions.database,
@@ -113,8 +113,8 @@ function _makeItemSummaryFromEntry(options: {
     sources:
       options.lookups.mediaSources.sourcesByItemId.get(item.itemId) ??
       new Map(),
-    durationMs: item.durationMs,
-    altText: makeAltTextFromItem({
+    durationMs: item.durationMs ?? undefined,
+    altText: itemAltText({
       altTextOverride: item.altTextOverride,
       personNames: options.lookups.personNames.get(item.itemId) ?? [],
       capturedAt: item.capturedAt,
@@ -170,10 +170,12 @@ function _makeItemsByDayFromEntries(options: {
  * themselves, and it does so in batches keyed by the ids actually drawn
  * rather than per item, per day, or per burst.
  */
-export async function readItemSummariesByDay(options: {
-  pageOptions: Readonly<TimelinePageOptions>;
-  days: readonly string[];
-}): Promise<Map<string, ItemSummary[]>> {
+export async function readItemSummariesByDay(
+  options: Readonly<{
+    pageOptions: Readonly<TimelinePageOptions>;
+    days: readonly string[];
+  }>,
+): Promise<Map<string, ItemSummary[]>> {
   const rows = await readItemsForDays({
     database: options.pageOptions.database,
     viewer: options.pageOptions.viewer,

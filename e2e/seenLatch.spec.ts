@@ -1,5 +1,5 @@
 import { itemsSeenRequestSchema } from "@memory-shoebox/shared";
-import { seedArchiveForSpec } from "./support/archive.ts";
+import { seedArchiveForSpec } from "./support/archiveSeedHelpers.ts";
 import {
   clearItemViewsForMember,
   seedMemberAtAddress,
@@ -19,16 +19,14 @@ import { ADMIN_EMAIL, expect, test } from "./support/signedIn/signedIn.ts";
  * admin fixture, then deletes the rows its sign-in wrote and reloads, so the
  * unseen state it measures against is real rather than inherited.
  *
- * **This already shipped broken once, on this branch.** An earlier version of
- * `useSeenLatch` observed an empty container and latched nothing, and every
- * unit test passed, because the jsdom harness mounts prints that are already
- * in the tree. Only a real page, with prints that arrive after the observer
- * does, can catch that.
+ * Prints can arrive after their observer starts. A real page verifies this
+ * ordering; a harness with already-mounted prints cannot cover it.
  *
  * **Scrolling at reading speed is load-bearing, not a nicety.** A day's
  * `.pile` carries `content-visibility: auto`; Chromium keeps its subtree
  * un-laid-out until some part of it nears the viewport, then lays out and
- * delivers intersection records for the whole thing in the same frame. Measured:
+ * delivers intersection records for the whole thing in the same frame.
+ * Measured:
  * at roughly 700px every 300ms, every print on a day this size latches; in
  * large jumps, most do not, which is a property of a threshold-0 observer with
  * no `rootMargin` rather than a defect. `?at=` and `scrollIntoView` are both

@@ -3,13 +3,13 @@ import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { FilterChips } from "@/surfaces/Timeline/FilterChips/FilterChips";
 import { FilterStrip } from "@/system/FilterStrip/FilterStrip";
 
 type Props = {
   selection: TimelineSelection;
-  count: number;
+  selectedItemCount: number;
   facets: FilterFacetsResponse | undefined;
   onChange: (update: TimelineSelectionUpdate) => void;
   onClear: () => void;
@@ -24,13 +24,13 @@ type Props = {
  */
 export function SelectionStrip({
   selection,
-  count,
+  selectedItemCount,
   facets,
   onChange,
   onClear,
 }: Readonly<Props>): ReactNode {
   return (
-    <FilterStrip count={count} onClear={onClear}>
+    <FilterStrip count={selectedItemCount} onClear={onClear}>
       <FilterChips selection={selection} facets={facets} onChange={onChange} />
     </FilterStrip>
   );

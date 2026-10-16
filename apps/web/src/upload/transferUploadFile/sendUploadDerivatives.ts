@@ -1,6 +1,6 @@
 import type { UploadedRendition } from "@memory-shoebox/shared";
 
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 
 import type { MadeDerivative } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 
@@ -49,7 +49,7 @@ async function _sendDerivative(
 ): Promise<UploadedRendition | undefined> {
   const { context, derivative } = functionOptions;
 
-  if (derivative.blob.size > appConfig.upload.derivatives.maxBytes) {
+  if (derivative.blob.size > APP_CONFIG.upload.derivatives.maxBytes) {
     return _dropDerivative({ context: context, derivative: derivative });
   }
   const presignDerivative = () => {

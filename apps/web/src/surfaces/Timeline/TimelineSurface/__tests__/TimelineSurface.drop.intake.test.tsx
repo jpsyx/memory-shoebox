@@ -8,7 +8,7 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { renderTimeline, respondWith } from "./TimelineSurface.fixtures";
+import { renderTimeline, respondWith } from "./timelineSurfaceTestHelpers";
 import {
   dropFiles,
   installTimelineSurfaceDropTestLifecycle,
@@ -133,13 +133,17 @@ describe("timeline file intake", () => {
       new File(["b"], "second.jpg", { type: "image/jpeg" }),
       new File(["c"], "nested.mp4", { type: "video/mp4" }),
     ];
-    const nested = makeDirectoryEntryFromBatches("nested", [
-      [makeFileEntryFromFile(files[2]!)],
-    ]);
-    const directory = makeDirectoryEntryFromBatches("folder", [
-      [makeFileEntryFromFile(files[0]!), nested],
-      [makeFileEntryFromFile(files[1]!)],
-    ]);
+    const nested = makeDirectoryEntryFromBatches({
+      name: "nested",
+      batches: [[makeFileEntryFromFile(files[2]!)]],
+    });
+    const directory = makeDirectoryEntryFromBatches({
+      name: "folder",
+      batches: [
+        [makeFileEntryFromFile(files[0]!), nested],
+        [makeFileEntryFromFile(files[1]!)],
+      ],
+    });
     await dropFiles({
       dataTransfer: {
         files: [],

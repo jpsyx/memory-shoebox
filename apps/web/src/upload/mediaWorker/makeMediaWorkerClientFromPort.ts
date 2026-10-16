@@ -1,6 +1,9 @@
+import type {
+  ImageDerivativesOptions,
+  ImageDerivativesResult,
+} from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import type { VisualFingerprintResult } from "@/upload/makeVisualFingerprintFromFile/makeVisualFingerprintFromFile";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
-import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import type {
   MediaWorkerPort,
   MediaWorkerRequest,
@@ -13,12 +16,7 @@ export type MediaWorkerClient = {
   hash: (file: Blob) => Promise<string>;
   /** The image's derivatives, possibly none. Rejects only on a read error. */
   makeImageDerivativesFromFile: (
-    options: Readonly<{
-      file: Blob;
-      contentType: string;
-      size: PixelSize | undefined;
-      purposes?: ReadonlyArray<"thumb" | "display">;
-    }>,
+    options: Readonly<ImageDerivativesOptions>,
   ) => Promise<ImageDerivativesResult>;
   /** Photo identity evidence, absent when the browser cannot decode it. */
   makeVisualFingerprintFromFile: (

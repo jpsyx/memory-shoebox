@@ -5,15 +5,33 @@ import { mkdir, mkdtemp, readFile, realpath, rm, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { promisify } from "node:util";
 import type { MediaProcessRunner } from "../../src/mediaProcessing/runtime/createMediaProcessRunner.ts";
 import type { MediaProbe } from "../../src/mediaProcessing/runtime/mediaRuntime.types.ts";
-import { getProbeFromFfprobe } from "../../src/mediaProcessing/runtime/probeMedia/probeMedia.helpers.ts";
+import { getProbeFromFfprobe } from "../../src/mediaProcessing/runtime/probeMedia/probeMediaHelpers.ts";
+type MediaStreamMetadata = {
+  codec_type: string;
+  codec_name: string;
+  pix_fmt: string;
+  width: number;
+  height: number;
+  avg_frame_rate: string;
+  duration: string;
+  start_time: string;
+  bit_rate: string;
+  color_transfer?: string;
+  color_primaries?: string;
+  color_space?: string;
+  color_range?: string;
+  sample_aspect_ratio?: string;
+  display_aspect_ratio?: string;
+  side_data_list?: Array<{ rotation?: number }>;
+};
 
 /** Synthetic fixture path, never a user's photo or bucket. */
-export function getFixturePath(name: string): string {
-  return fileURLToPath(
+export function makeFixturePathFromName(name: string): string {
+  return fileUrlToPath(
     new URL(`../fixtures/media-processing/${name}`, import.meta.url),
   );
 }
@@ -49,24 +67,7 @@ export async function createVerificationRunner(): Promise<MediaProcessRunner> {
 }
 
 type FileMetadata = {
-  streams: Array<{
-    codec_type: string;
-    codec_name: string;
-    pix_fmt: string;
-    width: number;
-    height: number;
-    avg_frame_rate: string;
-    duration: string;
-    start_time: string;
-    bit_rate: string;
-    color_transfer?: string;
-    color_primaries?: string;
-    color_space?: string;
-    color_range?: string;
-    sample_aspect_ratio?: string;
-    display_aspect_ratio?: string;
-    side_data_list?: Array<{ rotation?: number }>;
-  }>;
+  streams: MediaStreamMetadata[];
   format: { duration: string };
 };
 
@@ -85,7 +86,7 @@ export async function getMetadataFromFile(path: string): Promise<FileMetadata> {
 }
 
 /** Feeds the real metadata parser used by admission. */
-export async function getVideoProbe(path: string): Promise<MediaProbe> {
+export async function getVideoProbeFromFile(path: string): Promise<MediaProbe> {
   return getProbeFromFfprobe({
     kind: "video",
     stdout: JSON.stringify(await getMetadataFromFile(path)),
@@ -100,10 +101,13 @@ export async function getHashFromFile(path: string): Promise<string> {
 }
 
 /** Local range fixture with an optional terminal upstream cutoff. */
-export async function createFixtureReader(
-  path: string,
+export async function createFixtureReader({
+  path,
   byteLimit = Infinity,
-): Promise<{ url: string; close: () => Promise<void> }> {
+}: Readonly<{ path: string; byteLimit?: number }>): Promise<{
+  url: string;
+  close: () => Promise<void>;
+}> {
   const size = (await stat(path)).size;
   let consumed = 0;
   const server = createServer((request, response) => {
@@ -150,7 +154,9 @@ export async function createFixtureReader(
   };
 }
 
-/** Docker supplies zscale only; Sharp stays native. No isolation is asserted. */
+/**
+ * Docker supplies zscale only; Sharp stays native. No isolation is asserted.
+ */
 export async function createDockerVerificationRunner(
   sourcePath: string,
 ): Promise<MediaProcessRunner> {
@@ -211,7 +217,9 @@ export async function createDockerVerificationRunner(
   };
 }
 
-/** Reads actual IDR timestamps rather than only inspecting encoder arguments. */
+/**
+ * Reads actual IDR timestamps rather than only inspecting encoder arguments.
+ */
 export async function getKeyframeTimesFromFile(
   path: string,
 ): Promise<number[]> {

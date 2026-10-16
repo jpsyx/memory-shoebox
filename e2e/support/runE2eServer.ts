@@ -1,5 +1,8 @@
-/** Local acceptance entry point: real workers, isolated storage, no mail delivery. */
-import { createApp } from "../../apps/server/src/createApp.ts";
+/**
+ * Local acceptance entry point: real workers, isolated storage, no mail
+ * delivery.
+ */
+import { createApp } from "../../apps/server/src/createApp/createApp.ts";
 import { getConfig } from "../../apps/server/src/configHelpers.ts";
 import { createDatabase } from "../../apps/server/src/db/client.ts";
 import { migrateToLatest } from "../../apps/server/src/db/migrate.ts";
@@ -40,14 +43,13 @@ const app = await createApp({
   mailDomainReader: "none",
   startBackgroundWork: true,
 });
-const shutdown = async (): Promise<void> => {
-  await app.close();
-  await database.destroy();
-  process.exit(0);
-};
 ["SIGTERM", "SIGINT"].forEach((signal) => {
   process.once(signal, () => {
-    void shutdown();
+    void (async () => {
+      await app.close();
+      await database.destroy();
+      process.exit(0);
+    })();
   });
 });
 try {

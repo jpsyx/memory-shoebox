@@ -15,6 +15,32 @@ import {
 
 export type { FakeB2Client } from "./createFakeB2Client.types.ts";
 
+// Records calls, invokes hooks and applies simulated network refusals.
+function _recordOperationForClient(
+  options: Readonly<RecordFakeB2OperationOptions>,
+): void {
+  const { client, calls, operation, isNetworkCall } = options;
+  calls.push(operation);
+  client.onCall?.(operation);
+  if (isNetworkCall && client.isUnavailable) {
+    throw new Error(`Backblaze is unavailable (${operation})`);
+  }
+}
+
+// Construct the collections and upload sequence shared by this fake client.
+function _createFakeB2State(): FakeB2State {
+  return {
+    deletedKeys: [],
+    failingKeys: new Set(),
+    objects: new Map(),
+    storedObjects: new Map(),
+    multipartObjects: new Map(),
+    multipartUploads: new Map(),
+    calls: [],
+    openedUploadCount: 0,
+  };
+}
+
 /**
  * Builds a Backblaze double.
  *
@@ -79,30 +105,4 @@ export function createFakeB2Client(): FakeB2Client {
   };
 
   return client;
-}
-
-// Records calls, invokes hooks and applies simulated network refusals.
-function _recordOperationForClient(
-  options: Readonly<RecordFakeB2OperationOptions>,
-): void {
-  const { client, calls, operation, isNetworkCall } = options;
-  calls.push(operation);
-  client.onCall?.(operation);
-  if (isNetworkCall && client.isUnavailable) {
-    throw new Error(`Backblaze is unavailable (${operation})`);
-  }
-}
-
-// Construct the collections and upload sequence shared by this fake client.
-function _createFakeB2State(): FakeB2State {
-  return {
-    deletedKeys: [],
-    failingKeys: new Set(),
-    objects: new Map(),
-    storedObjects: new Map(),
-    multipartObjects: new Map(),
-    multipartUploads: new Map(),
-    calls: [],
-    openedUploadCount: 0,
-  };
 }

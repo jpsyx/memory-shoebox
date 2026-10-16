@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 
 import { createMeResponse } from "@/testing/createMeResponse";
 
@@ -17,7 +17,11 @@ import {
   createRouter,
   type AnyRouter,
 } from "@tanstack/react-router";
-/** Builds a memory router using the actual root beforeLoad and bootstrap redirect tracking, stubs fetch from supplied answers and returns its query client. */
+/**
+ * Builds a memory router using the actual root beforeLoad and bootstrap
+ * redirect tracking, stubs fetch from supplied answers and returns its query
+ * client.
+ */
 export function makeRootRouterFromOptions(
   options: Readonly<{
     path: string;
@@ -71,11 +75,17 @@ export function makeRootRouterFromOptions(
   });
   return { router, client };
 }
-/** Returns a bootstrap answer for the supplied account, exposing invitation progress only to admins. */
-export function bootstrap(
-  account: ReturnType<typeof createMeResponse> | null = ADMIN,
+/**
+ * Returns a bootstrap answer for the supplied account, exposing invitation
+ * progress only to admins.
+ */
+export function bootstrap({
+  account = ADMIN,
   needsInvitations = false,
-): SetupAnswer {
+}: {
+  account?: ReturnType<typeof createMeResponse> | null;
+  needsInvitations?: boolean;
+} = {}): SetupAnswer {
   return {
     body: {
       setup: { isRequired: false },

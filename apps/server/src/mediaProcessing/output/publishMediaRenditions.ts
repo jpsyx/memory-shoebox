@@ -1,4 +1,4 @@
-import { sql, type Kysely } from "kysely";
+import { type Selectable, sql, type Kysely } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
 import { createId } from "../../db/createId.ts";
 import { withUploadObjectCleanupLock } from "../../upload/withUploadObjectCleanupLock.ts";
@@ -16,10 +16,13 @@ type PublicationOptions = {
 
 const OWNERSHIP_LOST = Symbol("processing_publication_ownership_lost");
 
-function _getAttemptTime(
-  options: Readonly<PublicationOptions>,
-  expiry?: string,
-): string {
+function _getAttemptTime({
+  options,
+  expiry,
+}: {
+  options: Readonly<PublicationOptions>;
+  expiry?: string;
+}): string {
   const now = options.clock().toISOString();
   if (options.signal.aborted || (expiry !== undefined && now >= expiry)) {
     throw OWNERSHIP_LOST;
@@ -31,7 +34,7 @@ async function _getLiveSourceExpiry(
   options: Readonly<PublicationOptions>,
 ): Promise<string> {
   const { database, claim } = options;
-  const now = _getAttemptTime(options);
+  const now = _getAttemptTime({ options });
   const job = await database
     .selectFrom("media_processing_jobs as job")
     .innerJoin(
@@ -53,11 +56,13 @@ async function _getLiveSourceExpiry(
   if (job?.lease_expires_at === undefined || job.lease_expires_at === null) {
     throw OWNERSHIP_LOST;
   }
-  _getAttemptTime(options, job.lease_expires_at);
+  _getAttemptTime({ options, expiry: job.lease_expires_at });
   return job.lease_expires_at;
 }
 
-async function _hasRequiredOutputs(options: Readonly<PublicationOptions>) {
+async function _hasRequiredOutputs(
+  options: Readonly<PublicationOptions>,
+): Promise<true | undefined> {
   const item = await options.database
     .selectFrom("items")
     .select("kind")
@@ -70,19 +75,20 @@ async function _hasRequiredOutputs(options: Readonly<PublicationOptions>) {
   const purposes = options.outputs.map((output) => {
     return output.rendition.purpose;
   });
-  if (
-    purposes.includes("original") ||
+  return purposes.includes("original") ||
     new Set(purposes).size !== purposes.length ||
     !required.every((purpose) => {
       return purposes.includes(purpose as ProcessedRendition["purpose"]);
     })
-  ) {
-    return undefined;
-  }
-  return true;
+    ? undefined
+    : true;
 }
 
-async function _getOwnedOutputs(options: Readonly<PublicationOptions>) {
+async function _getOwnedOutputs(
+  options: Readonly<PublicationOptions>,
+): Promise<
+  Array<Selectable<Database["media_processing_outputs"]>> | undefined
+> {
   if (!(await _hasRequiredOutputs(options))) {
     return undefined;
   }
@@ -116,12 +122,15 @@ async function _getOwnedOutputs(options: Readonly<PublicationOptions>) {
   return rows;
 }
 
-async function _enqueueRetiredKeys(
-  options: Readonly<PublicationOptions>,
-  keys: readonly string[],
-): Promise<void> {
+async function _enqueueRetiredKeys({
+  options,
+  keys,
+}: {
+  options: Readonly<PublicationOptions>;
+  keys: readonly string[];
+}): Promise<void> {
   const { database } = options;
-  const now = _getAttemptTime(options);
+  const now = _getAttemptTime({ options });
   await database
     .insertInto("pending_object_deletions")
     .values(
@@ -161,7 +170,7 @@ async function _retireDerivatives(
     const keys = previous.map((row) => {
       return row.storage_key;
     });
-    await _enqueueRetiredKeys(options, keys);
+    await _enqueueRetiredKeys({ options, keys });
   }
   await database
     .deleteFrom("item_renditions")
@@ -198,37 +207,43 @@ async function _publish(
       }),
     )
     .execute();
-  const expiry = await _completePublication(
+  const expiry = await _completePublication({
     options,
-    owned.map((row) => {
+    outputIds: owned.map((row) => {
       return row.id;
     }),
-  );
+  });
   // Check after the final awaited write, immediately before callback success.
-  _getAttemptTime(options, expiry);
+  _getAttemptTime({ options, expiry });
   return true;
 }
 
-async function _completePublication(
-  options: Readonly<PublicationOptions>,
-  outputIds: readonly string[],
-): Promise<string> {
+async function _completePublication({
+  options,
+  outputIds,
+}: {
+  options: Readonly<PublicationOptions>;
+  outputIds: readonly string[];
+}): Promise<string> {
   await options.database
     .updateTable("media_processing_outputs")
-    .set({ state: "published", updated_at: _getAttemptTime(options) })
+    .set({ state: "published", updated_at: _getAttemptTime({ options }) })
     .where("id", "in", outputIds)
     .execute();
   const expiry = await _getLiveSourceExpiry(options);
-  await _completeJob(options, expiry);
+  await _completeJob({ options, expiry });
   return expiry;
 }
 
-async function _completeJob(
-  options: Readonly<PublicationOptions>,
-  expiry: string,
-): Promise<void> {
+async function _completeJob({
+  options,
+  expiry,
+}: {
+  options: Readonly<PublicationOptions>;
+  expiry: string;
+}): Promise<void> {
   const { database, claim } = options;
-  const now = _getAttemptTime(options, expiry);
+  const now = _getAttemptTime({ options, expiry });
   const result = await database
     .updateTable("media_processing_jobs")
     .set({
@@ -254,7 +269,9 @@ async function _completeJob(
   }
 }
 
-/** Publishes atomically only while live ownership and cancellation checks hold. */
+/**
+ * Publishes atomically only while live ownership and cancellation checks hold.
+ */
 export async function publishMediaRenditions(
   options: Readonly<PublicationOptions>,
 ): Promise<boolean> {

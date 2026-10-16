@@ -1,7 +1,7 @@
 import { waitFor } from "@testing-library/react";
 import { expect, it } from "vitest";
 import { createUploadDecodeCoordinator } from "../../createUploadDecodeCoordinator/createUploadDecodeCoordinator";
-import { makePreviewHarnessFromOptions } from "./uploadPreviewTestHelpers";
+import { makePreviewHarnessFromOptions } from "./makePreviewHarnessFromOptions";
 
 it.each(["resume", "release", "deactivate", "destroy"] as const)(
   "preserves a paused shared-slot request through %s without starting its decoder",

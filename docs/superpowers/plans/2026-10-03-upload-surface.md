@@ -525,7 +525,7 @@ through sign-in`, and `settled recovery has no second-email promise`:
 
 **Files:**
 
-- Create: `e2e/upload-surface/upload.surface.spec.ts`, `upload.recovery.spec.ts`, `upload.keyboard.spec.ts`, `upload.responsive.spec.ts`, `upload.contract.spec.ts` and `uploadSurfaceTestHelpers.ts`.
+- Create: `e2e/upload-surface/__tests__/upload.surface.spec.ts`, `upload.recovery.spec.ts`, `upload.keyboard.spec.ts`, `upload.responsive.spec.ts`, `upload.contract.spec.ts` and `uploadSurfaceTestHelpers.ts`.
 - Create: `e2e/support/makeUploadSurfaceFixturePaths/makeUploadSurfaceFixturePaths.ts` and `.test.ts` only for nontrivial fixture-byte transformations.
 - Modify: `playwright.config.ts`, `docs/e2e.md`, `docs/web.md`, `docs/prds/2026-09-27-memory-shoebox/plan/step-7b.md`, the plan README and this plan's checkboxes.
 
@@ -539,7 +539,7 @@ through sign-in`, and `settled recovery has no second-email promise`:
 
 - Modify: `UploadMilestoneModal/UploadMilestoneFields.tsx`, `UploadMilestoneFix/UploadMilestoneFixApproach.tsx`, `UploadTransfer/UploadDone.tsx`, `UploadSurfaceError.tsx` and Upload CSS to correct print/panel contexts for Night descriptions and active buttons, as exposed by matrix RED.
 
-- Create: `e2e/upload-surface/upload.zoom.spec.ts` and `uploadSurfaceStateHelpers.ts` for two-dimension zoom-equivalent control/native-date checks and focused shared state setup, exposed by Task 9 review.
+- Create: `e2e/upload-surface/__tests__/upload.zoom.spec.ts` and `uploadSurfaceStateHelpers.ts` for two-dimension zoom-equivalent control/native-date checks and focused shared state setup, exposed by Task 9 review.
 
 - Modify: Upload CSS only for native empty-date text using existing print ink, after actual WebKit placeholder contrast RED.
 
@@ -604,8 +604,8 @@ complete. The prior review remains evidence, not an integration approval.
 - Modify: `apps/web/src/surfaces/Upload/UploadLabelModal/useUploadLabelForm.ts` and `UploadLabelModal.test.tsx`.
 - Modify: `apps/web/src/surfaces/Upload/UploadDraft/UploadSavedPlan.tsx` and `UploadEditRow.tsx`.
 - Modify comments only: `UploadTransfer/UploadSavedOriginalPicker.tsx`, `apps/web/src/upload/uploadSessionController/uploadManifestReadHelpers.ts` and `uploadDeclarationHelpers.ts`.
-- Create: `e2e/upload-surface/upload.edit-retries.spec.ts` for the two failure/retry interactions, reusing existing surface test support.
-- Modify: `e2e/upload-surface/upload.keyboard.spec.ts` only for the observed occasion-picker readiness gap: await initial Close focus and opacity 1 before Escape, and dialog hidden before restored-trigger checks. Keep genuine keyboard input and the existing ring assertion.
+- Create: `e2e/upload-surface/__tests__/upload.edit-retries.spec.ts` for the two failure/retry interactions, reusing existing surface test support.
+- Modify: `e2e/upload-surface/__tests__/upload.keyboard.spec.ts` only for the observed occasion-picker readiness gap: await initial Close focus and opacity 1 before Escape, and dialog hidden before restored-trigger checks. Keep genuine keyboard input and the existing ring assertion.
 - Modify: feature/evidence docs, step 7b status notes and this plan's checkpoint after verification.
 - Focused helper/test leaves inside these existing owners are permitted only if required for the stated bounds.
 

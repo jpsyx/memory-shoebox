@@ -4,7 +4,7 @@ import type {
   PersonRef,
   VisibilitySummary,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import { readMediaSources } from "../../archive/readMediaSources.ts";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
 import { readPeopleRefsByItemId } from "../../archive/readPeopleRefsByItemId.ts";
@@ -13,7 +13,7 @@ import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
 import { readInstanceSettings } from "../../settings/readInstanceSettings.ts";
-import type { BurstFrameRow } from "../readBurstFrameRefs/readBurstFrameRows.ts";
+import type { BurstFrameRow } from "../readBurstFramePage/readBurstFrameRows.ts";
 import { readBurstSiblingsByBurstId } from "./readBurstSiblingsByBurstId.ts";
 import type { ItemSummaryRow } from "./readItemSummaryRows.ts";
 
@@ -85,7 +85,7 @@ async function _readItemLookups(
           }),
         ),
         now: options.now,
-        ttlSeconds: appConfig.media.signedUrlTtlSeconds,
+        ttlSeconds: APP_CONFIG.media.signedUrlTtlSeconds,
       }),
       readPeopleRefsByItemId({
         database: options.database,
@@ -127,7 +127,7 @@ export type ItemSummaryParts = ItemLookups & {
  * @param options.rows The requested items, already visibility-filtered.
  */
 export async function readItemSummaryParts(
-  options: ReadItemSummaryPartsShape,
+  options: Readonly<ReadItemSummaryPartsShape>,
 ): Promise<ItemSummaryParts> {
   const { itemIds, ruleIds, burstIds } = _makeIdsFromRows(options.rows);
 

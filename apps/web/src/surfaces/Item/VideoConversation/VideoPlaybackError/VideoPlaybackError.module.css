@@ -1,0 +1,21 @@
+.videoPlaybackError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: color-mix(in oklab, var(--chip-black) 92%, transparent);
+  color: var(--chip-white);
+  padding-bottom: 120px;
+  text-align: center;
+}
+.videoPlaybackError button {
+  background: var(--print);
+  color: var(--on-print);
+  border: 0;
+  border-radius: 0;
+  min-height: 40px;
+  padding: 8px 18px;
+}

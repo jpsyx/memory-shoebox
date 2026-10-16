@@ -1,22 +1,30 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 import {
   getRecordedBodyFromRequest,
   getRecordedCountFromLine,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import {
   makeBurst,
   makeDay,
   makeItem,
   makeMediaSource,
-} from "@/surfaces/Timeline/timelineFixtures";
-import { renderTimeline } from "./TimelineSurface.fixtures";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import {
   answerBulkTimeline,
   tickBothTimelinePhotos,
 } from "./timelineBulkTestHelpers";
+import type { BurstFrameRef } from "@memory-shoebox/shared";
+
+type BurstAnswers = {
+  burst: ReturnType<typeof makeBurst>;
+  timeline: Answer;
+  frames: BurstFrameRef[];
+  frameAnswer: Answer;
+};
 
 const BULK_PATH = "POST /api/items/bulk-edit";
 const FRAME_IDS = [1, 2, 3].map((index) => {
@@ -28,7 +36,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function _makeBurstAnswers() {
+function _makeBurstAnswers(): BurstAnswers {
   const burst = makeBurst({ visibleFrameCount: 3, hasUnseenFrames: false });
   const timeline: Answer = {
     status: 200,

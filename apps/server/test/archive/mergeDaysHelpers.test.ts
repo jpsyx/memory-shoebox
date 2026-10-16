@@ -1,9 +1,11 @@
+import type { MilestoneRef } from "@memory-shoebox/shared";
+import type { CandidateDay } from "../../src/archive/readItemDays.ts";
 import { describe, expect, it } from "vitest";
 import {
   getUnionDaysFromMilestones,
   getWindowBoundaryFromItemDays,
   makeDayPageFromCandidates,
-  makeMergedDays,
+  makeMergedDaysFromItemAndMilestoneDays,
 } from "../../src/archive/mergeDaysHelpers.ts";
 
 const WEEK = {
@@ -12,9 +14,15 @@ const WEEK = {
   startsOn: "2026-09-09",
   endsOn: "2026-09-13",
   blurb: null,
-};
+} satisfies MilestoneRef;
 
-const makeDay = (capturedOn: string, itemCount: number) => {
+const makeDay = ({
+  capturedOn,
+  itemCount,
+}: {
+  capturedOn: string;
+  itemCount: number;
+}): CandidateDay => {
   return {
     capturedOn,
     itemCount,
@@ -100,7 +108,10 @@ describe("getWindowBoundaryFromItemDays", () => {
   it("has no floor when there are fewer item days than the limit", () => {
     expect(
       getWindowBoundaryFromItemDays({
-        itemDays: [makeDay("2026-09-14", 1), makeDay("2026-09-13", 1)],
+        itemDays: [
+          makeDay({ capturedOn: "2026-09-14", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-13", itemCount: 1 }),
+        ],
         limit: 3,
       }),
     ).toBeUndefined();
@@ -110,9 +121,9 @@ describe("getWindowBoundaryFromItemDays", () => {
     expect(
       getWindowBoundaryFromItemDays({
         itemDays: [
-          makeDay("2026-09-14", 1),
-          makeDay("2026-09-13", 1),
-          makeDay("2026-09-12", 1),
+          makeDay({ capturedOn: "2026-09-14", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-13", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-12", itemCount: 1 }),
         ],
         limit: 3,
       }),
@@ -123,10 +134,10 @@ describe("getWindowBoundaryFromItemDays", () => {
     expect(
       getWindowBoundaryFromItemDays({
         itemDays: [
-          makeDay("2026-09-14", 1),
-          makeDay("2026-09-13", 1),
-          makeDay("2026-09-12", 1),
-          makeDay("2026-09-11", 1),
+          makeDay({ capturedOn: "2026-09-14", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-13", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-12", itemCount: 1 }),
+          makeDay({ capturedOn: "2026-09-11", itemCount: 1 }),
         ],
         limit: 3,
       }),
@@ -137,24 +148,27 @@ describe("getWindowBoundaryFromItemDays", () => {
 describe("makeMergedDays", () => {
   it("puts milestone-only days in place, newest first", () => {
     expect(
-      makeMergedDays({
-        itemDays: [makeDay("2026-09-14", 212), makeDay("2026-09-02", 1)],
+      makeMergedDaysFromItemAndMilestoneDays({
+        itemDays: [
+          makeDay({ capturedOn: "2026-09-14", itemCount: 212 }),
+          makeDay({ capturedOn: "2026-09-02", itemCount: 1 }),
+        ],
         milestoneDays: ["2026-09-13"],
       }),
     ).toEqual([
-      makeDay("2026-09-14", 212),
-      makeDay("2026-09-13", 0),
-      makeDay("2026-09-02", 1),
+      makeDay({ capturedOn: "2026-09-14", itemCount: 212 }),
+      makeDay({ capturedOn: "2026-09-13", itemCount: 0 }),
+      makeDay({ capturedOn: "2026-09-02", itemCount: 1 }),
     ]);
   });
 
   it("does not duplicate a day that has both items and an occasion", () => {
     expect(
-      makeMergedDays({
-        itemDays: [makeDay("2026-09-14", 212)],
+      makeMergedDaysFromItemAndMilestoneDays({
+        itemDays: [makeDay({ capturedOn: "2026-09-14", itemCount: 212 })],
         milestoneDays: ["2026-09-14"],
       }),
-    ).toEqual([makeDay("2026-09-14", 212)]);
+    ).toEqual([makeDay({ capturedOn: "2026-09-14", itemCount: 212 })]);
   });
 });
 
@@ -162,9 +176,9 @@ describe("makeDayPageFromCandidates", () => {
   it("cuts at the limit and says there is more", () => {
     const page = makeDayPageFromCandidates({
       candidates: [
-        makeDay("2026-09-14", 1),
-        makeDay("2026-09-13", 1),
-        makeDay("2026-09-12", 1),
+        makeDay({ capturedOn: "2026-09-14", itemCount: 1 }),
+        makeDay({ capturedOn: "2026-09-13", itemCount: 1 }),
+        makeDay({ capturedOn: "2026-09-12", itemCount: 1 }),
       ],
       limit: 2,
       itemBudget: 400,
@@ -179,7 +193,7 @@ describe("makeDayPageFromCandidates", () => {
 
   it("says there is no more when everything fits", () => {
     const page = makeDayPageFromCandidates({
-      candidates: [makeDay("2026-09-14", 1)],
+      candidates: [makeDay({ capturedOn: "2026-09-14", itemCount: 1 })],
       limit: 10,
       itemBudget: 400,
     });
@@ -189,9 +203,9 @@ describe("makeDayPageFromCandidates", () => {
   it("stops after the day that passes the budget", () => {
     const page = makeDayPageFromCandidates({
       candidates: [
-        makeDay("2026-09-14", 300),
-        makeDay("2026-09-13", 150),
-        makeDay("2026-09-12", 10),
+        makeDay({ capturedOn: "2026-09-14", itemCount: 300 }),
+        makeDay({ capturedOn: "2026-09-13", itemCount: 150 }),
+        makeDay({ capturedOn: "2026-09-12", itemCount: 10 }),
       ],
       limit: 10,
       itemBudget: 400,
@@ -206,7 +220,10 @@ describe("makeDayPageFromCandidates", () => {
 
   it("always returns one day, however fat it is", () => {
     const page = makeDayPageFromCandidates({
-      candidates: [makeDay("2026-09-14", 4000), makeDay("2026-09-13", 1)],
+      candidates: [
+        makeDay({ capturedOn: "2026-09-14", itemCount: 4000 }),
+        makeDay({ capturedOn: "2026-09-13", itemCount: 1 }),
+      ],
       limit: 10,
       itemBudget: 400,
     });

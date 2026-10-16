@@ -7,16 +7,15 @@ import {
   UPLOAD_FIXTURE_DIRECTORY,
 } from "../uploadHarnessHelpers.ts";
 import { makeExifCompatibleHeicFromBytes } from "./makeExifCompatibleHeicFromBytes/makeExifCompatibleHeicFromBytes.ts";
+type DistinctPhotoOptions = {
+  sourcePath: string;
+  targetPath: string;
+  seed: string;
+  isPortrait: boolean;
+};
 
 /** Distinct image pixels preserve the real visual-duplicate policy. */
-function _writeDistinctPhoto(
-  options: Readonly<{
-    sourcePath: string;
-    targetPath: string;
-    seed: string;
-    isPortrait: boolean;
-  }>,
-): void {
+function _writeDistinctPhoto(options: Readonly<DistinctPhotoOptions>): void {
   const width = options.isPortrait ? 360 : 480;
   const height = options.isPortrait ? 480 : 360;
   const drawing = Array.from({ length: 64 }, (_, index) => {
@@ -56,14 +55,6 @@ function _writeDistinctPhoto(
   }
 }
 
-/** ISO-BMFF markers make original video bytes unique without changing playback. */
-function _makeDistinctVideoBytes(source: Buffer, marker: Buffer): Buffer {
-  const freeHeader = Buffer.alloc(8);
-  freeHeader.writeUInt32BE(marker.length + 8);
-  freeHeader.write("free", 4, "latin1");
-  return Buffer.concat([source, freeHeader, marker]);
-}
-
 /** Writes a mixed media batch under the test's own output directory. */
 export function makeUploadSurfaceFixturePaths(
   options: Readonly<{
@@ -94,10 +85,12 @@ export function makeUploadSurfaceFixturePaths(
         isPortrait: !name.startsWith("IMG-"),
       });
     } else {
-      writeFileSync(
-        path,
-        _makeDistinctVideoBytes(readFileSync(sourcePath), Buffer.from(seed)),
-      );
+      const source = readFileSync(sourcePath);
+      const marker = Buffer.from(seed);
+      const freeHeader = Buffer.alloc(8);
+      freeHeader.writeUInt32BE(marker.length + 8);
+      freeHeader.write("free", 4, "latin1");
+      writeFileSync(path, Buffer.concat([source, freeHeader, marker]));
     }
     return path;
   });

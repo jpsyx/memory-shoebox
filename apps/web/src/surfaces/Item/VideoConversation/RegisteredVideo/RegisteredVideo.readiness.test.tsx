@@ -13,7 +13,9 @@ import { useVideoPlayback } from "../useVideoPlayback/useVideoPlayback";
 import { RegisteredVideo } from "./RegisteredVideo";
 
 const detail = makeVideoDetail();
-function Player({ version }: { version: number }): ReactNode {
+type Props = { version: number };
+
+function Player({ version }: Readonly<Props>): ReactNode {
   const [readiness, setReadiness] = useState<ViewerReadiness>();
   const transport = useVideoTransport(detail.itemId);
   const playback = useVideoPlayback({
@@ -48,7 +50,8 @@ function Player({ version }: { version: number }): ReactNode {
 
 describe("native video readiness ownership", () => {
   beforeEach(() => {
-    // jsdom exposes track arrays, but these browser interfaces are EventTargets.
+    // jsdom exposes track arrays, but these browser interfaces are
+    // EventTargets.
     vi.spyOn(HTMLMediaElement.prototype, "audioTracks", "get").mockReturnValue(
       undefined as never,
     );

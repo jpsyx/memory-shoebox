@@ -10,7 +10,7 @@ import {
   createPublicationFixture,
   expectRefused,
   interruptAttempt,
-  makeInterruptedDatabase,
+  makeInterruptedDatabaseFromFixture,
   readPublicationState,
   runOutputTransition,
 } from "./publicationTestHelpers.ts";
@@ -43,11 +43,14 @@ it.each([
             callback,
           });
     await entered.promise;
-    const work = runOutputTransition(fixture, operation);
-    interruptAttempt(fixture, interruption);
+    const work = runOutputTransition({
+      fixture: fixture,
+      operation: operation,
+    });
+    interruptAttempt({ fixture, interruption });
     release.resolve();
     await held;
-    await expectRefused(work, operation);
+    await expectRefused({ work, operation });
     expect(await readPublicationState(fixture.database)).toEqual(before);
   },
 );
@@ -64,11 +67,19 @@ it.each([
   async (operation, target, interruption) => {
     const fixture = await createPublicationFixture();
     const before = await readPublicationState(fixture.database);
-    const observed = makeInterruptedDatabase(fixture, target, interruption);
-    await expectRefused(
-      runOutputTransition(fixture, operation, observed.database),
+    const observed = makeInterruptedDatabaseFromFixture({
+      fixture,
+      target,
+      interruption,
+    });
+    await expectRefused({
+      work: runOutputTransition({
+        fixture: fixture,
+        operation: operation,
+        database: observed.database,
+      }),
       operation,
-    );
+    });
     expect(observed.didInterrupt()).toBe(true);
     expect(await readPublicationState(fixture.database)).toEqual(before);
   },

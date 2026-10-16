@@ -1,5 +1,5 @@
 import { makeMilestoneDetailFromOverrides } from "@/testing/askingAndOccasionsFixtureHelpers";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import { renderAt, respondWith } from "@/testing/surfaceHarnessHelpers";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -10,9 +10,11 @@ import { MilestoneForm } from "./MilestoneForm";
 describe("occasion form presentation", () => {
   it("retains invalid input and explains required dates", async () => {
     respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [], nextCursor: null },
-        status: 200,
+      routes: {
+        "GET /api/milestones": {
+          body: { milestones: [], nextCursor: null },
+          status: 200,
+        },
       },
     });
     renderAt("/milestones?mode=create");
@@ -28,9 +30,11 @@ describe("occasion form presentation", () => {
   });
   it("shows span date controls when multi-day is selected", async () => {
     respondWith({
-      "GET /api/milestones": {
-        body: { milestones: [], nextCursor: null },
-        status: 200,
+      routes: {
+        "GET /api/milestones": {
+          body: { milestones: [], nextCursor: null },
+          status: 200,
+        },
       },
     });
     renderAt("/milestones?mode=create");

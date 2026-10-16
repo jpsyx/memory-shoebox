@@ -1,4 +1,7 @@
-import { BURST_ID, makeBurstFrame } from "@/testing/itemFixtureHelpers";
+import {
+  BURST_ID,
+  makeBurstFrameFromPosition,
+} from "@/testing/itemFixtureHelpers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getBurstFramesForSelection } from "./getBurstFramesForSelection";
 
@@ -18,10 +21,16 @@ describe("getBurstFramesForSelection", () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(1)], nextCursor: "tail" }),
+        _response({
+          frames: [makeBurstFrameFromPosition(1)],
+          nextCursor: "tail",
+        }),
       )
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(2)], nextCursor: null }),
+        _response({
+          frames: [makeBurstFrameFromPosition(2)],
+          nextCursor: null,
+        }),
       );
     vi.stubGlobal("fetch", fetch);
     await getBurstFramesForSelection(BURST_ID, {
@@ -44,19 +53,25 @@ describe("getBurstFramesForSelection", () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(1)], nextCursor: "next/+=" }),
+        _response({
+          frames: [makeBurstFrameFromPosition(1)],
+          nextCursor: "next/+=",
+        }),
       )
       .mockResolvedValueOnce(
         _response({
-          frames: [makeBurstFrame(2), makeBurstFrame(3)],
+          frames: [
+            makeBurstFrameFromPosition(2),
+            makeBurstFrameFromPosition(3),
+          ],
           nextCursor: null,
         }),
       );
     vi.stubGlobal("fetch", fetch);
     await expect(getBurstFramesForSelection(BURST_ID)).resolves.toEqual([
-      makeBurstFrame(1),
-      makeBurstFrame(2),
-      makeBurstFrame(3),
+      makeBurstFrameFromPosition(1),
+      makeBurstFrameFromPosition(2),
+      makeBurstFrameFromPosition(3),
     ]);
     expect(
       fetch.mock.calls.map(([url]) => {
@@ -72,10 +87,16 @@ describe("getBurstFramesForSelection", () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(1)], nextCursor: "repeat" }),
+        _response({
+          frames: [makeBurstFrameFromPosition(1)],
+          nextCursor: "repeat",
+        }),
       )
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(2)], nextCursor: "repeat" }),
+        _response({
+          frames: [makeBurstFrameFromPosition(2)],
+          nextCursor: "repeat",
+        }),
       );
     vi.stubGlobal("fetch", fetch);
     await expect(getBurstFramesForSelection(BURST_ID)).rejects.toThrow(
@@ -88,7 +109,10 @@ describe("getBurstFramesForSelection", () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(
-        _response({ frames: [makeBurstFrame(1)], nextCursor: "tail" }),
+        _response({
+          frames: [makeBurstFrameFromPosition(1)],
+          nextCursor: "tail",
+        }),
       )
       .mockResolvedValueOnce(
         _response({ error: "unavailable", message: "Stack unavailable" }, 503),

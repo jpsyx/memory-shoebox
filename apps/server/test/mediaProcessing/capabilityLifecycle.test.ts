@@ -33,7 +33,7 @@ it("drains cancelled capability work before releasing the lane and does not cach
     },
   });
   vi.mocked(checkMediaCodecs)
-    .mockImplementationOnce(async (_runner, signal) => {
+    .mockImplementationOnce(async ({ signal }) => {
       started.resolve();
       await new Promise<void>((done) => {
         return signal!.addEventListener(
@@ -52,16 +52,22 @@ it("drains cancelled capability work before releasing the lane and does not cach
     cgroupRoot: "/unused",
     scratchRoot: "/unused",
   });
-  const running = coordinator.run(() => {
-    return runtime.getCapabilities(shutdown.signal);
-  }, shutdown.signal);
+  const running = coordinator.run({
+    work: () => {
+      return runtime.getCapabilities(shutdown.signal);
+    },
+    signal: shutdown.signal,
+  });
   const observed = expect(running).rejects.toThrow();
   await started.promise;
   shutdown.abort();
   let followerStarted = false;
-  const follower = coordinator.run(async () => {
-    followerStarted = true;
-  }, new AbortController().signal);
+  const follower = coordinator.run({
+    work: async () => {
+      followerStarted = true;
+    },
+    signal: new AbortController().signal,
+  });
   await new Promise((done) => {
     return setImmediate(done);
   });
@@ -72,11 +78,11 @@ it("drains cancelled capability work before releasing the lane and does not cach
   expect(disposed).toBe(true);
   expect(await runtime.getCapabilities(new AbortController().signal)).toEqual({
     available: true,
-    reason: null,
+    reason: undefined,
   });
   expect(await runtime.getCapabilities(new AbortController().signal)).toEqual({
     available: true,
-    reason: null,
+    reason: undefined,
   });
   expect(checkMediaCodecs).toHaveBeenCalledTimes(2);
 });

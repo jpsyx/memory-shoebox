@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties as CssProperties, ReactNode } from "react";
 import type { MilestoneAttachment } from "../../../useMilestoneAttachment/useMilestoneAttachment.types";
 import { MilestonePickerPrint } from "./MilestonePickerPrint/MilestonePickerPrint";
 import classes from "./MilestonePickerChoices.module.css";
@@ -19,7 +19,7 @@ export function MilestonePickerChoices({ picker }: Readonly<Props>): ReactNode {
             style={
               {
                 "--milestone-print-width": `${(10 * item.media.width) / item.media.height}rem`,
-              } as CSSProperties
+              } as CssProperties
             }
           >
             <MilestonePickerPrint

@@ -140,7 +140,7 @@ export const filterFacetsRequestSchema = timelineFilterQuerySchema;
 /** The filter surface's query string. */
 export type FilterFacetsRequest = z.infer<typeof filterFacetsRequestSchema>;
 
-/** The occasion that takes this day's one full band. Decision 14. */
+/** The occasion that takes this day's one full band. */
 export const dayMilestoneBandSchema = z.object({
   milestone: milestoneRefSchema,
   /** 1-based position of this day within the span. */
@@ -192,10 +192,10 @@ export type TimelineDay = z.infer<typeof timelineDaySchema>;
 /**
  * A page of days.
  *
- * With nothing visible the body is exactly
- * `{ "days": [], "nextCursor": null, "previousCursor": null, "resultCount": null }`, and a brand-new
- * archive and a viewer restricted from everything produce byte-identical
- * bodies. No field may be added that distinguishes them.
+ * With nothing visible, `days` is empty and `nextCursor`, `previousCursor`,
+ * and `resultCount` are null. A brand-new archive and a viewer restricted
+ * from everything produce byte-identical bodies. No field may be added
+ * that distinguishes them.
  */
 export const timelineResponseSchema = collectionSchema({
   resourceKey: "days",
@@ -219,7 +219,9 @@ export const railDaySchema = z.object({
   capturedOn: calendarDateSchema,
   /** Per viewer. `0` on a milestone-only day, which is still jumpable. */
   itemCount: z.number().int().nonnegative(),
-  /** Per-viewer photos matching the filter, counting burst frames separately. */
+  /**
+   * Per-viewer photos matching the filter, counting burst frames separately.
+   */
   photoCount: z.number().int().nonnegative(),
   /** Per-viewer videos matching the filter. */
   videoCount: z.number().int().nonnegative(),
@@ -276,7 +278,9 @@ export const tagFacetSchema = z
   .object({
     tag: tagRefSchema,
     isSelected: z.boolean(),
-    /** What adding this chip to the selection would leave. Null iff selected. */
+    /**
+     * What adding this chip to the selection would leave. Null iff selected.
+     */
     narrowedCount: z.number().int().nonnegative().nullable(),
     /** The chip's worth with no filters at all. Non-null iff selected. */
     ownCount: z.number().int().nonnegative().nullable(),

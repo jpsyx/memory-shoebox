@@ -1,5 +1,11 @@
 import { useRef, useState } from "react";
 import type { MediaRef } from "@memory-shoebox/shared";
+type PhotoSourceFailure = {
+  hasError: boolean;
+  version: number;
+  onError: () => void;
+  retry: () => void;
+};
 
 /** One automatic retry per selected item; explicit retry starts a new epoch. */
 export function usePhotoSourceFailure(
@@ -7,12 +13,7 @@ export function usePhotoSourceFailure(
     itemId: string;
     renew: () => Promise<MediaRef | undefined>;
   }>,
-): {
-  hasError: boolean;
-  version: number;
-  onError: () => void;
-  retry: () => void;
-} {
+): PhotoSourceFailure {
   const state = useRef({
     itemId: options.itemId,
     attempted: false,

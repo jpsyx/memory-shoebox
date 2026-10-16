@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { seedArchiveForSpec } from "./support/archive.ts";
+import { seedArchiveForSpec } from "./support/archiveSeedHelpers.ts";
 import { expect, test } from "./support/signedIn/signedIn.ts";
 
 /**

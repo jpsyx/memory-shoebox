@@ -21,24 +21,19 @@ export type ItemSummaryRow = {
 /**
  * The requested items, visibility-filtered, with each one's seen state.
  *
- * Filtered before the join, not after: `applyVisibilityFilter`'s generic
- * signature is over `SelectQueryBuilder<Database, TB | "items", Output>`,
- * and joining `item_views` into the query passed in front of it collides
- * two structurally distinct instantiations of the same generic table set.
- * Applying the filter first and joining the builder it hands back avoids
- * that, and is the same order `readBurstFrameRows.ts` already uses. The
- * member predicate belongs in the `ON`: in the `WHERE` it would turn the
- * anti-join inner and every seen item would disappear.
- *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.
  * @param options.itemIds The selection the caller asked for.
  */
-export async function readItemSummaryRows(options: {
-  database: DatabaseExecutor;
-  viewer: Viewer;
-  itemIds: readonly string[];
-}): Promise<ItemSummaryRow[]> {
+export async function readItemSummaryRows(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    itemIds: readonly string[];
+  }>,
+): Promise<ItemSummaryRow[]> {
+  // Apply visibility before widening the query with item_views. Keep the
+  // member condition in ON so items with no view row survive the left join.
   return applyVisibilityFilter({
     viewer: options.viewer,
     query: options.database

@@ -3,7 +3,7 @@ import {
   makeRemovalRequestFromOverrides,
 } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import { renderAt, respondWith } from "@/testing/surfaceHarnessHelpers";
 import type { ItemSummary } from "@memory-shoebox/shared";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -23,26 +23,28 @@ function _installDoesNotNavigateANewItemAfterAnswers0(): {
   });
   const { hold, letGo } = makeHold();
   respondWith({
-    [`GET ${HISTORY}`]: {
-      status: 200,
-      body: {
-        ...RESPONSE,
-        removalRequests: [
-          makeRemovalRequestFromOverrides({
-            canWithdraw: false,
-            canDeleteItem: true,
-          }),
-        ],
+    routes: {
+      [`GET ${HISTORY}`]: {
+        status: 200,
+        body: {
+          ...RESPONSE,
+          removalRequests: [
+            makeRemovalRequestFromOverrides({
+              canWithdraw: false,
+              canDeleteItem: true,
+            }),
+          ],
+        },
       },
-    },
-    [`DELETE /api/items/${ITEM.itemId}`]: {
-      status: 204,
-      body: undefined,
-      waitFor: hold,
-    },
-    [`GET /api/items/${other.itemId}/removal-requests`]: {
-      status: 200,
-      body: { ...RESPONSE, item: other },
+      [`DELETE /api/items/${ITEM.itemId}`]: {
+        status: 204,
+        body: undefined,
+        waitFor: hold,
+      },
+      [`GET /api/items/${other.itemId}/removal-requests`]: {
+        status: 200,
+        body: { ...RESPONSE, item: other },
+      },
     },
   });
   return { other, letGo };

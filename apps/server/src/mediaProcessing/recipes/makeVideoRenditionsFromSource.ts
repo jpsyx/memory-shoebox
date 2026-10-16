@@ -1,15 +1,15 @@
 import { mkdtemp, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { appConfig } from "../../../../../app.config.ts";
-import { getMediaInputArguments } from "../runtime/probeMedia/probeMedia.helpers.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
+import { makeMediaArgumentsFromInput } from "../runtime/probeMedia/probeMediaHelpers.ts";
 import { makeVideoArgumentsFromProbe } from "./makeVideoArgumentsFromProbe.ts";
 import {
   checkMediaRecipeInput,
   getMediaRecipeErrorFromFailure,
-  getOwnedFileBytes,
+  getByteSizeFromOwnedFile,
   makeImageRenditionsFromFile,
-} from "./mediaRecipeFiles.ts";
+} from "./mediaRecipeFileHelpers.ts";
 import type {
   MediaRecipeInput,
   ProcessedRendition,
@@ -18,7 +18,7 @@ import type {
 const TIMING = {
   duration: z.coerce.number().positive(),
   start_time: z.coerce.number(),
-};
+} satisfies z.ZodRawShape;
 const VIDEO = z.object({
   ...TIMING,
   codec_type: z.literal("video"),
@@ -61,19 +61,23 @@ const FFMPEG_PREFIX = [
   "1",
   "-filter_complex_threads",
   "1",
-];
+] as const;
 
-async function _run(
-  input: Readonly<MediaRecipeInput>,
-  executable: string,
-  args: string[],
-): Promise<string> {
+async function _run({
+  input,
+  executable,
+  args,
+}: {
+  input: Readonly<MediaRecipeInput>;
+  executable: string;
+  args: string[];
+}): Promise<string> {
   const result = await input.runner.run({
     executable,
     args,
     signal: input.signal,
-    timeoutMs: appConfig.mediaProcessing.videoTimeoutMs,
-    stdoutLimitBytes: appConfig.mediaProcessing.probeMetadataBytes,
+    timeoutMs: APP_CONFIG.mediaProcessing.videoTimeoutMs,
+    stdoutLimitBytes: APP_CONFIG.mediaProcessing.probeMetadataBytes,
   });
   if (result.exitCode !== 0) {
     throw new Error("processing_video_recipe_failed");
@@ -81,10 +85,13 @@ async function _run(
   return result.stdout;
 }
 
-function _hasBoundedDimensions(
-  video: Readonly<{ width: number; height: number }>,
-  input: Readonly<MediaRecipeInput>,
-): boolean {
+function _hasBoundedDimensions({
+  video,
+  input,
+}: {
+  video: Readonly<{ width: number; height: number }>;
+  input: Readonly<MediaRecipeInput>;
+}): boolean {
   const { width, height, rotationDegrees } = input.probe;
   const rotated = [90, 270].includes(rotationDegrees);
   return (
@@ -94,10 +101,13 @@ function _hasBoundedDimensions(
   );
 }
 
-function _checkStreams(
-  metadata: Readonly<z.infer<typeof METADATA>>,
-  input: Readonly<MediaRecipeInput>,
-): { width: number; height: number } {
+function _checkStreams({
+  metadata,
+  input,
+}: {
+  metadata: Readonly<z.infer<typeof METADATA>>;
+  input: Readonly<MediaRecipeInput>;
+}): { width: number; height: number } {
   const videos = metadata.streams.filter((stream) => {
     return stream.codec_type === "video";
   });
@@ -113,7 +123,7 @@ function _checkStreams(
   if (
     !video ||
     videos.length !== 1 ||
-    !_hasBoundedDimensions(video, input) ||
+    !_hasBoundedDimensions({ video, input }) ||
     !Number.isFinite(rate) ||
     rate <= 0 ||
     rate > 30 ||
@@ -132,7 +142,13 @@ function _checkStreams(
 async function _checkFaststart(path: string): Promise<void> {
   const file = await open(path, "r");
   const size = (await file.stat()).size;
-  const scan = async (offset: number, remaining: number): Promise<void> => {
+  const scan = async ({
+    offset,
+    remaining,
+  }: {
+    offset: number;
+    remaining: number;
+  }): Promise<void> => {
     if (remaining === 0 || offset + 8 > size) {
       throw new Error("processing_output_invalid");
     }
@@ -152,67 +168,84 @@ async function _checkFaststart(path: string): Promise<void> {
       throw new Error("processing_output_invalid");
     }
     if (type !== "moov") {
-      await scan(offset + bytes, remaining - 1);
+      await scan({ offset: offset + bytes, remaining: remaining - 1 });
     }
   };
   try {
-    await scan(0, 64);
+    await scan({ offset: 0, remaining: 64 });
   } finally {
     await file.close();
   }
 }
 
-async function _validatePlayback(
-  input: Readonly<MediaRecipeInput>,
-  path: string,
-): Promise<{ width: number; height: number }> {
-  const stdout = await _run(input, "ffprobe", [
-    "-v",
-    "error",
-    ...getMediaInputArguments({ format: "mov", input: path }),
-    "-show_streams",
-    "-show_format",
-    "-of",
-    "json",
-    path,
-  ]);
-  const dimensions = _checkStreams(METADATA.parse(JSON.parse(stdout)), input);
+async function _validatePlayback({
+  input,
+  path,
+}: {
+  input: Readonly<MediaRecipeInput>;
+  path: string;
+}): Promise<{ width: number; height: number }> {
+  const stdout = await _run({
+    input,
+    executable: "ffprobe",
+    args: [
+      "-v",
+      "error",
+      ...makeMediaArgumentsFromInput({ format: "mov", input: path }),
+      "-show_streams",
+      "-show_format",
+      "-of",
+      "json",
+      path,
+    ],
+  });
+  const dimensions = _checkStreams({
+    metadata: METADATA.parse(JSON.parse(stdout)),
+    input,
+  });
   await _checkFaststart(path);
   // A complete local decode rejects damaged packets after a valid moov header.
-  await _run(input, "ffmpeg", [
-    ...FFMPEG_PREFIX,
-    ...getMediaInputArguments({ format: "mov", input: path }),
-    "-i",
-    path,
-    "-map",
-    "0:v:0",
-    "-map",
-    "0:a:0?",
-    "-threads",
-    "1",
-    "-f",
-    "null",
-    "-",
-  ]);
+  await _run({
+    input,
+    executable: "ffmpeg",
+    args: [
+      ...FFMPEG_PREFIX,
+      ...makeMediaArgumentsFromInput({ format: "mov", input: path }),
+      "-i",
+      path,
+      "-map",
+      "0:v:0",
+      "-map",
+      "0:a:0?",
+      "-threads",
+      "1",
+      "-f",
+      "null",
+      "-",
+    ],
+  });
   return dimensions;
 }
 
-async function _getPlayback(
-  input: Readonly<MediaRecipeInput>,
-  outputDirectory: string,
-): Promise<ProcessedRendition> {
+async function _getPlayback({
+  input,
+  outputDirectory,
+}: {
+  input: Readonly<MediaRecipeInput>;
+  outputDirectory: string;
+}): Promise<ProcessedRendition> {
   const path = join(outputDirectory, "playback.mp4");
-  await _run(
+  await _run({
     input,
-    "ffmpeg",
-    makeVideoArgumentsFromProbe({
+    executable: "ffmpeg",
+    args: makeVideoArgumentsFromProbe({
       probe: input.probe,
       inputUrl: input.sourcePathOrUrl,
       outputPath: path,
     }),
-  );
-  const dimensions = await _validatePlayback(input, path);
-  const byteSize = await getOwnedFileBytes({
+  });
+  const dimensions = await _validatePlayback({ input, path });
+  const byteSize = await getByteSizeFromOwnedFile({
     path,
     directory: outputDirectory,
   });
@@ -225,26 +258,34 @@ async function _getPlayback(
   };
 }
 
-async function _getPosters(
-  input: Readonly<MediaRecipeInput>,
-  playback: Readonly<ProcessedRendition>,
-  outputDirectory: string,
-): Promise<ProcessedRendition[]> {
+async function _getPosters({
+  input,
+  playback,
+  outputDirectory,
+}: {
+  input: Readonly<MediaRecipeInput>;
+  playback: Readonly<ProcessedRendition>;
+  outputDirectory: string;
+}): Promise<ProcessedRendition[]> {
   const source = join(input.scratchDirectory, "poster-source.png");
-  await _run(input, "ffmpeg", [
-    ...FFMPEG_PREFIX,
-    "-n",
-    ...getMediaInputArguments({ format: "mov", input: playback.path }),
-    "-i",
-    playback.path,
-    "-map",
-    "0:v:0",
-    "-frames:v",
-    "1",
-    "-threads",
-    "1",
-    source,
-  ]);
+  await _run({
+    input,
+    executable: "ffmpeg",
+    args: [
+      ...FFMPEG_PREFIX,
+      "-n",
+      ...makeMediaArgumentsFromInput({ format: "mov", input: playback.path }),
+      "-i",
+      playback.path,
+      "-map",
+      "0:v:0",
+      "-frames:v",
+      "1",
+      "-threads",
+      "1",
+      source,
+    ],
+  });
   return makeImageRenditionsFromFile({
     input,
     source,
@@ -256,19 +297,22 @@ async function _getPosters(
   });
 }
 
-/** Produces a validated local playback MP4, poster and thumbnail, never publishes. */
+/**
+ * Produces a validated local playback MP4, poster and thumbnail, never
+ * publishes.
+ */
 export async function makeVideoRenditionsFromSource(
   input: Readonly<MediaRecipeInput>,
 ): Promise<ProcessedRendition[]> {
   const deadline = AbortSignal.timeout(
-    appConfig.mediaProcessing.videoTimeoutMs,
+    APP_CONFIG.mediaProcessing.videoTimeoutMs,
   );
   const boundedInput = {
     ...input,
     signal: AbortSignal.any([input.signal, deadline]),
   };
-  await checkMediaRecipeInput(boundedInput, "video");
-  getMediaInputArguments({ format: "mov", input: input.sourcePathOrUrl });
+  await checkMediaRecipeInput({ input: boundedInput, kind: "video" });
+  makeMediaArgumentsFromInput({ format: "mov", input: input.sourcePathOrUrl });
   if (!input.sourcePathOrUrl.startsWith("http://127.0.0.1:")) {
     throw new Error("processing_input_invalid");
   }
@@ -276,13 +320,20 @@ export async function makeVideoRenditionsFromSource(
     join(input.scratchDirectory, "output/video-"),
   );
   try {
-    const playback = await _getPlayback(boundedInput, outputDirectory);
-    const posters = await _getPosters(boundedInput, playback, outputDirectory);
+    const playback = await _getPlayback({
+      input: boundedInput,
+      outputDirectory,
+    });
+    const posters = await _getPosters({
+      input: boundedInput,
+      playback,
+      outputDirectory,
+    });
     const outputs = [playback, ...posters];
     if (
       outputs.reduce((sum, output) => {
         return sum + output.byteSize;
-      }, 0) > appConfig.mediaProcessing.outputBytes
+      }, 0) > APP_CONFIG.mediaProcessing.outputBytes
     ) {
       throw new Error("processing_disk_limit");
     }

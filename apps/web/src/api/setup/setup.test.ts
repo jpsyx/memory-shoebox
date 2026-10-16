@@ -6,7 +6,7 @@ import {
   setupStatusQueryOptions,
   setupProgressQueryOptions,
 } from "./setup";
-import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/SignInCard.fixtures";
+import { CREATED_SESSION } from "@/surfaces/SignIn/SignInCard/__tests__/signInCardTestHelpers";
 
 afterEach(() => {
   return vi.unstubAllGlobals();

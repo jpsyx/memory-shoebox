@@ -40,10 +40,13 @@ function _hasFreshMedia(
 function _getSafePreview(preview: MediaPreview): MediaPreview {
   return { ...preview, media: { ...preview.media, playback: null } };
 }
-async function _getPreviewsFromKnownNodes(
-  nodes: KnownMediaNeighbor[],
-  resources: MediaLoadingResources,
-): Promise<Map<string, MediaPreview>> {
+async function _getPreviewsFromKnownNodes({
+  nodes,
+  resources,
+}: {
+  nodes: KnownMediaNeighbor[];
+  resources: MediaLoadingResources;
+}): Promise<Map<string, MediaPreview>> {
   const previews = new Map<string, MediaPreview>();
   nodes.forEach((node) => {
     const stored = resources.previews.read(node.itemId);
@@ -61,8 +64,10 @@ async function _getPreviewsFromKnownNodes(
     });
   if (missing.length > 0) {
     const renewed = await resources.readPreviews({
-      itemIds: missing,
-      purpose: "speculative-preview",
+      request: {
+        itemIds: missing,
+        purpose: "speculative-preview",
+      },
     });
     renewed.forEach((preview) => {
       previews.set(preview.itemId, _getSafePreview(preview));
@@ -80,7 +85,10 @@ async function _readNeighbors(
   };
 }
 
-/** Reuses provable identities; missing identity falls back to the safe server probe. */
+/**
+ * Reuses provable identities; missing identity falls back to the safe server
+ * probe.
+ */
 export async function readMediaNeighborsFromKnownQueries(
   options: Readonly<Options>,
 ): Promise<KnownMediaNeighborsResponse> {
@@ -95,7 +103,7 @@ export async function readMediaNeighborsFromKnownQueries(
   }
   const epoch = resources.previews.captureEpoch();
   const nodes = [...known.ahead, ...known.behind];
-  const previews = await _getPreviewsFromKnownNodes(nodes, resources);
+  const previews = await _getPreviewsFromKnownNodes({ nodes, resources });
   if (
     nodes.some((node) => {
       return !previews.has(node.itemId);
@@ -103,7 +111,7 @@ export async function readMediaNeighborsFromKnownQueries(
   ) {
     return _readNeighbors(options);
   }
-  resources.previews.put([...previews.values()], epoch);
+  resources.previews.put({ previews: [...previews.values()], epoch: epoch });
   const getPreview = (node: KnownMediaNeighbor) => {
     return previews.get(node.itemId)!;
   };

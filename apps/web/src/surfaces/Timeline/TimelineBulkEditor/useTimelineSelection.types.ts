@@ -1,4 +1,4 @@
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import type { BurstFrameRef, TimelineDay } from "@memory-shoebox/shared";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
@@ -11,7 +11,9 @@ export type TimelineSelectionSnapshot = {
   problem?: string;
 };
 
-/** Explicit operations available to the timeline's selection toolbar and prints. */
+/**
+ * Explicit operations available to the timeline's selection toolbar and prints.
+ */
 export type TimelineSelectionActions = {
   onToggle: (itemId: string) => void;
   onOpenBurst: (burstId: string) => void;
@@ -25,7 +27,10 @@ export type TimelineSelectionActions = {
 export type TimelineSelectionState = TimelineSelectionSnapshot &
   TimelineSelectionActions;
 
-/** State publication and a synchronous read guard shared by selection operations. */
+/**
+ * State publication and a synchronous read guard shared by selection
+ * operations.
+ */
 export type TimelineSelectionContext = {
   days: readonly TimelineDay[];
   filterSelection?: Readonly<TimelineSelection>;

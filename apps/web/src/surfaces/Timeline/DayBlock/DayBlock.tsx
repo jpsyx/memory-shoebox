@@ -7,7 +7,7 @@ import { MilestoneBand } from "@/system/Pile/MilestoneBand";
 import { MilestoneContinues } from "@/system/Pile/MilestoneContinues";
 import { Pile } from "@/system/Pile/Pile";
 import { PileItems } from "@/system/Pile/PileItems/PileItems";
-import classes from "@/system/system.module.css";
+import classes from "./DayBlock.module.css";
 
 type Props = {
   day: TimelineDay;
@@ -40,7 +40,11 @@ export function DayBlock({
     <DayRow>
       <DaySpine day={day} countLabel={countLabel} />
       <Pile>
-        <span id={`day-${day.capturedOn}`} className={classes.railSpacer} />
+        <span
+          id={`day-${day.capturedOn}`}
+          className={classes.dayBlockAnchor}
+          data-pile-anchor
+        />
         {day.milestoneBand === null ? null : (
           <MilestoneBand band={day.milestoneBand} />
         )}

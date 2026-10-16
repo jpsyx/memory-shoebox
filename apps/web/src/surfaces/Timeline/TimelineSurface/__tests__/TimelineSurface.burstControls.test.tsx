@@ -1,10 +1,10 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import {
   BURST_ID,
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeBurstSummary,
   makeItemDetail,
   makeFrameIdFromPosition,
@@ -13,11 +13,17 @@ import {
   getRecordedBodyFromRequest,
   getRecordedCountFromLine,
   type Answer,
-} from "@/testing/surfaceHarness";
-import { renderTimeline, respondWith } from "./TimelineSurface.fixtures";
+} from "@/testing/surfaceHarnessHelpers";
+import { renderTimeline, respondWith } from "./timelineSurfaceTestHelpers";
 
 /** A burst's first photo, which remains its cover after the second leaves. */
-function _cover(visibleFrameCount: number, position = 1) {
+function _cover({
+  visibleFrameCount,
+  position = 1,
+}: {
+  visibleFrameCount: number;
+  position?: number;
+}): ReturnType<typeof makeItem> {
   return makeItem({
     itemId: makeFrameIdFromPosition(position),
     burst: makeBurstSummary({
@@ -34,14 +40,14 @@ describe("timeline burst editing", () => {
       const removedId = makeFrameIdFromPosition(position);
       const frames = [1, 2, 3].map((framePosition) => {
         return {
-          ...makeBurstFrame(framePosition),
+          ...makeBurstFrameFromPosition(framePosition),
           canRemoveFromBurst: true,
         };
       });
       const timeline: Answer = {
         body: {
           previousCursor: null,
-          days: [makeDay({ items: [_cover(3)] })],
+          days: [makeDay({ items: [_cover({ visibleFrameCount: 3 })] })],
           nextCursor: null,
           resultCount: null,
         },
@@ -79,7 +85,10 @@ describe("timeline burst editing", () => {
         days: [
           makeDay({
             items: [
-              _cover(2, position === 1 ? 2 : 1),
+              _cover({
+                visibleFrameCount: 2,
+                position: position === 1 ? 2 : 1,
+              }),
               makeItem({
                 itemId: removedId,
                 media: { ...makeItem().media, altText: "The separate photo" },

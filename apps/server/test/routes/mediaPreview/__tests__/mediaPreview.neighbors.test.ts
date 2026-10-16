@@ -22,30 +22,41 @@ describe("side-effect-free media reads", () => {
   it("enters exact burst edges and keeps null indices last, independent of capture order", async () => {
     const context = await createMediaPreviewContext();
     const { before, after, frameIds } = await seedMediaPreviewBurst(context);
-    const neighbors = async (itemId: string, direction = "next") => {
+    const neighbors = async ({
+      itemId,
+      direction = "next",
+    }: {
+      itemId: string;
+      direction?: string;
+    }) => {
       return getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId,
-            direction,
-            selection: SELECTION,
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId,
+              direction,
+              selection: SELECTION,
+            },
           })
         ).json(),
       );
     };
-    expect(await neighbors(before)).toEqual({
+    expect(await neighbors({ itemId: before })).toEqual({
       ahead: [frameIds[1], frameIds[2]],
       behind: [],
     });
-    expect(await neighbors(after, "previous")).toEqual({
+    expect(await neighbors({ itemId: after, direction: "previous" })).toEqual({
       ahead: [frameIds[3], frameIds[0]],
       behind: [],
     });
-    expect(await neighbors(frameIds[0]!)).toEqual({
+    expect(await neighbors({ itemId: frameIds[0]! })).toEqual({
       ahead: [frameIds[3], after],
       behind: [frameIds[2]],
     });
-    expect(await neighbors(frameIds[1]!, "previous")).toEqual({
+    expect(
+      await neighbors({ itemId: frameIds[1]!, direction: "previous" }),
+    ).toEqual({
       ahead: [before],
       behind: [frameIds[2]],
     });
@@ -64,10 +75,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: before,
-            direction: "next",
-            selection: SELECTION,
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: before,
+              direction: "next",
+              selection: SELECTION,
+            },
           })
         ).json(),
       ).ahead,
@@ -97,20 +111,26 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: before,
-            direction: "next",
-            selection,
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: before,
+              direction: "next",
+              selection,
+            },
           })
         ).json(),
       ),
     ).toEqual({ ahead: [frameIds[3], after], behind: [] });
     expect(
       (
-        await context.post("neighbors", {
-          itemId: before,
-          direction: "next",
-          selection: { ...selection, excludeAttached: true },
+        await context.post({
+          path: "neighbors",
+          payload: {
+            itemId: before,
+            direction: "next",
+            selection: { ...selection, excludeAttached: true },
+          },
         })
       ).json(),
     ).toEqual({ ahead: [], behind: [] });
@@ -142,10 +162,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: second,
-            direction: "next",
-            selection: SELECTION,
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: second,
+              direction: "next",
+              selection: SELECTION,
+            },
           })
         ).json(),
       ),
@@ -153,10 +176,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: first,
-            direction: "previous",
-            selection: SELECTION,
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: first,
+              direction: "previous",
+              selection: SELECTION,
+            },
           })
         ).json(),
       ),
@@ -164,10 +190,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: first,
-            direction: "previous",
-            selection: { ...SELECTION, until: "2026-09-27" },
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: first,
+              direction: "previous",
+              selection: { ...SELECTION, until: "2026-09-27" },
+            },
           })
         ).json(),
       ),
@@ -178,10 +207,13 @@ describe("side-effect-free media reads", () => {
       .execute();
     expect(
       (
-        await context.post("neighbors", {
-          itemId: first,
-          direction: "next",
-          selection: SELECTION,
+        await context.post({
+          path: "neighbors",
+          payload: {
+            itemId: first,
+            direction: "next",
+            selection: SELECTION,
+          },
         })
       ).json(),
     ).toEqual({ ahead: [], behind: [] });
@@ -205,10 +237,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: before,
-            selection: SELECTION,
-            direction: "next",
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: before,
+              selection: SELECTION,
+              direction: "next",
+            },
           })
         ).json(),
       ).ahead,
@@ -227,10 +262,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: before,
-            selection: SELECTION,
-            direction: "next",
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: before,
+              selection: SELECTION,
+              direction: "next",
+            },
           })
         ).json(),
       ).ahead,
@@ -238,10 +276,13 @@ describe("side-effect-free media reads", () => {
     expect(
       getItemIdsFromNeighborResponse(
         (
-          await context.post("neighbors", {
-            itemId: frameIds[2],
-            selection: SELECTION,
-            direction: "previous",
+          await context.post({
+            path: "neighbors",
+            payload: {
+              itemId: frameIds[2],
+              selection: SELECTION,
+              direction: "previous",
+            },
           })
         ).json(),
       ).ahead,

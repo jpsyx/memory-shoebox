@@ -1,0 +1,84 @@
+.itemLoading {
+  max-width: 78rem;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-3) var(--sp-5);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.itemLoadingPage {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--sp-4) 28px 0;
+}
+.itemLoadingSurface {
+  color-scheme: light;
+  color: var(--on-print);
+  background: var(--print);
+  border-radius: 0;
+  box-shadow: var(--shadow-print);
+  overflow: clip;
+  font-family: var(--font-ui);
+}
+.itemLoadingSurface ::selection {
+  background: var(--ink-dark);
+  color: var(--print);
+}
+.itemLoadingSurface :is(button, input, textarea, select):focus-visible {
+  outline: 2px solid var(--on-print);
+  outline-offset: 3px;
+}
+.itemLoadingSurface button {
+  font: inherit;
+  cursor: pointer;
+}
+.itemLoadingSurface button:disabled,
+.itemLoadingSurface button[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+.itemLoadingGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  min-height: 0;
+}
+.itemLoadingMediaColumn {
+  min-width: 0;
+  padding: var(--sp-1) 26px;
+  background: var(--print-sunk);
+}
+@media (max-width: 1000px) {
+  .itemLoadingGrid {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+  .itemLoadingMediaColumn {
+    padding: var(--sp-1) 20px;
+  }
+}
+
+@media (max-width: 800px) {
+  .itemLoadingPage {
+    padding: var(--sp-2) 12px 30px;
+  }
+  .itemLoadingGrid {
+    display: block;
+    min-height: 0;
+  }
+  .itemLoadingMediaColumn {
+    padding: 14px 12px 20px;
+  }
+}
+
+@media (min-width: 1100px) and (max-height: 800px) {
+  .itemLoadingPage {
+    padding-block-start: var(--sp-2);
+  }
+}
+
+@media (max-width: 56rem) {
+  .itemLoading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

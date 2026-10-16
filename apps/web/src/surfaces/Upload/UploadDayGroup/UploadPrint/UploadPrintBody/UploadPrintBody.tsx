@@ -1,11 +1,11 @@
-import { Print } from "@/system/Pile/Print";
-import system from "@/system/system.module.css";
+import { Print } from "@/system/Pile/Print/Print";
+import classes from "./UploadPrintBody.module.css";
 import type { UploadPreview } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type { PixelSize } from "@/upload/jpegDerivativesHelpers/jpegDerivativesHelpers";
 import type { UploadFileDto } from "@memory-shoebox/shared";
 import { clsx } from "clsx";
 import { type ReactNode } from "react";
-import { UploadPrintMarkers } from "./UploadPrintMarkers";
+import { UploadPrintMarkers } from "./UploadPrintMarkers/UploadPrintMarkers";
 import { UploadPrintPreview } from "./UploadPrintPreview/UploadPrintPreview";
 type Props = {
   file: UploadFileDto;
@@ -44,9 +44,9 @@ export function UploadPrintBody({
       onClick={onSelect}
       aria-pressed={selected}
       className={clsx(
-        system.print,
-        selected !== undefined && system.printSelectable,
-        selected && system.printSelected,
+        classes.uploadPrintBody,
+        selected !== undefined && classes.uploadPrintBodySelectable,
+        selected && classes.uploadPrintBodySelected,
       )}
       style={{
         aspectRatio: size ? `${size.width} / ${size.height}` : "4 / 3",

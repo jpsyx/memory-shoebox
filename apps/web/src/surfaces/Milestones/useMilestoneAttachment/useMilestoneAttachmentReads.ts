@@ -1,6 +1,6 @@
 import { makeMilestoneCandidatesInfiniteQueryOptionsFromIdentity } from "@/api/milestoneHelpers/milestoneItemsQueryHelpers";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
-import { makeTimelineQueryOptionsFromView } from "@/api/timeline/timeline";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { makeTimelineQueryOptionsFromView } from "@/api/timelineHelpers/timelineHelpers";
 import type { TimelineResponse } from "@memory-shoebox/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {

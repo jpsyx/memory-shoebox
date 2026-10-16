@@ -3,11 +3,16 @@ import { useRouter } from "@tanstack/react-router";
 import { useMediaLoading } from "./MediaLoadingContext";
 import { getSelectedSourceFromPreview } from "./getSelectedSourceFromPreview";
 
-/** Ordinary same-tab links transfer ownership before the router can clean up. */
-export function useMediaLink(
-  itemId: string,
-  direction: "previous" | "next",
-): (event: MouseEvent<HTMLAnchorElement>) => void {
+/**
+ * Ordinary same-tab links transfer ownership before the router can clean up.
+ */
+export function useMediaLink({
+  itemId,
+  direction,
+}: {
+  itemId: string;
+  direction: "previous" | "next";
+}): (event: MouseEvent<HTMLAnchorElement>) => void {
   const resources = useMediaLoading();
   const router = useRouter();
   return (event) => {
@@ -25,10 +30,10 @@ export function useMediaLink(
     const release = resources.navigation.prepare({
       itemId,
       direction,
-      source: getSelectedSourceFromPreview(
-        resources.previews.read(itemId),
-        resources.navigation.viewport,
-      ),
+      source: getSelectedSourceFromPreview({
+        preview: resources.previews.read(itemId),
+        viewport: resources.navigation.viewport,
+      }),
     });
     void router
       .navigate({

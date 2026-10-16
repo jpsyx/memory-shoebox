@@ -14,7 +14,7 @@ import {
   uploadSessionDetailSchema,
   type UploadSessionDetail,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../app.config.ts";
+import { APP_CONFIG } from "../../../app.config.ts";
 
 import {
   readFakeS3Requests,
@@ -57,7 +57,7 @@ test("a mixed batch goes up, lands on its days, and settles once", async ({
     const page = await uploaderContext.newPage();
     const proof = await pickInTheHarness({
       page,
-      query: `concurrency=${appConfig.upload.maxParallelTransfers}`,
+      query: `concurrency=${APP_CONFIG.upload.maxParallelTransfers}`,
       paths: [
         ...MEDIA_FIXTURE_PATHS,
         multipartPath,

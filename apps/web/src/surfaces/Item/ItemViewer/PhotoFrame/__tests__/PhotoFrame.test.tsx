@@ -1,10 +1,9 @@
+import type { MediaRef } from "@memory-shoebox/shared";
 import { MediaLoadingContext } from "@/media/MediaLoadingContext";
 import { PhotoReadinessContext } from "@/media/PhotoReadinessContext";
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "@/media/createMediaLoadingResources/createMediaLoadingResources";
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { createMediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "@/media/createMediaLoadingResources/createMediaLoadingLifetime";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import {
   act,
@@ -27,9 +26,9 @@ const media = {
       renditionId: `display-${width}`,
     });
   }),
-};
+} satisfies MediaRef;
 
-function _deferredDecode() {
+function _deferredDecode(): { promise: Promise<void>; finish: () => void } {
   let finish = () => {};
   const promise = new Promise<void>((resolve) => {
     finish = resolve;
@@ -237,7 +236,7 @@ it.each([
       width,
       height,
       previewState: "unavailable",
-      durationMs: null,
+      durationMs: undefined,
       altText: "An original PNG",
     });
     expect(produced.thumb).toEqual(width > 480 ? null : original);

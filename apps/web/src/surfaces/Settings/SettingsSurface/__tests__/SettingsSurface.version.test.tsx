@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import { renderSettings } from "./settingsFixtureHelpers";
 
 afterEach(() => {
@@ -54,6 +54,8 @@ it.each(["viewer", "uploader"] as const)(
   async (role) => {
     renderSettings({ role });
     await screen.findByText("Only an admin can manage Shoebox settings.");
-    expect(countCallsTo("GET", "/api/settings/version")).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/settings/version" })).toBe(
+      0,
+    );
   },
 );

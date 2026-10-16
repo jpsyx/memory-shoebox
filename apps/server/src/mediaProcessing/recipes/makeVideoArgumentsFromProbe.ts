@@ -1,15 +1,16 @@
-import { appConfig } from "../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../app.config.ts";
 import type { MediaProbe } from "../runtime/mediaRuntime.types.ts";
-import { getMediaInputArguments } from "../runtime/probeMedia/probeMedia.helpers.ts";
+import { makeMediaArgumentsFromInput } from "../runtime/probeMedia/probeMediaHelpers.ts";
 
 function _getSquarePixelScale(): string {
-  const { longEdge, shortEdge } = appConfig.mediaProcessing.playback;
+  const { longEdge, shortEdge } = APP_CONFIG.mediaProcessing.playback;
   // DAR and coded dimensions already include FFmpeg's automatic orientation.
   const widthBound = `min(iw,if(gte(dar,1),${longEdge},${shortEdge}))`;
   const heightBound = `min(ih,if(gte(dar,1),${shortEdge},${longEdge}))`;
   const width = `trunc(min(${widthBound},${heightBound}*dar)/2)*2`;
   const height = `trunc(min(${heightBound},${widthBound}/dar)/2)*2`;
-  // Zero is a special "keep input size" value for scale, so reject it explicitly.
+  // Zero is a special "keep input size" value for scale, so reject it
+  // explicitly.
   return `scale=w='if(gte(${width},2),${width},NAN)':h='if(gte(${height},2),${height},NAN)'`;
 }
 
@@ -18,7 +19,8 @@ function _getFilters(probe: Readonly<MediaProbe>): string {
     probe.transfer === "sdr"
       ? ["colorspace=all=bt709:range=tv"]
       : [
-          // Read actual input primaries/matrix; missing color metadata fails closed.
+          // Read actual input primaries/matrix; missing color metadata fails
+          // closed.
           `zscale=tin=${probe.transfer === "pq" ? "smpte2084" : "arib-std-b67"}:t=linear:p=bt2020:m=gbr:npl=100`,
           "format=gbrpf32le",
           "tonemap=tonemap=hable:desat=2",
@@ -29,11 +31,11 @@ function _getFilters(probe: Readonly<MediaProbe>): string {
     "setsar=1",
     ...color,
     "format=yuv420p",
-    `fps=${Math.min(probe.frameRate!, appConfig.mediaProcessing.playback.frameRate)}`,
+    `fps=${Math.min(probe.frameRate!, APP_CONFIG.mediaProcessing.playback.frameRate)}`,
   ].join(",");
 }
 
-const LIMITS = appConfig.mediaProcessing.playback;
+const LIMITS = APP_CONFIG.mediaProcessing.playback;
 const ENCODING_ARGUMENTS = [
   "-c:v",
   "libx264",
@@ -88,7 +90,7 @@ const PREFIX = [
   "1",
   "-filter_complex_threads",
   "1",
-];
+] as const;
 const MAPPING = [
   "-map",
   "0:v:0",
@@ -98,7 +100,7 @@ const MAPPING = [
   "-1",
   "-map_chapters",
   "-1",
-];
+] as const;
 
 function _getTimingArguments(probe: Readonly<MediaProbe>): string[] {
   const keyframeFrames = Math.max(
@@ -117,7 +119,9 @@ function _getTimingArguments(probe: Readonly<MediaProbe>): string[] {
   ];
 }
 
-/** The Main/3.1 playback recipe, retaining forced input/protocol restrictions. */
+/**
+ * The Main/3.1 playback recipe, retaining forced input/protocol restrictions.
+ */
 export function makeVideoArgumentsFromProbe(
   options: Readonly<{
     probe: MediaProbe;
@@ -129,14 +133,14 @@ export function makeVideoArgumentsFromProbe(
   if (
     probe.kind !== "video" ||
     probe.transfer === "unsupported" ||
-    probe.frameRate === null
+    probe.frameRate === undefined
   ) {
     throw new Error("processing_input_invalid");
   }
   // FFmpeg applies the input display transform once and clears its matrix.
   return [
     ...PREFIX,
-    ...getMediaInputArguments({ format: "mov", input: inputUrl }),
+    ...makeMediaArgumentsFromInput({ format: "mov", input: inputUrl }),
     "-i",
     inputUrl,
     ...MAPPING,

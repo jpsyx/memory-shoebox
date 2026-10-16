@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMediaOperationGate } from "./createMediaOperationGate";
 
-function _deferred() {
+function _deferred(): { promise: Promise<void>; finish: () => void } {
   let finish = () => {};
   const promise = new Promise<void>((resolve) => {
     finish = resolve;
@@ -16,16 +16,25 @@ describe("shared speculative operations", () => {
     const metadata = _deferred();
     const controller = new AbortController();
     const starts: string[] = [];
-    const first = gate.run(controller.signal, () => {
-      starts.push("image");
-      return transfer.promise;
+    const first = gate.run({
+      signal: controller.signal,
+      operation: () => {
+        starts.push("image");
+        return transfer.promise;
+      },
     });
-    const second = gate.run(new AbortController().signal, () => {
-      starts.push("metadata");
-      return metadata.promise;
+    const second = gate.run({
+      signal: new AbortController().signal,
+      operation: () => {
+        starts.push("metadata");
+        return metadata.promise;
+      },
     });
-    const third = gate.run(new AbortController().signal, async () => {
-      starts.push("next");
+    const third = gate.run({
+      signal: new AbortController().signal,
+      operation: async () => {
+        starts.push("next");
+      },
     });
     await Promise.resolve();
     controller.abort();
@@ -44,14 +53,20 @@ describe("shared speculative operations", () => {
     const first = _deferred();
     const second = _deferred();
     const pending = [first, second].map((transfer) => {
-      return gate.run(new AbortController().signal, () => {
-        return transfer.promise;
+      return gate.run({
+        signal: new AbortController().signal,
+        operation: () => {
+          return transfer.promise;
+        },
       });
     });
     let didStart = false;
     const controller = new AbortController();
-    const queued = gate.run(controller.signal, async () => {
-      didStart = true;
+    const queued = gate.run({
+      signal: controller.signal,
+      operation: async () => {
+        didStart = true;
+      },
     });
     const rejected = expect(queued).rejects.toMatchObject({
       name: "AbortError",
@@ -67,16 +82,22 @@ describe("shared speculative operations", () => {
   it("returns a slot after failure", async () => {
     const gate = createMediaOperationGate();
     await expect(
-      gate.run(new AbortController().signal, async () => {
-        throw new Error("failed");
+      gate.run({
+        signal: new AbortController().signal,
+        operation: async () => {
+          throw new Error("failed");
+        },
       }),
     ).rejects.toThrow("failed");
     const first = _deferred();
     let starts = 0;
     const pending = [0, 1].map(() => {
-      return gate.run(new AbortController().signal, async () => {
-        starts += 1;
-        await first.promise;
+      return gate.run({
+        signal: new AbortController().signal,
+        operation: async () => {
+          starts += 1;
+          await first.promise;
+        },
       });
     });
     await Promise.resolve();

@@ -18,7 +18,7 @@ a configurable API base URL.
 API routes are Fastify route modules under `apps/server/src/routes/`, mounted
 under the `/api` prefix. A module declaring `GET /health` is reachable at
 `/api/health`. Group them by resource, one module per group, and register them
-in `apps/server/src/app.ts`.
+in `apps/server/src/createApp/createApp.ts`.
 
 Everything that is not `/api/*` belongs to the SPA: the server falls back to
 `index.html` so the client-side router can resolve the path. See

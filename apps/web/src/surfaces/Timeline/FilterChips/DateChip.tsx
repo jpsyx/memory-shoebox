@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type {
   TimelineSelection,
   TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { Chip } from "@/system/Chip/Chip";
 import { dateRangeLabel, dayLabel } from "@/system/labelHelpers/labelHelpers";
 
@@ -11,15 +11,6 @@ type Props = {
   onChange: (update: TimelineSelectionUpdate) => void;
 };
 
-/** What one date chip reads, whether one end is set or both. */
-function _dateChipLabel(selection: Readonly<TimelineSelection>): string {
-  return selection.from === undefined
-    ? `Until ${dayLabel(selection.until ?? "")}`
-    : selection.until === undefined
-      ? `From ${dayLabel(selection.from)}`
-      : dateRangeLabel({ from: selection.from, until: selection.until });
-}
-
 /**
  * The dates as one chip rather than two.
  *
@@ -27,10 +18,8 @@ function _dateChipLabel(selection: Readonly<TimelineSelection>): string {
  * is not something anybody means.
  */
 export function DateChip({ selection, onChange }: Readonly<Props>): ReactNode {
-  if (selection.from === undefined && selection.until === undefined) {
-    return null;
-  }
-  return (
+  return selection.from === undefined &&
+    selection.until === undefined ? null : (
     <Chip
       onPanel
       removeLabel="Clear the dates"
@@ -40,7 +29,11 @@ export function DateChip({ selection, onChange }: Readonly<Props>): ReactNode {
         });
       }}
     >
-      {_dateChipLabel(selection)}
+      {selection.from === undefined
+        ? `Until ${dayLabel(selection.until ?? "")}`
+        : selection.until === undefined
+          ? `From ${dayLabel(selection.from)}`
+          : dateRangeLabel({ from: selection.from, until: selection.until })}
     </Chip>
   );
 }

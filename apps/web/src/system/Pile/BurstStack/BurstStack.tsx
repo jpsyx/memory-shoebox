@@ -1,12 +1,11 @@
 import { useBurstMotion } from "@/system/motion/useBurstMotion";
 import { PileSelectionContext } from "../PileSelection/PileSelection";
-import { Button } from "@mantine/core";
 import { clsx } from "clsx";
 import { useContext, useEffect, useState, type ReactNode } from "react";
 import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
-import { BurstPhoto } from "./BurstPhoto";
-import { Print } from "@/system/Pile/Print";
-import classes from "@/system/system.module.css";
+import classes from "./BurstStack.module.css";
+import { BurstCover } from "./BurstCover/BurstCover";
+import { BurstFan } from "./BurstFan/BurstFan";
 
 type Props = {
   cover: ItemSummary;
@@ -80,57 +79,36 @@ function useStackControls(props: Readonly<Props>): StackControls {
   };
 }
 
-function _renderFan(
-  props: Readonly<Props>,
-  controls: Readonly<StackControls>,
-): ReactNode {
-  return (
-    <div className={classes.fan}>
-      <div className={classes.fanHead}>
-        <b className={classes.fanHeadLabel}>{props.span}</b>
-        <Button
-          disabled={controls.isPinned}
-          variant="panel"
-          size="sm"
-          onClick={controls.onCollapse}
-        >
-          Collapse
-        </Button>
-      </div>
-      {(controls.shownFrames ?? []).map((frame, index) => {
-        return (
-          <BurstPhoto
-            key={frame.itemId}
-            frame={frame}
-            seed={props.seed + index + 1}
-            onOpen={props.onOpenFrame}
-            onRemove={controls.isSelecting ? undefined : props.onRemoveFrame}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function _renderCover(props: Readonly<Props>, onOpen: () => void): ReactNode {
-  return (
-    <Print
-      media={props.cover.media}
-      seed={props.seed}
-      itemId={undefined}
-      mediaItemId={props.cover.itemId}
-      unseen={props.hasUnseenFrames}
-      onClick={onOpen}
-    >
-      <span className={classes.stackCount}>
-        {props.frameCount} <small>photos</small>
-      </span>
-    </Print>
-  );
-}
-
-/** A stack opens browsing frames normally and only filtered frames during selection. */
-export function BurstStack(props: Readonly<Props>): ReactNode {
+/**
+ * A stack opens browsing frames normally and only filtered frames during
+ * selection.
+ */
+export function BurstStack({
+  cover,
+  frames,
+  frameCount,
+  span,
+  seed,
+  onOpen,
+  onOpenFrame,
+  onRemoveFrame,
+  startOpen,
+  burstId,
+  hasUnseenFrames,
+}: Readonly<Props>): ReactNode {
+  const props: Props = {
+    cover,
+    frames,
+    frameCount,
+    span,
+    seed,
+    onOpen,
+    onOpenFrame,
+    onRemoveFrame,
+    startOpen,
+    burstId,
+    hasUnseenFrames,
+  };
   const controls = useStackControls(props);
   const motion = useBurstMotion(controls.isFanned);
   const animatedControls = {
@@ -143,7 +121,11 @@ export function BurstStack(props: Readonly<Props>): ReactNode {
   };
   return (
     <div
-      className={clsx(classes.stack, controls.isFanned && classes.stackOpen)}
+      className={clsx(
+        classes.burstStack,
+        controls.isFanned && classes.burstStackOpen,
+      )}
+      data-burst-stack
       data-burst-id={props.burstId}
       ref={motion.reference}
       onClickCapture={motion.capture}
@@ -153,9 +135,25 @@ export function BurstStack(props: Readonly<Props>): ReactNode {
         }
       }}
     >
-      {controls.isFanned
-        ? _renderFan(props, animatedControls)
-        : _renderCover(props, controls.onOpen)}
+      {controls.isFanned ? (
+        <BurstFan
+          frames={controls.shownFrames ?? []}
+          span={props.span}
+          seed={props.seed}
+          isPinned={controls.isPinned}
+          onCollapse={animatedControls.onCollapse}
+          onOpenFrame={props.onOpenFrame}
+          onRemoveFrame={controls.isSelecting ? undefined : props.onRemoveFrame}
+        />
+      ) : (
+        <BurstCover
+          cover={props.cover}
+          seed={props.seed}
+          frameCount={props.frameCount}
+          hasUnseenFrames={props.hasUnseenFrames}
+          onOpen={controls.onOpen}
+        />
+      )}
     </div>
   );
 }

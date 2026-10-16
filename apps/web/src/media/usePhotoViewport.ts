@@ -2,15 +2,19 @@ import { useLayoutEffect, useState, type RefObject } from "react";
 import {
   getPhotoViewportFromElement,
   type PhotoViewport,
-} from "./photoViewport";
+} from "./photoViewportHelpers";
 import { useAvifSupport } from "./useAvifSupport/useAvifSupport";
 
 /** Re-measures the actual frame and follows monitor/zoom DPR changes. */
-export function usePhotoViewport(
-  reference: RefObject<HTMLElement | null>,
-  initial?: PhotoViewport,
+export function usePhotoViewport({
+  reference,
+  initial,
   measureParent = false,
-): PhotoViewport | undefined {
+}: Readonly<{
+  reference: RefObject<HTMLElement | null>;
+  initial?: Readonly<PhotoViewport>;
+  measureParent?: boolean;
+}>): PhotoViewport | undefined {
   const supportsAvif = useAvifSupport();
   const [viewport, setViewport] = useState<PhotoViewport | undefined>(initial);
   useLayoutEffect(
@@ -22,7 +26,7 @@ export function usePhotoViewport(
       const measure = () => {
         setViewport((previous) => {
           const measured = {
-            ...getPhotoViewportFromElement(element),
+            ...getPhotoViewportFromElement(element ?? undefined),
             supportsAvif,
           };
           return JSON.stringify(previous) === JSON.stringify(measured)

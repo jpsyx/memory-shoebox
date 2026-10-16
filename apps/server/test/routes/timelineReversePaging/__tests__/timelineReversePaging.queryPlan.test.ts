@@ -19,7 +19,7 @@ import { insertItem } from "../../../helpers/seedHelpers/seedHelpers.ts";
 import {
   insertDrawableItem,
   makeApp,
-} from "../../__tests__/timelineContractTestHelpers.ts";
+} from "../../timelineContractTestHelpers.ts";
 
 describe("bidirectional atomic-day timeline pages", () => {
   it("uses the same bounded keyset plan as the archive grows in either direction", async () => {
@@ -55,7 +55,13 @@ describe("bidirectional atomic-day timeline pages", () => {
         });
       }
       const filter = makeTimelineFilterFromQuery({});
-      const read = (direction: "older" | "newer", isAdmin: boolean) => {
+      const read = ({
+        direction,
+        isAdmin,
+      }: {
+        direction: "older" | "newer";
+        isAdmin: boolean;
+      }) => {
         return readTimelinePage({
           database,
           b2: fixture.b2,
@@ -80,7 +86,7 @@ describe("bidirectional atomic-day timeline pages", () => {
       for (const isAdmin of [false, true]) {
         for (const direction of ["older", "newer"] as const) {
           executed.length = 0;
-          await read(direction, isAdmin);
+          await read({ direction, isAdmin });
           smallCounts.push(executed.length);
         }
       }
@@ -95,7 +101,7 @@ describe("bidirectional atomic-day timeline pages", () => {
       for (const isAdmin of [false, true]) {
         for (const direction of ["older", "newer"] as const) {
           executed.length = 0;
-          const page = await read(direction, isAdmin);
+          const page = await read({ direction, isAdmin });
           largeCounts.push(executed.length);
           expect(
             page.days.map((day) => {
@@ -144,8 +150,8 @@ describe("bidirectional atomic-day timeline pages", () => {
       }
       expect(largeCounts).toEqual(smallCounts);
       expect(
-        largeCounts.every((count) => {
-          return count <= 12;
+        largeCounts.every((queryCount) => {
+          return queryCount <= 12;
         }),
       ).toBe(true);
     } finally {

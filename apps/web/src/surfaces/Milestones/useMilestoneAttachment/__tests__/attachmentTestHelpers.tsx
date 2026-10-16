@@ -1,3 +1,4 @@
+import { makeQueryWrapperFromClient } from "@/testing/makeQueryWrapperFromClient";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import {
   makeItemSummaryFromOverrides,
@@ -9,10 +10,9 @@ import type {
   MilestoneDetail,
   TimelineResponse,
 } from "@memory-shoebox/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import type { RenderHookResult } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { useMilestoneAttachment } from ".././useMilestoneAttachment";
 import type {
   MilestoneAttachment,
@@ -48,11 +48,7 @@ export function renderAttachmentController(
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const wrapper = ({ children }: { children: ReactNode }) => {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
+  const wrapper = makeQueryWrapperFromClient(queryClient);
   const initialProps: MilestoneAttachmentOptions & {
     hasUsableAuthority: boolean;
   } = { detail, viewer: VIEWER, source, hasUsableAuthority: true };

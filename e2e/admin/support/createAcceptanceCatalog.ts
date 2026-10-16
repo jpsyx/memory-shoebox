@@ -1,5 +1,5 @@
 import type { AcceptanceContext } from "./acceptance.types.ts";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileUrlToPath } from "node:url";
 import { createTestApp } from "../../../apps/server/test/helpers/createTestApp.ts";
 import { createTestConfig } from "../../../apps/server/test/helpers/createTestConfig.ts";
 import { seedAcceptanceMembers } from "./seedAcceptanceMembers.ts";
@@ -30,7 +30,7 @@ function _createAcceptanceApp(
     config: createTestConfig({
       NODE_ENV: "development",
       ENABLE_FAKE_EMAIL: "true",
-      WEB_DIST_PATH: fileURLToPath(
+      WEB_DIST_PATH: fileUrlToPath(
         new URL(`../../../apps/web/${webDistDirectory}`, import.meta.url),
       ),
     }),

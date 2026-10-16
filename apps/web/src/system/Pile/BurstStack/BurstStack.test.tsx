@@ -6,9 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { BurstStack } from "@/system/Pile/BurstStack/BurstStack";
 import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
 import { Pile } from "@/system/Pile/Pile";
-import { makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import {
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeFrameIdFromPosition,
 } from "@/testing/itemFixtureHelpers";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
@@ -65,7 +65,10 @@ describe("a burst that has not been opened yet", () => {
       <Pile>
         <BurstStack
           cover={makeItem()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frames={[
+            makeBurstFrameFromPosition(1),
+            makeBurstFrameFromPosition(2),
+          ]}
           frameCount={45}
           span="45 photos"
           seed={0}
@@ -83,7 +86,10 @@ describe("a burst that has not been opened yet", () => {
       <Pile>
         <BurstStack
           cover={makeItem()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frames={[
+            makeBurstFrameFromPosition(1),
+            makeBurstFrameFromPosition(2),
+          ]}
           frameCount={2}
           span="2 photos"
           seed={0}
@@ -110,9 +116,9 @@ describe("burst membership actions", () => {
       <BurstStack
         cover={makeItem()}
         frames={[
-          { ...makeBurstFrame(1), canRemoveFromBurst: true },
-          { ...makeBurstFrame(2), canRemoveFromBurst: false },
-          makeBurstFrame(3),
+          { ...makeBurstFrameFromPosition(1), canRemoveFromBurst: true },
+          { ...makeBurstFrameFromPosition(2), canRemoveFromBurst: false },
+          makeBurstFrameFromPosition(3),
         ]}
         frameCount={3}
         span="3 photos"
@@ -140,7 +146,10 @@ describe("burst membership actions", () => {
 
   it("hides membership controls in selection mode and lets the photo toggle its tick", async () => {
     const onToggle = vi.fn();
-    const frame = { ...makeBurstFrame(1), canRemoveFromBurst: true };
+    const frame = {
+      ...makeBurstFrameFromPosition(1),
+      canRemoveFromBurst: true,
+    };
     _render(
       <PileSelectionContext
         value={{
@@ -178,7 +187,10 @@ describe("closing a burst with the keyboard or its control", () => {
       _render(
         <BurstStack
           cover={makeItem()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frames={[
+            makeBurstFrameFromPosition(1),
+            makeBurstFrameFromPosition(2),
+          ]}
           frameCount={2}
           span="Two photographs"
           seed={0}
@@ -218,7 +230,10 @@ it("retains the fan during exit and leaves another control's focus alone", async
         <button>Elsewhere</button>
         <BurstStack
           cover={makeItem()}
-          frames={[makeBurstFrame(1), makeBurstFrame(2)]}
+          frames={[
+            makeBurstFrameFromPosition(1),
+            makeBurstFrameFromPosition(2),
+          ]}
           frameCount={2}
           span="Two photographs"
           seed={0}
@@ -259,7 +274,7 @@ it("gathers from the current animated pose when interrupted", async () => {
     _render(
       <BurstStack
         cover={makeItem()}
-        frames={[makeBurstFrame(1)]}
+        frames={[makeBurstFrameFromPosition(1)]}
         frameCount={1}
         span="One photograph"
         seed={0}
@@ -267,7 +282,7 @@ it("gathers from the current animated pose when interrupted", async () => {
       />,
     );
     const photo = screen.getByRole("button", {
-      name: makeBurstFrame(1).altText,
+      name: makeBurstFrameFromPosition(1).altText,
     });
     photo.style.translate = "-12px 24px";
     photo.style.opacity = "0.6";

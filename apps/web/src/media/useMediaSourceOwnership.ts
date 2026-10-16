@@ -1,4 +1,4 @@
-import type { MediaSource } from "@memory-shoebox/shared";
+import type { MediaDestination } from "./mediaPrefetch.types";
 import {
   useContext,
   useLayoutEffect,
@@ -11,23 +11,22 @@ import type {
   DecodedPhotoSnapshot,
   MediaSourceClaim,
 } from "./createMediaNavigation";
-import type { PhotoViewport } from "./photoViewport";
+import type { PhotoViewport } from "./photoViewportHelpers";
 
-const EMPTY_SUBSCRIBE = () => {
+const EMPTY_SUBSCRIBE = (): (() => void) => {
   return () => {};
 };
-const EMPTY_SNAPSHOT = () => {
+const EMPTY_SNAPSHOT = (): number => {
   return 0;
 };
 
-/** Reads a pure pixel snapshot and adopts transport only after a view commits. */
+/**
+ * Reads a pure pixel snapshot and adopts transport only after a view commits.
+ */
 export function useMediaSourceOwnership(
-  options: Readonly<{
-    itemId: string;
-    source: Pick<MediaSource, "url" | "renditionId"> | undefined;
-    viewport?: PhotoViewport;
-    sourceEpoch?: number;
-  }>,
+  options: Readonly<
+    MediaDestination & { viewport?: PhotoViewport; sourceEpoch?: number }
+  >,
 ): {
   handoff: DecodedPhotoSnapshot | undefined;
   finishSelectedDecode: () => void;

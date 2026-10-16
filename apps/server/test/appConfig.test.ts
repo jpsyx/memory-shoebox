@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appConfig } from "../../../app.config.ts";
+import { APP_CONFIG } from "../../../app.config.ts";
 
 /**
  * S3's floor for every multipart part but the last. Backblaze's is the
@@ -17,7 +17,7 @@ const S3_MAXIMUM_SINGLE_PUT_BYTES = 5 * 1024 ** 3;
 const S3_MAXIMUM_PRESIGN_SECONDS = 604_800;
 
 describe("appConfig.upload", () => {
-  const upload = appConfig.upload;
+  const upload = APP_CONFIG.upload;
 
   it("sizes a part at or above S3's minimum", () => {
     expect(upload.multipartPartSizeBytes).toBeGreaterThanOrEqual(

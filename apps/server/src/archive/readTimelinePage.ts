@@ -10,7 +10,7 @@ import type {
   TimelineDay,
   TimelineResponse,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
@@ -51,7 +51,9 @@ export type TimelinePageOptions = {
   limit: number;
   /** Decoded and already checked against the filter digest by the route. */
   cursor: TimelinePageState | undefined;
-  /** Explicitly recount a retained refresh whose uncursored page was evicted. */
+  /**
+   * Explicitly recount a retained refresh whose uncursored page was evicted.
+   */
   includeResultCount?: boolean;
   /** The request's own clock, which every `expiresAt` counts from. */
   now: Date;
@@ -138,12 +140,12 @@ function _makeTimelineDay(options: {
 /** Count a narrowed selection only on bootstrap or an explicit refresh head. */
 async function _readResultCount(
   options: Readonly<TimelinePageOptions>,
-): Promise<number | null> {
+): Promise<number | undefined> {
   if (
     !hasAnyFilter(options.filter) ||
     (options.cursor !== undefined && !options.includeResultCount)
   ) {
-    return null;
+    return undefined;
   }
   return countSelectedItems({
     database: options.database,
@@ -293,7 +295,7 @@ export async function readTimelinePage(
     limit: options.limit,
     boundaryDay: options.cursor?.boundaryDay,
     direction: options.cursor?.direction ?? "older",
-    itemBudget: appConfig.timeline.pageItemBudget,
+    itemBudget: APP_CONFIG.timeline.pageItemBudget,
   });
 
   const bandedDays = await _readBandedDays({
@@ -321,6 +323,6 @@ export async function readTimelinePage(
       return _makeTimelineDay({ banded, bandCounts, itemsByDay });
     }),
     ...(await _readEdgeCursors({ pageOptions: options, days: stream.days })),
-    resultCount: await _readResultCount(options),
+    resultCount: (await _readResultCount(options)) ?? null,
   };
 }

@@ -17,7 +17,7 @@ import {
 import {
   insertDrawableItem,
   makeApp,
-} from "../../__tests__/timelineContractTestHelpers.ts";
+} from "../../timelineContractTestHelpers.ts";
 
 describe("bidirectional atomic-day timeline pages", () => {
   it("keeps hidden burst frames absent when reversing into their atomic day", async () => {
@@ -65,19 +65,21 @@ describe("bidirectional atomic-day timeline pages", () => {
         seq: 11,
         capturedOn: "2026-09-19",
       });
-      const read = async (cursor: string | null): Promise<TimelineResponse> => {
+      const read = async (
+        cursor: string | undefined,
+      ): Promise<TimelineResponse> => {
         return (
           await fixture.app.inject({
             method: "GET",
             headers: { cookie },
-            url: `/api/timeline?limit=1${cursor === null ? "" : `&cursor=${cursor}`}`,
+            url: `/api/timeline?limit=1${cursor === undefined ? "" : `&cursor=${cursor}`}`,
           })
         ).json();
       };
-      const newest = await read(null);
-      const middle = await read(newest.nextCursor);
-      const oldest = await read(middle.nextCursor);
-      const restored = await read(oldest.previousCursor);
+      const newest = await read(undefined);
+      const middle = await read(newest.nextCursor ?? undefined);
+      const oldest = await read(middle.nextCursor ?? undefined);
+      const restored = await read(oldest.previousCursor ?? undefined);
       expect(restored.days).toEqual(middle.days);
       expect(restored.days[0]!.itemCount).toBe(2);
       expect(restored.days[0]!.items[0]!.burst).toMatchObject({

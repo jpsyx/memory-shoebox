@@ -1,29 +1,5 @@
-import { seedArchiveForSpec } from "./support/archive.ts";
+import { seedArchiveForSpec } from "./support/archiveSeedHelpers.ts";
 import { expect, test } from "./support/signedIn/signedIn.ts";
-
-/**
- * Whether the pile needs virtualizing, answered rather than guessed at.
- *
- * Step 5b's decision 7 held that a day-level `content-visibility: auto` would
- * be enough and that virtualization would be added only if a measurement asked
- * for it. This is that measurement: a scripted scroll over the seeded 340-item
- * day, at a phone-sized viewport, with the two thresholds that decide the
- * question written as assertions rather than as numbers somebody has to read.
- * The `console.log` is what puts the figures in the run's output for the design
- * document's § What the measurement found.
- *
- * It is here rather than in a standalone script because the measurement needs
- * three things set up: a server, a catalog holding the fat day, and a session.
- * The end-to-end run builds all three for nothing.
- */
-
-/** What one scripted scroll comes back with. */
-type ScrollMeasurement = {
-  framesPerSecond: number;
-  /** -1 where `PerformanceObserver` does not know the `longtask` type. */
-  longTaskCount: number;
-  longestTaskMs: number;
-};
 
 /**
  * Scrolls thirty thousand pixels in six-hundred-pixel steps, one animation
@@ -38,7 +14,12 @@ type ScrollMeasurement = {
  * It reports `longTaskCount: -1` instead, which is a figure no supported
  * browser can produce.
  */
-async function _measureAScriptedScroll(): Promise<ScrollMeasurement> {
+async function _measureAScriptedScroll(): Promise<{
+  framesPerSecond: number;
+  /** -1 where `PerformanceObserver` does not know the `longtask` type. */
+  longTaskCount: number;
+  longestTaskMs: number;
+}> {
   const longTasks: number[] = [];
   const startObserving = (): PerformanceObserver | undefined => {
     try {
@@ -57,11 +38,11 @@ async function _measureAScriptedScroll(): Promise<ScrollMeasurement> {
   const observer = startObserving();
   const started = performance.now();
   let frames = 0;
-  const count = (): void => {
+  const countAnimationFrames = (): void => {
     frames += 1;
-    requestAnimationFrame(count);
+    requestAnimationFrame(countAnimationFrames);
   };
-  requestAnimationFrame(count);
+  requestAnimationFrame(countAnimationFrames);
 
   for (let offset = 0; offset < 30_000; offset += 600) {
     window.scrollTo(0, offset);

@@ -3,9 +3,9 @@ import {
   makeBurst,
   makeDay,
   makeItem,
-} from "@/surfaces/Timeline/timelineFixtures";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
 import {
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeFrameIdFromPosition,
 } from "@/testing/itemFixtureHelpers";
 import { stubFetch } from "@/testing/fetchStubHelpers";
@@ -25,8 +25,8 @@ describe("timeline bulk selection boundaries", () => {
         ) === "holiday";
       return Response.json({
         frames: isFiltered
-          ? [makeBurstFrame(2)]
-          : [makeBurstFrame(1), makeBurstFrame(2)],
+          ? [makeBurstFrameFromPosition(2)]
+          : [makeBurstFrameFromPosition(1), makeBurstFrameFromPosition(2)],
         nextCursor: null,
       });
     });
@@ -58,10 +58,16 @@ describe("timeline bulk selection boundaries", () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(
-        Response.json({ frames: [makeBurstFrame(1)], nextCursor: "tail" }),
+        Response.json({
+          frames: [makeBurstFrameFromPosition(1)],
+          nextCursor: "tail",
+        }),
       )
       .mockResolvedValueOnce(
-        Response.json({ frames: [makeBurstFrame(2)], nextCursor: null }),
+        Response.json({
+          frames: [makeBurstFrameFromPosition(2)],
+          nextCursor: null,
+        }),
       );
     vi.stubGlobal("fetch", fetch);
     const { result } = renderHook(() => {
@@ -121,7 +127,7 @@ describe("timeline bulk selection boundaries", () => {
         status: 200,
         body: {
           frames: Array.from({ length: 501 }, (_, position) => {
-            return makeBurstFrame(position + 1);
+            return makeBurstFrameFromPosition(position + 1);
           }),
           nextCursor: null,
         },

@@ -1,5 +1,5 @@
 import { PhotoReadinessContext } from "@/media/PhotoReadinessContext";
-import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtures";
+import { makeMediaSource } from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { makeItemDetail } from "@/testing/itemFixtureHelpers";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
@@ -57,7 +57,7 @@ it("selects waiting AVIF originals and publishes neighbor readiness after the sh
   expect(
     view.container.querySelectorAll('[data-photo-ready="true"]'),
   ).toHaveLength(2);
-  for (const itemId of ["first", "second"]) {
+  ["first", "second"].forEach((itemId) => {
     expect(readiness).toHaveBeenCalledWith(
       expect.objectContaining({
         itemId,
@@ -65,7 +65,7 @@ it("selects waiting AVIF originals and publishes neighbor readiness after the sh
         viewport: expect.objectContaining({ supportsAvif: true }),
       }),
     );
-  }
+  });
   view.unmount();
   vi.restoreAllMocks();
 });

@@ -4,7 +4,7 @@ import {
   type BulkEditItemsRequest,
   type TimelineDay,
 } from "@memory-shoebox/shared";
-import type { TimelineSelection } from "@/api/timeline/selection/selection";
+import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import {
   PileSelectionContext,
   type PileSelection,

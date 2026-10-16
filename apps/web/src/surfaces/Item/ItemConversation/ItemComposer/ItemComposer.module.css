@@ -1,0 +1,87 @@
+.itemComposer {
+  border: 1px solid var(--rule-print-strong);
+  border-radius: 0;
+  padding: 13px;
+}
+.itemComposerInput {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.itemComposerAvatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+  background: var(--print-sunk);
+  color: var(--on-print);
+  font-size: var(--micro);
+  font-weight: 650;
+}
+.itemComposer textarea {
+  min-width: 0;
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: var(--micro);
+  line-height: 1.55;
+  border: 0;
+  background: var(--print);
+  color: var(--on-print);
+  caret-color: var(--ink-dark);
+}
+.itemComposer textarea::placeholder {
+  color: var(--on-print-quiet);
+  opacity: 1;
+}
+.itemComposerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.itemComposerAnchorToggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 0;
+  min-height: 36px;
+  background: var(--print-sunk);
+  color: var(--on-print);
+  padding: 3px 7px;
+  font-size: var(--micro) !important;
+  font-variant-numeric: tabular-nums;
+}
+.itemComposerAnchorToggle[aria-pressed="true"] {
+  background: var(--print-sunk);
+  color: var(--ink-dark);
+}
+.itemComposerSend {
+  margin-left: auto;
+  background: var(--ink-dark);
+  color: var(--print);
+  border: 0;
+  border-radius: 0;
+  width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+}
+.itemComposerError {
+  color: var(--on-print);
+  font-size: var(--micro);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+@media (max-width: 800px) {
+  .itemComposer textarea {
+    font-size: var(--micro);
+    min-height: 63px;
+  }
+  .itemComposerActions button {
+    min-height: 36px;
+  }
+}

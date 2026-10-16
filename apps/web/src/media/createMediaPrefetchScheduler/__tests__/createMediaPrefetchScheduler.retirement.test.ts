@@ -13,16 +13,19 @@ installCreateMediaPrefetchSchedulerTestLifecycle();
 describe("bounded media prefetch", () => {
   it("drops late results after sign-out and rejects scheduling after disposal", async () => {
     const { scheduler, starts, retained } = createPrefetchHarness();
-    scheduler.schedule(
-      [makePrefetchCandidateFromId("old-member")],
-      ENVIRONMENT,
-    );
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "old-member" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     scheduler.dispose();
     starts[0]!.finish();
-    scheduler.schedule([makePrefetchCandidateFromId("other-member")], {
-      ...ENVIRONMENT,
-      memberId: "other",
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "other-member" })],
+      environment: {
+        ...ENVIRONMENT,
+        memberId: "other",
+      },
     });
     await vi.advanceTimersByTimeAsync(1000);
     expect(starts).toHaveLength(1);
@@ -33,14 +36,17 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("discards old member work on a changed environment", async () => {
     const { scheduler, starts, retained } = createPrefetchHarness();
-    scheduler.schedule(
-      [makePrefetchCandidateFromId("old-member")],
-      ENVIRONMENT,
-    );
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "old-member" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
-    scheduler.schedule([makePrefetchCandidateFromId("new-member")], {
-      ...ENVIRONMENT,
-      memberId: "other",
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "new-member" })],
+      environment: {
+        ...ENVIRONMENT,
+        memberId: "other",
+      },
     });
     expect(starts[0]!.signal.aborted).toBe(true);
     starts[0]!.finish();
@@ -57,15 +63,21 @@ describe("bounded media prefetch", () => {
   it("releases failed operations and does not retry them on every schedule", async () => {
     const harness = createPrefetchHarness();
     const candidates = [
-      makePrefetchCandidateFromId("broken"),
-      makePrefetchCandidateFromId("second", 1),
-      makePrefetchCandidateFromId("third", 2),
+      makePrefetchCandidateFromId({ id: "broken" }),
+      makePrefetchCandidateFromId({ id: "second", rank: 1 }),
+      makePrefetchCandidateFromId({ id: "third", rank: 2 }),
     ];
-    harness.scheduler.schedule(candidates, ENVIRONMENT);
+    harness.scheduler.schedule({
+      candidates: candidates,
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     harness.starts[0]!.fail();
     await vi.advanceTimersByTimeAsync(0);
-    harness.scheduler.schedule(candidates, ENVIRONMENT);
+    harness.scheduler.schedule({
+      candidates: candidates,
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(
       harness.starts.map(({ candidate }) => {
@@ -78,16 +90,25 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("reacquires the immediate decoded neighbor after the candidate window changes", async () => {
     const { scheduler, starts, retained } = createPrefetchHarness();
-    scheduler.schedule([makePrefetchCandidateFromId("first")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "first" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     starts[0]!.finish();
     await vi.advanceTimersByTimeAsync(0);
-    scheduler.schedule([makePrefetchCandidateFromId("second")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "second" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(0);
     starts[1]!.finish();
     await vi.advanceTimersByTimeAsync(0);
     expect([...retained]).toEqual(["second"]);
-    scheduler.schedule([makePrefetchCandidateFromId("first")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "first" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(0);
     expect(starts).toHaveLength(3);
     starts[2]!.finish();
@@ -98,14 +119,14 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("suppresses promoted ownership on member disposal without releasing unsettled bytes", async () => {
     const harness = createPrefetchHarness();
-    harness.scheduler.schedule(
-      [makePrefetchCandidateFromId("foreground")],
-      ENVIRONMENT,
-    );
+    harness.scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "foreground" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const release = harness.scheduler.promote({
       itemId: "foreground",
-      source: makePrefetchCandidateFromId("foreground").source,
+      source: makePrefetchCandidateFromId({ id: "foreground" }).source,
     }).release;
     harness.scheduler.dispose();
     expect(harness.starts[0]!.signal.aborted).toBe(true);
@@ -118,67 +139,63 @@ describe("bounded media prefetch", () => {
   });
 });
 
-for (const mismatch of [
-  "item",
-  "url",
-  "rendition",
-  "expiry",
-  "epoch",
-] as const) {
-  it(`refuses a completed native handoff after ${mismatch} mismatch`, async () => {
-    const candidate = makePrefetchCandidateFromId("exact");
-    const image = document.createElement("img");
-    const release = vi.fn();
-    let epoch = {};
-    const scheduler = createMediaPrefetchScheduler({
-      clock: Date.now,
-      getEpoch: () => {
-        return epoch;
-      },
-      load: async () => {
-        return {
-          release,
-          decodedPhoto: {
-            itemId: candidate.itemId,
-            source: candidate.source,
-            getImage: () => {
-              return image;
+(["item", "url", "rendition", "expiry", "epoch"] as const).forEach(
+  (mismatch) => {
+    it(`refuses a completed native handoff after ${mismatch} mismatch`, async () => {
+      const candidate = makePrefetchCandidateFromId({ id: "exact" });
+      const image = document.createElement("img");
+      const release = vi.fn();
+      let epoch = {};
+      const scheduler = createMediaPrefetchScheduler({
+        clock: Date.now,
+        getEpoch: () => {
+          return epoch;
+        },
+        load: async () => {
+          return {
+            release,
+            decodedPhoto: {
+              itemId: candidate.itemId,
+              source: candidate.source,
+              getImage: () => {
+                return image;
+              },
             },
-          },
-        };
-      },
+          };
+        },
+      });
+      scheduler.schedule({ candidates: [candidate], environment: ENVIRONMENT });
+      await vi.advanceTimersByTimeAsync(250);
+      if (mismatch === "epoch") {
+        epoch = {};
+      }
+      if (mismatch === "expiry") {
+        vi.setSystemTime(3_540_000);
+      }
+      const promotion = scheduler.promote({
+        itemId: mismatch === "item" ? "foreign" : candidate.itemId,
+        source: {
+          ...candidate.source,
+          url:
+            mismatch === "url"
+              ? "https://bucket.test/renewed"
+              : candidate.source.url,
+          renditionId:
+            mismatch === "rendition"
+              ? "replacement"
+              : candidate.source.renditionId,
+        },
+      });
+      expect(promotion.decodedPhoto).toBeUndefined();
+      promotion.release();
+      scheduler.dispose();
+      expect(release).toHaveBeenCalledOnce();
     });
-    scheduler.schedule([candidate], ENVIRONMENT);
-    await vi.advanceTimersByTimeAsync(250);
-    if (mismatch === "epoch") {
-      epoch = {};
-    }
-    if (mismatch === "expiry") {
-      vi.setSystemTime(3_540_000);
-    }
-    const promotion = scheduler.promote({
-      itemId: mismatch === "item" ? "foreign" : candidate.itemId,
-      source: {
-        ...candidate.source,
-        url:
-          mismatch === "url"
-            ? "https://bucket.test/renewed"
-            : candidate.source.url,
-        renditionId:
-          mismatch === "rendition"
-            ? "replacement"
-            : candidate.source.renditionId,
-      },
-    });
-    expect(promotion.decodedPhoto).toBeUndefined();
-    promotion.release();
-    scheduler.dispose();
-    expect(release).toHaveBeenCalledOnce();
-  });
-}
+  },
+);
 
 it("never adopts an in-flight decode result after transport promotion", async () => {
-  const candidate = makePrefetchCandidateFromId("exact");
+  const candidate = makePrefetchCandidateFromId({ id: "exact" });
   const image = document.createElement("img");
   const release = vi.fn();
   const completion = Promise.withResolvers<SpeculativeMedia>();
@@ -188,7 +205,7 @@ it("never adopts an in-flight decode result after transport promotion", async ()
       return completion.promise;
     },
   });
-  scheduler.schedule([candidate], ENVIRONMENT);
+  scheduler.schedule({ candidates: [candidate], environment: ENVIRONMENT });
   await vi.advanceTimersByTimeAsync(250);
   const claim = scheduler.promote({
     itemId: candidate.itemId,
@@ -214,8 +231,12 @@ it("never adopts an in-flight decode result after transport promotion", async ()
 });
 
 it("counts one handoff's encoded bytes until the last independent claim releases it", async () => {
-  const candidate = makePrefetchCandidateFromId("encoded", 0, {
-    byteSize: 8 * 1024 ** 2,
+  const candidate = makePrefetchCandidateFromId({
+    id: "encoded",
+    rank: 0,
+    source: {
+      byteSize: 8 * 1024 ** 2,
+    },
   });
   const image = document.createElement("img");
   const release = vi.fn();
@@ -234,7 +255,7 @@ it("counts one handoff's encoded bytes until the last independent claim releases
       },
     });
   const scheduler = createMediaPrefetchScheduler({ clock: Date.now, load });
-  scheduler.schedule([candidate], ENVIRONMENT);
+  scheduler.schedule({ candidates: [candidate], environment: ENVIRONMENT });
   await vi.advanceTimersByTimeAsync(250);
   const first = scheduler.promote({
     itemId: candidate.itemId,
@@ -247,9 +268,12 @@ it("counts one handoff's encoded bytes until the last independent claim releases
   first.release();
   first.release();
   expect(release).not.toHaveBeenCalled();
-  scheduler.schedule([makePrefetchCandidateFromId("encoded-next", 1)], {
-    ...ENVIRONMENT,
-    selectionKey: "encoded",
+  scheduler.schedule({
+    candidates: [makePrefetchCandidateFromId({ id: "encoded-next", rank: 1 })],
+    environment: {
+      ...ENVIRONMENT,
+      selectionKey: "encoded",
+    },
   });
   await vi.advanceTimersByTimeAsync(250);
   expect(load).toHaveBeenCalledOnce();

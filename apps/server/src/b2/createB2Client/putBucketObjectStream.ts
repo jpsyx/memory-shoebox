@@ -110,7 +110,8 @@ async function _putStream(
       { abortSignal: options.signal },
     );
   } catch (error) {
-    // Cancellation must not suppress abort. Durable ownership covers abort failure.
+    // Cancellation must not suppress abort. Durable ownership covers abort
+    // failure.
     await s3
       .send(
         new AbortMultipartUploadCommand({
@@ -124,19 +125,22 @@ async function _putStream(
   }
 }
 
-/** Streams one bounded output, recording the upload ID before a single part is sent. */
+/**
+ * Streams one bounded output, recording the upload ID before a single part is
+ * sent.
+ */
 export async function putBucketObjectStream(
-  input: Readonly<{
+  options: Readonly<{
     context: B2OperationContext;
     options: Parameters<B2Client["putObjectStream"]>[0];
   }>,
 ): Promise<void> {
-  const { options, context } = input;
-  options.signal.throwIfAborted();
+  const { options: uploadOptions, context } = options;
+  uploadOptions.signal.throwIfAborted();
   if (
-    !Number.isSafeInteger(options.byteSize) ||
-    options.byteSize <= 0 ||
-    options.byteSize > MAX_OUTPUT_BYTES
+    !Number.isSafeInteger(uploadOptions.byteSize) ||
+    uploadOptions.byteSize <= 0 ||
+    uploadOptions.byteSize > MAX_OUTPUT_BYTES
   ) {
     throw new Error("processing_output_size_invalid");
   }
@@ -159,9 +163,9 @@ export async function putBucketObjectStream(
       bucket: config.bucket,
       key: makeBucketKeyFromKey({
         keyPrefix: context.keyPrefix,
-        key: options.key,
+        key: uploadOptions.key,
       }),
-      options,
+      options: uploadOptions,
     });
   } finally {
     s3.destroy();

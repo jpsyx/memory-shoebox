@@ -4,17 +4,13 @@ import type {
   SpeculativeMedia,
 } from "../mediaPrefetch.types";
 
-function _releaseImage(image: HTMLImageElement): void {
-  image.onload = null;
-  image.onerror = null;
-  image.remove();
-  image.removeAttribute("src");
-}
-
-function _getDecodedPhoto(
-  candidate: Readonly<PrefetchCandidate>,
-  getOwnedImage: () => HTMLImageElement | undefined,
-): DecodedPhoto | undefined {
+function _getDecodedPhoto({
+  candidate,
+  getOwnedImage,
+}: {
+  candidate: Readonly<PrefetchCandidate>;
+  getOwnedImage: () => HTMLImageElement | undefined;
+}): DecodedPhoto | undefined {
   if (candidate.kind !== "photo" || !candidate.decode) {
     return undefined;
   }
@@ -34,16 +30,22 @@ function _getDecodedPhoto(
   };
 }
 
-function _loadImage(
-  candidate: Readonly<PrefetchCandidate>,
-  signal: AbortSignal,
-): Promise<SpeculativeMedia> {
+function _loadImage({
+  candidate,
+  signal,
+}: {
+  candidate: Readonly<PrefetchCandidate>;
+  signal: AbortSignal;
+}): Promise<SpeculativeMedia> {
   return new Promise((resolve, reject) => {
     let ownedImage: HTMLImageElement | undefined = new Image();
     const image = ownedImage;
     const release = () => {
       if (ownedImage !== undefined) {
-        _releaseImage(ownedImage);
+        ownedImage.onload = null;
+        ownedImage.onerror = null;
+        ownedImage.remove();
+        ownedImage.removeAttribute("src");
         ownedImage = undefined;
       }
     };
@@ -60,8 +62,11 @@ function _loadImage(
         signal.throwIfAborted();
         image.onload = null;
         image.onerror = null;
-        const decodedPhoto = _getDecodedPhoto(candidate, () => {
-          return ownedImage;
+        const decodedPhoto = _getDecodedPhoto({
+          candidate,
+          getOwnedImage: () => {
+            return ownedImage;
+          },
         });
         resolve({ release, decodedPhoto });
       } catch (failure) {
@@ -82,10 +87,13 @@ function _loadImage(
  * in-flight image settles only on load/error (and any active decode settling).
  * The caller keeps its operation and byte reservations until then.
  */
-export async function loadSpeculativeMedia(
-  candidate: Readonly<PrefetchCandidate>,
-  signal: AbortSignal,
-): Promise<SpeculativeMedia> {
+export async function loadSpeculativeMedia({
+  candidate,
+  signal,
+}: Readonly<{
+  candidate: Readonly<PrefetchCandidate>;
+  signal: AbortSignal;
+}>): Promise<SpeculativeMedia> {
   signal.throwIfAborted();
   if (
     candidate.kind === "video-metadata" ||
@@ -93,5 +101,5 @@ export async function loadSpeculativeMedia(
   ) {
     throw new Error("Speculative video metadata awaits measured M2 acceptance");
   }
-  return _loadImage(candidate, signal);
+  return _loadImage({ candidate, signal });
 }

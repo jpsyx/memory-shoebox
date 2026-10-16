@@ -31,9 +31,25 @@ import {
   insertMember,
   insertRendition,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
+type MultipartOutputFixture = Awaited<
+  ReturnType<typeof createRecordingMultipartStorage>
+> & {
+  database: ReturnType<typeof createDatabase>;
+  databasePath: string;
+  queue: ReturnType<typeof createMediaProcessingQueue>;
+  claim: ProcessingClaim;
+  outputId: string;
+  key: string;
+  upload: Parameters<typeof uploadProcessingOutput>[0];
+  row: () => Promise<Selectable<Database["media_processing_outputs"]>>;
+};
+
 /** One mebibyte in bytes for multipart boundary fixtures. */
 export const MIB = 1024 ** 2;
-/** Starts an owned loopback fake bucket and real storage adapter, exposes recorded requests and registers server cleanup. */
+/**
+ * Starts an owned loopback fake bucket and real storage adapter, exposes
+ * recorded requests and registers server cleanup.
+ */
 export async function createRecordingMultipartStorage(): Promise<{
   b2: ReturnType<typeof createB2Client>;
   requests: () => Promise<
@@ -72,23 +88,18 @@ export async function createRecordingMultipartStorage(): Promise<{
     },
   };
 }
-/** Yields one deterministic buffer of the requested byte length as an async upload body. */
+/**
+ * Yields one deterministic buffer of the requested byte length as an async
+ * upload body.
+ */
 export async function* makeBodyFromSize(size: number): AsyncGenerator<Buffer> {
   yield Buffer.alloc(size, 3);
 }
-/** Creates an owned disk catalog, claimed job, reserved output and recording storage; returns upload inputs and row reader, with cleanup registered. */
-export async function createMultipartOutputFixture(): Promise<
-  Awaited<ReturnType<typeof createRecordingMultipartStorage>> & {
-    database: ReturnType<typeof createDatabase>;
-    databasePath: string;
-    queue: ReturnType<typeof createMediaProcessingQueue>;
-    claim: ProcessingClaim;
-    outputId: string;
-    key: string;
-    upload: Parameters<typeof uploadProcessingOutput>[0];
-    row: () => Promise<Selectable<Database["media_processing_outputs"]>>;
-  }
-> {
+/**
+ * Creates an owned disk catalog, claimed job, reserved output and recording
+ * storage; returns upload inputs and row reader, with cleanup registered.
+ */
+export async function createMultipartOutputFixture(): Promise<MultipartOutputFixture> {
   const directory = await mkdtemp(join(tmpdir(), "processing-output-"));
   const databasePath = join(directory, "catalog.db");
   const database = createDatabase(databasePath);

@@ -9,7 +9,7 @@ import {
   type UploadProblemCode,
   type UploadSessionState,
 } from "@memory-shoebox/shared";
-import { appConfig } from "../../app.config.ts";
+import { APP_CONFIG } from "../../app.config.ts";
 
 /**
  * Everything the upload spec and its setup project share that is not a read
@@ -226,7 +226,7 @@ export function getSessionIdFromState(
  */
 export function writeMultipartVideo(targetPath: string): number {
   const base = readFileSync(join(UPLOAD_FIXTURE_DIRECTORY, "h264-clip.mp4"));
-  const { multipartThresholdBytes, multipartPartSizeBytes } = appConfig.upload;
+  const { multipartThresholdBytes, multipartPartSizeBytes } = APP_CONFIG.upload;
   const totalBytes = multipartThresholdBytes + multipartPartSizeBytes / 2;
   const freeBoxHeader = Buffer.alloc(8);
   freeBoxHeader.writeUInt32BE(totalBytes - base.length, 0);

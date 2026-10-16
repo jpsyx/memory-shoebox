@@ -1,11 +1,11 @@
 import type { ItemSummary, MemberRef } from "@memory-shoebox/shared";
 
-import type { Page } from "@playwright/test";
+import type { VisualRoutingPage } from "../visualPage.types.ts";
 
 import { makeVisualRemovalFromOptions } from "./makeVisualRemovalFromOptions.ts";
 
 type VisualRemovalOptions = {
-  page: Page;
+  page: VisualRoutingPage;
   surface: string;
   state: string;
   member: MemberRef;
@@ -14,7 +14,7 @@ type VisualRemovalOptions = {
 };
 
 type RouteVisualQueueOptions = {
-  page: Page;
+  page: VisualRoutingPage;
   state: string;
   request: ReturnType<typeof makeVisualRemovalFromOptions>["request"];
   settled: ReturnType<typeof makeVisualRemovalFromOptions>["settled"];

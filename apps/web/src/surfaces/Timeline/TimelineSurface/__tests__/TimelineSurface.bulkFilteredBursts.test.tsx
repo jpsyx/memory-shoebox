@@ -2,13 +2,13 @@ import {
   makeBurst,
   makeDay,
   makeItem,
-} from "@/surfaces/Timeline/timelineFixtures";
-import { makeBurstFrame } from "@/testing/itemFixtureHelpers";
-import { getRecordedBodyFromRequest } from "@/testing/surfaceHarness";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
+import { makeBurstFrameFromPosition } from "@/testing/itemFixtureHelpers";
+import { getRecordedBodyFromRequest } from "@/testing/surfaceHarnessHelpers";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderTimeline } from "./TimelineSurface.fixtures";
+import { renderTimeline } from "./timelineSurfaceTestHelpers";
 import { answerBulkTimeline } from "./timelineBulkTestHelpers";
 
 afterEach(() => {
@@ -20,8 +20,14 @@ describe("selecting frames within timeline filters", () => {
   it("reopens an already cached fan through filtered reads before frames can be ticked", async () => {
     const tagId = "018f0000-0000-7000-8000-000000009001";
     const burst = makeBurst({ visibleFrameCount: 2 });
-    const matchingFrame = { ...makeBurstFrame(2), altText: "Matching frame" };
-    const outsideFrame = { ...makeBurstFrame(1), altText: "Outside filter" };
+    const matchingFrame = {
+      ...makeBurstFrameFromPosition(2),
+      altText: "Matching frame",
+    };
+    const outsideFrame = {
+      ...makeBurstFrameFromPosition(1),
+      altText: "Outside filter",
+    };
     answerBulkTimeline({
       "GET /api/timeline": {
         body: {

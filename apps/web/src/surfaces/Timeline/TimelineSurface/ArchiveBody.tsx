@@ -1,4 +1,4 @@
-import { getArchiveTotalsFromRail } from "@/api/timeline/timeline";
+import { getArchiveTotalsFromRail } from "@/api/timelineHelpers/timelineHelpers";
 import { ArchiveEnd } from "@/surfaces/Timeline/ArchiveEnd/ArchiveEnd";
 import { DayStream } from "@/surfaces/Timeline/DayStream/DayStream";
 import { JumpRailSlot } from "@/surfaces/Timeline/TimelineSurface/JumpRailSlot";

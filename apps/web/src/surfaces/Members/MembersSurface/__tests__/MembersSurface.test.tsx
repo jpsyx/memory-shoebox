@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import {
   ADMIN_ACCOUNT,
   INVITED,
@@ -53,7 +53,7 @@ describe("Members administration", () => {
     expect(
       await screen.findByText("Only an admin can manage members."),
     ).toBeVisible();
-    expect(countCallsTo("GET", "/api/members")).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/members" })).toBe(0);
   });
   it("offers Retry after a failed directory read", async () => {
     renderMembers({
@@ -67,7 +67,9 @@ describe("Members administration", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Retry" }));
     await waitFor(() => {
-      return expect(countCallsTo("GET", "/api/members")).toBe(2);
+      return expect(countCallsTo({ method: "GET", path: "/api/members" })).toBe(
+        2,
+      );
     });
   });
 });

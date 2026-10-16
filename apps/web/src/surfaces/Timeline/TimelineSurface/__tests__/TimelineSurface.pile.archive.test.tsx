@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { setFirstSignIn } from "@/session/firstSignIn/firstSignIn";
 
-import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtures";
+import { makeDay, makeItem } from "@/surfaces/Timeline/timelineFixtureHelpers";
 
 import {
   makeFrameIdFromPosition,
@@ -19,8 +19,8 @@ import {
   recordedUrls,
   renderTimeline,
   respondWith,
-} from "./TimelineSurface.fixtures";
-import { installTimelineSurfacePileTestLifecycle } from "./TimelineSurfacepileTestHelpers";
+} from "./timelineSurfaceTestHelpers";
+import { installTimelineSurfacePileTestLifecycle } from "./installTimelineSurfacePileTestLifecycle";
 installTimelineSurfacePileTestLifecycle();
 describe("the timeline", () => {
   it("draws the days the route returned", async () => {

@@ -4,8 +4,18 @@ import {
   makeDay,
   makeItem,
   makeMediaSource,
-} from "../apps/web/src/surfaces/Timeline/timelineFixtures.ts";
+} from "../apps/web/src/surfaces/Timeline/timelineFixtureHelpers.ts";
 import { createMeResponse } from "../apps/web/src/testing/createMeResponse.ts";
+
+type DayPrintCoordinates = {
+  itemId: string | undefined;
+  row: string | undefined;
+  day: string;
+  localTop: number;
+  rowTop: number;
+  left: number;
+  top: number;
+};
 
 /** Mixed proportions expose columns that fill downward before moving across. */
 const ITEMS = Array.from({ length: 8 }, (_, index) => {
@@ -83,24 +93,35 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-/** Native layout offsets share a verified day origin and ignore print rotations. */
-async function _getDayCoordinatesFromPrints(prints: Locator, dayId: string) {
+/**
+ * Native layout offsets share a verified day origin and ignore print rotations.
+ */
+async function _getDayCoordinatesFromPrints({
+  prints,
+  dayId,
+}: {
+  prints: Locator;
+  dayId: string;
+}): Promise<DayPrintCoordinates[]> {
   return prints.evaluateAll((elements, expectedDay) => {
     const day = document.getElementById(expectedDay);
-    if (!(day instanceof HTMLElement)) throw new Error("Missing owning day");
+    if (!(day instanceof HTMLElement)) {
+      throw new Error("Missing owning day");
+    }
     const offsetFromDocument = (element: HTMLElement) => {
       let left = 0;
       let top = 0;
-      let ancestor: HTMLElement | null = element;
+      let ancestor: HTMLElement | undefined = element;
       while (ancestor) {
         left += ancestor.offsetLeft;
         top += ancestor.offsetTop;
         if (
           ancestor.offsetParent !== null &&
           !(ancestor.offsetParent instanceof HTMLElement)
-        )
+        ) {
           throw new Error("Unsupported layout origin");
-        ancestor = ancestor.offsetParent as HTMLElement | null;
+        }
+        ancestor = ancestor.offsetParent ?? undefined;
       }
       return { left, top };
     };
@@ -109,10 +130,13 @@ async function _getDayCoordinatesFromPrints(prints: Locator, dayId: string) {
       if (
         !(element instanceof HTMLElement) ||
         element.closest("section") !== day
-      )
+      ) {
         throw new Error("Print belongs to another day");
+      }
       const row = element.closest<HTMLElement>("[data-timeline-row]");
-      if (!row || !day.contains(row)) throw new Error("Missing owned row");
+      if (!row || !day.contains(row)) {
+        throw new Error("Missing owned row");
+      }
       const position = offsetFromDocument(element);
       return {
         itemId: element.dataset.itemId,
@@ -142,10 +166,10 @@ async function _getDayCoordinatesFromPrints(prints: Locator, dayId: string) {
         document.documentElement.dataset.pile = value;
       }, arrangement);
       // Layout coordinates ignore the deliberate messy-mode rotation.
-      const sparseBoxes = await _getDayCoordinatesFromPrints(
-        sparsePrints,
-        "day-2026-09-27",
-      );
+      const sparseBoxes = await _getDayCoordinatesFromPrints({
+        prints: sparsePrints,
+        dayId: "day-2026-09-27",
+      });
       expect(sparseBoxes[1]?.top).toBe(sparseBoxes[0]?.top);
       expect(sparseBoxes[1]?.left).toBeGreaterThan(sparseBoxes[0]?.left ?? 0);
 
@@ -154,10 +178,10 @@ async function _getDayCoordinatesFromPrints(prints: Locator, dayId: string) {
         .locator("[data-item-id]");
       await densePrints.first().scrollIntoViewIfNeeded();
       await expect(densePrints).toHaveCount(8);
-      const denseBoxes = await _getDayCoordinatesFromPrints(
-        densePrints,
-        "day-2026-09-26",
-      );
+      const denseBoxes = await _getDayCoordinatesFromPrints({
+        prints: densePrints,
+        dayId: "day-2026-09-26",
+      });
       expect(
         denseBoxes.map((box) => {
           return box.itemId;

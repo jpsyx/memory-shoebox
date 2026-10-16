@@ -1,14 +1,14 @@
 import { expect, it } from "vitest";
-import { createLifecycleFixture } from "./lifecycleTestHelpers.ts";
-import { discoverMediaProcessingWork } from "../../src/mediaProcessing/queue/discoverMediaProcessingWork.ts";
+import { createLifecycleFixture } from "./createLifecycleFixture.ts";
+import { discoverMediaProcessingWork } from "../../src/mediaProcessing/queue/mediaProcessingWorkHelpers.ts";
 import { readMediaPreviews } from "../../src/media/readMediaPreviews.ts";
 import { readItemSummariesByDay } from "../../src/archive/readItemSummariesByDay.ts";
 import { readItemSummariesByItemIds } from "../../src/archive/readItemSummariesByItemIds/readItemSummariesByItemIds.ts";
 import { readItemSummariesByIds } from "../../src/items/readItemSummariesByIds/readItemSummariesByIds.ts";
 import { readItemDetail } from "../../src/items/readItemDetail/readItemDetail.ts";
 import { getVisibleItemOr404 } from "../../src/items/getVisibleItemOr404.ts";
-import { readBurstFrameSources } from "../../src/items/readBurstFrameRefs/readBurstFrameSources.ts";
-import { makeBurstFrameRefsFromRows } from "../../src/items/readBurstFrameRefs/makeBurstFrameRefsFromRows.ts";
+import { readBurstFrameSources } from "../../src/items/readBurstFramePage/readBurstFrameSources.ts";
+import { makeBurstFrameRefsFromRows } from "../../src/items/readBurstFramePage/makeBurstFrameRefsFromRows.ts";
 import { readUploadFilePage } from "../../src/upload/readUploadFilePage/readUploadFilePage.ts";
 import { readPeopleDirectory } from "../../src/archive/readPeopleDirectory.ts";
 import { makeTimelineFilterFromQuery } from "../../src/archive/selectionFilterHelpers.ts";

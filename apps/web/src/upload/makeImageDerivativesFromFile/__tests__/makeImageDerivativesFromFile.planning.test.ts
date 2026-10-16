@@ -1,3 +1,4 @@
+import type { DerivativeTarget } from "../makeImageDerivativesFromFile.types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeImageDataFromHeic } from "@/upload/makeImageDataFromHeic/makeImageDataFromHeic";
@@ -10,9 +11,12 @@ vi.mock("@/upload/makeImageDataFromHeic/makeImageDataFromHeic", () => {
   return { makeImageDataFromHeic: vi.fn() };
 });
 
-const DISPLAY = { purpose: "display", longEdgePx: 2048 };
+const DISPLAY = {
+  purpose: "display",
+  longEdgePx: 2048,
+} satisfies DerivativeTarget;
 
-const THUMB = { purpose: "thumb", longEdgePx: 480 };
+const THUMB = { purpose: "thumb", longEdgePx: 480 } satisfies DerivativeTarget;
 
 afterEach(() => {
   vi.unstubAllGlobals();

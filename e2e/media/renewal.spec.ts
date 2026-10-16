@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { test, expect } from "./media.fixtures.ts";
-import { expectCurrentPhotoDecoded } from "./measurements.ts";
+import { expectCurrentPhotoDecoded } from "./mediaMeasurementHelpers.ts";
 
 test("renews an expired selected original and preserves paused playback without another open", async ({
   page,

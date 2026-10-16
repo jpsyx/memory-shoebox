@@ -3,21 +3,27 @@ import {
   makeRemovalRequestFromOverrides,
 } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
+import {
+  recordedUrls,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarnessHelpers";
 import type { ItemSummary, RemovalRequestDto } from "@memory-shoebox/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 function _installKeepsUncertaintyAndAnIdleReadonlyRetryAnswers0(): void {
   respondWith({
-    "GET /api/me": { status: 200, body: account },
-    [`GET ${historyPath}`]: {
-      status: 200,
-      body: {
-        item,
-        removalRequests: [request],
-        canRequestRemoval: false,
-        nextCursor: null,
+    routes: {
+      "GET /api/me": { status: 200, body: account },
+      [`GET ${historyPath}`]: {
+        status: 200,
+        body: {
+          item,
+          removalRequests: [request],
+          canRequestRemoval: false,
+          nextCursor: null,
+        },
       },
     },
   });
@@ -115,20 +121,22 @@ it("uses the same Shoebox day for preview, request, capture and settlement acros
     declineReason: "Keeping this one.",
   };
   respondWith({
-    "GET /api/me": {
-      status: 200,
-      body: {
-        ...account,
-        settings: { ...account.settings, timezone: "America/New_York" },
+    routes: {
+      "GET /api/me": {
+        status: 200,
+        body: {
+          ...account,
+          settings: { ...account.settings, timezone: "America/New_York" },
+        },
       },
-    },
-    [`GET ${historyPath}`]: {
-      status: 200,
-      body: {
-        item,
-        removalRequests: [settled],
-        canRequestRemoval: false,
-        nextCursor: null,
+      [`GET ${historyPath}`]: {
+        status: 200,
+        body: {
+          item,
+          removalRequests: [settled],
+          canRequestRemoval: false,
+          nextCursor: null,
+        },
       },
     },
   });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { createApp } from "../../src/createApp.ts";
+import { createApp } from "../../src/createApp/createApp.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { ApiError } from "../../src/http/ApiError.ts";

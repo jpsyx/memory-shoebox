@@ -10,14 +10,6 @@ import type {
   ItemNavigationTarget,
 } from "./itemNavigation.types";
 
-type MoveOptions = {
-  context: ItemNavigationContext;
-  targets:
-    | Partial<Record<ItemDirection, ItemNavigationTarget | undefined>>
-    | undefined;
-  isUnavailable: boolean;
-};
-
 type TargetNavigation = {
   resources: MediaLoadingResources;
   target: ItemNavigationTarget;
@@ -36,10 +28,10 @@ async function _navigateToTarget(
   const release = options.resources.navigation.prepare({
     itemId,
     direction: options.direction,
-    source: getSelectedSourceFromPreview(
-      options.resources.previews.read(itemId),
-      options.resources.navigation.viewport,
-    ),
+    source: getSelectedSourceFromPreview({
+      preview: options.resources.previews.read(itemId),
+      viewport: options.resources.navigation.viewport,
+    }),
   });
   try {
     await options.router.navigate({
@@ -61,7 +53,13 @@ async function _navigateToTarget(
 
 /** Serializes moves until the selected destination finishes loading. */
 export function useItemNavigationMove(
-  options: Readonly<MoveOptions>,
+  options: Readonly<{
+    context: ItemNavigationContext;
+    targets:
+      | Partial<Record<ItemDirection, ItemNavigationTarget | undefined>>
+      | undefined;
+    isUnavailable: boolean;
+  }>,
 ): ItemNavigationMovement {
   const router = useRouter();
   const resources = useMediaLoading();

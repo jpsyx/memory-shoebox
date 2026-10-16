@@ -18,7 +18,7 @@ it("limits concurrent reads to two and refuses phase changes until idle", async 
       started.resolve();
     }
     void finish.promise.then(() => {
-      makeRangeResponseFromSize(8)(request, response);
+      makeRangeResponseFromSize({ size: 8 })(request, response);
     });
   });
   const reader = await createOwnedRangeReader({
@@ -29,14 +29,16 @@ it("limits concurrent reads to two and refuses phase changes until idle", async 
     phaseByteLimit: 16 * MIB,
   });
   const reads = [
-    readRange(reader.url, "bytes=0-7"),
-    readRange(reader.url, "bytes=0-7"),
+    readRange({ url: reader.url, range: "bytes=0-7" }),
+    readRange({ url: reader.url, range: "bytes=0-7" }),
   ];
   await started.promise;
   expect(() => {
     reader.setPhaseByteLimit(undefined);
   }).toThrow(/active/i);
-  expect((await readRange(reader.url, "bytes=0-7")).status).toBe(429);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-7" })).status,
+  ).toBe(429);
   finish.resolve();
   expect(
     (await Promise.all(reads)).map((read) => {
@@ -48,7 +50,7 @@ it("limits concurrent reads to two and refuses phase changes until idle", async 
 it("closes on cancellation without exposing credentials or other object paths", async () => {
   const controller = new AbortController();
   const reader = await createOwnedRangeReader({
-    b2: await createRangeSource(makeRangeResponseFromSize(4)),
+    b2: await createRangeSource(makeRangeResponseFromSize({ size: 4 })),
     key: "private/path",
     sourceBytes: 4,
     signal: controller.signal,
@@ -70,10 +72,12 @@ it("aborts an idle upstream read after fifteen seconds and shuts down active rea
     signal: new AbortController().signal,
   });
   const start = Date.now();
-  expect((await readRange(reader.url, "bytes=0-3")).status).toBe(502);
+  expect(
+    (await readRange({ url: reader.url, range: "bytes=0-3" })).status,
+  ).toBe(502);
   expect(Date.now() - start).toBeGreaterThanOrEqual(14_900);
   expect(reader.getFailure()).toBe("upstream_timeout");
-  const pending = readRange(reader.url, "bytes=0-3");
+  const pending = readRange({ url: reader.url, range: "bytes=0-3" });
   const rejected = expect(pending).rejects.toThrow();
   await new Promise((resolve) => {
     setTimeout(resolve, 20);
@@ -86,7 +90,12 @@ it("charges consumed partial bytes when a child aborts and never resets a probe 
   const lengths: number[] = [];
   const b2 = await createRangeSource((request, response) => {
     if (lengths.length > 0) {
-      makeRangeResponseFromSize(MIB, lengths)(request, response);
+      makeRangeResponseFromSize({
+        size: MIB,
+        onRange: (length) => {
+          lengths.push(length);
+        },
+      })(request, response);
       return;
     }
     lengths.push(MIB);
@@ -122,17 +131,23 @@ it("charges consumed partial bytes when a child aborts and never resets a probe 
   expect(bytesRead).toBeLessThan(MIB);
   expect(reader.getFailure()).toBeUndefined();
   reader.setPhaseByteLimit(MIB);
-  await expect(readRange(reader.url, `bytes=0-${MIB - 1}`)).rejects.toThrow();
+  await expect(
+    readRange({ url: reader.url, range: `bytes=0-${MIB - 1}` }),
+  ).rejects.toThrow();
   expect(lengths).toEqual([MIB, MIB - bytesRead]);
   expect(reader.getBytesRead()).toBe(MIB);
   expect(reader.getFailure()).toBe("phase_byte_limit");
-  expect((await readRange(reader.url, `bytes=0-${MIB - 1}`)).status).toBe(429);
+  expect(
+    (await readRange({ url: reader.url, range: `bytes=0-${MIB - 1}` })).status,
+  ).toBe(429);
 });
 
 it("stops upstream consumption while the child applies backpressure", async () => {
   const sourceBytes = 64 * MIB;
   const reader = await createOwnedRangeReader({
-    b2: await createRangeSource(makeRangeResponseFromSize(sourceBytes)),
+    b2: await createRangeSource(
+      makeRangeResponseFromSize({ size: sourceBytes }),
+    ),
     key: "source",
     sourceBytes,
     signal: new AbortController().signal,

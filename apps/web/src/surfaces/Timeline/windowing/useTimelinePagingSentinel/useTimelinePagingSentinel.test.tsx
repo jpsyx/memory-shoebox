@@ -1,9 +1,6 @@
-import { useTimelinePaging } from "@/api/timeline/useTimelinePaging/useTimelinePaging";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useInfiniteQuery,
-} from "@tanstack/react-query";
+import { makeQueryWrapperFromClient } from "@/testing/makeQueryWrapperFromClient";
+import { useTimelinePaging } from "@/api/timelineHelpers/useTimelinePaging";
+import { QueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useRef } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -60,11 +57,7 @@ it.each(["older", "newer"] as const)(
     };
     client.setQueryData(queryKey, { pages: [2], pageParams: [2] });
     const refresh = client.fetchInfiniteQuery({ ...options, staleTime: 0 });
-    const wrapper = ({ children }: { children: React.ReactNode }) => {
-      return (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
-      );
-    };
+    const wrapper = makeQueryWrapperFromClient(client);
     const hook = renderHook(
       () => {
         const stream = useInfiniteQuery(options);

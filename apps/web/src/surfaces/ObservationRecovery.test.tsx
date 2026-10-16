@@ -1,7 +1,11 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
-import { renderAt, respondWith, recordedUrls } from "@/testing/surfaceHarness";
+import {
+  renderAt,
+  respondWith,
+  recordedUrls,
+} from "@/testing/surfaceHarnessHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { ITEM_ID } from "@/testing/itemFixtureHelpers";
 import {
@@ -56,7 +60,9 @@ it.each(CASES)(
   "$route retains stale rows after 503 and clears the notice after Retry",
   async (fixture) => {
     respondWith({
-      [`GET ${fixture.path}`]: { status: 200, body: fixture.body },
+      routes: {
+        [`GET ${fixture.path}`]: { status: 200, body: fixture.body },
+      },
     });
     const { router } = renderAt(fixture.route);
     await screen.findByText(fixture.text);
@@ -65,13 +71,12 @@ it.each(CASES)(
     vi.stubGlobal(
       "fetch",
       vi.fn(async (path, init) => {
-        if (String(path).startsWith(fixture.path) && failed) {
-          return Response.json(
-            { error: "unavailable", message: "Read unavailable" },
-            { status: 503 },
-          );
-        }
-        return original(path, init);
+        return String(path).startsWith(fixture.path) && failed
+          ? Response.json(
+              { error: "unavailable", message: "Read unavailable" },
+              { status: 503 },
+            )
+          : original(path, init);
       }),
     );
     await act(async () => {
@@ -103,7 +108,9 @@ it.each(
   "$fixture.route suppresses cached rows and reconciles $status",
   async ({ fixture, status }) => {
     respondWith({
-      [`GET ${fixture.path}`]: { status: 200, body: fixture.body },
+      routes: {
+        [`GET ${fixture.path}`]: { status: 200, body: fixture.body },
+      },
     });
     const { router } = renderAt(fixture.route);
     await screen.findByText(fixture.text);
@@ -136,7 +143,9 @@ it.each(
 );
 it("a failed authority recheck hides rows and offers an explicit account retry", async () => {
   const fixture = CASES[0]!;
-  respondWith({ "GET /api/presence": { status: 200, body: fixture.body } });
+  respondWith({
+    routes: { "GET /api/presence": { status: 200, body: fixture.body } },
+  });
   const { router } = renderAt("/presence");
   await screen.findByText("Tomás");
   const allowAccount = _failAccountRecheck();
@@ -161,7 +170,9 @@ it("a failed authority recheck hides rows and offers an explicit account retry",
 });
 it("activity pagination refusal also removes earlier rows and reconciles access", async () => {
   const fixture = CASES[2]!;
-  respondWith({ "GET /api/activity": { status: 200, body: fixture.body } });
+  respondWith({
+    routes: { "GET /api/activity": { status: 200, body: fixture.body } },
+  });
   renderAt("/changes");
   await screen.findByText("Old iPhone");
   const original = fetch;
@@ -174,12 +185,13 @@ it("activity pagination refusal also removes earlier rows and reconciles access"
           { status: 403 },
         );
       }
-      if (path === "/api/bootstrap")
+      if (path === "/api/bootstrap") {
         return Response.json({
           setup: { isRequired: false },
           account: createMeResponse({ role: "viewer" }),
           progress: null,
         });
+      }
       if (path === "/api/me") {
         return Response.json(createMeResponse({ role: "viewer" }));
       }
@@ -212,12 +224,13 @@ function _refuseObservation({
           { status },
         );
       }
-      if (path === "/api/bootstrap")
+      if (path === "/api/bootstrap") {
         return Response.json({
           setup: { isRequired: false },
           account: status === 401 ? null : createMeResponse({ role: "viewer" }),
           progress: null,
         });
+      }
       if (path === "/api/me") {
         return status === 401
           ? Response.json(
@@ -243,12 +256,13 @@ function _failAccountRecheck(): () => void {
           { status: 403 },
         );
       }
-      if (path === "/api/bootstrap" && !accountFailed)
+      if (path === "/api/bootstrap" && !accountFailed) {
         return Response.json({
           setup: { isRequired: false },
           account: createMeResponse({ role: "viewer" }),
           progress: null,
         });
+      }
       if (path === "/api/me") {
         return accountFailed
           ? Response.json(

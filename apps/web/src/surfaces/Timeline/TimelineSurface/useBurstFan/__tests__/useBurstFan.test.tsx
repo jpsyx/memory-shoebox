@@ -1,7 +1,7 @@
-import { burstFramesQueryOptions } from "@/api/bursts/bursts";
+import { burstFramesQueryOptions } from "@/api/burstQueryHelpers/burstQueryHelpers";
 import { useBurstFan } from "@/surfaces/Timeline/TimelineSurface/useBurstFan/useBurstFan";
 import { stubFetch } from "@/testing/fetchStubHelpers";
-import { makeBurstFrame } from "@/testing/itemFixtureHelpers";
+import { makeBurstFrameFromPosition } from "@/testing/itemFixtureHelpers";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 import { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -10,8 +10,8 @@ import { describe, expect, it, vi } from "vitest";
 const BURST_MORNING = "018f0000-0000-7000-8000-00000000b001";
 const BURST_EVENING = "018f0000-0000-7000-8000-00000000b002";
 
-const MORNING_FRAME = makeBurstFrame(1);
-const EVENING_FRAME = makeBurstFrame(2);
+const MORNING_FRAME = makeBurstFrameFromPosition(1);
+const EVENING_FRAME = makeBurstFrameFromPosition(2);
 
 /** Answers one hanging fetch with its frames. */
 type AnswerFetch = (frames: readonly BurstFrameRef[]) => void;
@@ -41,7 +41,7 @@ describe("useBurstFan", () => {
     const answers: AnswerFetch[] = [];
     const client = _makeHangingQueryClient(answers);
     const { result } = renderHook(() => {
-      return useBurstFan(client);
+      return useBurstFan({ queryClient: client });
     });
 
     act(() => {
@@ -60,7 +60,7 @@ describe("useBurstFan", () => {
     const answers: AnswerFetch[] = [];
     const client = _makeHangingQueryClient(answers);
     const { result } = renderHook(() => {
-      return useBurstFan(client);
+      return useBurstFan({ queryClient: client });
     });
 
     // Both stacks are pressed before either fetch has answered, so both
@@ -104,7 +104,7 @@ it("updates an already-open fan after a burst write refreshes its query", async 
     },
   });
   const { result } = renderHook(() => {
-    return useBurstFan(queryClient);
+    return useBurstFan({ queryClient });
   });
   act(() => {
     return result.current.onOpenBurst(BURST_MORNING);
@@ -136,7 +136,7 @@ it("does not repopulate a cleared fan when an older request finally answers", as
   const answers: AnswerFetch[] = [];
   const client = _makeHangingQueryClient(answers);
   const { result } = renderHook(() => {
-    return useBurstFan(client);
+    return useBurstFan({ queryClient: client });
   });
   act(() => {
     return result.current.onOpenBurst(BURST_MORNING);
@@ -171,10 +171,13 @@ it("bounds live frame queries to the twenty compact expanded IDs, then prunes a 
     ),
   );
   const hook = renderHook(() => {
-    return useBurstFan(client, {
-      viewKey: "view",
-      memory,
-      retainedBurstIds: new Set(ids),
+    return useBurstFan({
+      queryClient: client,
+      options: {
+        viewKey: "view",
+        memory,
+        retainedBurstIds: new Set(ids),
+      },
     });
   });
   for (const id of ids) {

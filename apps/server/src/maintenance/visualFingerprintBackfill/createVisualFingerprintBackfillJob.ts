@@ -97,7 +97,9 @@ async function _runBatch(
   await _logProgress({ dependencies, results });
 }
 
-/** Runs automatically after startup; existing scheduler owns overlap and drain. */
+/**
+ * Runs automatically after startup; existing scheduler owns overlap and drain.
+ */
 export function createVisualFingerprintBackfillJob(
   options: Readonly<VisualFingerprintBackfillOptions>,
 ): Job {
@@ -108,24 +110,32 @@ export function createVisualFingerprintBackfillJob(
     intervalMs: 30_000,
     run: async () => {
       try {
-        await coordinator.run(async () => {
-          if (options.runtime !== undefined) {
-            const capabilities = await options.runtime.getCapabilities(signal);
-            if (!capabilities.available) {
-              return;
+        await coordinator.run({
+          work: async () => {
+            if (options.runtime !== undefined) {
+              const capabilities =
+                await options.runtime.getCapabilities(signal);
+              if (!capabilities.available) {
+                return;
+              }
+              await _runBatch({
+                ...options,
+                signal,
+                makeFingerprint: (bytes) => {
+                  return options.runtime!.makeFingerprint({
+                    bytes: bytes,
+                    signal: signal,
+                  });
+                },
+              });
+            } else if (options.makeFingerprint !== undefined) {
+              // Explicit injected adapters support deterministic local tests
+              // only.
+              await _runBatch({ ...options, signal });
             }
-            await _runBatch({
-              ...options,
-              signal,
-              makeFingerprint: (bytes) => {
-                return options.runtime!.makeFingerprint(bytes, signal);
-              },
-            });
-          } else if (options.makeFingerprint !== undefined) {
-            // Explicit injected adapters support deterministic local tests only.
-            await _runBatch({ ...options, signal });
-          }
-        }, signal);
+          },
+          signal: signal,
+        });
       } catch (error) {
         if (!signal.aborted) {
           throw error;

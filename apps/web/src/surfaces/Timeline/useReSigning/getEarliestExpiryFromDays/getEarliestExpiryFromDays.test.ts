@@ -3,10 +3,10 @@ import {
   makeDay,
   makeItem,
   makeMediaSource,
-} from "@/surfaces/Timeline/timelineFixtures";
+} from "@/surfaces/Timeline/timelineFixtureHelpers";
 import { getEarliestExpiryFromDays } from "@/surfaces/Timeline/useReSigning/getEarliestExpiryFromDays/getEarliestExpiryFromDays";
 
-function _itemExpiring(at: string) {
+function _itemExpiring(at: string): ReturnType<typeof makeItem> {
   return makeItem({
     itemId: `item-${at}`,
     media: {
@@ -37,20 +37,31 @@ describe("getEarliestExpiryFromDays", () => {
     expect(getEarliestExpiryFromDays([])).toBeUndefined();
   });
 
-  it("looks at the poster and the video sources too", () => {
-    const item = makeItem({
-      media: {
-        ...makeItem().media,
-        poster: makeMediaSource({ expiresAt: "2026-09-27T09:00:00.000Z" }),
-        playback: makeMediaSource({
-          expiresAt: "2026-09-27T08:00:00.000Z",
-          purpose: "video_mp4",
-          contentType: "video/mp4",
-        }),
-      },
-    });
-    expect(getEarliestExpiryFromDays([makeDay({ items: [item] })])).toBe(
-      "2026-09-27T08:00:00.000Z",
-    );
-  });
+  it.each(["poster", "playback"] as const)(
+    "returns the %s expiry when that source expires first",
+    (earliestSource) => {
+      const earlierExpiry = "2026-09-27T08:00:00.000Z";
+      const laterExpiry = "2026-09-27T09:00:00.000Z";
+      const item = makeItem({
+        media: {
+          ...makeItem().media,
+          thumb: makeMediaSource({ expiresAt: laterExpiry }),
+          display: makeMediaSource({ expiresAt: laterExpiry }),
+          poster: makeMediaSource({
+            expiresAt:
+              earliestSource === "poster" ? earlierExpiry : laterExpiry,
+          }),
+          playback: makeMediaSource({
+            expiresAt:
+              earliestSource === "playback" ? earlierExpiry : laterExpiry,
+            purpose: "video_mp4",
+            contentType: "video/mp4",
+          }),
+        },
+      });
+      expect(getEarliestExpiryFromDays([makeDay({ items: [item] })])).toBe(
+        earlierExpiry,
+      );
+    },
+  );
 });

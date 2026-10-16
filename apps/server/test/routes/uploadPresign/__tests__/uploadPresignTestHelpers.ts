@@ -2,7 +2,7 @@ import type { Insertable, Selectable } from "kysely";
 import type { LightMyRequestResponse } from "fastify";
 import { createHash } from "node:crypto";
 
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 import type { Database } from "../../../../src/db/types/db.types.ts";
 
@@ -157,19 +157,19 @@ export const EARLIER = shiftMinutes({ instant: NOW, minutes: -10 });
  * Presigned URL expiry used by the fixture.
  */
 export const EXPIRES_AT = new Date(
-  Date.parse(NOW) + appConfig.upload.presignTtlSeconds * 1000,
+  Date.parse(NOW) + APP_CONFIG.upload.presignTtlSeconds * 1000,
 ).toISOString();
 
 /**
  * Original byte size that exercises the multipart upload path.
  */
-export const MULTIPART_BYTES = appConfig.upload.multipartThresholdBytes + 1;
+export const MULTIPART_BYTES = APP_CONFIG.upload.multipartThresholdBytes + 1;
 
 /**
  * Number of parts required for the multipart fixture original.
  */
 export const MULTIPART_PART_COUNT = Math.ceil(
-  MULTIPART_BYTES / appConfig.upload.multipartPartSizeBytes,
+  MULTIPART_BYTES / APP_CONFIG.upload.multipartPartSizeBytes,
 );
 
 /**

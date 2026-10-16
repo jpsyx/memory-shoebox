@@ -1,3 +1,5 @@
+import type { MediaSource } from "../src/dtos.ts";
+import type { ItemCapabilities, ItemDetail } from "../src/items.ts";
 import { describe, expect, it } from "vitest";
 import {
   burstFramesRequestSchema,
@@ -41,7 +43,7 @@ const MEDIA_SOURCE = {
   expiresAt: "2026-09-27T11:00:00.000Z",
   width: 800,
   height: 600,
-};
+} satisfies MediaSource;
 
 const CAPABILITIES = {
   canSetVisibility: true,
@@ -52,7 +54,7 @@ const CAPABILITIES = {
   canDelete: true,
   canRequestRemoval: false,
   canSeeViewers: false,
-};
+} satisfies ItemCapabilities;
 
 const ITEM_DETAIL = {
   itemId: "0199a0d4-0000-7000-8000-000000000001",
@@ -95,7 +97,7 @@ const ITEM_DETAIL = {
   comments: [],
   reactions: { kinds: [], myKind: null },
   capabilities: CAPABILITIES,
-};
+} satisfies ItemDetail;
 
 describe("itemDetailSchema", () => {
   it("accepts the whole permalink payload", () => {

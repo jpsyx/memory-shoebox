@@ -5,7 +5,7 @@ import {
   renderAt,
   respondWith,
   type Answer,
-} from "@/testing/surfaceHarness";
+} from "@/testing/surfaceHarnessHelpers";
 import type { MilestoneDetail } from "@memory-shoebox/shared";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,12 +19,14 @@ function _installSendsOnePatchOnlyWhileTheHeldAnswers0(): {
   const path = `/api/milestones/${detail.milestone.milestoneId}`;
   const answer: Answer = { status: 200, body: detail };
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [detail], nextCursor: null },
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [detail], nextCursor: null },
+      },
+      [`GET ${path}`]: answer,
+      [`PATCH ${path}`]: { status: 200, body: detail },
     },
-    [`GET ${path}`]: answer,
-    [`PATCH ${path}`]: { status: 200, body: detail },
   });
   return { held, path, answer };
 }

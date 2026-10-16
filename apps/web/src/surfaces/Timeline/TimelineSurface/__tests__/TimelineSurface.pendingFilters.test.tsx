@@ -1,12 +1,16 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { renderTimeline, respondWith } from "./TimelineSurface.fixtures";
+import { renderTimeline, respondWith } from "./timelineSurfaceTestHelpers";
 
 const HOSPITAL = "018f0000-0000-7000-8000-0000000e0001";
 const BEACH = "018f0000-0000-7000-8000-0000000e0002";
 const ELENA = "018f0000-0000-7000-8000-0000000f0001";
 
-async function _holdNavigation(initialPath: string) {
+async function _holdNavigation(
+  initialPath: string,
+): Promise<
+  ReturnType<typeof renderTimeline> & { release: () => Promise<void> }
+> {
   respondWith({
     "GET /api/timeline/rail": {
       status: 200,
@@ -65,7 +69,9 @@ async function _holdNavigation(initialPath: string) {
     release = resolve;
   });
   vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
-    if (String(args[0]).startsWith("/api/bootstrap")) await pending;
+    if (String(args[0]).startsWith("/api/bootstrap")) {
+      await pending;
+    }
     return originalFetch(...args);
   });
   return {
@@ -87,7 +93,13 @@ async function _press(name: string): Promise<void> {
   });
 }
 
-async function _date(label: string, value: string): Promise<void> {
+async function _date({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): Promise<void> {
   await act(async () => {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
   });
@@ -109,8 +121,8 @@ it("composes tag and both date endpoints while bootstrap holds the preceding sel
       find: true,
       at: "2026-09-10",
     });
-    await _date("From", "2026-07-01");
-    await _date("Until", "2026-07-31");
+    await _date({ label: "From", value: "2026-07-01" });
+    await _date({ label: "Until", value: "2026-07-31" });
     expect(held.router.state.location.search).toEqual({
       find: true,
       tag: [HOSPITAL],

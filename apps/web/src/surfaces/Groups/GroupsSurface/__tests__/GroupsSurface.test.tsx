@@ -7,9 +7,9 @@ import {
 } from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
 import {
   countCallsTo,
-  getBodiesSentTo,
+  getBodiesFromRecordedRequests,
   respondWith,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { meQueryOptions } from "@/api/me/me";
 function _renderPartialRename(): typeof GROUP {
@@ -47,7 +47,9 @@ describe("Groups", () => {
     await user.click(screen.getByRole("option", { name: /Tomás/ }));
     await user.click(screen.getByRole("button", { name: "Create the group" }));
     await waitFor(() => {
-      return expect(getBodiesSentTo("POST", "/api/groups")).toEqual([
+      return expect(
+        getBodiesFromRecordedRequests({ method: "POST", path: "/api/groups" }),
+      ).toEqual([
         { name: "New cousins", memberIds: [GROUP.members[0]!.memberId] },
       ]);
     });
@@ -71,7 +73,7 @@ describe("Groups", () => {
       "aria-invalid",
       "true",
     );
-    expect(countCallsTo("POST", "/api/groups")).toBe(0);
+    expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(0);
     await user.type(screen.getByLabelText("What to call it"), "Duplicate");
     await user.click(screen.getByRole("button", { name: "Create the group" }));
     expect(await screen.findByText("This name is already used.")).toBeVisible();
@@ -109,9 +111,14 @@ describe("Groups", () => {
     await waitFor(() => {
       return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
-    expect(countCallsTo("PATCH", `/api/groups/${GROUP.groupId}`)).toBe(0);
     expect(
-      getBodiesSentTo("PUT", `/api/groups/${GROUP.groupId}/members`),
+      countCallsTo({ method: "PATCH", path: `/api/groups/${GROUP.groupId}` }),
+    ).toBe(0);
+    expect(
+      getBodiesFromRecordedRequests({
+        method: "PUT",
+        path: `/api/groups/${GROUP.groupId}/members`,
+      }),
     ).toEqual([{ memberIds: [createMeResponse().me.member.memberId] }]);
   });
   it("refuses group administration when the current role is uploader", async () => {
@@ -119,8 +126,8 @@ describe("Groups", () => {
     expect(
       await screen.findByText("Only an admin can manage groups."),
     ).toBeVisible();
-    expect(countCallsTo("GET", "/api/groups")).toBe(0);
-    expect(countCallsTo("GET", "/api/members")).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/groups" })).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/members" })).toBe(0);
   });
   it("closes creation and sends no POST after cached authority is lost", async () => {
     const { queryClient } = renderGroups();
@@ -148,7 +155,7 @@ describe("Groups", () => {
     expect(
       await screen.findByText("Only an admin can manage groups."),
     ).toBeVisible();
-    expect(countCallsTo("POST", "/api/groups")).toBe(0);
+    expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(0);
   });
   it("provides Retry for a failed administrative list", async () => {
     renderGroups({

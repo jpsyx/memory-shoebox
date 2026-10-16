@@ -3,7 +3,7 @@ import {
   makeRemovalRequestFromOverrides,
 } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { renderAt, respondWith } from "@/testing/surfaceHarness";
+import { renderAt, respondWith } from "@/testing/surfaceHarnessHelpers";
 import type {
   ItemSummary,
   ListItemRemovalRequestsResponse,
@@ -44,9 +44,11 @@ export function renderRemovalSurface({
   canRequestRemoval?: boolean;
 }>): ReturnType<typeof renderAt> {
   respondWith({
-    [`GET ${HISTORY}`]: {
-      status: 200,
-      body: { ...RESPONSE, removalRequests: requests, canRequestRemoval },
+    routes: {
+      [`GET ${HISTORY}`]: {
+        status: 200,
+        body: { ...RESPONSE, removalRequests: requests, canRequestRemoval },
+      },
     },
   });
   return renderAt(`/items/${ITEM.itemId}/removal`);

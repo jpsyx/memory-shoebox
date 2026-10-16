@@ -5,7 +5,11 @@ import {
   makeMilestoneDetailFromOverrides,
 } from "@/testing/askingAndOccasionsFixtureHelpers";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { recordedUrls, renderAt, respondWith } from "@/testing/surfaceHarness";
+import {
+  recordedUrls,
+  renderAt,
+  respondWith,
+} from "@/testing/surfaceHarnessHelpers";
 import type {
   ItemSummary,
   ListMilestoneMismatchesResponse,
@@ -88,9 +92,11 @@ function _installDestinationDirectory(): {
   const firstPath = `/api/milestones/${first.milestone.milestoneId}`;
   const secondPath = `/api/milestones/${second.milestone.milestoneId}`;
   respondWith({
-    "GET /api/milestones": {
-      status: 200,
-      body: { milestones: [first, second], nextCursor: null },
+    routes: {
+      "GET /api/milestones": {
+        status: 200,
+        body: { milestones: [first, second], nextCursor: null },
+      },
     },
   });
   return { firstPath, secondPath };

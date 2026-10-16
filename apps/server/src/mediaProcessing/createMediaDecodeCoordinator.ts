@@ -1,17 +1,24 @@
-/** One process-wide lane shared by capability checks and every heavy decoder. */
+/**
+ * One process-wide lane shared by capability checks and every heavy decoder.
+ */
 export type MediaDecodeCoordinator = {
-  /** Waits abortably; active work retains the lane until it actually settles. */
-  run: <Result>(
-    work: () => Promise<Result>,
-    signal: AbortSignal,
-  ) => Promise<Result>;
+  /**
+   * Waits abortably; active work retains the lane until it actually settles.
+   */
+  run: <Result>({
+    work,
+    signal,
+  }: Readonly<{
+    work: () => Promise<Result>;
+    signal: AbortSignal;
+  }>) => Promise<Result>;
 };
 
 /** Creates a FIFO lane without timers or work at construction time. */
 export function createMediaDecodeCoordinator(): MediaDecodeCoordinator {
   let pending = Promise.resolve();
   return {
-    run: async (work, signal) => {
+    run: async ({ work, signal }) => {
       signal.throwIfAborted();
       let started = false;
       const result = pending.then(() => {

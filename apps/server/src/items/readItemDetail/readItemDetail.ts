@@ -2,8 +2,8 @@ import type { ItemDetail } from "@memory-shoebox/shared";
 import {
   makeBurstAndFramesFromParts,
   makeItemDetailFromParts,
-  makeMediaRefForItem,
-} from "./makeItemDetailFromParts.ts";
+  makeMediaRefFromItemAndParts,
+} from "./itemDetailAssemblyHelpers.ts";
 import { readBurstParts } from "./readBurstParts.ts";
 import type { ItemDetailOptions } from "./readItemDetail.types.ts";
 import { readItemDetailParts } from "./readItemDetailParts.ts";
@@ -82,15 +82,15 @@ export async function readItemDetail(
   return makeItemDetailFromParts({
     detailOptions: options,
     parts,
-    media: makeMediaRefForItem({
+    media: makeMediaRefFromItemAndParts({
       item,
       people: parts.peopleByItemId.get(item.itemId) ?? [],
       parts,
     }),
     burst,
     burstFrames,
-    // Null whenever there is no burst to be a position in, which includes the
+    // Absent whenever there is no burst to be a position in, which includes the
     // single visible frame that draws as a plain print.
-    burstPosition: burst === null ? null : (burstParts?.framePosition ?? null),
+    burstPosition: burst === undefined ? undefined : burstParts?.framePosition,
   });
 }

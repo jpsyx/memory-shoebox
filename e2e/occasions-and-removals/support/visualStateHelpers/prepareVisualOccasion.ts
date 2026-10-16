@@ -1,13 +1,13 @@
 import type { ItemSummary } from "@memory-shoebox/shared";
 
-import type { Page } from "@playwright/test";
+import type { VisualRoutingPage } from "../visualPage.types.ts";
 
 import { makeVisualOccasions } from "./makeVisualOccasions.ts";
 
 import { VISUAL_MILESTONE_ID } from "./visualStateHelpers.constants.ts";
 
 type RouteMilestonesOptions = {
-  page: Page;
+  page: VisualRoutingPage;
   item: ItemSummary;
   detail: ReturnType<typeof makeVisualOccasions>[number];
   rows: ReturnType<typeof makeVisualOccasions>;
@@ -62,7 +62,7 @@ async function _routeMilestones({
 async function _routeTimeline({
   page,
   item,
-}: Readonly<{ page: Page; item: ItemSummary }>): Promise<void> {
+}: Readonly<{ page: VisualRoutingPage; item: ItemSummary }>): Promise<void> {
   await page.route("**/api/timeline?*", async (route) => {
     const excluded =
       new URL(route.request().url()).searchParams.get("excludeAttached") ===
@@ -95,7 +95,7 @@ async function _routeTimeline({
 /** Controlled occasion state responses, distinct from real API verification. */
 export async function prepareVisualOccasion(
   options: Readonly<{
-    page: Page;
+    page: VisualRoutingPage;
     state: string;
     item: ItemSummary;
   }>,

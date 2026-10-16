@@ -2,6 +2,14 @@ import type {
   FakeS3LedgerSnapshot,
   FakeS3RequestEvidence,
 } from "../createFakeS3Server.types.ts";
+type SelectionTransferOptions = {
+  ledger: FakeS3LedgerSnapshot;
+  objectIds: readonly string[];
+  requestStartWatermark: number;
+  nextSelectionWatermark: number;
+  sequenceAtSelection: number;
+  activeRequestIds: readonly number[];
+};
 
 type SelectionTransfers = {
   bodyBytes: number;
@@ -18,16 +26,11 @@ function _getBodyBytesFromRequests(
   }, 0);
 }
 
-/** Attributes starts to one selection while keeping their final terminal bytes. */
+/**
+ * Attributes starts to one selection while keeping their final terminal bytes.
+ */
 export function getSelectionTransfersFromLedger(
-  options: Readonly<{
-    ledger: FakeS3LedgerSnapshot;
-    objectIds: readonly string[];
-    requestStartWatermark: number;
-    nextSelectionWatermark: number;
-    sequenceAtSelection: number;
-    activeRequestIds: readonly number[];
-  }>,
+  options: Readonly<SelectionTransferOptions>,
 ): SelectionTransfers {
   const requests = options.ledger.requests.filter((request) => {
     return (

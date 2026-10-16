@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import classes from "@/system/system.module.css";
+import classes from "./Pile.module.css";
 
 type Props = {
   children: ReactNode;

@@ -7,7 +7,7 @@ import { getDerivativePlanFromSize } from "@/upload/makeImageDerivativesFromFile
 import type { ImageDerivativesResult } from "@/upload/makeImageDerivativesFromFile/makeImageDerivativesFromFile.types";
 import { makeVideoDerivativesFromFile } from "@/upload/makeVideoDerivativesFromFile/makeVideoDerivativesFromFile";
 import { makeMediaWorkerClientFromPort } from "@/upload/mediaWorker/makeMediaWorkerClientFromPort";
-import { appConfig } from "../../../../../app.config";
+import { APP_CONFIG } from "../../../../../app.config";
 import type {
   CreateUploadPreviewQueueOptions,
   UploadPreviewContext,
@@ -59,7 +59,12 @@ function _requestPreview({
   }
   context.activeFileIds.add(input.fileId);
   if (context.values.has(input.fileId)) {
-    _touchCachedPreview({ context, fileId: input.fileId });
+    const fileId = input.fileId;
+    const bytes = context.cachedByteSizes.get(fileId);
+    if (bytes !== undefined) {
+      context.cachedByteSizes.delete(fileId);
+      context.cachedByteSizes.set(fileId, bytes);
+    }
     return;
   }
   // Each viewport re-entry owns a distinct token, even with the same input.
@@ -85,17 +90,6 @@ function _disposePreview({
   context.cachedBytes -= context.cachedByteSizes.get(fileId) ?? 0;
   context.cachedByteSizes.delete(fileId);
   return context.values.delete(fileId);
-}
-
-function _touchCachedPreview({
-  context,
-  fileId,
-}: Readonly<{ context: UploadPreviewContext; fileId: string }>): void {
-  const bytes = context.cachedByteSizes.get(fileId);
-  if (bytes !== undefined) {
-    context.cachedByteSizes.delete(fileId);
-    context.cachedByteSizes.set(fileId, bytes);
-  }
 }
 
 function _trimCachedPreviews(context: UploadPreviewContext): boolean {
@@ -201,7 +195,10 @@ async function _getDerivativesFromInput({
   input: Readonly<UploadPreviewInput>;
 }>): Promise<{ derivatives: MadeDerivative[]; size?: PixelSize }> {
   if (input.contentType.startsWith("video/")) {
-    return context.options.makeVideoDerivativesFromFile(input.file, ["thumb"]);
+    return context.options.makeVideoDerivativesFromFile({
+      file: input.file,
+      purposes: ["thumb"],
+    });
   }
   if (!input.contentType.startsWith("image/")) {
     return { derivatives: [] };
@@ -219,7 +216,7 @@ async function _getDerivativesFromInput({
     context.wasmDecodeCount += 1;
   }
   if (
-    context.wasmDecodeCount >= appConfig.upload.heicWorkerRecycleCount ||
+    context.wasmDecodeCount >= APP_CONFIG.upload.heicWorkerRecycleCount ||
     (made.usedWasmDecoder && made.dropDetail !== undefined)
   ) {
     _recycleWorker(context);

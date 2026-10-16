@@ -9,7 +9,26 @@ import type {
   PrefetchEnvironment,
   SpeculativeMedia,
 } from "../../mediaPrefetch.types";
-/** Visible member/selection on unrestricted 4G, used as the baseline speculative-policy environment. */
+type PrefetchStart = {
+  candidate: PrefetchCandidate;
+  signal: AbortSignal;
+  finish: () => void;
+  fail: () => void;
+};
+
+type PrefetchHarness = {
+  scheduler: ReturnType<typeof createMediaPrefetchScheduler>;
+  starts: PrefetchStart[];
+  retained: Set<string>;
+  getMaxActive: () => number;
+  getReservedBytes: () => number;
+  getMaxReservedBytes: () => number;
+};
+
+/**
+ * Visible member/selection on unrestricted 4G, used as the baseline
+ * speculative-policy environment.
+ */
 export const ENVIRONMENT: PrefetchEnvironment = {
   memberId: "member",
   selectionKey: "selected-photo",
@@ -17,12 +36,19 @@ export const ENVIRONMENT: PrefetchEnvironment = {
   saveData: false,
   effectiveType: "4g",
 };
-/** Returns a 1 MiB JPEG candidate with configurable source fields; only the immediate rank requests decode ownership. */
-export function makePrefetchCandidateFromId(
-  id: string,
+/**
+ * Returns a 1 MiB JPEG candidate with configurable source fields; only the
+ * immediate rank requests decode ownership.
+ */
+export function makePrefetchCandidateFromId({
+  id,
   rank = 0,
-  source: Partial<MediaSource> = {},
-): PrefetchCandidate {
+  source = {},
+}: Readonly<{
+  id: string;
+  rank?: number;
+  source?: Readonly<Partial<MediaSource>>;
+}>): PrefetchCandidate {
   return {
     itemId: id,
     rank,
@@ -42,26 +68,13 @@ export function makePrefetchCandidateFromId(
     },
   };
 }
-/** Creates the real scheduler with manually settled loads and explicit active, retained-image and reserved-byte accounting; callers control settlement and disposal. */
-export function createPrefetchHarness(): {
-  scheduler: ReturnType<typeof createMediaPrefetchScheduler>;
-  starts: Array<{
-    candidate: PrefetchCandidate;
-    signal: AbortSignal;
-    finish: () => void;
-    fail: () => void;
-  }>;
-  retained: Set<string>;
-  getMaxActive: () => number;
-  getReservedBytes: () => number;
-  getMaxReservedBytes: () => number;
-} {
-  const starts: Array<{
-    candidate: PrefetchCandidate;
-    signal: AbortSignal;
-    finish: () => void;
-    fail: () => void;
-  }> = [];
+/**
+ * Creates the real scheduler with manually settled loads and explicit active,
+ * retained-image and reserved-byte accounting; callers control settlement and
+ * disposal.
+ */
+export function createPrefetchHarness(): PrefetchHarness {
+  const starts: PrefetchStart[] = [];
   const retained = new Set<string>();
   let active = 0;
   let maxActive = 0;
@@ -69,7 +82,7 @@ export function createPrefetchHarness(): {
   let maxReservedBytes = 0;
   const scheduler = createMediaPrefetchScheduler({
     clock: Date.now,
-    load: (candidate, signal) => {
+    load: ({ candidate, signal }) => {
       active += 1;
       maxActive = Math.max(active, maxActive);
       reservedBytes += candidate.source.byteSize;
@@ -117,7 +130,10 @@ export function createPrefetchHarness(): {
     },
   };
 }
-/** Starts each scheduler scenario at fake time zero and restores real timers after it. */
+/**
+ * Starts each scheduler scenario at fake time zero and restores real timers
+ * after it.
+ */
 export function installCreateMediaPrefetchSchedulerTestLifecycle(): void {
   beforeEach(() => {
     vi.useFakeTimers();

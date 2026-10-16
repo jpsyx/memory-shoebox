@@ -1,5 +1,5 @@
 import type { UploadFileDto } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../app.config.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { makeBurstsFromCandidates } from "./makeBurstsFromCandidates.ts";
 import type { UploadFileRow } from "./uploadSessionAccessHelpers.ts";
@@ -30,7 +30,7 @@ function _makePreviewGroups(
       return [row.id, row];
     }),
   );
-  const bursts = makeBurstsFromCandidates({ candidates, ...appConfig.burst });
+  const bursts = makeBurstsFromCandidates({ candidates, ...APP_CONFIG.burst });
   const groups = new Map<string, UploadBurstGroup>();
   bursts.forEach((burst) => {
     const photoCount = burst.itemIds.filter((itemId) => {

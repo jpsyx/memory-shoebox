@@ -5,11 +5,11 @@ import {
   BURST_ID,
   ITEM_ID,
   makeBurstDetail,
-  makeBurstFrame,
+  makeBurstFrameFromPosition,
   makeItemDetail,
 } from "@/testing/itemFixtureHelpers";
 import { renderItem, respondWithItem } from "@/testing/itemHarnessHelpers";
-import type { Answer } from "@/testing/surfaceHarness";
+import type { Answer } from "@/testing/surfaceHarnessHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
 
 /** The frames route's answer for a whole run of `frameCount`. */
@@ -17,7 +17,7 @@ function _wholeRunAnswer(frameCount: number): Answer {
   return {
     body: {
       frames: Array.from({ length: frameCount }, (_unused, index) => {
-        return makeBurstFrame(index + 1);
+        return makeBurstFrameFromPosition(index + 1);
       }),
       nextCursor: null,
     },

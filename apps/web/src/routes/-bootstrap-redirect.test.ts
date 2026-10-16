@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { QueryClient } from "@tanstack/react-query";
 import {
   createMemoryHistory,
@@ -10,6 +10,16 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createMeResponse } from "@/testing/createMeResponse";
 import type { BootstrapResponse } from "@memory-shoebox/shared";
 import { Route } from "./__root";
+import type { Mock } from "vitest";
+import type { AnyRouter } from "@tanstack/react-router";
+
+type BootstrapRouterFixture = {
+  router: AnyRouter;
+  client: QueryClient;
+  fetcher: Mock<() => Promise<Response>>;
+  setDestinationFailure: (failed: boolean) => void;
+  setResponse: (current: BootstrapResponse) => void;
+};
 
 const FRESH = {
   setup: { isRequired: true },
@@ -27,7 +37,13 @@ const INVITATION = {
   progress: { needsInvitations: true },
 } satisfies BootstrapResponse;
 
-function _makeRouterFromResponse(initial: BootstrapResponse, track = true) {
+function _makeRouterFromResponse({
+  initial,
+  track = true,
+}: {
+  initial: BootstrapResponse;
+  track?: boolean;
+}): BootstrapRouterFixture {
   let failDestination = false;
   const client = new QueryClient();
   let response = initial;
@@ -85,7 +101,9 @@ it.each([
 ] as const)(
   "%s redirect chain uses one bootstrap, then independent navigations and retries read fresh",
   async (_kind, response, destination) => {
-    const { router, client, fetcher } = _makeRouterFromResponse(response);
+    const { router, client, fetcher } = _makeRouterFromResponse({
+      initial: response,
+    });
     await router.load();
     expect(router.state.location.pathname).toBe(destination);
     expect(fetcher).toHaveBeenCalledTimes(1);
@@ -107,8 +125,9 @@ it.each([
 it.each(["retry", "navigation", "unrelated", "preserved-state"])(
   "an independent %s before redirect consumption cannot reuse the source read",
   async (kind) => {
-    const { router, client, fetcher, setResponse } =
-      _makeRouterFromResponse(FRESH);
+    const { router, client, fetcher, setResponse } = _makeRouterFromResponse({
+      initial: FRESH,
+    });
     let hasInterleaved = false;
     const stop = router.subscribe("onBeforeNavigate", ({ toLocation }) => {
       if (toLocation.pathname === "/setup" && !hasInterleaved) {
@@ -135,8 +154,9 @@ it.each(["retry", "navigation", "unrelated", "preserved-state"])(
 );
 
 it("a write between redirect legs invalidates the receipt", async () => {
-  const { router, client, fetcher, setResponse } =
-    _makeRouterFromResponse(FRESH);
+  const { router, client, fetcher, setResponse } = _makeRouterFromResponse({
+    initial: FRESH,
+  });
   let saving: Promise<unknown> | undefined;
   const stop = router.subscribe("onBeforeNavigate", ({ toLocation }) => {
     if (toLocation.pathname === "/setup" && !saving) {
@@ -159,8 +179,9 @@ it("a write between redirect legs invalidates the receipt", async () => {
 });
 
 it("consumed redirect tokens and browser Back cannot replay authority", async () => {
-  const { router, client, fetcher, setResponse } =
-    _makeRouterFromResponse(FRESH);
+  const { router, client, fetcher, setResponse } = _makeRouterFromResponse({
+    initial: FRESH,
+  });
   await router.load();
   const token = router.state.location.state.bootstrapRedirect;
   expect(typeof token).toBe("string");
@@ -180,7 +201,7 @@ it("consumed redirect tokens and browser Back cannot replay authority", async ()
 
 it("a failed destination retry reads fresh after consuming the redirect", async () => {
   const { router, client, fetcher, setResponse, setDestinationFailure } =
-    _makeRouterFromResponse(FRESH);
+    _makeRouterFromResponse({ initial: FRESH });
   setDestinationFailure(true);
   await router.load();
   expect(router.state.matches.at(-1)?.status).toBe("error");
@@ -194,8 +215,9 @@ it("a failed destination retry reads fresh after consuming the redirect", async 
 });
 
 it("an aborted source read cannot publish authority or a redirect receipt", async () => {
-  const { router, client, fetcher, setResponse } =
-    _makeRouterFromResponse(FRESH);
+  const { router, client, fetcher, setResponse } = _makeRouterFromResponse({
+    initial: FRESH,
+  });
   let releaseRead: (response: Response) => void = () => {};
   const deferredRead = new Promise<Response>((settle) => {
     releaseRead = settle;
@@ -221,7 +243,10 @@ it("an aborted source read cannot publish authority or a redirect receipt", asyn
 });
 
 it("a router without navigation tracking never reuses a redirect receipt", async () => {
-  const { router, client, fetcher } = _makeRouterFromResponse(FRESH, false);
+  const { router, client, fetcher } = _makeRouterFromResponse({
+    initial: FRESH,
+    track: false,
+  });
   await router.load();
   expect(router.state.location.pathname).toBe("/setup");
   expect(fetcher).toHaveBeenCalledTimes(2);
@@ -230,8 +255,10 @@ it("a router without navigation tracking never reuses a redirect receipt", async
 
 it("an initialized admin leaves setup with one bootstrap for the complete chain", async () => {
   const { router, client, fetcher } = _makeRouterFromResponse({
-    ...INVITATION,
-    progress: { needsInvitations: false },
+    initial: {
+      ...INVITATION,
+      progress: { needsInvitations: false },
+    },
   });
   await router.navigate({ to: "/setup" });
   expect(router.state.location.pathname).toBe("/");
@@ -240,7 +267,9 @@ it("an initialized admin leaves setup with one bootstrap for the complete chain"
 });
 
 it("a preload between redirect legs neither reads nor consumes the receipt", async () => {
-  const { router, client, fetcher } = _makeRouterFromResponse(FRESH);
+  const { router, client, fetcher } = _makeRouterFromResponse({
+    initial: FRESH,
+  });
   let preloading: Promise<unknown> | undefined;
   const stop = router.subscribe("onBeforeNavigate", ({ toLocation }) => {
     if (toLocation.pathname === "/setup" && !preloading) {

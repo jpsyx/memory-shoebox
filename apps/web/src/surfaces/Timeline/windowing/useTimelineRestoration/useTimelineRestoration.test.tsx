@@ -1,27 +1,47 @@
-import {
-  createMediaLoadingLifetime,
-  createMediaLoadingResources,
-} from "@/media/createMediaLoadingResources/createMediaLoadingResources";
+import type { BurstFrameRef } from "@memory-shoebox/shared";
+import type { TimelineAnchor } from "../timelineWindow.types";
+import { createMediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
+import { createMediaLoadingLifetime } from "@/media/createMediaLoadingResources/createMediaLoadingLifetime";
 import { MediaLoadingContext } from "@/media/MediaLoadingContext";
-import { makeBurstFrame } from "@/testing/itemFixtureHelpers";
+import { makeBurstFrameFromPosition } from "@/testing/itemFixtureHelpers";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient } from "@tanstack/react-query";
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { DayStream } from "../../DayStream/DayStream";
-import { makeBurst, makeDay, makeItem } from "../../timelineFixtures";
+import { makeBurst, makeDay, makeItem } from "../../timelineFixtureHelpers";
 import { useBurstFan } from "../../TimelineSurface/useBurstFan/useBurstFan";
 
+import type { ReactNode } from "react";
+import type { MockInstance } from "vitest";
+
+type Props = { viewKey: string };
+
+type MountedConsumer = ReturnType<typeof render> & {
+  resources: ReturnType<typeof createMediaLoadingResources>;
+  client: QueryClient;
+  fetcher: ReturnType<typeof vi.fn<() => Promise<Response>>>;
+  scroll: MockInstance<Window["scrollTo"]>;
+  answer: (
+    options: Readonly<{
+      index: number;
+      status?: number;
+      frames?: readonly BurstFrameRef[];
+    }>,
+  ) => Promise<void>;
+  changeView: () => void;
+};
+
 const burst = makeBurst();
-const frame = makeBurstFrame(1);
+const frame = makeBurstFrameFromPosition(1);
 const day = makeDay({ items: [makeItem({ burst })] });
 const saved = {
   capturedOn: day.capturedOn,
   itemId: frame.itemId,
   burstId: burst.burstId,
   offsetPx: 119,
-  pageCursor: null,
-};
+  pageCursor: undefined,
+} satisfies TimelineAnchor;
 const disposals: Array<() => void> = [];
 afterEach(() => {
   disposals.splice(0).forEach((dispose) => {
@@ -31,7 +51,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function mountConsumer() {
+function _mountConsumer(): MountedConsumer {
   const resources = createMediaLoadingResources({
     memberId: "member",
     lifetime: createMediaLoadingLifetime(),
@@ -40,7 +60,11 @@ function mountConsumer() {
     defaultOptions: { queries: { retry: false } },
   });
   resources.timeline.get("view").anchor = saved;
-  resources.timeline.expand("view", burst.burstId, 900);
+  resources.timeline.expand({
+    viewKey: "view",
+    burstId: burst.burstId,
+    height: 900,
+  });
   const reads: Array<(response: Response) => void> = [];
   const fetcher = vi.fn(() => {
     return new Promise<Response>((fulfill) => {
@@ -49,11 +73,14 @@ function mountConsumer() {
   });
   vi.stubGlobal("fetch", fetcher);
   const scroll = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-  function Consumer({ viewKey }: { viewKey: string }) {
-    const fan = useBurstFan(client, {
-      viewKey,
-      memory: resources.timeline,
-      retainedBurstIds: new Set([burst.burstId]),
+  function Consumer({ viewKey }: Readonly<Props>): ReactNode {
+    const fan = useBurstFan({
+      queryClient: client,
+      options: {
+        viewKey,
+        memory: resources.timeline,
+        retainedBurstIds: new Set([burst.burstId]),
+      },
     });
     return (
       <MantineProvider>
@@ -78,7 +105,15 @@ function mountConsumer() {
     client.clear();
     resources.dispose();
   });
-  const answer = async (index: number, status = 200, frames = [frame]) => {
+  const answer = async ({
+    index,
+    status = 200,
+    frames = [frame],
+  }: Readonly<{
+    index: number;
+    status?: number;
+    frames?: readonly BurstFrameRef[];
+  }>) => {
     await act(async () => {
       reads[index]!(
         new Response(JSON.stringify({ frames, nextCursor: null }), { status }),
@@ -99,14 +134,14 @@ function mountConsumer() {
 }
 
 it("awaits a real shared frame query and protects the saved position through pending scrolls", async () => {
-  const consumer = mountConsumer();
+  const consumer = _mountConsumer();
   expect(consumer.fetcher).toHaveBeenCalledOnce();
   fireEvent.scroll(window);
   expect(consumer.resources.timeline.get("view").anchor).toEqual(saved);
   expect(
     consumer.container.querySelector(`[data-item-id="${frame.itemId}"]`),
   ).toBeNull();
-  await consumer.answer(0);
+  await consumer.answer({ index: 0 });
   await waitFor(() => {
     expect(
       consumer.container.querySelector(`[data-item-id="${frame.itemId}"]`),
@@ -119,8 +154,8 @@ it("awaits a real shared frame query and protects the saved position through pen
 });
 
 it("keeps the requested anchor after transport failure and a reachable Retry restores it", async () => {
-  const consumer = mountConsumer();
-  await consumer.answer(0, 503);
+  const consumer = _mountConsumer();
+  await consumer.answer({ index: 0, status: 503 });
   const retry = await consumer.findByRole("button", {
     name: "Retry returning to your place",
   });
@@ -128,7 +163,7 @@ it("keeps the requested anchor after transport failure and a reachable Retry res
   expect(consumer.resources.timeline.get("view").anchor).toEqual(saved);
   fireEvent.click(retry);
   expect(consumer.fetcher).toHaveBeenCalledTimes(2);
-  await consumer.answer(1);
+  await consumer.answer({ index: 1 });
   await waitFor(() => {
     expect(
       consumer.queryByRole("button", { name: "Retry returning to your place" }),
@@ -142,8 +177,8 @@ it("keeps the requested anchor after transport failure and a reachable Retry res
 it.each([200, 404])(
   "finishes authoritative frame absence (%i) at the retained day without retry",
   async (status) => {
-    const consumer = mountConsumer();
-    await consumer.answer(0, status, []);
+    const consumer = _mountConsumer();
+    await consumer.answer({ index: 0, status: status, frames: [] });
     await waitFor(() => {
       expect(consumer.scroll).toHaveBeenCalled();
     });
@@ -158,7 +193,7 @@ it.each([200, 404])(
 it.each(["view", "unmount"])(
   "retires a delayed restoration on %s departure without overwriting its saved anchor",
   async (departure) => {
-    const consumer = mountConsumer();
+    const consumer = _mountConsumer();
     expect(consumer.fetcher).toHaveBeenCalledOnce();
     if (departure === "view") {
       consumer.changeView();
@@ -166,7 +201,7 @@ it.each(["view", "unmount"])(
       consumer.unmount();
     }
     consumer.scroll.mockClear();
-    await consumer.answer(0);
+    await consumer.answer({ index: 0 });
     expect(consumer.scroll).not.toHaveBeenCalled();
     expect(consumer.resources.timeline.get("view").anchor).toEqual(saved);
     expect(
@@ -179,8 +214,8 @@ it.each(["view", "unmount"])(
 );
 
 it("supersedes a pending Retry while reusing its query and only completing the current restore", async () => {
-  const consumer = mountConsumer();
-  await consumer.answer(0, 503);
+  const consumer = _mountConsumer();
+  await consumer.answer({ index: 0, status: 503 });
   const retry = await consumer.findByRole("button", {
     name: "Retry returning to your place",
   });
@@ -193,7 +228,7 @@ it("supersedes a pending Retry while reusing its query and only completing the c
   fireEvent.scroll(window);
   expect(consumer.resources.timeline.get("view").anchor).toEqual(saved);
   expect(retry).toBeInTheDocument();
-  await consumer.answer(1);
+  await consumer.answer({ index: 1 });
   await waitFor(() => {
     expect(
       consumer.queryByRole("button", { name: "Retry returning to your place" }),
@@ -205,8 +240,8 @@ it("supersedes a pending Retry while reusing its query and only completing the c
 });
 
 it("preserves the requested position when leaving after a transport error", async () => {
-  const consumer = mountConsumer();
-  await consumer.answer(0, 503);
+  const consumer = _mountConsumer();
+  await consumer.answer({ index: 0, status: 503 });
   await consumer.findByRole("button", {
     name: "Retry returning to your place",
   });

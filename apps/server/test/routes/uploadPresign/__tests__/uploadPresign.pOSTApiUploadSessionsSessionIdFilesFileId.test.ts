@@ -9,7 +9,7 @@ import {
 
 import { describe, expect, it } from "vitest";
 import type { PresignMultipart, PresignSingle } from "@memory-shoebox/shared";
-import { appConfig } from "../../../../../../app.config.ts";
+import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 import { NOW } from "../../../helpers/seedHelpers/seedHelpers.ts";
 
@@ -120,7 +120,7 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/presign", () => {
     expect(opened).toMatchObject({
       mode: "multipart",
       fileId,
-      partSizeBytes: appConfig.upload.multipartPartSizeBytes,
+      partSizeBytes: APP_CONFIG.upload.multipartPartSizeBytes,
       partCount: MULTIPART_PART_COUNT,
       method: "PUT",
       expiresAt: EXPIRES_AT,

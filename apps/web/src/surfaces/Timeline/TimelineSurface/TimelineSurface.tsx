@@ -1,4 +1,4 @@
-import type { TimelineSearch } from "@/api/timeline/selection/selection";
+import type { TimelineSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive/EmptyArchive";
 import { FirstSignInBanner } from "@/surfaces/Timeline/TimelineSurface/FirstSignInBanner";
 import { TimelinePile } from "@/surfaces/Timeline/TimelineSurface/TimelinePile";

@@ -1,3 +1,7 @@
+import type {
+  MediaProcessingEnqueueInput,
+  ProcessingClaim,
+} from "../../../../src/mediaProcessing/queue/mediaProcessingQueue.types.ts";
 import { mkdtempSync, rmSync } from "node:fs";
 
 import { tmpdir } from "node:os";
@@ -12,29 +16,27 @@ import { migrateToLatest } from "../../../../src/db/migrate.ts";
 
 import { createMediaProcessingQueue } from "../../../../src/mediaProcessing/queue/createMediaProcessingQueue.ts";
 
-import type { ProcessingClaim } from "../../../../src/mediaProcessing/queue/mediaProcessingQueue.types.ts";
-
 import {
   insertItem,
   insertMember,
   insertRendition,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
-/** Fixed initial clock for queue leases and retry scheduling. */
-export const START = "2026-10-14T12:00:00.000Z";
-/** Creates an owned migrated disk catalog, source and queue with an advanceable clock; registers database and directory cleanup. */
-export async function createQueueFixture(): Promise<{
+type QueueFixture = {
   database: ReturnType<typeof createDatabase>;
   path: string;
   queue: ReturnType<typeof createMediaProcessingQueue>;
-  input: {
-    itemId: string;
-    sourceRenditionId: string;
-    recipe: string;
-    priority: number;
-  };
+  input: MediaProcessingEnqueueInput;
   clock: () => Date;
   advance: (seconds: number) => void;
-}> {
+};
+
+/** Fixed initial clock for queue leases and retry scheduling. */
+export const START = "2026-10-14T12:00:00.000Z";
+/**
+ * Creates an owned migrated disk catalog, source and queue with an advanceable
+ * clock; registers database and directory cleanup.
+ */
+export async function createQueueFixture(): Promise<QueueFixture> {
   const directory = mkdtempSync(join(tmpdir(), "processing-queue-"));
   const path = join(directory, "catalog.db");
   const database = createDatabase(path);
@@ -66,7 +68,10 @@ export async function createQueueFixture(): Promise<{
     },
   };
 }
-/** Claims one job, asserts its lease/token identity and returns the non-null claim. */
+/**
+ * Claims one job, asserts its lease/token identity and returns the non-null
+ * claim.
+ */
 export async function claimProcessingJob(
   queue: ReturnType<typeof createMediaProcessingQueue>,
 ): Promise<ProcessingClaim> {
@@ -79,7 +84,10 @@ export async function claimProcessingJob(
   );
   return claim!;
 }
-/** Runs work alongside a zero-delay timer and returns both its result and observed event-loop heartbeat delay. */
+/**
+ * Runs work alongside a zero-delay timer and returns both its result and
+ * observed event-loop heartbeat delay.
+ */
 export async function observeResponsiveOperations<Result>(
   work: () => Promise<Result>,
 ): Promise<{ result: Result; heartbeatDelayMs: number }> {

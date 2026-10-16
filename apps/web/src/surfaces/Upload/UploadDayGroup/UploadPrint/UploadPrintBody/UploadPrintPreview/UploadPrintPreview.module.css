@@ -16,7 +16,14 @@
   color: var(--on-print-quiet);
 }
 
-.previewImage {
+img.uploadPrintPreviewImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--panel-sunk);
+}
+
+.uploadPrintPreviewImage {
   animation: develop 460ms var(--ease);
 }
 @keyframes develop {
@@ -28,7 +35,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .previewImage {
+  .uploadPrintPreviewImage {
     animation-duration: 120ms !important;
   }
 }

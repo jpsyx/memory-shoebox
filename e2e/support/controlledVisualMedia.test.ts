@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { getControlledVisualImagesFromDocument } from "../occasions-and-removals/support/waitForControlledVisualMedia.ts";
+import { getControlledVisualImagesFromDocument } from "../occasions-and-removals/support/controlledVisualMediaHelpers.ts";
 
 let observations: IntersectionObserverCallback;
 const targets: Element[] = [];
@@ -29,7 +29,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-function intersect(isIntersecting: boolean): void {
+function _intersect(isIntersecting: boolean): void {
   observations(
     targets.map((target) => {
       return {
@@ -45,7 +45,7 @@ function intersect(isIntersecting: boolean): void {
     {} as IntersectionObserver,
   );
 }
-function imageFixture(): HTMLImageElement {
+function _imageFixture(): HTMLImageElement {
   const owner = document.createElement("button");
   owner.dataset.photoSurface = "pile";
   owner.dataset.itemId = "controlled-item";
@@ -55,7 +55,7 @@ function imageFixture(): HTMLImageElement {
   document.body.append(owner);
   return image;
 }
-function admit(image: HTMLImageElement): void {
+function _admit(image: HTMLImageElement): void {
   image.src = "https://visual-media.invalid/highChair-thumb.jpg";
   Object.defineProperties(image, {
     currentSrc: {
@@ -69,17 +69,17 @@ function admit(image: HTMLImageElement): void {
   });
 }
 it("observes the actual source owner and rejects readiness before admission or decode", async () => {
-  const image = imageFixture();
+  const image = _imageFixture();
   image.decode = vi.fn().mockResolvedValue(undefined);
   const before = getControlledVisualImagesFromDocument();
   await Promise.resolve();
   expect(targets).toEqual([image.parentElement]);
-  intersect(true);
+  _intersect(true);
   expect(await before).toMatchObject([
-    { isIntersecting: true, source: null, decoded: false },
+    { isIntersecting: true, source: undefined, decoded: false },
   ]);
   expect(image.decode).not.toHaveBeenCalled();
-  admit(image);
+  _admit(image);
   let finish!: () => void;
   image.decode = vi.fn(() => {
     return new Promise<void>((done) => {
@@ -92,7 +92,7 @@ it("observes the actual source owner and rejects readiness before admission or d
     return value;
   });
   await Promise.resolve();
-  intersect(true);
+  _intersect(true);
   await Promise.resolve();
   await Promise.resolve();
   expect(settled).toBe(false);
@@ -102,21 +102,26 @@ it("observes the actual source owner and rejects readiness before admission or d
   ]);
 });
 it("records only independently nonintersecting source-less images as withheld", async () => {
-  imageFixture();
+  _imageFixture();
   const pending = getControlledVisualImagesFromDocument();
   await Promise.resolve();
-  intersect(false);
+  _intersect(false);
   expect(await pending).toMatchObject([
-    { isIntersecting: false, source: null, currentSource: "", decoded: false },
+    {
+      isIntersecting: false,
+      source: undefined,
+      currentSource: "",
+      decoded: false,
+    },
   ]);
   expect(disconnect).toHaveBeenCalledOnce();
 });
 it("does not hide a failed admitted source even outside the viewport", async () => {
-  const image = imageFixture();
-  admit(image);
+  const image = _imageFixture();
+  _admit(image);
   image.decode = vi.fn().mockRejectedValue(new Error("native decode failed"));
   const pending = getControlledVisualImagesFromDocument();
   await Promise.resolve();
-  intersect(false);
+  _intersect(false);
   await expect(pending).rejects.toThrow("native decode failed");
 });

@@ -6,11 +6,17 @@ import {
   useRef,
   type RefObject,
 } from "react";
-import { getAnchorNodeFromTimelineWindow } from "../timelineGeometry";
+import { getAnchorNodeFromTimelineWindow } from "../timelineGeometryHelpers/timelineGeometryHelpers";
 import type {
   TimelineAnchor,
   TimelineWindowOptions,
 } from "../timelineWindow.types";
+type AnchorPreparationOptions = {
+  anchor: TimelineAnchor;
+  committed: RefObject<Options>;
+  waitForCommit: WaitForCommit;
+  signal: AbortSignal;
+};
 
 type Options = Readonly<TimelineWindowOptions>;
 type WindowVirtualizer = Virtualizer<Window, HTMLElement>;
@@ -55,12 +61,9 @@ function useCommittedRows(options: Options): {
   return { committed, waitForCommit };
 }
 
-async function _prepareAnchor(options: {
-  anchor: TimelineAnchor;
-  committed: RefObject<Options>;
-  waitForCommit: WaitForCommit;
-  signal: AbortSignal;
-}): Promise<void> {
+async function _prepareAnchor(
+  options: AnchorPreparationOptions,
+): Promise<void> {
   const { anchor, committed, signal, waitForCommit } = options;
   if (
     !committed.current.rows.some((row) => {
@@ -89,14 +92,18 @@ async function _prepareAnchor(options: {
   if (frames === undefined) {
     return;
   }
-  await _waitForBurstRows(burstId, waitForCommit, signal);
+  await _waitForBurstRows({ burstId, waitForCommit, signal });
 }
 
-function _waitForBurstRows(
-  burstId: string,
-  waitForCommit: WaitForCommit,
-  signal: AbortSignal,
-): Promise<void> {
+function _waitForBurstRows({
+  burstId,
+  waitForCommit,
+  signal,
+}: {
+  burstId: string;
+  waitForCommit: WaitForCommit;
+  signal: AbortSignal;
+}): Promise<void> {
   return waitForCommit((current) => {
     const hasBurst = current.rows.some((row) => {
       return row.items.some((item) => {
@@ -125,12 +132,6 @@ type RestoreOptions = {
   correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void;
 };
 
-async function _restoreAnchor(options: RestoreOptions): Promise<void> {
-  await _prepareAnchor(options);
-  options.signal.throwIfAborted();
-  await _restoreCommittedAnchor(options);
-}
-
 async function _restoreCommittedAnchor(options: RestoreOptions): Promise<void> {
   const { anchor, committed, waitForCommit, signal, virtualizer } = options;
   const index = committed.current.rows.findIndex((row) => {
@@ -148,7 +149,8 @@ async function _restoreCommittedAnchor(options: RestoreOptions): Promise<void> {
   virtualizer.scrollToIndex(index, { align: "start", behavior: "auto" });
   await waitForCommit((current) => {
     return (
-      getAnchorNodeFromTimelineWindow(current, anchor.itemId) !== undefined ||
+      getAnchorNodeFromTimelineWindow({ current, itemId: anchor.itemId }) !==
+        undefined ||
       !current.rows.some((row) => {
         return row.itemIds.includes(anchor.itemId ?? "");
       })
@@ -164,10 +166,10 @@ function _correctAnchorOffset({
   virtualizer,
   correctOffset,
 }: RestoreOptions): void {
-  const node = getAnchorNodeFromTimelineWindow(
-    committed.current,
-    anchor.itemId,
-  );
+  const node = getAnchorNodeFromTimelineWindow({
+    current: committed.current,
+    itemId: anchor.itemId,
+  });
   if (node) {
     correctOffset(
       virtualizer,
@@ -176,12 +178,46 @@ function _correctAnchorOffset({
   }
 }
 
-/** Restores one explicit saved position after its owned metadata and DOM commit are ready. */
-export function useTimelineRestoration(
-  options: Options,
-  virtualizer: WindowVirtualizer,
-  correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void,
-): (anchor: TimelineAnchor) => Promise<void> {
+async function _restoreOwnedAnchor({
+  options,
+  operation,
+}: {
+  options: Omit<RestoreOptions, "signal">;
+  operation: RefObject<AbortController | undefined>;
+}): Promise<void> {
+  operation.current?.abort();
+  const controller = new AbortController();
+  operation.current = controller;
+  try {
+    await (async (restoreOptions: RestoreOptions) => {
+      await _prepareAnchor(restoreOptions);
+      restoreOptions.signal.throwIfAborted();
+      await _restoreCommittedAnchor(restoreOptions);
+    })({ ...options, signal: controller.signal });
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      throw error;
+    }
+  } finally {
+    if (operation.current === controller) {
+      operation.current = undefined;
+    }
+  }
+}
+
+/**
+ * Restores one explicit saved position after its owned metadata and DOM commit
+ * are ready.
+ */
+export function useTimelineRestoration({
+  options,
+  virtualizer,
+  correctOffset,
+}: Readonly<{
+  options: Options;
+  virtualizer: WindowVirtualizer;
+  correctOffset: (virtualizer: WindowVirtualizer, offset: number) => void;
+}>): (anchor: TimelineAnchor) => Promise<void> {
   const { committed, waitForCommit } = useCommittedRows(options);
   const operation = useRef<AbortController | undefined>(undefined);
   useEffect(
@@ -195,31 +231,17 @@ export function useTimelineRestoration(
   );
   return useCallback(
     (anchor: TimelineAnchor) => {
-      return _restoreOwnedAnchor(
-        { anchor, committed, waitForCommit, virtualizer, correctOffset },
+      return _restoreOwnedAnchor({
+        options: {
+          anchor,
+          committed,
+          waitForCommit,
+          virtualizer,
+          correctOffset,
+        },
         operation,
-      );
+      });
     },
     [committed, waitForCommit, virtualizer, correctOffset],
   );
-}
-
-async function _restoreOwnedAnchor(
-  options: Omit<RestoreOptions, "signal">,
-  operation: RefObject<AbortController | undefined>,
-): Promise<void> {
-  operation.current?.abort();
-  const controller = new AbortController();
-  operation.current = controller;
-  try {
-    await _restoreAnchor({ ...options, signal: controller.signal });
-  } catch (error) {
-    if (!controller.signal.aborted) {
-      throw error;
-    }
-  } finally {
-    if (operation.current === controller) {
-      operation.current = undefined;
-    }
-  }
 }

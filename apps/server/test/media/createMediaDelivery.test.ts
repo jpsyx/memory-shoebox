@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { describe, expect, it, vi } from "vitest";
 import { createMediaDelivery } from "../../src/media/createMediaDelivery.ts";
 import type {
@@ -29,7 +30,10 @@ function _sign(
   });
 }
 
-function _createDelivery() {
+function _createDelivery(): {
+  sign: Mock<typeof _sign>;
+  delivery: ReturnType<typeof createMediaDelivery>;
+} {
   const sign = vi.fn(_sign);
   return {
     sign,

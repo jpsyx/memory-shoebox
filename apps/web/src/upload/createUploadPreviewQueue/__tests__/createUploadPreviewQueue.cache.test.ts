@@ -1,6 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makePreviewHarnessFromOptions } from "./uploadPreviewTestHelpers";
+import { makePreviewHarnessFromOptions } from "./makePreviewHarnessFromOptions";
 
 afterEach(() => {
   return vi.restoreAllMocks();

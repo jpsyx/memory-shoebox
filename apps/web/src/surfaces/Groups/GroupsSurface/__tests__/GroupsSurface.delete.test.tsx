@@ -9,7 +9,7 @@ import {
 import {
   countCallsTo,
   respondWith,
-} from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+} from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 function _renderStaleConsent(
   code: string,
 ): typeof USAGE & { confirmationToken: string } {
@@ -59,7 +59,10 @@ describe("Groups deletion consent", () => {
     await user.click(dialog.getByRole("button", { name: "Delete it anyway" }));
     await waitFor(() => {
       return expect(
-        countCallsTo("DELETE", _tokenPath(USAGE.confirmationToken!)),
+        countCallsTo({
+          method: "DELETE",
+          path: _tokenPath(USAGE.confirmationToken!),
+        }),
       ).toBe(1);
     });
   });
@@ -79,12 +82,18 @@ describe("Groups deletion consent", () => {
           /Usage changed. Review these consequences and confirm again/,
         ),
       ).toBeVisible();
-      expect(countCallsTo("DELETE", _tokenPath(USAGE.confirmationToken!))).toBe(
-        1,
-      );
-      expect(countCallsTo("DELETE", _tokenPath(fresh.confirmationToken))).toBe(
-        0,
-      );
+      expect(
+        countCallsTo({
+          method: "DELETE",
+          path: _tokenPath(USAGE.confirmationToken!),
+        }),
+      ).toBe(1);
+      expect(
+        countCallsTo({
+          method: "DELETE",
+          path: _tokenPath(fresh.confirmationToken),
+        }),
+      ).toBe(0);
       respondWith({
         [`DELETE ${_tokenPath(fresh.confirmationToken)}`]: {
           body: undefined,
@@ -100,7 +109,10 @@ describe("Groups deletion consent", () => {
       );
       await waitFor(() => {
         return expect(
-          countCallsTo("DELETE", _tokenPath(fresh.confirmationToken)),
+          countCallsTo({
+            method: "DELETE",
+            path: _tokenPath(fresh.confirmationToken),
+          }),
         ).toBe(1);
       });
     },

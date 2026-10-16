@@ -5294,7 +5294,7 @@ the size the day stream reaches.
 **Files:**
 
 - Create: `apps/server/src/archive/readTimelinePage.ts`
-- Create: `apps/server/src/routes/timeline.ts`
+- Create: `apps/server/src/routes/timelineRoutes.ts`
 - Modify: `apps/server/src/app.ts`
 - Test: `apps/server/test/routes/timeline.test.ts`
 
@@ -6015,7 +6015,7 @@ function _makeNextCursor(options: {
 
 - [ ] **Step 4: Write the route**
 
-Create `apps/server/src/routes/timeline.ts`:
+Create `apps/server/src/routes/timelineRoutes.ts`:
 
 ```ts
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -6126,7 +6126,7 @@ Expected: PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/server/src/archive apps/server/src/routes/timeline.ts apps/server/src/app.ts apps/server/test/routes/timeline.test.ts
+git add apps/server/src/archive apps/server/src/routes/timelineRoutes.ts apps/server/src/app.ts apps/server/test/routes/timeline.test.ts
 git commit -m "feat(archive): GET /api/timeline, days with their counts and prints"
 ```
 
@@ -6873,7 +6873,7 @@ adding one would be a second place the two empty states could drift apart.
 **Files:**
 
 - Create: `apps/server/src/archive/readRailDays.ts`
-- Modify: `apps/server/src/routes/timeline.ts`
+- Modify: `apps/server/src/routes/timelineRoutes.ts`
 - Test: `apps/server/test/routes/timelineRail.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -7118,7 +7118,7 @@ export async function readRailDays(options: {
 
 - [ ] **Step 4: Add the route**
 
-In `apps/server/src/routes/timeline.ts`, extend the imports and add the second
+In `apps/server/src/routes/timelineRoutes.ts`, extend the imports and add the second
 route inside `timelineRoutes`:
 
 ```ts
@@ -7162,7 +7162,7 @@ Expected: PASS, every case.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add apps/server/src/archive/readRailDays.ts apps/server/src/routes/timeline.ts apps/server/test/routes/timelineRail.test.ts
+git add apps/server/src/archive/readRailDays.ts apps/server/src/routes/timelineRoutes.ts apps/server/test/routes/timelineRail.test.ts
 git commit -m "feat(archive): the jump rail, complete and unpaginated"
 ```
 

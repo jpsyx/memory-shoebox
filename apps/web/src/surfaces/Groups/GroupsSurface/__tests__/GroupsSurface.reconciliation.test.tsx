@@ -6,7 +6,7 @@ import {
   USAGE,
   renderGroups,
 } from "@/surfaces/Groups/GroupsSurface/__tests__/renderGroups";
-import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/AccountSurface.fixtures";
+import { countCallsTo } from "@/surfaces/Account/AccountSurface/__tests__/accountSurfaceTestHelpers";
 function _renderDeletedUsageRecovery(): {
   path: string;
   usagePath: string;
@@ -27,13 +27,12 @@ function _renderDeletedUsageRecovery(): {
     if (url === path && init?.method === "DELETE") {
       hasDeleted = true;
     }
-    if (url === usagePath && hasDeleted) {
-      return Response.json(
-        { error: "groups_not_found", message: "Not found." },
-        { status: 404 },
-      );
-    }
-    return original(url, init);
+    return url === usagePath && hasDeleted
+      ? Response.json(
+          { error: "groups_not_found", message: "Not found." },
+          { status: 404 },
+        )
+      : original(url, init);
   });
   return { path, usagePath, recovery };
 }
@@ -52,16 +51,15 @@ function _failAccountAfterWrite({
     if (url === path && init?.method === method) {
       hasWritten = true;
     }
-    if (url === "/api/me" && hasWritten && !hasRecovered) {
-      return Response.json(
-        {
-          error: "temporarily_unavailable",
-          message: "Account refresh unavailable.",
-        },
-        { status: 503 },
-      );
-    }
-    return original(url, init);
+    return url === "/api/me" && hasWritten && !hasRecovered
+      ? Response.json(
+          {
+            error: "temporarily_unavailable",
+            message: "Account refresh unavailable.",
+          },
+          { status: 503 },
+        )
+      : original(url, init);
   });
   return {
     allowRefresh: () => {
@@ -88,7 +86,7 @@ it("retains truthful creation success and retries only reconciliation after /me 
   ).toBeDisabled();
   expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
   expect(screen.getByRole("button", { name: "Edit Cousins" })).toBeDisabled();
-  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(1);
   recovery.allowRefresh();
   await user.click(
     screen.getByRole("button", { name: "Retry account refresh" }),
@@ -96,7 +94,7 @@ it("retains truthful creation success and retries only reconciliation after /me 
   await waitFor(() => {
     expect(screen.queryByText("A new group")).not.toBeInTheDocument();
   });
-  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(1);
   expect(screen.getByRole("button", { name: "New group" })).toBeEnabled();
 });
 it("retains truthful deletion success and retries only reconciliation after /me fails", async () => {
@@ -126,7 +124,7 @@ it("retains truthful deletion success and retries only reconciliation after /me 
   ).not.toBeInTheDocument();
   await user.keyboard("{Escape}");
   expect(screen.getByRole("dialog")).toBeVisible();
-  expect(countCallsTo("DELETE", path)).toBe(1);
+  expect(countCallsTo({ method: "DELETE", path })).toBe(1);
   recovery.allowRefresh();
   await user.click(
     dialog.getByRole("button", { name: "Retry account refresh" }),
@@ -134,7 +132,7 @@ it("retains truthful deletion success and retries only reconciliation after /me 
   await waitFor(() => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  expect(countCallsTo("DELETE", path)).toBe(1);
+  expect(countCallsTo({ method: "DELETE", path })).toBe(1);
 });
 
 it("recovers the persisted lock through reads after leaving and returning to Groups", async () => {
@@ -176,7 +174,7 @@ it("recovers the persisted lock through reads after leaving and returning to Gro
     expect(screen.getByRole("button", { name: "New group" })).toBeEnabled();
   });
   expect(screen.getByRole("button", { name: "Edit Cousins" })).toBeEnabled();
-  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(1);
   expect(
     screen.queryByRole("button", { name: "Retry account refresh" }),
   ).not.toBeInTheDocument();
@@ -197,8 +195,8 @@ it("never rereads deleted usage or displays consent recovery after persisted del
     screen.queryByRole("button", { name: "Retry" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByText(/items lose access/)).not.toBeInTheDocument();
-  expect(countCallsTo("GET", usagePath)).toBe(1);
-  expect(countCallsTo("DELETE", path)).toBe(1);
+  expect(countCallsTo({ method: "GET", path: usagePath })).toBe(1);
+  expect(countCallsTo({ method: "DELETE", path })).toBe(1);
   recovery.allowRefresh();
   await user.click(
     screen.getByRole("button", { name: "Retry account refresh" }),
@@ -206,8 +204,8 @@ it("never rereads deleted usage or displays consent recovery after persisted del
   await waitFor(() => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  expect(countCallsTo("GET", usagePath)).toBe(1);
-  expect(countCallsTo("DELETE", path)).toBe(1);
+  expect(countCallsTo({ method: "GET", path: usagePath })).toBe(1);
+  expect(countCallsTo({ method: "DELETE", path })).toBe(1);
 });
 
 it("keeps a committed group refresh-only when navigation bootstrap fails", async () => {
@@ -221,12 +219,12 @@ it("keeps a committed group refresh-only when navigation bootstrap fails", async
   const original = vi.mocked(fetch).getMockImplementation()!;
   let failBootstrap = false;
   vi.mocked(fetch).mockImplementation(async (path, init) => {
-    if (path === "/api/bootstrap" && failBootstrap)
-      return Response.json(
-        { error: "unavailable", message: "Unavailable" },
-        { status: 503 },
-      );
-    return original(path, init);
+    return path === "/api/bootstrap" && failBootstrap
+      ? Response.json(
+          { error: "unavailable", message: "Unavailable" },
+          { status: 503 },
+        )
+      : original(path, init);
   });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "New group" }));
@@ -241,7 +239,7 @@ it("keeps a committed group refresh-only when navigation bootstrap fails", async
   expect(
     screen.queryByRole("button", { name: "New group" }),
   ).not.toBeInTheDocument();
-  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(1);
   failBootstrap = false;
   recovery.allowRefresh();
   await user.click(
@@ -256,5 +254,5 @@ it("keeps a committed group refresh-only when navigation bootstrap fails", async
       screen.getByRole("button", { name: "New group" }),
     ).toBeEnabled();
   });
-  expect(countCallsTo("POST", "/api/groups")).toBe(1);
+  expect(countCallsTo({ method: "POST", path: "/api/groups" })).toBe(1);
 });

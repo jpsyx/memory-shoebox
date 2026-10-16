@@ -1,6 +1,6 @@
 import { test, expect } from "./asking-occasions.fixtures.ts";
 import { showControlledVisualState } from "./support/visualStateHelpers/showControlledVisualState.ts";
-import { waitForControlledVisualMedia } from "./support/waitForControlledVisualMedia.ts";
+import { waitForControlledVisualMedia } from "./support/controlledVisualMediaHelpers.ts";
 
 const THUMBNAIL = "https://visual-media.invalid/highChair-thumb.jpg";
 
@@ -38,10 +38,12 @@ test("controlled capture waits for actual admitted thumbnail response and decode
     }),
   ).toBe(0);
   let finished = false;
-  const readiness = waitForControlledVisualMedia(page, 1).then((value) => {
-    finished = true;
-    return value;
-  });
+  const readiness = waitForControlledVisualMedia({ page, imageCount: 1 }).then(
+    (value) => {
+      finished = true;
+      return value;
+    },
+  );
   await page.evaluate(() => {
     return new Promise<void>((done) => {
       requestAnimationFrame(() => {
@@ -72,7 +74,7 @@ test("controlled capture retains a nonintersecting source and rejects failed adm
     state: "open",
     scheme: "light",
   });
-  const state = await waitForControlledVisualMedia(page, 2);
+  const state = await waitForControlledVisualMedia({ page, imageCount: 2 });
   expect(state).toMatchObject([
     {
       alt: "Family at home",
@@ -110,7 +112,9 @@ test("controlled capture retains a nonintersecting source and rejects failed adm
     }),
   ).toBeVisible();
   await expect(page.locator("img")).toHaveCount(0);
-  await expect(waitForControlledVisualMedia(page, 1)).rejects.toThrow();
+  await expect(
+    waitForControlledVisualMedia({ page, imageCount: 1 }),
+  ).rejects.toThrow();
 });
 
 test("controlled roles agree with current navigation bootstrap and account shell", async ({
@@ -148,7 +152,10 @@ test("controlled roles agree with current navigation bootstrap and account shell
       name: "You run this archive",
       exact: true,
     });
-    if (role === "admin") await expect(administration).toBeVisible();
-    else await expect(administration).toHaveCount(0);
+    if (role === "admin") {
+      await expect(administration).toBeVisible();
+    } else {
+      await expect(administration).toHaveCount(0);
+    }
   }
 });

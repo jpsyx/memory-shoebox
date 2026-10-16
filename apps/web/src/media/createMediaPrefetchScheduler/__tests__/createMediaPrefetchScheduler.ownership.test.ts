@@ -11,7 +11,7 @@ import {
 installCreateMediaPrefetchSchedulerTestLifecycle();
 describe("bounded media prefetch", () => {
   it("keeps a completed decoded promotion reserved through clear until selected decode releases it", async () => {
-    const candidate = makePrefetchCandidateFromId("ready");
+    const candidate = makePrefetchCandidateFromId({ id: "ready" });
     const image = document.createElement("img");
     image.src = candidate.source.url;
     let retained = true;
@@ -31,7 +31,7 @@ describe("bounded media prefetch", () => {
       };
     });
     const scheduler = createMediaPrefetchScheduler({ clock: Date.now, load });
-    scheduler.schedule([candidate], ENVIRONMENT);
+    scheduler.schedule({ candidates: [candidate], environment: ENVIRONMENT });
     await vi.advanceTimersByTimeAsync(250);
     const promotion = scheduler.promote({
       itemId: candidate.itemId,
@@ -40,9 +40,12 @@ describe("bounded media prefetch", () => {
     scheduler.clear();
     expect(promotion.decodedPhoto?.getImage()).toBe(image);
     expect(release).not.toHaveBeenCalled();
-    scheduler.schedule([makePrefetchCandidateFromId("following")], {
-      ...ENVIRONMENT,
-      selectionKey: "ready",
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "following" })],
+      environment: {
+        ...ENVIRONMENT,
+        selectionKey: "ready",
+      },
     });
     await vi.advanceTimersByTimeAsync(250);
     expect(load).toHaveBeenCalledTimes(1);
@@ -57,20 +60,34 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("discards reversed queued work but reserves unavoidable transfers until settled", async () => {
     const harness = createPrefetchHarness();
-    harness.scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("old", 0, { byteSize: 7 * 1024 ** 2 }),
-        makePrefetchCandidateFromId("old-queued", 1, {
-          byteSize: 2 * 1024 ** 2,
+    harness.scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "old",
+          rank: 0,
+          source: { byteSize: 7 * 1024 ** 2 },
+        }),
+        makePrefetchCandidateFromId({
+          id: "old-queued",
+          rank: 1,
+          source: {
+            byteSize: 2 * 1024 ** 2,
+          },
         }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
-    harness.scheduler.schedule(
-      [makePrefetchCandidateFromId("reverse", 0, { byteSize: 2 * 1024 ** 2 })],
-      { ...ENVIRONMENT, selectionKey: "reversed" },
-    );
+    harness.scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "reverse",
+          rank: 0,
+          source: { byteSize: 2 * 1024 ** 2 },
+        }),
+      ],
+      environment: { ...ENVIRONMENT, selectionKey: "reversed" },
+    });
     expect(harness.starts[0]!.signal.aborted).toBe(true);
     await vi.advanceTimersByTimeAsync(250);
     expect(harness.starts).toHaveLength(1);
@@ -89,30 +106,41 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("deduplicates a rendition even when its lease URL changes", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("shared"),
-        makePrefetchCandidateFromId("shared", 1, {
-          url: "https://bucket.test/renewed",
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({ id: "shared" }),
+        makePrefetchCandidateFromId({
+          id: "shared",
+          rank: 1,
+          source: {
+            url: "https://bucket.test/renewed",
+          },
         }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("shared", 0, {
-          url: "https://bucket.test/newer",
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({
+          id: "shared",
+          rank: 0,
+          source: {
+            url: "https://bucket.test/newer",
+          },
         }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(starts).toHaveLength(1);
     expect(starts[0]!.signal.aborted).toBe(false);
     starts[0]!.finish();
     await vi.advanceTimersByTimeAsync(0);
-    scheduler.schedule([makePrefetchCandidateFromId("shared")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "shared" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(starts).toHaveLength(1);
   });
@@ -120,17 +148,17 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("does not cancel an in-flight candidate promoted to foreground", async () => {
     const { scheduler, starts, retained } = createPrefetchHarness();
-    scheduler.schedule(
-      [
-        makePrefetchCandidateFromId("selected"),
-        makePrefetchCandidateFromId("obsolete", 1),
+    scheduler.schedule({
+      candidates: [
+        makePrefetchCandidateFromId({ id: "selected" }),
+        makePrefetchCandidateFromId({ id: "obsolete", rank: 1 }),
       ],
-      ENVIRONMENT,
-    );
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const release = scheduler.promote({
       itemId: "selected",
-      source: makePrefetchCandidateFromId("selected").source,
+      source: makePrefetchCandidateFromId({ id: "selected" }).source,
     }).release;
     scheduler.clear();
     expect(starts[0]!.signal.aborted).toBe(false);
@@ -146,14 +174,21 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("retires foreground adoption while keeping unsettled bytes reserved", async () => {
     const harness = createPrefetchHarness();
-    const candidate = makePrefetchCandidateFromId("adopted", 0, {
-      byteSize: 8 * 1024 ** 2,
+    const candidate = makePrefetchCandidateFromId({
+      id: "adopted",
+      rank: 0,
+      source: {
+        byteSize: 8 * 1024 ** 2,
+      },
     });
-    harness.scheduler.schedule([candidate], ENVIRONMENT);
+    harness.scheduler.schedule({
+      candidates: [candidate],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const release = harness.scheduler.promote({
       itemId: "adopted",
-      source: makePrefetchCandidateFromId("adopted").source,
+      source: makePrefetchCandidateFromId({ id: "adopted" }).source,
     }).release;
     harness.scheduler.clear();
     expect(harness.starts[0]!.signal.aborted).toBe(false);
@@ -161,10 +196,10 @@ describe("bounded media prefetch", () => {
     harness.scheduler.clear();
     expect(harness.starts[0]!.signal.aborted).toBe(true);
     expect(harness.getReservedBytes()).toBe(8 * 1024 ** 2);
-    harness.scheduler.schedule(
-      [makePrefetchCandidateFromId("later")],
-      ENVIRONMENT,
-    );
+    harness.scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "later" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     expect(harness.starts).toHaveLength(1);
     harness.starts[0]!.finish();
@@ -181,15 +216,18 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("releases each foreground owner only once", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule([makePrefetchCandidateFromId("adopted")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "adopted" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const releaseFirst = scheduler.promote({
       itemId: "adopted",
-      source: makePrefetchCandidateFromId("adopted").source,
+      source: makePrefetchCandidateFromId({ id: "adopted" }).source,
     }).release;
     const releaseSecond = scheduler.promote({
       itemId: "adopted",
-      source: makePrefetchCandidateFromId("adopted").source,
+      source: makePrefetchCandidateFromId({ id: "adopted" }).source,
     }).release;
     scheduler.clear();
     releaseFirst();
@@ -204,20 +242,26 @@ describe("bounded media prefetch", () => {
 describe("bounded media prefetch", () => {
   it("isolates a stale foreground release from a later load of the same rendition", async () => {
     const { scheduler, starts } = createPrefetchHarness();
-    scheduler.schedule([makePrefetchCandidateFromId("adopted")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "adopted" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const releaseOld = scheduler.promote({
       itemId: "adopted",
-      source: makePrefetchCandidateFromId("adopted").source,
+      source: makePrefetchCandidateFromId({ id: "adopted" }).source,
     }).release;
     scheduler.clear();
     starts[0]!.finish();
     await vi.advanceTimersByTimeAsync(0);
-    scheduler.schedule([makePrefetchCandidateFromId("adopted")], ENVIRONMENT);
+    scheduler.schedule({
+      candidates: [makePrefetchCandidateFromId({ id: "adopted" })],
+      environment: ENVIRONMENT,
+    });
     await vi.advanceTimersByTimeAsync(250);
     const releaseCurrent = scheduler.promote({
       itemId: "adopted",
-      source: makePrefetchCandidateFromId("adopted").source,
+      source: makePrefetchCandidateFromId({ id: "adopted" }).source,
     }).release;
     scheduler.clear();
     releaseOld();

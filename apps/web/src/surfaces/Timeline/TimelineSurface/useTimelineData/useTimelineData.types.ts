@@ -7,7 +7,7 @@ import {
   type TimelineSearch,
   type TimelineSelection,
   type TimelineSelectionUpdate,
-} from "@/api/timeline/selection/selection";
+} from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 
 import type {
   BurstFrameRef,
@@ -19,7 +19,7 @@ import type {
 
 import { type RefCallback } from "react";
 
-/** Everything the hooks below produce, reduced to what the JSX reads. */
+/** Timeline query results and controls consumed by the surface. */
 export type TimelineData = {
   role: MemberRole;
   isEmptyArchive: boolean;
@@ -38,7 +38,7 @@ export type TimelineData = {
   isFetching: boolean;
   hasPrevious: boolean;
   viewKey: string;
-  pageCursors: ReadonlyMap<string, string | null>;
+  pageCursors: ReadonlyMap<string, string | undefined>;
   recoverPage: (anchor: TimelineAnchor) => Promise<void>;
   expanded: ReadonlyMap<string, TimelineExpansion>;
   onCollapseBurst: (burstId: string) => void;
@@ -46,7 +46,7 @@ export type TimelineData = {
   /** Either "show everything" button, both of which keep the jump. */
   onClearFilters: () => void;
   onReachEnd: () => void;
-  /** Guarded newer-page entry point; C3 owns the measured start trigger. */
+  /** Guarded newer-page entry point for the measured start trigger. */
   onReachStart: () => void;
   onRestart: (at: string) => void;
   onOpenBurst: (burstId: string) => void;
@@ -60,14 +60,17 @@ export type TimelineData = {
   archiveRef: RefCallback<HTMLElement>;
 };
 
-/** Query results and selection callbacks used to derive display data without taking query, navigation or burst ownership. */
+/**
+ * Query results and selection callbacks used to derive display data without
+ * taking query, navigation or burst ownership.
+ */
 export type MakeTimelineDataOptions = {
   search: TimelineSearch;
   selection: TimelineSelection;
   role: MemberRole | undefined;
   days: TimelineDay[];
   railDays: readonly RailDay[];
-  resultCount: number | null | undefined;
+  resultCount: number | undefined;
   facets: FilterFacetsResponse | undefined;
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   isStreamSuccess: boolean;

@@ -58,7 +58,7 @@ function limit. No barrel files. Shared test fixtures live in
 - Create: `apps/web/src/api/removals/removals.ts`, `removalsQueryHelpers.ts`, `removals.types.ts`, `removals.test.ts` in that directory.
 - Modify: `apps/web/src/api/milestoneHelpers/milestoneHelpers.ts`, `milestoneHelpers.types.ts`, `milestoneSchemas.constants.ts`, `milestonesQueryHelpers.ts`, `milestoneHelpers.test.ts`.
 - Create: `apps/web/src/api/milestoneHelpers/milestoneItemsHelpers.ts`, `milestoneItemsQueryHelpers.ts`, `milestoneItemsHelpers.test.ts`.
-- Modify: `apps/web/src/api/timeline/selection/selection.ts`, `selection.test.ts`, `apps/web/src/api/timeline/timeline.ts`, `timeline.test.ts`.
+- Modify: `apps/web/src/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers.ts`, `selection.test.ts`, `apps/web/src/api/timelineHelpers/timelineHelpers.ts`, `timeline.test.ts`.
 - Create: `apps/web/src/testing/askingAndOccasionsFixtures.ts`.
 - Update: `docs/web.md` client-contract notes.
 

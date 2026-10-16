@@ -1,4 +1,4 @@
-import { installBootstrapRedirectTracking } from "@/api/bootstrap/bootstrapRedirect";
+import { installBootstrapRedirectTracking } from "@/api/bootstrapHelpers/bootstrapRedirectHelpers";
 import { createRouter } from "@tanstack/react-router";
 import { queryClient } from "@/queryClient";
 import { routeTree } from "@/routeTree.gen";

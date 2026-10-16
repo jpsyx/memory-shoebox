@@ -22,7 +22,7 @@ export type Props = {
   hasPrevious?: boolean;
   onReachStart?: () => void;
   viewKey?: string;
-  pageCursors?: ReadonlyMap<string, string | null>;
+  pageCursors?: ReadonlyMap<string, string | undefined>;
   recoverPage?: (anchor: TimelineAnchor) => Promise<void>;
   restoreBurst?: (
     burstId: string,

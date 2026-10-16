@@ -6,7 +6,7 @@ import {
   renderAccount,
   respondWith,
   VIEWER,
-} from "./AccountSurface.fixtures";
+} from "./accountSurfaceTestHelpers";
 
 beforeEach(() => {
   vi.unstubAllGlobals();
@@ -33,10 +33,12 @@ describe("surface 9", () => {
     respondWith();
     renderAccount();
     await screen.findByRole("heading", { name: "Where you are signed in" });
-    expect(countCallsTo("GET", "/api/bootstrap")).toBe(1);
-    expect(countCallsTo("GET", "/api/me")).toBe(0);
-    expect(countCallsTo("GET", "/api/setup")).toBe(0);
-    expect(countCallsTo("GET", "/api/setup/progress")).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/bootstrap" })).toBe(1);
+    expect(countCallsTo({ method: "GET", path: "/api/me" })).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/setup" })).toBe(0);
+    expect(countCallsTo({ method: "GET", path: "/api/setup/progress" })).toBe(
+      0,
+    );
   });
 
   it("opens the five admin doors for an admin", async () => {
