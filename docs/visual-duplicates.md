@@ -100,3 +100,33 @@ The historical checksum backfill remains a separate operator tool, primarily
 useful for original-byte identity and legacy videos. Visual backfill does not
 need those checksums to run. See [catalog upgrades](migrations.md) and
 [checksum maintenance](checksum-backfill.md).
+
+## Regression coverage
+
+Shared matcher tests cover small pixel changes, different compositions and
+colors, featureless images, and malformed evidence. Server decoder tests use
+real JPEG encoding, resizing, and EXIF orientation, including a nearby-frame
+negative case. Manifest route tests use different checksums for visual archive
+and batch duplicates and retain duplicate notices across request retries.
+Browser worker/controller tests cover fingerprint production, propagation,
+decode failures, and reuse; ingest and backfill tests protect durable evidence.
+
+`publication.duplicateDetection.test.ts` joins real JPEG fingerprinting, optimized
+rendition publication, and the HTTP upload manifest against one migrated catalog.
+An exact original without fingerprint evidence and a renamed/resized JPEG with
+different bytes and a different matching fingerprint must both be skipped.
+It also verifies original checksum, size, fingerprint, and dimensions survive
+publication, with the processing configuration both enabled and disabled.
+The test invokes publication directly; it does not claim Linux runtime admission
+or production codec execution. Deliberately disabling visual matching or clearing
+the stored fingerprint during publication makes both cases fail.
+
+Run the focused integration guard after compiling the email package:
+
+```sh
+pnpm --filter @memory-shoebox/emails build
+pnpm --filter @memory-shoebox/server test test/mediaProcessing/publication/__tests__/publication.duplicateDetection.test.ts
+```
+
+These tests run in the ordinary `pnpm test` suite. Production checks, including
+fingerprint coverage for old photos, are in [media verification](media-verification.md).
