@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getManifestEntryFromFile } from "@/upload/getManifestEntryFromFile/getManifestEntryFromFile";
 import { makeAtomBytesFromTypeAndBody } from "@/testing/mediaBytesHelpers/mediaAtomBytesHelpers";
 import {
   makeHeicBytesFromExif,
@@ -273,6 +274,96 @@ describe("getPostOrientationSizeFromHeader", () => {
     expect(getPostOrientationSizeFromHeader({ width: 4, height: 3 })).toEqual({
       width: 4,
       height: 3,
+    });
+  });
+});
+
+function _makeJpeg(options: {
+  orientation?: number;
+  marker?: number;
+  exif?: boolean;
+}): File {
+  const metadata = makeJpegBytesFromExif(
+    options.exif === false
+      ? undefined
+      : {
+          orientation: options.orientation ?? 1,
+          pixelWidth: 5712,
+          pixelHeight: 4284,
+          dateTimeOriginal: "2026:09:14 06:41:32",
+        },
+  );
+  // Frame: 8-bit, 5712 rows by 4284 columns, three components.
+  return new File(
+    [
+      metadata.slice(0, -2),
+      new Uint8Array([
+        0xff,
+        options.marker ?? 0xc0,
+        0,
+        17,
+        8,
+        0x16,
+        0x50,
+        0x10,
+        0xbc,
+        3,
+        1,
+        0x22,
+        0,
+        2,
+        0x11,
+        1,
+        3,
+        0x11,
+        1,
+        0xff,
+        0xd9,
+      ]),
+    ],
+    "export.jpeg",
+    { type: "image/jpeg" },
+  );
+}
+
+describe("JPEG frame dimensions", () => {
+  it.each([0xc0, 0xc2])(
+    "uses the encoded portrait size instead of stale EXIF for frame %i",
+    async (marker) => {
+      expect(
+        await getManifestEntryFromFile({
+          file: _makeJpeg({ marker }),
+          clientRef: "export",
+        }),
+      ).toMatchObject({
+        width: 4284,
+        height: 5712,
+        capture: { exifCapturedAtLocal: "2026-09-14T06:41:32" },
+      });
+    },
+  );
+
+  it("applies EXIF orientation to encoded dimensions exactly once", async () => {
+    expect(
+      await getImageHeaderFromFile(_makeJpeg({ orientation: 6 })),
+    ).toMatchObject({ width: 5712, height: 4284 });
+  });
+
+  it("reads encoded dimensions without EXIF", async () => {
+    expect(
+      await getImageHeaderFromFile(_makeJpeg({ exif: false })),
+    ).toMatchObject({ width: 4284, height: 5712 });
+  });
+
+  it("does not invent dimensions from a truncated frame", async () => {
+    const file = new Blob([
+      new Uint8Array([
+        0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 0x16, 0x50, 0x10, 0xbc,
+      ]),
+    ]);
+    expect(await getImageHeaderFromFile(file)).toMatchObject({
+      width: undefined,
+      height: undefined,
     });
   });
 });

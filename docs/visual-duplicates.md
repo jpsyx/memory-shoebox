@@ -16,6 +16,21 @@ checks. Different frames in a burst should remain separate. This is a heuristic
 for alternate exports of the same photo, not proof of original-file identity;
 crops and substantive edits are outside its intended coverage.
 
+JPEG upload dimensions come from the encoded frame header before applying EXIF
+orientation. Photo exports can retain stale EXIF width/height even after the
+pixels have been rotated or resized. Trusting those dimensions could reject a
+matching fingerprint at the aspect-ratio check. The frame reader skips metadata
+payloads, stops before scan data, and reads at most 256 small marker headers;
+other image formats and unreadable frame headers retain the metadata fallback.
+Capture dates continue to come from EXIF. Neither path modifies the original.
+
+Native browser fingerprint generation is not identical across engines. A
+WebKit color-grid mismatch against a Chromium-produced archived fingerprint
+remains observed on a real JPEG export, even after correcting its dimensions.
+The dimension correction fixes the reproduced Chromium upload miss; it does not
+claim to repair that separate cross-browser mismatch. Exact-byte matching can
+still skip an original when its browser-generated visual evidence would fail.
+
 Version 1 uses at most two differing bits in the 64-bit DCT hash, at most 24
 in the 240-bit gradient signature, RGB root-mean-square difference at most four
 on a 0–255 scale, and aspect ratios within one percent. All checks must pass.
