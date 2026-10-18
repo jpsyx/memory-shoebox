@@ -6,6 +6,13 @@ A filename does not establish photo identity. Originals are transferred and
 stored byte for byte; fingerprints are small derived metadata, not replacement
 images. Videos continue using exact-byte duplicate checks.
 
+Duplicate rows in the draft and finished batch use the selected local original
+and the shared viewport preview queue to show a thumbnail, just like transfer
+rows. Skipping an upload does not create a server thumbnail or expose the matched
+archive item's media. After a reload, when the local original is no longer
+available, the row keeps its duplicate notice and shows the unavailable-original
+fallback. Duplicate originals are not retained for upload recovery.
+
 ## Photo evidence
 
 Browser decoding applies orientation, normalizes sRGB, and samples a 32 by 32

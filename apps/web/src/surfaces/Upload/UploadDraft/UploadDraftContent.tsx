@@ -62,7 +62,7 @@ export function UploadDraftContent({
       ) : null}
       <UploadRecoveryChoices {...{ snapshot, controller }} />
       <UploadDraftOverview snapshot={snapshot} />
-      <UploadDuplicateFiles snapshot={snapshot} />
+      <UploadDuplicateFiles snapshot={snapshot} previews={previews} />
       <UploadMissingFiles
         {...{ snapshot, controller, onRemove }}
         isRefusalsOnly

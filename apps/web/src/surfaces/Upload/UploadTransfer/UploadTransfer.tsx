@@ -41,7 +41,11 @@ export function UploadTransfer({
         <UploadSending snapshot={snapshot} previews={previews} />
       ) : null}
       {snapshot.phase === "done" ? (
-        <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />
+        <UploadDone
+          snapshot={snapshot}
+          previews={previews}
+          onUploadMore={onUploadMore}
+        />
       ) : (
         <UploadResume
           snapshot={snapshot}
@@ -57,7 +61,11 @@ export function UploadTransfer({
         />
       ) : null}
       {!isSending && detail.state === "settled" && snapshot.phase !== "done" ? (
-        <UploadDone snapshot={snapshot} onUploadMore={onUploadMore} />
+        <UploadDone
+          snapshot={snapshot}
+          previews={previews}
+          onUploadMore={onUploadMore}
+        />
       ) : null}
       {!isSending ? (
         <UploadDraftDays {...{ snapshot, controller, previews, viewer }} />

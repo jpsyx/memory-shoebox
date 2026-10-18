@@ -1,6 +1,7 @@
 import { ChipRow } from "@/system/Chip/ChipRow";
 import { Sheet } from "@/system/Chrome/Sheet";
 import { Prose } from "@/system/typography/Prose";
+import type { UploadPreviewQueue } from "@/upload/createUploadPreviewQueue/createUploadPreviewQueue.types";
 import type { UploadSnapshot } from "@/upload/createUploadSessionController/createUploadSessionController.types";
 import { Button, Stack } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
@@ -8,10 +9,15 @@ import type { ReactNode } from "react";
 import { UploadOutcome } from "./UploadOutcome";
 import { UploadDuplicateFiles } from "./UploadDuplicateFiles";
 import classes from "./UploadDone.module.css";
-type Props = { snapshot: UploadSnapshot; onUploadMore: () => void };
+type Props = {
+  snapshot: UploadSnapshot;
+  previews: UploadPreviewQueue;
+  onUploadMore: () => void;
+};
 /** Server outcome totals describe the finished batch, never email delivery. */
 export function UploadDone({
   snapshot,
+  previews,
   onUploadMore,
 }: Readonly<Props>): ReactNode {
   const summary = snapshot.detail!.summary;
@@ -34,7 +40,7 @@ export function UploadDone({
           </Prose>
         ) : null}
         {snapshot.phase === "done" ? (
-          <UploadDuplicateFiles snapshot={snapshot} />
+          <UploadDuplicateFiles snapshot={snapshot} previews={previews} />
         ) : null}
         <ChipRow>
           <Button component={Link} to="/">
