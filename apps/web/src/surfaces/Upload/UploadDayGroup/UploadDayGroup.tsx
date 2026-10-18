@@ -20,7 +20,7 @@ type Props = {
   viewer?: { memberId: string; isAdmin?: boolean };
 };
 
-/** Server capture-day grouping; ticks edit targets without writing an API. */
+/** Non-duplicate capture-day prints; ticks edit targets without an API write. */
 export function UploadDayGroup({
   day,
   snapshot,
@@ -32,10 +32,17 @@ export function UploadDayGroup({
   const [isExpanded, setIsExpanded] = useState(false);
   const files =
     snapshot.detail?.files.filter((file) => {
-      return file.capturedOn === day.capturedOn;
+      return (
+        file.capturedOn === day.capturedOn &&
+        !file.duplicateReason &&
+        snapshot.fileActivityById.get(file.fileId)?.kind !== "duplicate"
+      );
     }) ?? [];
   const visible = isExpanded ? files : files.slice(0, 12);
   const canSelect = snapshot.detail?.state === "draft" && !snapshot.isBusy;
+  if (files.length === 0) {
+    return null;
+  }
   return (
     <section className={system.uploadDay} aria-label={day.capturedOn}>
       <UploadDayHeader

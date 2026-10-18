@@ -1518,8 +1518,12 @@ per worker. One active decode bounds concurrent work, not the sum of retained
 WASM heaps. Browser transfer preparation still makes no 960 px candidate; the
 server processing queue adds responsive upgrades asynchronously.
 
-`UploadDayGroup` renders capture days from the complete server manifest, twelve
-prints initially and an explicit Show all control for the remaining prints.
+`UploadDayGroup` renders non-duplicate files from the complete server manifest,
+twelve prints initially and an explicit Show all control for the remaining
+prints. Saved duplicate reasons and duplicates detected during transfer exclude
+those files from the bottom gallery; their dedicated duplicate notices remain
+visible. Day counts and Show all totals use only the remaining files, and a day
+containing only duplicates is omitted.
 Draft day groups share a responsive grid, flowing left to right and wrapping
 to one column on narrow screens. Each day's previews also fill rows from left
 to right and wrap, keeping their natural image proportions. This upload-specific

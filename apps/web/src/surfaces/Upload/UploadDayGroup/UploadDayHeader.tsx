@@ -17,7 +17,7 @@ type Props = {
   canSelect: boolean;
 };
 
-/** Shows the capture day, saved file count and day selection. */
+/** Shows the capture day, non-duplicate file count and day selection. */
 export function UploadDayHeader({
   day,
   snapshot,
@@ -43,7 +43,7 @@ export function UploadDayHeader({
         })}
       </span>
       <span className={system.uploadDayCount}>
-        {day.fileCount.toLocaleString("en-GB")}
+        {files.length.toLocaleString("en-GB")}
       </span>
       <UploadDaySelection
         day={day}
