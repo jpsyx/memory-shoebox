@@ -42,22 +42,22 @@ describe("side-effect-free media reads", () => {
         ).json(),
       );
     };
-    expect(await neighbors({ itemId: before })).toEqual({
+    expect(await neighbors({ itemId: after })).toEqual({
       ahead: [frameIds[1], frameIds[2]],
       behind: [],
     });
-    expect(await neighbors({ itemId: after, direction: "previous" })).toEqual({
+    expect(await neighbors({ itemId: before, direction: "previous" })).toEqual({
       ahead: [frameIds[3], frameIds[0]],
       behind: [],
     });
     expect(await neighbors({ itemId: frameIds[0]! })).toEqual({
-      ahead: [frameIds[3], after],
+      ahead: [frameIds[3], before],
       behind: [frameIds[2]],
     });
     expect(
       await neighbors({ itemId: frameIds[1]!, direction: "previous" }),
     ).toEqual({
-      ahead: [before],
+      ahead: [after],
       behind: [frameIds[2]],
     });
   });
@@ -78,7 +78,7 @@ describe("side-effect-free media reads", () => {
           await context.post({
             path: "neighbors",
             payload: {
-              itemId: before,
+              itemId: after,
               direction: "next",
               selection: SELECTION,
             },
@@ -114,20 +114,20 @@ describe("side-effect-free media reads", () => {
           await context.post({
             path: "neighbors",
             payload: {
-              itemId: before,
+              itemId: after,
               direction: "next",
               selection,
             },
           })
         ).json(),
       ),
-    ).toEqual({ ahead: [frameIds[3], after], behind: [] });
+    ).toEqual({ ahead: [frameIds[3], before], behind: [] });
     expect(
       (
         await context.post({
           path: "neighbors",
           payload: {
-            itemId: before,
+            itemId: after,
             direction: "next",
             selection: { ...selection, excludeAttached: true },
           },
@@ -172,7 +172,7 @@ describe("side-effect-free media reads", () => {
           })
         ).json(),
       ),
-    ).toEqual({ ahead: [older], behind: [first] });
+    ).toEqual({ ahead: [first, older], behind: [newer] });
     expect(
       getItemIdsFromNeighborResponse(
         (
@@ -186,7 +186,7 @@ describe("side-effect-free media reads", () => {
           })
         ).json(),
       ),
-    ).toEqual({ ahead: [newer], behind: [second] });
+    ).toEqual({ ahead: [second, newer], behind: [older] });
     expect(
       getItemIdsFromNeighborResponse(
         (
@@ -200,7 +200,7 @@ describe("side-effect-free media reads", () => {
           })
         ).json(),
       ),
-    ).toEqual({ ahead: [], behind: [second] });
+    ).toEqual({ ahead: [second], behind: [older] });
     await context.database
       .deleteFrom("items")
       .where("id", "=", first)
@@ -242,18 +242,18 @@ describe("side-effect-free media reads", () => {
             payload: {
               itemId: before,
               selection: SELECTION,
-              direction: "next",
+              direction: "previous",
             },
           })
         ).json(),
       ).ahead,
-    ).toEqual([between, frameIds[1]]);
+    ).toEqual([between, frameIds[3]]);
   });
 });
 describe("side-effect-free media reads", () => {
   it("breaks equal burst indices by ID in both directions", async () => {
     const context = await createMediaPreviewContext();
-    const { before, frameIds } = await seedMediaPreviewBurst(context);
+    const { after, frameIds } = await seedMediaPreviewBurst(context);
     await context.database
       .updateTable("items")
       .set({ burst_index: 1 })
@@ -265,7 +265,7 @@ describe("side-effect-free media reads", () => {
           await context.post({
             path: "neighbors",
             payload: {
-              itemId: before,
+              itemId: after,
               selection: SELECTION,
               direction: "next",
             },
@@ -286,6 +286,6 @@ describe("side-effect-free media reads", () => {
           })
         ).json(),
       ).ahead,
-    ).toEqual([frameIds[1], before]);
+    ).toEqual([frameIds[1], after]);
   });
 });

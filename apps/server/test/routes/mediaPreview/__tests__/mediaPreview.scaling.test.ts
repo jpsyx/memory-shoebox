@@ -17,7 +17,7 @@ installMediaPreviewTestLifecycle();
 describe("side-effect-free media reads", () => {
   it("keeps statement and returned-row counts bounded as the archive and burst grow", async () => {
     const context = await createMediaPreviewContext();
-    const { after, burstId } = await seedMediaPreviewBurst(context);
+    const { before, burstId } = await seedMediaPreviewBurst(context);
     const queries: CompiledQuery[] = [];
     const rowCounts: number[] = [];
     const compiled = new WeakMap<object, CompiledQuery>();
@@ -47,7 +47,11 @@ describe("side-effect-free media reads", () => {
           isAdmin: false,
           visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
         },
-        request: { itemId: after, direction: "previous", selection: SELECTION },
+        request: {
+          itemId: before,
+          direction: "previous",
+          selection: SELECTION,
+        },
       });
     };
     await read();

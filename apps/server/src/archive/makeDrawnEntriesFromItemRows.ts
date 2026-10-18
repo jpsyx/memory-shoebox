@@ -81,10 +81,10 @@ function _makeStackFromFrames(options: Readonly<BurstStackParts>): DrawnEntry {
  * | 1              | A plain print. Never a stack of one                       |
  * | 2 or more      | One entry, measured over the visible frames alone         |
  *
- * The stack stands at the position of its **earliest visible frame**, which is
- * the only position consistent with a day ordered oldest first: a burst is a
- * contiguous run, so the stack stands where the run started. Its identity is
- * the cover, which may be a later frame.
+ * The stack occupies its earliest visible frame's position in the chronological
+ * source rows. Its identity is the cover, which may be a later frame. Timeline
+ * presentation reverses the completed entries, preserving this anchor and the
+ * chronological burst span.
  *
  * @param options.rows The day's visible items, chronological.
  * @param options.coverItemIdsByBurstId `bursts.cover_item_id` per burst.

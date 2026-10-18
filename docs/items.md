@@ -37,8 +37,8 @@ first. The selection preserves tag, people, date, and milestone attachment
 filters; callers pass the effective `until` boundary of a timeline jump. A
 missing, hidden, deleted, or no-longer-matching current item returns empty lists.
 
-Navigation keeps newest days first and oldest captures first within each day,
-with sequence breaking capture-time ties. A burst occupies its earliest visible,
+Navigation keeps newest days first and newest captures first within each day,
+with descending sequence breaking capture-time ties, matching the timeline. A burst occupies its earliest visible,
 matching capture; its cover does not determine its position. Frames follow burst
 index then ID, with null indices last. Forward entry selects the first matching
 frame and backward entry the last, using bounded SQL probes. No navigation read

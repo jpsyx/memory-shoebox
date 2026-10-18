@@ -143,12 +143,12 @@ function _makeItemSummaryFromEntry(options: {
   };
 }
 
-/** Groups visible prints by day, including unavailable previews. */
+/** Groups visible prints newest first, after chronological burst grouping. */
 function _makeItemsByDayFromEntries(options: {
   entries: readonly DrawnEntry[];
   lookups: Readonly<DrawnItemLookups>;
 }): Map<string, ItemSummary[]> {
-  return options.entries.reduce<Map<string, ItemSummary[]>>(
+  return options.entries.reduceRight<Map<string, ItemSummary[]>>(
     (itemsByDay, entry) => {
       const summary = _makeItemSummaryFromEntry({
         entry,

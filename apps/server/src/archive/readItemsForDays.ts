@@ -60,11 +60,10 @@ function _makeItemRowFromRow(
  * and arrive already visibility-filtered, which is what makes a burst with no
  * visible frames vanish with no code at all.
  *
- * **Ordered oldest first within the day**, so a day reads the way it happened,
- * with `seq` as the tiebreak because two frames of a burst can share a
- * millisecond. The order the server sends is the order the wall is built from:
- * the messy pile seeds its tilt, offset and z-order from the item's index
- * (`DESIGN.md` § Do's), so a client that re-sorted would reshuffle it.
+ * Source rows are oldest first, with `seq` breaking timestamp ties, so burst
+ * grouping can identify the earliest visible frame and its chronological span.
+ * `readItemSummariesByDay` reverses the grouped entries before serving them:
+ * timeline days display newest first, with descending `seq` for tied prints.
  *
  * @param options.database The Kysely handle.
  * @param options.viewer The request's viewer.

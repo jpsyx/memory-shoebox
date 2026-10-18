@@ -171,13 +171,13 @@ async function _readTimelineNeighbor(
 ): Promise<NeighborRow | undefined> {
   const anchor = await _readAnchor(options);
   const isNext = options.direction === "next";
-  const order = isNext ? "asc" : "desc";
+  const order = isNext ? "desc" : "asc";
   const query = _buildTimelineQuery(options);
   const tuple = sql`(candidate.captured_at, candidate.seq, candidate.id)`;
   const anchorTuple = sql`(${anchor.captured_at}, ${anchor.seq}, ${anchor.id})`;
   const sameDay = await query
     .where("candidate.captured_on", "=", anchor.captured_on)
-    .where(sql<boolean>`${tuple} ${sql.raw(isNext ? ">" : "<")} ${anchorTuple}`)
+    .where(sql<boolean>`${tuple} ${sql.raw(isNext ? "<" : ">")} ${anchorTuple}`)
     .orderBy("candidate.captured_at", order)
     .orderBy("candidate.seq", order)
     .orderBy("candidate.id", order)
@@ -186,9 +186,16 @@ async function _readTimelineNeighbor(
   if (sameDay !== undefined) {
     return sameDay;
   }
-  return query
+  // Find the adjacent day first so the existing mixed-direction index can
+  // supply its reversed capture edge without sorting the whole day.
+  const adjacentDay = query
+    .clearSelect()
+    .select("candidate.captured_on")
     .where("candidate.captured_on", isNext ? "<" : ">", anchor.captured_on)
     .orderBy("candidate.captured_on", isNext ? "desc" : "asc")
+    .limit(1);
+  return query
+    .where("candidate.captured_on", "=", adjacentDay)
     .orderBy("candidate.captured_at", order)
     .orderBy("candidate.seq", order)
     .orderBy("candidate.id", order)

@@ -175,7 +175,7 @@ describe("side-effect-free media reads", () => {
     const precedingPhoto = await insertItem(context.database, {
       uploadedBy: context.uploaderId,
       seq: 1,
-      captured_at: "2026-09-27T00:00:00.000Z",
+      captured_at: "2026-09-27T23:00:00.000Z",
     });
     const before = await getMediaSideEffectsFromDatabase(context.database);
     const neighbors = await context.post({

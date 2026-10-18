@@ -84,6 +84,47 @@ describe("a burst in the pile", () => {
     await close();
   });
 
+  it("places the stack between newer and older prints without reversing its span", async () => {
+    const { app, database, close } = await makeApp();
+    try {
+      const { cookie, memberId } = await insertSignedInMember({ database });
+      const { burstId, frameIds } = await seedBurst(database, { memberId });
+      await setBurstCover(database, { burstId, coverItemId: frameIds[1]! });
+      const earlierId = await insertDrawableItem(database, {
+        uploadedBy: memberId,
+        seq: 4,
+        capturedAt: "2026-09-14T06:00:00.000Z",
+      });
+      const laterId = await insertDrawableItem(database, {
+        uploadedBy: memberId,
+        seq: 5,
+        capturedAt: "2026-09-14T07:00:00.000Z",
+      });
+      const response = await app.inject({
+        method: "GET",
+        url: "/api/timeline",
+        headers: { cookie },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().days[0].items).toMatchObject([
+        { itemId: laterId, burst: null },
+        {
+          itemId: frameIds[1],
+          burst: {
+            burstId,
+            coverItemId: frameIds[1],
+            visibleFrameCount: 3,
+            startsAt: "2026-09-14T06:41:00.000Z",
+            endsAt: "2026-09-14T06:43:00.000Z",
+          },
+        },
+        { itemId: earlierId, burst: null },
+      ]);
+    } finally {
+      await close();
+    }
+  });
+
   it("falls back to the earliest visible frame when the cover is restricted", async () => {
     const { app, database, close } = await makeApp();
     const { cookie } = await insertSignedInMember({ database });

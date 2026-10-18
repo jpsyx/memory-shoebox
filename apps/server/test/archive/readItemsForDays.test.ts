@@ -38,7 +38,7 @@ describe("readItemsForDays", () => {
     memberId = await insertMember(database);
   });
 
-  it("reads one day oldest first, which is how the day happened", async () => {
+  it("reads source rows oldest first for chronological burst grouping", async () => {
     const eveningId = await insertItem(database, {
       uploadedBy: memberId,
       seq: 1,

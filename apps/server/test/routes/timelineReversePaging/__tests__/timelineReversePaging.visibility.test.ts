@@ -141,7 +141,7 @@ describe("bidirectional atomic-day timeline pages", () => {
         first.days[0]!.items.map((item) => {
           return item.itemId;
         }),
-      ).toEqual([source, equalDay]);
+      ).toEqual([equalDay, source]);
       const last = (
         await fixture.app.inject({
           method: "GET",

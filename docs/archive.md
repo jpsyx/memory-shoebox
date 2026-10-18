@@ -196,6 +196,11 @@ bounded SQL statement with visible, selection-exact item existence probes and,
 when content filters permit them, occasion-day existence probes. Hidden rows
 and unfiltered totals cannot create a cursor.
 
+Within each day, displayed photos, videos, and collapsed burst stacks also run
+newest first. Plain items sort by capture time descending, with descending
+sequence as the deterministic timestamp tiebreaker. This applies to initial,
+filtered, older-page, and newer-page reads alike.
+
 ## The cursor
 
 Base64url over `{ v: 2, d, f, direction }`, in `timelineCursorHelpers.ts`:
@@ -298,10 +303,12 @@ computed over the visible frames only, never from `bursts.starts_at` and
 endpoints of "06:41 to 06:44" exactly as a stored count leaks them through a
 denominator.
 
-The collapsed entry stands at the position of its **earliest visible frame**. A
-burst is a contiguous run, and items within a day come back oldest first
-(`ORDER BY captured_at ASC, seq ASC`), so the stack stands where the run
-started. That order is the server's to decide rather than the browser's:
+Source rows arrive chronologically (`ORDER BY captured_at ASC, seq ASC`) so
+burst grouping can identify the earliest visible frame and the correct span.
+The collapsed entry retains that earliest-frame anchor. The server then reverses
+the completed entries for newest-first presentation within each day, without
+changing the cover or chronological burst metadata. That order is the server's
+to decide rather than the browser's:
 `DESIGN.md` § Do's seeds the messy pile's tilt, offset and z-order from the
 item's index, so a client that re-sorted would reshuffle the wall.
 
