@@ -1,0 +1,14 @@
+.polaroidContainer {
+  position: relative;
+  padding: var(--polaroid-padding, 10px);
+  border: 0;
+  border-radius: 0;
+  background: var(--print);
+  color: var(--on-print);
+  box-shadow: var(--shadow-frame);
+}
+
+.polaroidContainerThumbnail {
+  padding: var(--polaroid-padding, 5px);
+  box-shadow: var(--shadow-print);
+}

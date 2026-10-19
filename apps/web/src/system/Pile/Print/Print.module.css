@@ -2,10 +2,6 @@
   position: relative;
   display: block;
   width: 100%;
-  padding: 5px;
-  border: 0;
-  background: var(--print);
-  box-shadow: var(--shadow-print);
   cursor: pointer;
   font: inherit;
   text-align: inherit;
@@ -56,7 +52,7 @@
   flex: none;
   width: auto;
   height: 7.5rem;
-  padding: 4px;
+  --polaroid-padding: 4px;
   margin-right: -1.6rem;
   transform: rotate(var(--r, 0deg));
   transform-origin: bottom center;
@@ -71,7 +67,7 @@
   flex: none;
   width: auto;
   height: 7.5rem;
-  padding: 4px;
+  --polaroid-padding: 4px;
   margin-right: -1.6rem;
   transform: rotate(var(--r, 0deg));
   transform-origin: bottom center;

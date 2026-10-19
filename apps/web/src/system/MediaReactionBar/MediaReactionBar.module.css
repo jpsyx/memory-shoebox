@@ -52,7 +52,7 @@
 }
 .mediaReactionBarHint {
   margin: 0;
-  color: var(--on-print);
+  color: var(--on-panel);
   font-size: var(--micro);
   font-variant-numeric: tabular-nums;
 }
@@ -90,6 +90,6 @@
 }
 .mediaReactionBarArea > [role="status"] {
   margin: 0;
-  color: var(--on-print-quiet);
+  color: var(--on-panel-quiet);
   font-size: var(--micro);
 }

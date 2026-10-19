@@ -4,7 +4,13 @@ Videos keep the approved player-and-sidebar composition, using Shoebox's
 rendition-aware ink and print palette. The surface, player and composer have
 square edges. The rounded **reaction bar** (also called the **emoji bar** or
 **react bar**) is the primary way to react to a video moment. On phones, the
-conversation stacks beneath the player. Photos reuse the same white surface,
+conversation stacks beneath the player. Photos and videos reuse `ItemConversation`
+for the page layout: the heading and metadata sit directly on the page background,
+while the media frame and the entire white comments panel have their own elevation.
+The shared `PolaroidContainer` supplies the same white paper edge and shadow to
+photos and videos, and also frames timeline thumbnails. Video controls stay inside
+the paper edge; fullscreen uses the inner player without that edge.
+The rounded white reaction bar retains its own elevation. Photos also reuse the
 More drawer, composer, comment rows and media reaction bar. Their whole-item
 reaction choices and untimed comments retain their existing contracts.
 The [prototype research](video-conversation-prototypes.md) records the library

@@ -1,3 +1,4 @@
+import { PolaroidContainer } from "@/system/PolaroidContainer/PolaroidContainer";
 import { scatterStyle } from "@/system/Pile/scatterStyle";
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
@@ -39,7 +40,9 @@ export function Print({
     durationMs: media.durationMs ?? undefined,
   });
   return (
-    <button
+    <PolaroidContainer
+      component="button"
+      size="thumbnail"
       {...interaction.intent}
       type="button"
       ref={reference}
@@ -65,6 +68,6 @@ export function Print({
         labelCount={labelCount}
       />
       {children}
-    </button>
+    </PolaroidContainer>
   );
 }

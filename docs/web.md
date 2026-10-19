@@ -749,8 +749,16 @@ all the previous frame is until then: the right column and its reaction row
 are `inert`, because a write from either would land on the frame being left.
 
 **Photos and videos share one conversation surface.** `ItemConversation/` owns
-its white container, heading and metadata, media/comment grid, composer, comment
-rows and the top-right **More** drawer. The drawer contains people, tags,
+the heading and metadata on the page background, media/comment grid, composer,
+comment rows and the top-right **More** drawer. There is no enclosing white card.
+The media frame, rounded reaction bar and full white comments panel each retain
+their own elevation; the shared layout owns the spacing for both media kinds.
+`system/PolaroidContainer` owns the square white paper edge and shadow for both
+full-size photos and videos, plus timeline and burst thumbnails. Its viewer size
+uses a 10px edge; thumbnails use 5px (4px in a burst fan). It renders a div for
+viewers or the existing native button for timeline prints, preserving refs,
+selection, navigation and motion. Video fullscreen targets the inner player,
+so the paper edge stays outside fullscreen. The drawer contains people, tags,
 visibility, capture date, description and original/actions, with the same
 capability checks for either kind. It fills the phone width, lets nested dialogs
 handle Escape first, and returns focus to More without replacing the media.

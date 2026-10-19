@@ -5,11 +5,7 @@
 }
 .itemConversationSurface {
   color-scheme: light;
-  color: var(--on-print);
-  background: var(--print);
-  border-radius: 0;
-  box-shadow: var(--shadow-print);
-  overflow: clip;
+  color: var(--on-panel);
   font-family: var(--font-ui);
 }
 .itemConversationSurface ::selection {
@@ -34,8 +30,11 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--sp-3);
-  padding: 5px 28px;
-  border-bottom: 1px solid var(--rule-print);
+  padding: 5px 0;
+  color: var(--on-panel);
+}
+.itemConversationHeader :is(button, input, textarea, select):focus-visible {
+  outline-color: var(--on-panel);
 }
 .itemConversationHeader h1 {
   margin: 0;
@@ -47,21 +46,27 @@
   text-wrap: balance;
 }
 .itemConversationHeader p {
-  color: var(--on-print-quiet);
+  color: var(--on-panel-quiet);
   margin: 2px 0 0;
   font-size: var(--micro);
 }
 .itemConversationGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
+  column-gap: var(--sp-3);
   min-height: 0;
 }
 .itemConversationMediaColumn {
   min-width: 0;
-  padding: var(--sp-1) 26px;
-  background: var(--print-sunk);
+  padding: var(--sp-1) 0;
+}
+.itemConversationMediaColumn [role="alert"] {
+  color: var(--on-panel);
 }
 .itemConversationCommentsColumn {
+  color: var(--on-print);
+  background: var(--print);
+  box-shadow: var(--shadow-print);
   min-height: 0;
   overflow-y: auto;
   contain: size;
@@ -71,9 +76,6 @@
 @media (max-width: 1000px) {
   .itemConversationGrid {
     grid-template-columns: minmax(0, 1fr) 320px;
-  }
-  .itemConversationMediaColumn {
-    padding: var(--sp-1) 20px;
   }
 }
 @media (max-width: 800px) {
@@ -85,7 +87,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: var(--sp-3);
-    padding: var(--sp-1) 18px;
+    padding: var(--sp-1) 0;
   }
   .itemConversationHeader p {
     font-size: var(--micro);
@@ -95,7 +97,7 @@
     min-height: 0;
   }
   .itemConversationMediaColumn {
-    padding: 14px 12px 20px;
+    padding: var(--sp-1) 0 var(--sp-3);
   }
   .itemConversationCommentsColumn {
     contain: none;

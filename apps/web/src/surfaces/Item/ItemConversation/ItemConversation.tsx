@@ -10,7 +10,7 @@ type Props = ComponentProps<typeof ItemDetails> & {
 };
 
 /**
- * Shared white surface, heading, More drawer and responsive media/comment grid.
+ * Shared page layout, heading, More drawer and elevated comments panel.
  */
 export function ItemConversation({
   media,

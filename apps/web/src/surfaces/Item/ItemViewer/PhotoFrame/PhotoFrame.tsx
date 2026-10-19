@@ -1,3 +1,4 @@
+import { PolaroidContainer } from "@/system/PolaroidContainer/PolaroidContainer";
 import { useMediaLease } from "@/media/useMediaLease/useMediaLease";
 import { usePhotoSourceFailure } from "@/media/usePhotoSourceFailure";
 import { useSelectedPhoto, type SelectedPhoto } from "@/media/useSelectedPhoto";
@@ -65,7 +66,7 @@ export function PhotoFrame({
       ? previous.current
       : undefined;
   return (
-    <div
+    <PolaroidContainer
       ref={photo.frame}
       className={classes.photoFrame}
       data-photo-surface="viewer"
@@ -98,6 +99,6 @@ export function PhotoFrame({
           </button>
         ) : null}
       </div>
-    </div>
+    </PolaroidContainer>
   );
 }

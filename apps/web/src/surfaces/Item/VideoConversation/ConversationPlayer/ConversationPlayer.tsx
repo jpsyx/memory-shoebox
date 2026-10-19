@@ -1,3 +1,4 @@
+import { PolaroidContainer } from "@/system/PolaroidContainer/PolaroidContainer";
 import { useMediaLease } from "@/media/useMediaLease/useMediaLease";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import type { ItemDetail } from "@memory-shoebox/shared";
@@ -33,41 +34,43 @@ export function ConversationPlayer({
   const [retryVersion, setRetryVersion] = useState(0);
   const hasError = playback.hasError;
   return (
-    <Container
-      className={classes.conversationPlayer}
-      aria-label="Video player"
-      data-item-navigation-ignore
-      data-video-player
-    >
-      <RegisteredVideo
-        key={`media-${retryVersion}`}
-        itemId={detail.itemId}
-        media={detail.media}
-        transport={transport}
-        playback={playback}
-      />
-      <VideoPlaybackOverlay
-        itemId={detail.itemId}
-        playback={playback}
-        transport={transport}
-        hasError={hasError}
-        renew={lease.renew}
-        onReload={() => {
-          setRetryVersion((version) => {
-            return version + 1;
-          });
-          transport.setPosition(0);
-          playback.setIsPlaying(false);
-        }}
-      />
-      <ConversationControls
-        key={`controls-${retryVersion}`}
-        comments={detail.comments}
-        transport={transport}
-        playback={playback}
-        reactions={reactions}
-        hasError={hasError}
-      />
-    </Container>
+    <PolaroidContainer>
+      <Container
+        className={classes.conversationPlayer}
+        aria-label="Video player"
+        data-item-navigation-ignore
+        data-video-player
+      >
+        <RegisteredVideo
+          key={`media-${retryVersion}`}
+          itemId={detail.itemId}
+          media={detail.media}
+          transport={transport}
+          playback={playback}
+        />
+        <VideoPlaybackOverlay
+          itemId={detail.itemId}
+          playback={playback}
+          transport={transport}
+          hasError={hasError}
+          renew={lease.renew}
+          onReload={() => {
+            setRetryVersion((version) => {
+              return version + 1;
+            });
+            transport.setPosition(0);
+            playback.setIsPlaying(false);
+          }}
+        />
+        <ConversationControls
+          key={`controls-${retryVersion}`}
+          comments={detail.comments}
+          transport={transport}
+          playback={playback}
+          reactions={reactions}
+          hasError={hasError}
+        />
+      </Container>
+    </PolaroidContainer>
   );
 }
