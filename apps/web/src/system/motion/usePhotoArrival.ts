@@ -1,5 +1,8 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
-import { arrivePhotoTransition } from "./photoTransition/photoTransition";
+import {
+  arrivePhotoTransition,
+  preparePhotoArrival,
+} from "./photoTransition/photoTransition";
 
 /** Wait for real pixels and restored scroll without delaying route navigation. */
 export function usePhotoArrival<T extends HTMLElement>(
@@ -10,6 +13,13 @@ export function usePhotoArrival<T extends HTMLElement>(
   const ownReference = useRef<T>(null);
   const reference = options?.reference ?? ownReference;
   const isReady = options?.isReady ?? true;
+  useLayoutEffect(() => {
+    const element = reference.current;
+    if (!element || !itemId) {
+      return;
+    }
+    return preparePhotoArrival(element, itemId);
+  }, [itemId, reference]);
   useLayoutEffect(() => {
     const element = reference.current;
     const image = element?.querySelector("img");

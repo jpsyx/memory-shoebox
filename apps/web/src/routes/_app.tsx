@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { MediaLoadingProvider } from "@/media/MediaLoadingProvider/MediaLoadingProvider";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
-import { clearPhotoTransition } from "@/system/motion/photoTransition/photoTransition";
+import {
+  clearPhotoTransition,
+  reconcilePhotoTransition,
+} from "@/system/motion/photoTransition/photoTransition";
 import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import {
@@ -11,7 +14,7 @@ import {
   useMatches,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 
 /**
  * Signed-in routes with account authority and shared application navigation.
@@ -48,6 +51,10 @@ function AppShell(): ReactNode {
   useEffect(() => {
     return clearPhotoTransition;
   }, [viewer.memberId]);
+
+  useLayoutEffect(() => {
+    reconcilePhotoTransition(routeKey);
+  }, [routeKey]);
 
   // An item page replaces the bar rather than adding one under it.
   //

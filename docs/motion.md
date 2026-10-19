@@ -7,24 +7,42 @@ change permissions, save settings or create upload progress. See the
 
 ## Photo journey
 
-A decoded timeline print records its item identity, geometry, source surface
-and intended route when explicitly opened. The pending geometry expires after
-1.5 seconds. The matching viewer waits for the selected display image to decode and commit,
-then measures on the next frame so layout and scroll restoration can finish.
-A loading thumbnail or retained preview cannot start the viewer flight. It then draws one temporary,
-inert, `aria-hidden` photograph above the real destination for a 560ms flight.
-The real destination remains in the document and is restored on completion
-or cancellation. The temporary frame copies the destination paper padding,
-background and shadow, plus the image backdrop and currently selected pixels,
-so letterboxed photos retain their blue inset through the handoff. No source
-image URL is retained in the snapshot.
+A decoded timeline print becomes one temporary, inert, `aria-hidden` frame at
+click time. It keeps the source photograph visible while navigation and decoding
+finish. Both a matching route preview and the selected viewer hide their real
+frames in a layout effect before paint. They retain their layout boxes and
+accessible content. There is never an intentional full-size reveal before the
+flight.
 
-The in-app back link stages the reverse flight. A visible matching print is
-required; deep links, unloaded pictures, unavailable browser APIs, video,
-off-screen destinations, unrelated routes and reduced motion use normal
-navigation. Browser back continues to work without a staged return animation.
-Unmounting the destination and changes to signed-in membership clear retained
-motion. Returning focus to a print never steals focus from another control.
+The matching selected image must decode and commit before arrival measures the
+final frame on the next animation frame. The retained print then travels for
+420ms; the in-app return uses 300ms. The same temporary frame survives loading
+and flight, and the real destination becomes visible once on completion.
+
+The temporary frame copies the source and destination paper, padding, shadow,
+image backdrop and current image URL. Its fixed, layout-contained box changes
+size independently of the page. `object-fit: contain` preserves photo proportions
+as letterboxing changes, avoiding the unequal image scaling of the earlier
+transform-only flight. Only this one inert frame animates size; the rest of the
+page does not relayout for motion. The retained pixels are removed on completion
+or cancellation and are never stored in an application cache.
+
+Pending arrivals expire after 1.5 seconds and reveal the normal loading or error
+state without a late animation. Unrelated navigation, membership changes,
+resizing, wheel/touch scrolling and scroll keys or Escape cancel the journey.
+Router scroll restoration can finish during loading; scrolling during a flight
+cancels it because the measured destination may have moved. Preview replacement
+releases its own hidden frame without retiring the selected destination's flight.
+Old cleanup callbacks cannot remove a newer journey.
+
+A visible matching print is required for the in-app return. Deep links,
+unloaded source pictures, unavailable animation support, video, off-screen
+destinations and reduced motion use normal navigation. Browser back continues
+to work without a staged return animation. Returning focus to a print never
+steals focus from another control.
+
+The [photo transition review](photo-transition-review.md) records the flash
+reproduction and the first-paint, interruption and browser checks for this handoff.
 
 ## Burst choreography
 
@@ -72,6 +90,7 @@ fallback, upload previews and settled-upload rendering, and reduced motion.
 The isolated acceptance fixture recorded no page errors. CSS poses and keyframe values are reviewed visually rather than
 asserted by tests that merely repeat their implementation.
 
-The completed pass passed all 4,222 repository tests, workspace type checking,
-formatting, lint and production build. A fresh independent code review verified
-interruption and focus fixes with no remaining material findings.
+The photo-handoff regression additionally checks the first painted frame through
+completion in Chromium and WebKit at desktop and mobile widths. Targeted tests
+cover bounded loading, preview replacement, interruption and stale cleanup. See
+the linked photo transition review for the measured evidence and limitations.

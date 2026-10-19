@@ -90,6 +90,10 @@ it.each([
         />
       </MediaLoadingContext>,
     );
+    const retained = document.querySelector("[data-photo-flight]");
+    expect(
+      view.container.querySelector("[data-photo-surface]"),
+    ).toHaveAttribute("data-photo-arriving", "true");
     const flushFrames = () => {
       frames.splice(0).forEach((callback) => {
         return callback(0);
@@ -114,6 +118,7 @@ it.each([
       act(flushFrames);
     }
     expect(animate).toHaveBeenCalledOnce();
+    expect(document.querySelector("[data-photo-flight]")).toBe(retained);
     expect(document.querySelector("[data-photo-flight] img")).toHaveAttribute(
       "src",
       selected.getAttribute("src"),

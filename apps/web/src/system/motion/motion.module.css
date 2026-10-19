@@ -3,6 +3,10 @@
   z-index: 300;
   pointer-events: none;
   transform-origin: center;
+  box-sizing: border-box;
+  contain: layout style;
+}
+.photoFlight[data-photo-flight-phase="moving"] {
   will-change: transform;
 }
 .photoFlight img {

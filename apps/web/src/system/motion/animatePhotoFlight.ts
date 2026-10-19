@@ -3,68 +3,50 @@ import {
   PAPER_EASE,
   type PaperGeometry,
 } from "./paperMotionHelpers";
-import classes from "./motion.module.css";
+import { updatePhotoFlightFromElement } from "./photoFlightHelpers";
 
-/** The temporary layer contains only a photograph and never an active control. */
-function _makeFlightFromTarget(
-  target: HTMLElement,
-  geometry: PaperGeometry,
-): HTMLDivElement {
-  const layer = document.createElement("div");
-  layer.className = classes.photoFlight ?? "";
-  layer.dataset.photoFlight = "true";
-  layer.setAttribute("aria-hidden", "true");
-  layer.inert = true;
-  const frameStyle = getComputedStyle(target);
-  Object.assign(layer.style, {
-    left: `${geometry.centerX - geometry.width / 2}px`,
-    top: `${geometry.centerY - geometry.height / 2}px`,
-    width: `${geometry.width}px`,
-    height: `${geometry.height}px`,
-    boxSizing: "border-box",
-    padding: frameStyle.padding,
-    backgroundColor: frameStyle.backgroundColor,
-    boxShadow: frameStyle.boxShadow,
-  });
-  const targetImage = target.querySelector("img")!;
-  const image = targetImage.cloneNode() as HTMLImageElement;
-  image.src = targetImage.currentSrc || targetImage.src;
-  image.removeAttribute("srcset");
-  image.removeAttribute("sizes");
-  image.style.backgroundColor = getComputedStyle(targetImage).backgroundColor;
-  image.removeAttribute("loading");
-  image.alt = "";
-  layer.append(image);
-  document.body.append(layer);
-  return layer;
+type FlightOptions = {
+  target: HTMLElement;
+  source: PaperGeometry;
+  layer: HTMLDivElement;
+  onFinished: () => void;
+};
+
+function _getPoseFromLayer(layer: HTMLDivElement): Keyframe {
+  return {
+    width: layer.style.width,
+    height: layer.style.height,
+    padding: layer.style.padding,
+    boxShadow: layer.style.boxShadow,
+    backgroundColor: layer.style.backgroundColor,
+    transform: layer.style.transform,
+  };
 }
 
-/** Fly one inert print; every completion and cancellation restores the real one. */
-export function animatePhotoFlight(
-  target: HTMLElement,
-  source: PaperGeometry,
-  onFinished: () => void,
-): () => void {
+/** Fly the retained print, keeping its pixels proportional through letterboxing. */
+export function animatePhotoFlight({
+  target,
+  source,
+  layer,
+  onFinished,
+}: Readonly<FlightOptions>): () => void {
   const destination = getPaperGeometryFromElement(target);
-  const layer = _makeFlightFromTarget(target, destination);
-  target.dataset.photoArriving = "true";
-  const animation = layer.animate(
-    [
-      {
-        transform: `translate(${source.centerX - destination.centerX}px, ${source.centerY - destination.centerY}px) rotate(${source.angle}deg) scale(${source.width / destination.width}, ${source.height / destination.height})`,
-      },
-      { transform: `rotate(${destination.angle}deg) scale(1)` },
-    ],
-    { duration: 560, easing: PAPER_EASE },
-  );
+  const departure = {
+    ..._getPoseFromLayer(layer),
+    transform: `translate(calc(-50% + ${source.centerX - destination.centerX}px), calc(-50% + ${source.centerY - destination.centerY}px)) rotate(${source.angle}deg)`,
+  };
+  updatePhotoFlightFromElement(layer, target, destination);
+  layer.dataset.photoFlightPhase = "moving";
+  const animation = layer.animate([departure, _getPoseFromLayer(layer)], {
+    duration: target.dataset.photoSurface === "viewer" ? 420 : 300,
+    easing: PAPER_EASE,
+  });
   let isReleased = false;
   const release = () => {
     if (isReleased) {
       return;
     }
     isReleased = true;
-    delete target.dataset.photoArriving;
-    layer.remove();
     animation.cancel();
     onFinished();
   };
