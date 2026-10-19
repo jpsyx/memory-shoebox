@@ -106,7 +106,7 @@ export function useSelectedPhoto(
   options: Readonly<SelectedPhotoOptions>,
 ): SelectedPhoto {
   const { media, itemId } = options;
-  const frame = usePhotoArrival<HTMLDivElement>(itemId, media.thumb?.url ?? "");
+  const frame = useRef<HTMLDivElement>(null);
   const resources = useContext(MediaLoadingContext);
   const viewport = usePhotoViewport({
     reference: frame,
@@ -135,6 +135,21 @@ export function useSelectedPhoto(
     viewport,
     sourceEpoch: options.sourceEpoch,
   });
+  const decoded = usePhotoDecode({
+    itemId,
+    source,
+    viewport,
+    sourceEpoch: options.sourceEpoch,
+    onDecoded: () => {
+      if (options.presentation !== "preview") {
+        ownership.finishSelectedDecode();
+      }
+    },
+  });
+  usePhotoArrival(itemId, decoded.sourceKey, {
+    reference: frame,
+    isReady: decoded.isReady && options.presentation !== "preview",
+  });
   return {
     frame,
     source,
@@ -142,16 +157,6 @@ export function useSelectedPhoto(
     handoff: ownership.handoff,
     discardHandoff: ownership.finishSelectedDecode,
     recheckHandoff: ownership.recheckHandoff,
-    ...usePhotoDecode({
-      itemId,
-      source,
-      viewport,
-      sourceEpoch: options.sourceEpoch,
-      onDecoded: () => {
-        if (options.presentation !== "preview") {
-          ownership.finishSelectedDecode();
-        }
-      },
-    }),
+    ...decoded,
   };
 }

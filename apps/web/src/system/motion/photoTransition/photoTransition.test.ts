@@ -59,6 +59,23 @@ describe("a print travelling to its own destination", () => {
     expect(document.querySelectorAll("[data-photo-flight]")).toHaveLength(1);
     expect(animate).toHaveBeenCalledOnce();
   });
+  it("carries the destination paper, shadow and image backdrop into the flight", () => {
+    stagePhotoTransition(_makePhoto("pile"), "photo-a");
+    history.replaceState({}, "", "/items/photo-a");
+    const target = _makePhoto("viewer");
+    target.style.backgroundColor = "rgb(250, 251, 252)";
+    target.style.boxShadow = "2px 4px 8px rgb(10, 20, 30)";
+    target.style.padding = "10px";
+    target.querySelector("img")!.style.backgroundColor = "rgb(190, 205, 230)";
+    arrivePhotoTransition(target, "photo-a");
+    const flight = document.querySelector<HTMLElement>("[data-photo-flight]")!;
+    expect(flight.style.backgroundColor).toBe(target.style.backgroundColor);
+    expect(flight.style.boxShadow).toBe(target.style.boxShadow);
+    expect(flight.querySelector("img")!.style.backgroundColor).toBe(
+      "rgb(190, 205, 230)",
+    );
+    expect(flight.style.boxSizing).toBe("border-box");
+  });
   it("restores the destination after completion and never leaves a duplicate", async () => {
     stagePhotoTransition(_makePhoto("pile"), "photo-a");
     history.replaceState({}, "", "/items/photo-a");

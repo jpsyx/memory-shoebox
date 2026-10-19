@@ -15,14 +15,23 @@ function _makeFlightFromTarget(
   layer.dataset.photoFlight = "true";
   layer.setAttribute("aria-hidden", "true");
   layer.inert = true;
+  const frameStyle = getComputedStyle(target);
   Object.assign(layer.style, {
     left: `${geometry.centerX - geometry.width / 2}px`,
     top: `${geometry.centerY - geometry.height / 2}px`,
     width: `${geometry.width}px`,
     height: `${geometry.height}px`,
-    padding: getComputedStyle(target).padding,
+    boxSizing: "border-box",
+    padding: frameStyle.padding,
+    backgroundColor: frameStyle.backgroundColor,
+    boxShadow: frameStyle.boxShadow,
   });
-  const image = target.querySelector("img")!.cloneNode() as HTMLImageElement;
+  const targetImage = target.querySelector("img")!;
+  const image = targetImage.cloneNode() as HTMLImageElement;
+  image.src = targetImage.currentSrc || targetImage.src;
+  image.removeAttribute("srcset");
+  image.removeAttribute("sizes");
+  image.style.backgroundColor = getComputedStyle(targetImage).backgroundColor;
   image.removeAttribute("loading");
   image.alt = "";
   layer.append(image);

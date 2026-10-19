@@ -9,11 +9,15 @@ change permissions, save settings or create upload progress. See the
 
 A decoded timeline print records its item identity, geometry, source surface
 and intended route when explicitly opened. The pending geometry expires after
-1.5 seconds. The matching destination waits for its image and the next frame
-so layout and scroll restoration can finish. It then draws one temporary,
+1.5 seconds. The matching viewer waits for the selected display image to decode and commit,
+then measures on the next frame so layout and scroll restoration can finish.
+A loading thumbnail or retained preview cannot start the viewer flight. It then draws one temporary,
 inert, `aria-hidden` photograph above the real destination for a 560ms flight.
 The real destination remains in the document and is restored on completion
-or cancellation. No source image URL is retained in the snapshot.
+or cancellation. The temporary frame copies the destination paper padding,
+background and shadow, plus the image backdrop and currently selected pixels,
+so letterboxed photos retain their blue inset through the handoff. No source
+image URL is retained in the snapshot.
 
 The in-app back link stages the reverse flight. A visible matching print is
 required; deep links, unloaded pictures, unavailable browser APIs, video,

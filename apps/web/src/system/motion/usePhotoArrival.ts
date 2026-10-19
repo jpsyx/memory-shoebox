@@ -5,12 +5,15 @@ import { arrivePhotoTransition } from "./photoTransition/photoTransition";
 export function usePhotoArrival<T extends HTMLElement>(
   itemId: string | undefined,
   imageUrl: string,
+  options?: { reference: RefObject<T | null>; isReady: boolean },
 ): RefObject<T | null> {
-  const reference = useRef<T>(null);
+  const ownReference = useRef<T>(null);
+  const reference = options?.reference ?? ownReference;
+  const isReady = options?.isReady ?? true;
   useLayoutEffect(() => {
     const element = reference.current;
     const image = element?.querySelector("img");
-    if (!element || !image || !itemId) {
+    if (!element || !image || !itemId || !isReady) {
       return;
     }
     let frame = 0;
@@ -32,6 +35,6 @@ export function usePhotoArrival<T extends HTMLElement>(
       image.removeEventListener("load", onLoad);
       release?.();
     };
-  }, [itemId, imageUrl]);
+  }, [itemId, imageUrl, reference, isReady]);
   return reference;
 }
