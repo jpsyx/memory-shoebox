@@ -87,8 +87,10 @@ spacing, and contact-shadow tokens. Reduced motion suppresses floating emoji mot
 Ctrl+Enter submits a comment or reply through the same form as Send. Plain Enter
 still inserts a newline; composing input and repeated keydown events do not send.
 
-Replies are one level deep and inherit the parent comment's timestamp. Existing
-edit, delete and comment-reaction permissions still apply. Removing a parent
+Replies are one level deep and inherit the parent comment's timestamp. Cancelling
+a pending reply retires that composer: the saved reply still joins the thread,
+but its eventual success cannot close a newly opened reply or discard new words.
+Existing edit, delete and comment-reaction permissions still apply. Removing a parent
 promotes its replies to top-level comments, preserving their text and reactions.
 The item cache mirrors this database behavior immediately.
 

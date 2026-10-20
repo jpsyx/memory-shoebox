@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,6 +20,7 @@ import {
   renderItem,
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
+import { makeHold } from "@/testing/itemWriteTestHelpers";
 
 beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
@@ -302,8 +309,68 @@ describe("video conversation interactions", () => {
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
     await screen.findByText("Yes!");
     expect(
+      screen.queryByRole("textbox", { name: "Reply to Abuela Rosa" }),
+    ).not.toBeInTheDocument();
+    expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
     ).toEqual({ body: "Yes!", parentCommentId: parent.commentId });
+  });
+
+  it("retains a reopened reply's words when the cancelled sender later succeeds", async () => {
+    const parent = makeComment({ atSeconds: 6 });
+    const { hold, letGo } = makeHold();
+    respondWithItem({
+      detail: makeVideoDetail({ comments: [parent] }),
+      routes: {
+        [`POST /api/items/${ITEM_ID}/comments`]: {
+          status: 201,
+          waitFor: hold,
+          body: makeComment({
+            commentId: "018f0000-0000-7000-8000-00000000d103",
+            parentCommentId: parent.commentId,
+            author: SIGNED_IN,
+            body: "First sent reply",
+            atSeconds: 6,
+          }),
+        },
+      },
+    });
+    renderItem(ITEM_ID);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Reply to Abuela Rosa" }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Reply to Abuela Rosa" }),
+      "First sent reply",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Post reply" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Reply to Abuela Rosa" }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Reply to Abuela Rosa" }),
+      "Newer reply words",
+    );
+    expect(screen.getByRole("button", { name: "Post reply" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+    await act(async () => {
+      letGo();
+    });
+    await screen.findByText("First sent reply");
+    expect(
+      screen.getByRole("textbox", { name: "Reply to Abuela Rosa" }),
+    ).toHaveValue("Newer reply words");
+    expect(
+      getRecordedCountFromLine(`POST /api/items/${ITEM_ID}/comments`),
+    ).toBe(1);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Post reply" }),
+      ).toHaveAttribute("aria-busy", "false");
+    });
   });
 
   it("opens item details in a drawer without replacing the player", async () => {

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { IconSend } from "@tabler/icons-react";
 import type { CommentDto } from "@memory-shoebox/shared";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
@@ -21,6 +21,13 @@ export function VideoReply({
 }: Readonly<Props>): ReactNode {
   const [body, setBody] = useState("");
   const write = useCreateComment(itemId);
+  const isMounted = useRef(false);
+  useLayoutEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   return (
     <form
       className={classes.videoReply}
@@ -29,7 +36,11 @@ export function VideoReply({
         if (body.trim() !== "" && !write.isSending) {
           write.send({
             draft: { body, parentCommentId: parent.commentId },
-            onSent,
+            onSent: () => {
+              if (isMounted.current) {
+                onSent();
+              }
+            },
           });
         }
       }}
