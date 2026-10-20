@@ -343,7 +343,7 @@ focus behavior. An open nested interaction holds the dock; its first Escape
 closes that interaction. Draft capture, retries, reactions, editing, replies and
 submission still belong to the existing conversation components and write hooks.
 
-The integrated production browser regression in `e2e/admin/video-theater.spec.ts`
+The integrated production browser regression in `e2e/admin/video-theater/__tests__/`
 runs the actual item route, shared components and animated CSS against isolated
 local catalogs in Chromium and WebKit. It replaces the earlier narrow Vite focus
 harness. It covers moment capture/pause, collapse and mixed-navigation restoration,

@@ -10,8 +10,11 @@ imported into the production viewer.
 
 The seven groups in the [approved specification](superpowers/specs/2026-10-20-theater-design.md)
 map to the following evidence. Browser scenarios live in
-`e2e/admin/video-theater.spec.ts` and run in both Chromium and WebKit. Deep race
-combinations remain covered by the existing real-hook and route integration tests.
+`e2e/admin/video-theater/__tests__/` and run in both Chromium and WebKit. The five
+focused specs cover navigation, focus, conversation, authority/playback and
+geometry. Run them with the `video-theater` filter; the existing configuration
+still discovers all 24 scenarios in each engine. Deep race combinations remain
+covered by the existing real-hook and route integration tests.
 
 | Group                            | Production browser evidence                                                                                                                                                                                                                                                                                                                | Complementary deterministic evidence                                                                                                                                                                                                                                            |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,6 +29,11 @@ combinations remain covered by the existing real-hook and route integration test
 The current selected photo is awaited through its decoded `data-photo-ready`
 handoff before asserting native-node identity. Replacing a thumbnail during
 ordinary decode is valid media loading, not a presentation remount.
+
+Deletion persistence is asserted only after the reloaded, authorized composer is
+editable. Comments belong to that same real item-detail payload, so absence is
+checked after data readiness rather than against the SPA loading shell. This
+review correction strengthens browser evidence and changes no production code.
 
 ## Integration repairs
 
@@ -61,7 +69,7 @@ shared host, with complete fallback behavior when native fullscreen is absent.
 | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `pnpm check`                                                                        | 5,229 passed; seven existing server skips. Skills, format, lint, workspace types and build pass.       |
 | `pnpm test:e2e:video --reporter=list,json`                                          | 88/88 passed across Chromium/WebKit.                                                                   |
-| `pnpm exec playwright test -c playwright.video.config.ts video-theater.spec.ts`     | 48/48 passed after final approved-layout repairs.                                                      |
+| `pnpm exec playwright test -c playwright.video.config.ts video-theater`             | 48/48 passed after the review split and authorized reload readiness correction.                        |
 | `pnpm exec playwright test -c playwright.admin.config.ts item-conversation.spec.ts` | 8/8 passed after final style repairs, including reaction-failure visibility/contrast and burst layout. |
 | Video conversation `--grep 'grouped moments'`                                       | 2/2 passed after final style repairs, retaining real marker rows inside the fullscreen host.           |
 | Theater `--grep geometry`                                                           | 8/8 passed with settled captures, explicit close visibility/reachability and both engines.             |
@@ -73,6 +81,12 @@ check and static checks cover the resulting source. Native fullscreen was
 observed in both engines; forced rejection confirmed complete window fallback
 with no native fullscreen element. No browser project or acceptance group was
 skipped.
+
+Review fix round 1 also passed the focused photo/video deletion checks in both
+engines (4/4), root `pnpm type-check`, `pnpm lint` and `pnpm format:check`.
+Before/after discovery has identical scenario titles and projects: 48 theater
+tests. Full video discovery remains 88 tests in 12 files. This test/docs-only
+round did not rerun the workspace unit suite or non-theater browser scenarios.
 
 Existing jsdom scroll/navigation and Video.js notices, the build's React compiler
 module-directive advisory and Playwright's NO_COLOR/FORCE_COLOR notice are baseline
