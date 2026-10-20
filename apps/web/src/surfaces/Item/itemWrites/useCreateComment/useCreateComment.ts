@@ -1,5 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef } from "react";
+import {
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { CreateCommentRequest } from "@memory-shoebox/shared";
 import { createComment } from "@/api/comments/comments";
 import { commentSendFailure } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
@@ -10,11 +13,11 @@ import {
 } from "@/surfaces/Item/itemWrites/itemWriteHelpers/itemWriteHelpers";
 import { useUpdateCachedItem } from "@/surfaces/Item/itemWrites/useUpdateCachedItem";
 
+type CommentSubmission = { draft: CreateCommentRequest; onSent: () => void };
+
 /** What the composer needs. `onSent` clears it, and only on success. */
 export type CommentSend = {
-  send: (
-    options: Readonly<{ draft: CreateCommentRequest; onSent: () => void }>,
-  ) => void;
+  send: (options: Readonly<CommentSubmission>) => void;
   isSending: boolean;
   error: string | undefined;
 };
@@ -27,37 +30,35 @@ export type CommentSend = {
 export function useCreateComment(itemId: string): CommentSend {
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
-  // `isPending` reaches the component a macrotask after `mutate`, so a double
-  // press inside that window would otherwise queue a second POST and post the
-  // comment twice.
-  const isInFlightRef = useRef(false);
+  const mutationKey = ["items", itemId, "comments"];
+  const filters = { mutationKey, exact: true };
+  const numPendingSends = useIsMutating(filters);
   const mutation = useMutation({
-    mutationKey: ["items", itemId, "comments"],
+    mutationKey,
     scope: makeWriteScopeFromItemId(itemId),
-    mutationFn: (draft: CreateCommentRequest) => {
+    mutationFn: ({ draft }: CommentSubmission) => {
       return createComment({ itemId, body: draft });
     },
-    onSuccess: (comment) => {
+    onSuccess: (comment, { onSent }) => {
       updateCachedItem((detail) => {
         return makeItemDetailFromSavedComment({ detail, comment });
       });
+      // Mutation-level callbacks survive composer observer unmount.
+      onSent();
     },
     onError: (error) => {
       refetchItemWhenRefused({ queryClient, itemId, error });
     },
-    onSettled: () => {
-      isInFlightRef.current = false;
-    },
   });
   return {
     send: ({ draft, onSent }) => {
-      if (isInFlightRef.current) {
+      // The cache sees mutate synchronously, including a remounted composer.
+      if (queryClient.isMutating(filters) > 0) {
         return;
       }
-      isInFlightRef.current = true;
-      mutation.mutate(draft, { onSuccess: onSent });
+      mutation.mutate({ draft, onSent });
     },
-    isSending: mutation.isPending,
+    isSending: numPendingSends > 0,
     error:
       mutation.error === null ? undefined : commentSendFailure(mutation.error),
   };

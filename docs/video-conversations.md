@@ -61,7 +61,14 @@ Focusing a new comment pauses playback and captures its timestamp. Any position
 displayed as `0:00` (less than one second) selects **Whole video**, including when
 the member tries to attach that position with the timestamp control. The × on an
 attached timestamp also switches to **Whole video**. Seeking while writing does
-not move that draft. Failed submissions retain the text and anchor. Comment timestamps and
+not move that draft. Failed submissions retain the text and anchor. The main composer shares per-item
+in-memory drafts for the item-route visit, so changing items or remounting the
+composer preserves its words, captured moment and started state. Leaving the
+item route or changing member discards that memory; a denied or deleted item
+loses only its own draft. An in-flight send remains owned by its original item
+through navigation and blocks another send for that item until it settles.
+Successful writes clear only the submitted draft revision, including after
+composer unmount, and preserve any later edits. Comment timestamps and
 timeline markers seek the actual media. Crowded moments group into an accessible
 list. Every marker, including a single comment, opens a Mantine popover with
 separate author, timestamp, and full comment text. Comment line breaks are

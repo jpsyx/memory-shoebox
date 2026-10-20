@@ -1,10 +1,11 @@
-import { useRef, useState, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { isFocusLostOrWithin } from "@/system/focusHelpers";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import {
   useCreateComment,
   type CommentSend,
 } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
+import { useItemCommentDraftMemory } from "./ItemCommentDraftProvider";
 
 type ItemCommentDraft = CommentSend & {
   body: string;
@@ -14,73 +15,17 @@ type ItemCommentDraft = CommentSend & {
   toggleMoment: () => void;
   submit: () => void;
 };
+type DraftOptions = {
+  itemId: string;
+  transport?: VideoTransport;
+  fieldRef: RefObject<HTMLTextAreaElement | null>;
+};
 
-/** A draft captures one moment; focus and playback never move it afterward. */
-export function useItemCommentDraft(
-  options: Readonly<{
-    itemId: string;
-    transport?: VideoTransport;
-    fieldRef: RefObject<HTMLTextAreaElement | null>;
-  }>,
-): ItemCommentDraft {
-  const { itemId, transport, fieldRef } = options;
-  const [body, setBody] = useState("");
-  const [atSeconds, setAtSeconds] = useState<number>();
-  const hasStarted = useRef(false);
-  const write = useCreateComment(itemId);
-  const start = () => {
-    if (hasStarted.current || transport === undefined) {
-      return;
-    }
-    hasStarted.current = true;
-    transport.pause();
-    setAtSeconds(_getMomentFromTransport(transport));
-  };
-  return {
-    body,
-    setBody,
-    atSeconds,
-    start,
-    ...write,
-    toggleMoment: () => {
-      if (transport === undefined) {
-        return;
-      }
-      hasStarted.current = true;
-      transport.pause();
-      setAtSeconds((current) => {
-        return current === undefined
-          ? _getMomentFromTransport(transport)
-          : undefined;
-      });
-      fieldRef.current?.focus();
-    },
-    submit: () => {
-      if (body.trim() === "" || write.isSending) {
-        return;
-      }
-      const sentBody = body;
-      write.send({
-        draft: { body: sentBody, atSeconds: atSeconds ?? null },
-        onSent: () => {
-          setBody((current) => {
-            return current === sentBody ? "" : current;
-          });
-          if (
-            transport === undefined &&
-            isFocusLostOrWithin(fieldRef.current?.form ?? undefined)
-          ) {
-            fieldRef.current?.focus();
-          }
-          if (fieldRef.current?.value === sentBody) {
-            hasStarted.current = false;
-            setAtSeconds(undefined);
-          }
-        },
-      });
-    },
-  };
-}
+type SubmissionOptions = DraftOptions & {
+  memory: ReturnType<typeof useItemCommentDraftMemory>;
+  write: CommentSend;
+  owner: RefObject<string | undefined>;
+};
 
 /** Positions displayed as 0:00 mean the whole video. */
 function _getMomentFromTransport(
@@ -88,4 +33,101 @@ function _getMomentFromTransport(
 ): number | undefined {
   const position = transport.getAnnotationPosition();
   return position < 1 ? undefined : position;
+}
+
+function _toggleDraftMoment({
+  itemId,
+  transport,
+  fieldRef,
+  memory,
+}: Readonly<
+  DraftOptions & {
+    memory: ReturnType<typeof useItemCommentDraftMemory>;
+  }
+>): void {
+  if (transport === undefined) {
+    return;
+  }
+  transport.pause();
+  memory.update(itemId, {
+    hasStarted: true,
+    atSeconds:
+      memory.read(itemId).atSeconds === undefined
+        ? _getMomentFromTransport(transport)
+        : undefined,
+  });
+  fieldRef.current?.focus();
+}
+
+function _submitDraft({
+  itemId,
+  memory,
+  write,
+  transport,
+  fieldRef,
+  owner,
+}: Readonly<SubmissionOptions>): void {
+  const submitted = memory.read(itemId);
+  if (submitted.body.trim() === "" || write.isSending) {
+    return;
+  }
+  const submittedField = fieldRef.current;
+  write.send({
+    draft: { body: submitted.body, atSeconds: submitted.atSeconds ?? null },
+    onSent: () => {
+      if (memory.read(itemId).revision === submitted.revision) {
+        memory.remove(itemId);
+      }
+      if (
+        transport === undefined &&
+        owner.current === itemId &&
+        submittedField !== null &&
+        fieldRef.current === submittedField &&
+        isFocusLostOrWithin(submittedField.form ?? undefined)
+      ) {
+        submittedField.focus();
+      }
+    },
+  });
+}
+
+/** A draft captures one moment; focus and playback never move it afterward. */
+export function useItemCommentDraft(
+  options: Readonly<DraftOptions>,
+): ItemCommentDraft {
+  const { itemId, transport } = options;
+  const memory = useItemCommentDraftMemory();
+  const draft = memory.read(itemId);
+  const write = useCreateComment(itemId);
+  const owner = useRef<string | undefined>(itemId);
+  useLayoutEffect(() => {
+    owner.current = itemId;
+    return () => {
+      owner.current = undefined;
+    };
+  }, [itemId]);
+  return {
+    ...write,
+    body: draft.body,
+    atSeconds: draft.atSeconds,
+    setBody: (body) => {
+      return memory.update(itemId, { body });
+    },
+    start: () => {
+      if (memory.read(itemId).hasStarted || transport === undefined) {
+        return;
+      }
+      transport.pause();
+      memory.update(itemId, {
+        hasStarted: true,
+        atSeconds: _getMomentFromTransport(transport),
+      });
+    },
+    toggleMoment: () => {
+      _toggleDraftMoment({ ...options, memory });
+    },
+    submit: () => {
+      return _submitDraft({ ...options, memory, write, owner });
+    },
+  };
 }
