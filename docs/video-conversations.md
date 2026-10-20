@@ -306,8 +306,9 @@ The same timeline, speed, mute and play controls sit near the lower stage edge;
 the existing reaction bar remains available while playing or commenting. Photo
 reaction failures retain their existing announced alert, with a contrasting
 backing over the stage and image. On
-narrow screens the comment dock reserves space above those controls and reactions,
-using viewport height and safe-area insets. The video picture permits media
+narrow screens the bubble and panel remain bottom-right, with controls and
+reactions raised above the open panel using shared state, viewport height and
+safe-area insets. Empty marker rows do not add blank theater transport height. The video picture permits media
 navigation in theater while its nested controls retain their keyboard exclusions.
 Scoped viewer Portal defaults keep the media More reactions popover inside the
 stable fullscreen host; the comment dock retains its narrower portal target.
@@ -329,8 +330,9 @@ composer beneath them using CSS order. Collapsed content is inert and hidden fro
 assistive technology. Hover opening focuses the composer without pinning the
 panel: departure closes it after 450ms, and re-entry cancels that timer. Explicit
 keyboard or touch opening follows focus departure instead. Closing with focus
-inside returns focus to the bubble. Visibility changes immediately at the state
-commit so browser focus works while opacity and dimensions animate. Item,
+inside returns focus to the bubble. Inert and accessibility state change at the
+commit while opacity and dimensions animate. Redundant CSS visibility hiding is
+avoided because WebKit can retain it while reduced motion interrupts collapse. Item,
 presentation and availability changes
 reset the open state and retire departure timers.
 
@@ -341,11 +343,12 @@ focus behavior. An open nested interaction holds the dock; its first Escape
 closes that interaction. Draft capture, retries, reactions, editing, replies and
 submission still belong to the existing conversation components and write hooks.
 
-The focused browser regression in
-`e2e/admin/video-theater-comments-focus.spec.ts` runs the real shared components
-and their CSS with motion enabled in Chromium and WebKit. It uses an isolated
-test-only Vite page with no product route or API, through the existing video
-Playwright configuration. It verifies opening focus and moment capture plus
-Escape/navigation focus restoration; production viewer integration and fullscreen
-geometry remain separate coverage. Run it with
-`pnpm exec playwright test -c playwright.video.config.ts video-theater-comments-focus.spec.ts`.
+The integrated production browser regression in `e2e/admin/video-theater.spec.ts`
+runs the actual item route, shared components and animated CSS against isolated
+local catalogs in Chromium and WebKit. It replaces the earlier narrow Vite focus
+harness. It covers moment capture/pause, collapse and mixed-navigation restoration,
+real writes and late settlement, permissions, fullscreen portal ancestry, native
+and refused fullscreen, focus containment and responsive control reachability.
+Existing conversation tests now enter the shared host, including expired playback
+URL retry. See [theater](theater.md) for ownership, title/counter, drafts and short
+viewport behavior and [verification](theater-verification.md) for exact evidence.

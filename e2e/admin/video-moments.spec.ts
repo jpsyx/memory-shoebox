@@ -86,7 +86,9 @@ test("long grouped comments remain readable across all renditions on a phone", a
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   const body = "A family moment we will always remember.\n".repeat(25);
-  for (const atSeconds of [0, 0.1]) {
+  // Positions displayed as 0:00 are whole-video comments, so grouped timed
+  // comment fixtures must start at a nonzero displayed timestamp.
+  for (const atSeconds of [4, 4.1]) {
     const comment = await page.request.post(
       `/api/items/${catalog.videoId}/comments`,
       {
@@ -100,8 +102,8 @@ test("long grouped comments remain readable across all renditions on a phone", a
     await page.evaluate((value) => {
       document.documentElement.dataset.rendition = value;
     }, rendition);
-    await page.getByRole("button", { name: "2 moments near 0:00" }).click();
-    const moments = page.getByRole("list", { name: "Moments near 0:00" });
+    await page.getByRole("button", { name: "2 moments near 0:04" }).click();
+    const moments = page.getByRole("list", { name: "Moments near 0:04" });
     await expect(moments).toBeVisible();
     await expect(moments.locator("..")).toHaveCSS("opacity", "1");
     const firstTimestamp = moments

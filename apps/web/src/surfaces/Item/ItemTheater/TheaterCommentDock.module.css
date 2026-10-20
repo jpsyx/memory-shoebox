@@ -34,12 +34,10 @@
   border-radius: inherit;
   overflow: hidden;
   opacity: 0;
-  visibility: hidden;
   transition: opacity 130ms var(--ease);
 }
 .theater[data-open] .panel {
   opacity: 1;
-  visibility: visible;
   transition-delay: 100ms;
 }
 .bubble {
@@ -62,7 +60,6 @@
 }
 .theater[data-open] .bubble {
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
 }
 .close {
@@ -98,29 +95,26 @@
   .bubble {
     transition: none;
   }
+  .theater[data-open] .panel {
+    transition-delay: 0s;
+  }
 }
 
-@media (max-width: 1000px) {
-  .theater[data-open] {
-    bottom: calc(
-      var(--theater-dock-clearance, 260px) + env(safe-area-inset-bottom)
-    );
-    height: min(
-      510px,
-      calc(
-        100dvh - var(--theater-dock-clearance, 260px) - 86px -
-          env(safe-area-inset-top) - env(safe-area-inset-bottom)
-      )
-    );
-  }
-}
 @media (max-width: 800px) {
-  .theater {
-    bottom: calc(
-      var(--theater-dock-clearance, 260px) + env(safe-area-inset-bottom)
-    );
-  }
   .theater[data-open] {
     width: min(400px, calc(100vw - 32px));
+    height: var(--theater-panel-height);
+  }
+}
+
+/* Mantine's fixed inner otherwise retains the dock's static horizontal origin. */
+.portals :global(.mantine-Modal-inner) {
+  inset-inline-start: 0;
+}
+
+@media (min-width: 601px) and (max-width: 1000px) and (max-height: 600px) {
+  .theater[data-open] {
+    bottom: max(24px, env(safe-area-inset-bottom));
+    height: calc(100dvh - 110px - env(safe-area-inset-top));
   }
 }

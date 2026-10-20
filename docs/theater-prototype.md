@@ -1,8 +1,9 @@
 # Theater mode prototype
 
 Review prototype, October 20, 2026. Source: `prototypes/theater/`.
-The production viewer is unchanged. This is an interactive proposal for one
-fullscreen experience shared by photos and videos.
+The approved design reference is retained independently. The production viewer
+now implements the shared experience described in [theater](theater.md), using
+the existing media and conversation components.
 
 ## Design brief
 
@@ -61,8 +62,8 @@ the illustrations and short animations are existing repository fixtures.
 Comments and drafts live in browser memory and reset on reload. Reactions are
 visual interaction probes, without server persistence. The prototype does not
 read family records, send notifications, or call production services. Production
-integration will reuse the existing timeline-neighbor navigation, media loading,
-permission checks, comment APIs, and reaction APIs after design approval.
+integration reuses the existing timeline-neighbor navigation, media loading,
+permission checks, comment APIs, and reaction APIs. No prototype code is imported.
 
 ## Verification
 
@@ -73,5 +74,6 @@ local posting, current-item return and reentry, single-line title sizing,
 per-item draft timestamps, playback-speed consistency, touch
 controls, reduced motion, and navigation after a media error. Desktop and phone
 screenshots accompany this brief. Phone checks use browser touch emulation;
-physical-device keyboards and platform-specific fullscreen behavior remain for
-production integration testing.
+physical-device keyboards and platform-specific fullscreen remain unverified by
+emulation. See [production verification](theater-verification.md) for the
+implemented viewer evidence.

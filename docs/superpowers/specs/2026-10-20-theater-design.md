@@ -3,8 +3,11 @@
 October 20, 2026. Architectural specification for the approved
 [theater prototype](../../theater-prototype.md). Audience: implementers and reviewers.
 The prototype and its title, return-navigation, and hint-removal refinements are
-approved. This document translates that design into production requirements;
-production implementation has not begun.
+approved. This document records the production requirements. Implementation Tasks 1–5
+are complete and reviewed; Task 6 implementation and production acceptance are
+verified. Controller-owned independent Task 6 and whole-branch reviews remain.
+See [production verification](../../theater-verification.md) for evidence and
+platform limits.
 
 ## Intent and scope
 

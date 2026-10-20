@@ -30,8 +30,14 @@
 @media (max-width: 800px) {
   .theater {
     left: max(12px, env(safe-area-inset-left));
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
+    right: var(
+      --theater-reactions-right,
+      max(96px, env(safe-area-inset-right))
+    );
+    bottom: var(
+      --theater-reactions-bottom,
+      max(12px, env(safe-area-inset-bottom))
+    );
     max-width: none;
   }
 }

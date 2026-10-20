@@ -68,7 +68,7 @@ change the bounded neighbor query. This read creates no opens, seen state,
 activity events, email or storage signing work.
 
 The browser scopes the query to member and selection, retains freshness for
-30 seconds, and disables retries and focus refetch. The theater must enable it
+30 seconds, and disables retries and focus refetch. The theater enables it
 only after matching actual-detail authorization. A missing or refused counter
 omits that segment from the title; title copy continues to use `itemHeading`
 and the existing camera-offset/instance-timezone wall-clock rules.
@@ -112,3 +112,15 @@ thumbnail/display purposes, including a separate optional portrait fixture.
 It verifies matching `currentSrc` and zero repeated media bodies at DPR 1 and 2
 in Chromium and WebKit. The full published 480/960/2048 candidate set and
 optimized-video metadata remain later M2 evidence gates.
+
+## Theater presentation
+
+Photo entry and the video toolbar's Enter theater action select one shared
+presentation on the existing item route. The persistent host owns fullscreen
+and modal focus/scroll across mixed navigation and failed actual-detail reads.
+Back returns to the current item and re-entry retains that selection. Existing
+heading/capture-clock copy supplies the single-line title; no new title field or
+accessibility-description override was introduced. The authorized position above
+is ancillary and never gates selected media. Conversation writes, leases and
+navigation ownership remain shared. See [theater](theater.md) and its
+[verification](theater-verification.md).

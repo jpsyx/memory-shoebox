@@ -62,3 +62,18 @@
     transition: none;
   }
 }
+
+.theater .navigationArrow:focus-visible {
+  outline: none;
+}
+.theater .navigationArrow:focus-visible svg {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.theater .navigationArrow[data-disabled] {
+  border: 0;
+}
+.theater .navigationArrow[data-disabled] svg {
+  opacity: 0.45;
+}

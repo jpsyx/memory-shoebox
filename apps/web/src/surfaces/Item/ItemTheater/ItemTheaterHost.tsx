@@ -97,6 +97,41 @@ function _containFocus(root: HTMLElement): () => void {
     document.removeEventListener("focusin", keepFocusInside);
   };
 }
+function _restoreCurrentEntryFocus(root: HTMLElement): () => void {
+  const focusEntry = () => {
+    const entry = root.querySelector<HTMLButtonElement>(
+      "[data-theater-entry]:not(:disabled)",
+    );
+    if (entry === null || entry.closest("[inert], [hidden]")) {
+      return false;
+    }
+    entry.focus({ preventScroll: true });
+    return document.activeElement === entry;
+  };
+  if (focusEntry()) {
+    return () => {};
+  }
+  _getFocusableFromHost(root)[0]?.focus({ preventScroll: true });
+  const retire = () => {
+    observer.disconnect();
+    document.removeEventListener("pointerdown", retire, true);
+    document.removeEventListener("keydown", retire, true);
+  };
+  const observer = new MutationObserver(() => {
+    if (focusEntry()) {
+      retire();
+    }
+  });
+  observer.observe(root, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["disabled", "inert", "hidden"],
+  });
+  document.addEventListener("pointerdown", retire, true);
+  document.addEventListener("keydown", retire, true);
+  return retire;
+}
 function useModalOwnership(theater: TheaterMode): void {
   const { hostRef, presentation } = theater;
   const shouldRestoreFocus = useRef(false);
@@ -108,10 +143,7 @@ function useModalOwnership(theater: TheaterMode): void {
     if (presentation !== "theater") {
       if (shouldRestoreFocus.current) {
         shouldRestoreFocus.current = false;
-        const entry = root.querySelector<HTMLButtonElement>(
-          "[data-theater-entry]",
-        );
-        (entry ?? _getFocusableFromHost(root)[0])?.focus();
+        return _restoreCurrentEntryFocus(root);
       }
       return;
     }

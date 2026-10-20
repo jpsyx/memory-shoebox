@@ -178,6 +178,12 @@ rather than added later. Videos now place comments beside the player, with
 one-level replies and moment-specific emoji reactions. These events are separate
 from a member's reaction to the whole item. See [video conversations](video-conversations.md).
 
+**Theater.** Photos and videos share a black, contained-media stage on the
+existing item route. Members can navigate the same filtered timeline, comment
+through the existing conversation UI, and return to the current item with Back.
+Native fullscreen and window fallback use one persistent application host; there
+is no slideshow or separate media library. See [theater](theater.md).
+
 **Storage.** Media lives in Backblaze B2 and is fetched by the browser directly
 through short-lived signed URLs. SQLite holds metadata only. Consequence for
 design: normal application requests never stream media. Background visual

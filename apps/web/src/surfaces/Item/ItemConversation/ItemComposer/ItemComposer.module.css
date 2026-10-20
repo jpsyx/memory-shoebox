@@ -100,3 +100,16 @@
 .theater .itemComposerSend {
   border-radius: 12px;
 }
+
+@media (max-width: 600px) and (max-height: 600px) {
+  .theater {
+    padding: 8px;
+    margin-top: 6px;
+  }
+  .theater textarea {
+    min-height: 44px;
+  }
+  .theater .itemComposerActions {
+    margin-top: 4px;
+  }
+}

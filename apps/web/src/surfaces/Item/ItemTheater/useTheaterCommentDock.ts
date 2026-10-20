@@ -71,18 +71,28 @@ function _cancelClose(memory: DockMemory): void {
 function _close(owner: Readonly<DockOwner>): void {
   _cancelClose(owner.memory);
   owner.memory.isOpen = false;
-  owner.memory.isFocusInside = false;
   const root = _getRootFromOwner(owner);
-  owner.memory.shouldRestoreFocus =
-    root?.contains(document.activeElement) ?? false;
+  owner.memory.shouldRestoreFocus ||=
+    owner.memory.isFocusInside ||
+    (root?.contains(document.activeElement) ?? false);
+  owner.memory.isFocusInside = false;
   owner.setIsOpen(false);
 }
 function _restoreFocus(owner: Readonly<DockOwner>): void {
   if (owner.memory.shouldRestoreFocus) {
-    owner.memory.shouldRestoreFocus = false;
-    _getRootFromOwner(owner)
-      ?.querySelector<HTMLButtonElement>("[data-theater-comment-trigger]")
-      ?.focus();
+    const trigger = _getRootFromOwner(owner)?.querySelector<HTMLButtonElement>(
+      "[data-theater-comment-trigger]",
+    );
+    if (
+      trigger === undefined ||
+      trigger === null ||
+      trigger.closest("[inert]") ||
+      trigger.disabled
+    ) {
+      return;
+    }
+    trigger.focus();
+    owner.memory.shouldRestoreFocus = document.activeElement !== trigger;
   }
 }
 function _scheduleClose(owner: Readonly<DockOwner>): void {
@@ -149,10 +159,32 @@ function _focusAndObserve(
     observer.disconnect();
   };
 }
+function usePendingFocusRetirement(owner: Readonly<DockOwner>): void {
+  const onUserMove = useEffectEvent((event: Event) => {
+    if (
+      event.target instanceof Node &&
+      !_getRootFromOwner(owner)?.contains(event.target)
+    ) {
+      owner.memory.shouldRestoreFocus = false;
+    }
+  });
+  useLayoutEffect(() => {
+    document.addEventListener("pointerdown", onUserMove, true);
+    document.addEventListener("keydown", onUserMove, true);
+    return () => {
+      document.removeEventListener("pointerdown", onUserMove, true);
+      document.removeEventListener("keydown", onUserMove, true);
+      owner.memory.shouldRestoreFocus = false;
+    };
+  }, [owner.memory]);
+}
 function useDockEffects(owner: Readonly<DockOwner>, isOpen: boolean): void {
   const { presentation, itemId, isUnavailable, fieldRef } = owner.options;
   const onReset = useEffectEvent(() => {
     _close(owner);
+    if (presentation !== "theater") {
+      owner.memory.shouldRestoreFocus = false;
+    }
     owner.memory.isPointerInside = false;
     return () => {
       _cancelClose(owner.memory);
@@ -164,6 +196,7 @@ function useDockEffects(owner: Readonly<DockOwner>, isOpen: boolean): void {
   const onClosed = useEffectEvent(() => {
     _restoreFocus(owner);
   });
+  usePendingFocusRetirement(owner);
   useLayoutEffect(() => {
     return onReset();
   }, [presentation, itemId, isUnavailable]);
@@ -173,7 +206,7 @@ function useDockEffects(owner: Readonly<DockOwner>, isOpen: boolean): void {
     }
     onClosed();
     return undefined;
-  }, [isOpen, fieldRef]);
+  }, [isOpen, fieldRef, itemId, isUnavailable]);
 }
 function _getPointerHandlersFromOwner(
   owner: Readonly<DockOwner>,

@@ -87,3 +87,15 @@
   scrollbar-color: var(--rule-print-strong) var(--print);
   scrollbar-width: thin;
 }
+
+@media (max-width: 600px) and (max-height: 600px) {
+  .theater {
+    padding-bottom: 12px;
+  }
+  .theater .itemCommentsHeading {
+    min-height: 44px;
+  }
+  .theater .itemCommentsThreads {
+    padding-top: 0;
+  }
+}
