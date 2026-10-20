@@ -46,7 +46,7 @@ No dependencies, production operations, deployment, push, or merge are required.
 
 ### Counter and metadata
 
-Planning assumption pending the user's counter preference: `4/4` means current
+Approved planning interpretation: `4/4` means current
 position / total individual media in the current filtered timeline. It counts
 visible burst frames individually, in exactly the same order as navigation.
 It is not the count of loaded previews, a burst-only count, or a session visit count.
@@ -59,8 +59,7 @@ its authorized value is loading or unavailable, without blocking media or naviga
 Existing neighbor responses contain only bounded previews and cannot establish a
 global rank. Add an independent read-only position query, enabled only in theater,
 so accurate counting does not change the fast neighbor path or fetch every item.
-If the user chooses burst-only counting before implementation, replace this one
-contract and its plan task with existing `burstPosition` / `visibleFrameCount`.
+The approved plan uses this filtered-timeline interpretation.
 
 ### Comment behavior
 
