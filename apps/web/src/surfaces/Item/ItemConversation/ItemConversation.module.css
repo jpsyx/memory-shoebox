@@ -115,11 +115,12 @@
   display: none;
 }
 .theater {
+  --theater-dock-clearance: 90px;
   max-width: none;
   width: 100%;
   height: 100%;
   margin: 0;
-  padding: 82px 0 0;
+  padding: 0;
 }
 .theater .itemConversationSurface,
 .theater .itemConversationGrid {
@@ -139,4 +140,8 @@
   contain: none;
   background: transparent;
   box-shadow: none;
+}
+
+.theater:has([data-video-player]) {
+  --theater-dock-clearance: 260px;
 }

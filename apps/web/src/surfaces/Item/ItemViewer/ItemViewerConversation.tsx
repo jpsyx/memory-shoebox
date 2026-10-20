@@ -1,4 +1,5 @@
-import type { ReactNode, RefObject } from "react";
+import { useMemo, type ReactNode, type RefObject } from "react";
+import { MantineThemeProvider, Portal } from "@mantine/core";
 import { VideoConversation } from "../VideoConversation/VideoConversation";
 import { ItemConversation } from "../ItemConversation/ItemConversation";
 import { ItemComments } from "../ItemConversation/ItemComments/ItemComments";
@@ -29,6 +30,15 @@ export function ItemViewerConversation({
   theater,
   dockController,
 }: Readonly<Props>): ReactNode {
+  const portalTheme = useMemo(() => {
+    return {
+      components: {
+        Portal: Portal.extend({
+          defaultProps: { target: "[data-item-theater-host]" },
+        }),
+      },
+    };
+  }, []);
   const props = { detail, selectedPreview, isPlaceholder, viewer, timezone };
   const presentation = theater.presentation;
   const onComment = () => {
@@ -38,32 +48,44 @@ export function ItemViewerConversation({
       fieldRef.current?.focus();
     }
   };
-  return detail.kind === "video" && !isPlaceholder ? (
-    <VideoConversation
-      key={detail.itemId}
-      {...props}
-      transport={transport}
-      onDeleted={onDeleted}
-      fieldRef={fieldRef}
-      presentation={presentation}
-      dockController={dockController}
-      onComment={onComment}
-    />
-  ) : (
-    <ItemConversation
-      {...props}
-      onDeleted={onDeleted}
-      presentation={presentation}
-      dockController={dockController}
-      media={<ItemMediaColumn {...props} onComment={onComment} />}
-      conversation={
-        <ItemComments
-          detail={detail}
-          viewer={viewer}
+  return (
+    <MantineThemeProvider theme={portalTheme}>
+      {detail.kind === "video" && !isPlaceholder ? (
+        <VideoConversation
+          key={detail.itemId}
+          {...props}
+          transport={transport}
+          onDeleted={onDeleted}
           fieldRef={fieldRef}
           presentation={presentation}
+          dockController={dockController}
+          onComment={onComment}
+          onEnterTheater={theater.enter}
+          playbackPreferences={theater.playbackPreferences}
         />
-      }
-    />
+      ) : (
+        <ItemConversation
+          {...props}
+          onDeleted={onDeleted}
+          presentation={presentation}
+          dockController={dockController}
+          media={
+            <ItemMediaColumn
+              {...props}
+              onComment={onComment}
+              presentation={presentation}
+            />
+          }
+          conversation={
+            <ItemComments
+              detail={detail}
+              viewer={viewer}
+              fieldRef={fieldRef}
+              presentation={presentation}
+            />
+          }
+        />
+      )}
+    </MantineThemeProvider>
   );
 }

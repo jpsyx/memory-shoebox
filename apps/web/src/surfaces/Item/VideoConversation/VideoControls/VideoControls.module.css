@@ -42,3 +42,12 @@
     flex-basis: 100%;
   }
 }
+
+.theater button {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+.theater .videoControlsClock {
+  margin-right: auto;
+}

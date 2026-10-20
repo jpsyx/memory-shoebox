@@ -1,5 +1,5 @@
 import { onVideoPlay, onVideoPlayKey } from "../videoPlaybackHelpers";
-import { FullscreenButton, MuteButton, PlayButton } from "@videojs/react";
+import { MuteButton, PlayButton } from "@videojs/react";
 import {
   IconMaximize,
   IconPlayerPauseFilled,
@@ -11,6 +11,8 @@ import type { KeyboardEvent, ReactNode } from "react";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { VideoSpeedSelect } from "../VideoSpeedSelect/VideoSpeedSelect";
+import { clsx } from "clsx";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
 import classes from "./VideoControls.module.css";
 
 type Props = {
@@ -18,14 +20,18 @@ type Props = {
   duration: number;
   hasError: boolean;
   onFailure: () => void;
+  presentation?: ItemPresentation;
+  onEnterTheater: () => void;
 };
 
-/** Video.js primitives own playback, volume and fullscreen state. */
+/** Video.js owns playback and volume; the shared host owns theater entry. */
 export function VideoControls({
   transport,
   duration,
   hasError,
   onFailure,
+  presentation = "page",
+  onEnterTheater,
 }: Readonly<Props>): ReactNode {
   const onKeyCapture = (event: KeyboardEvent) => {
     onVideoPlayKey({
@@ -36,7 +42,12 @@ export function VideoControls({
     });
   };
   return (
-    <div className={classes.videoControls}>
+    <div
+      className={clsx(
+        classes.videoControls,
+        presentation === "theater" && classes.theater,
+      )}
+    >
       <PlayButton
         disabled={hasError}
         onKeyDownCapture={onKeyCapture}
@@ -61,9 +72,16 @@ export function VideoControls({
         className={classes.videoControlsClock}
       >{`${clockLabel(Math.min(duration, transport.position))} / ${clockLabel(duration)}`}</span>
       <VideoSpeedSelect videoRef={transport.videoRef} />
-      <FullscreenButton>
-        <IconMaximize />
-      </FullscreenButton>
+      {presentation === "page" ? (
+        <button
+          type="button"
+          aria-label="Enter theater"
+          data-theater-entry
+          onClick={onEnterTheater}
+        >
+          <IconMaximize />
+        </button>
+      ) : null}
     </div>
   );
 }

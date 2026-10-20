@@ -9,7 +9,8 @@ for the page layout: the heading and metadata sit directly on the page backgroun
 while the media frame and the entire white comments panel have their own elevation.
 The shared `PolaroidContainer` supplies the same white paper edge and shadow to
 photos and videos, and also frames timeline thumbnails. Video controls stay inside
-the paper edge; fullscreen uses the inner player without that edge.
+the paper edge. Theater switches the same frame to a black full-viewport
+appearance without replacing its media node.
 The rounded white reaction bar retains its own elevation. Photos also reuse the
 More drawer, composer, comment rows and media reaction bar. Their whole-item
 reaction choices and untimed comments retain their existing contracts.
@@ -38,8 +39,8 @@ cutoff, resource failures and unsupported inputs leave originals available.
 See [media-loading.md](media-loading.md#local-photo-and-playback-recipes) for
 the recipe and the still-unverified deployment memory prerequisites.
 
-Video.js supplies playback, mute and
-fullscreen controls; the application owns comments, timeline marks and saved
+Video.js supplies playback and mute controls; the existing fullscreen action
+enters the shared application theater, whose header owns fullscreen; the application owns comments, timeline marks and saved
 reactions. There is no new video hosting, analytics or public sharing service.
 Clicking or tapping the video picture toggles play/pause through the same
 Video.js control as the toolbar. The picture is a keyboard-focusable button
@@ -251,8 +252,9 @@ placeholder recovering to a playable video through the same transport ref.
 `ItemSurface` retains one `ItemTheaterHost`, theater controller, video transport
 and shared draft provider for the item-route visit. The host is not keyed by
 item ID and wraps every actual-detail state, so loading, denied detail, failures
-and retry retain the same Back and fullscreen controls. The item bar exposes
-**Enter theater**. Back pauses through the existing transport, returns to the
+and retry retain the same Back and fullscreen controls. The photo item bar exposes
+**Enter theater**; the video toolbar replaces its prior fullscreen action with
+the same entry, which is hidden while in theater. Back pauses through the existing transport, returns to the
 ordinary view of the current route item, releases the scroll lock and restores
 focus to that item's entry control. Switching presentation preserves the native
 media and composer nodes and does not reopen actual detail.
@@ -277,6 +279,34 @@ Its independent position query uses the same originating filters and runs only
 in theater after current actual detail authorizes the requested item. Placeholder
 detail, denial and failure cannot authorize a count or display the prior item's
 counter. Counting never blocks media or changes actual-detail open semantics.
+
+## Shared theater media and playback
+
+`PolaroidContainer` changes appearance on the same DOM node. `PhotoFrame` keeps
+its selected/preview loading contract separate from its paper/theater appearance,
+so full-stage measurements still use selected-photo sizing, decoded handoff and
+existing leases. `ConversationPlayer` contains the existing native video and
+Video.js controls across presentation changes. Position, playback rate and volume
+survive entry and exit; a new native video resets rate to 1×. The host's mute
+preference follows native volume-change events and carries across selected videos.
+
+`useTheaterVideoPlayback` runs beside the existing renewal registration in
+`RegisteredVideo`, where lease changes and retry mounts expose the actual playable
+node. It selects one explicit play intent per theater entry/new node and waits
+through `beforePlay`. A new comment or exit pauses through the same transport and
+supersedes that ticket. Retired nodes/items cannot play after readiness settles.
+Metadata edits, routine renewal and ordinary page presentation create no autoplay
+intent. Browser play rejection leaves the normal paused controls usable rather
+than becoming a load error. Explicit source retry retains its existing safe-media
+request and readiness gate before a fresh theater node attempts playback.
+
+The same timeline, speed, mute and play controls sit near the lower stage edge;
+the existing reaction bar remains available while playing or commenting. On
+narrow screens the comment dock reserves space above those controls and reactions,
+using viewport height and safe-area insets. The video picture permits media
+navigation in theater while its nested controls retain their keyboard exclusions.
+Scoped viewer Portal defaults keep the media More reactions popover inside the
+stable fullscreen host; the comment dock retains its narrower portal target.
 
 ## Shared theater comment presentation
 

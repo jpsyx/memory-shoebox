@@ -5,7 +5,9 @@ import { useVideoReadiness } from "@/media/useVideoReadiness/useVideoReadiness";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { MediaRef } from "@memory-shoebox/shared";
-import { useContext, type ReactNode } from "react";
+import { useTheaterVideoPlayback } from "../../ItemTheater/useTheaterVideoPlayback";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
+import { useContext, useRef, type ReactNode, type RefObject } from "react";
 import type { VideoPlayback } from "../useVideoPlayback/useVideoPlayback";
 import { useVideoSourceRenewal } from "../videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 import { RegisteredVideoElement } from "./RegisteredVideoElement";
@@ -15,6 +17,8 @@ type Props = {
   media: MediaRef;
   transport: VideoTransport;
   playback: VideoPlayback;
+  presentation?: ItemPresentation;
+  playbackPreferences?: RefObject<{ isMuted: boolean }>;
 };
 
 /**
@@ -25,6 +29,8 @@ export function RegisteredVideo({
   media: initialMedia,
   transport,
   playback,
+  presentation = "page",
+  playbackPreferences,
 }: Readonly<Props>): ReactNode {
   const lease = useMediaLease({
     itemId,
@@ -43,6 +49,14 @@ export function RegisteredVideo({
     videoRef: transport.videoRef,
     source: media.playback ?? undefined,
     renew: lease.renew,
+  });
+  const defaultPreferences = useRef({ isMuted: false });
+  useTheaterVideoPlayback({
+    itemId,
+    presentation,
+    transport,
+    playback,
+    preferences: playbackPreferences ?? defaultPreferences,
   });
   useMediaSourceOwnership({
     itemId,

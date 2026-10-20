@@ -13,7 +13,19 @@ export type PhotoViewport = {
 export function getPhotoViewportFromElement(
   element?: HTMLElement,
 ): PhotoViewport {
-  const width = element?.getBoundingClientRect().width ?? 0;
+  const bounds = element?.getBoundingClientRect();
+  const width = bounds?.width ?? 0;
+  if (element?.dataset.appearance === "theater") {
+    return {
+      cssWidth: width > 0 ? width : window.innerWidth,
+      cssHeight:
+        bounds !== undefined && bounds.height > 0
+          ? bounds.height
+          : window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      supportsWebp: _supportsWebp(),
+    };
+  }
   return {
     cssWidth: width > 20 ? width - 20 : Math.min(window.innerWidth - 40, 960),
     cssHeight: window.innerHeight * 0.7,

@@ -4,6 +4,7 @@ import classes from "./PolaroidContainer.module.css";
 
 type Props = {
   size?: "viewer" | "thumbnail";
+  appearance?: "paper" | "theater";
 } & (
   | ({ component?: "div" } & ComponentPropsWithRef<"div">)
   | ({ component: "button" } & ComponentPropsWithRef<"button">)
@@ -12,11 +13,13 @@ type Props = {
 /** Shared paper edge and elevation for media viewers and timeline prints. */
 export function PolaroidContainer({
   size = "viewer",
+  appearance = "paper",
   className,
   ...props
 }: Readonly<Props>): ReactNode {
   const frameClassName = clsx(
     classes.polaroidContainer,
+    appearance === "theater" && classes.theater,
     size === "thumbnail" && classes.polaroidContainerThumbnail,
     className,
   );

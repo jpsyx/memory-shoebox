@@ -99,3 +99,28 @@
     transition: none;
   }
 }
+
+@media (max-width: 1000px) {
+  .theater[data-open] {
+    bottom: calc(
+      var(--theater-dock-clearance, 260px) + env(safe-area-inset-bottom)
+    );
+    height: min(
+      510px,
+      calc(
+        100dvh - var(--theater-dock-clearance, 260px) - 86px -
+          env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      )
+    );
+  }
+}
+@media (max-width: 800px) {
+  .theater {
+    bottom: calc(
+      var(--theater-dock-clearance, 260px) + env(safe-area-inset-bottom)
+    );
+  }
+  .theater[data-open] {
+    width: min(400px, calc(100vw - 32px));
+  }
+}

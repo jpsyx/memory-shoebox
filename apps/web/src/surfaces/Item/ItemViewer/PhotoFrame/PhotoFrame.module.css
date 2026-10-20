@@ -15,3 +15,22 @@
 .photoFramePixels {
   position: relative;
 }
+
+.photoFrame[data-appearance="theater"] .photoFramePixels {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.photoFrame[data-appearance="theater"] img {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.photoFrame[data-appearance="theater"] picture {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}

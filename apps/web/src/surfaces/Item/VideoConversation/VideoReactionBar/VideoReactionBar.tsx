@@ -3,6 +3,8 @@ import type { VideoReactionEmoji } from "@memory-shoebox/shared";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import type { VideoReactionsState } from "../useVideoReactions/useVideoReactions";
 import { MediaReactionBar } from "@/system/MediaReactionBar/MediaReactionBar";
+import { clsx } from "clsx";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
 import classes from "./VideoReactionBar.module.css";
 
 type Props = {
@@ -10,6 +12,7 @@ type Props = {
   position: number;
   canReact: boolean;
   onComment: () => void;
+  presentation?: ItemPresentation;
 };
 const CHOICES: Array<{ emoji: VideoReactionEmoji; label: string }> = [
   { emoji: "😂", label: "Laugh" },
@@ -30,64 +33,73 @@ export function VideoReactionBar({
   position,
   canReact,
   onComment,
+  presentation = "page",
 }: Readonly<Props>): ReactNode {
   return (
-    <MediaReactionBar
-      choices={CHOICES.map((choice) => {
-        return {
-          ...choice,
-          value: choice.emoji,
-          title: `${choice.label} at ${clockLabel(position)}`,
-        };
-      })}
-      label="React to this moment"
-      commentLabel="Comment on this moment"
-      onReact={(emoji) => {
-        reactions.react({ emoji, atSeconds: position });
-      }}
-      onComment={onComment}
-      disabled={
-        !canReact ||
-        reactions.isLoading ||
-        reactions.readError !== undefined ||
-        reactions.isSending ||
-        reactions.writeError !== undefined
-      }
-      hint={
-        <>
-          React to this moment <span>·</span> {clockLabel(position)}
-        </>
-      }
+    <div
+      className={clsx(
+        classes.videoReactionBar,
+        presentation === "theater" && classes.theater,
+      )}
+      data-item-navigation-ignore
     >
-      {reactions.isLoading ? <p role="status">Loading reactions…</p> : null}
-      {reactions.readError === undefined ? null : (
-        <p className={classes.videoReactionBarError} role="alert">
-          Reactions couldn’t load.{" "}
-          <button type="button" onClick={reactions.refresh}>
-            Try again
-          </button>
-        </p>
-      )}
-      {reactions.writeError === undefined ? null : (
-        <p className={classes.videoReactionBarError} role="alert">
-          That reaction couldn’t be saved.{" "}
-          <button
-            type="button"
-            onClick={reactions.retry}
-            disabled={reactions.isSending}
-          >
-            Retry reaction
-          </button>{" "}
-          <button type="button" onClick={reactions.dismiss}>
-            Dismiss
-          </button>
-        </p>
-      )}
-      <span className="visually-hidden" role="status">
-        {reactions.lastAdded === undefined
-          ? ""
-          : `Reaction ${reactions.lastAdded.emoji} added at ${clockLabel(reactions.lastAdded.atSeconds)}`}
-      </span>
-    </MediaReactionBar>
+      <MediaReactionBar
+        choices={CHOICES.map((choice) => {
+          return {
+            ...choice,
+            value: choice.emoji,
+            title: `${choice.label} at ${clockLabel(position)}`,
+          };
+        })}
+        label="React to this moment"
+        commentLabel="Comment on this moment"
+        onReact={(emoji) => {
+          reactions.react({ emoji, atSeconds: position });
+        }}
+        onComment={onComment}
+        disabled={
+          !canReact ||
+          reactions.isLoading ||
+          reactions.readError !== undefined ||
+          reactions.isSending ||
+          reactions.writeError !== undefined
+        }
+        hint={
+          <>
+            React to this moment <span>·</span> {clockLabel(position)}
+          </>
+        }
+      >
+        {reactions.isLoading ? <p role="status">Loading reactions…</p> : null}
+        {reactions.readError === undefined ? null : (
+          <p className={classes.videoReactionBarError} role="alert">
+            Reactions couldn’t load.{" "}
+            <button type="button" onClick={reactions.refresh}>
+              Try again
+            </button>
+          </p>
+        )}
+        {reactions.writeError === undefined ? null : (
+          <p className={classes.videoReactionBarError} role="alert">
+            That reaction couldn’t be saved.{" "}
+            <button
+              type="button"
+              onClick={reactions.retry}
+              disabled={reactions.isSending}
+            >
+              Retry reaction
+            </button>{" "}
+            <button type="button" onClick={reactions.dismiss}>
+              Dismiss
+            </button>
+          </p>
+        )}
+        <span className="visually-hidden" role="status">
+          {reactions.lastAdded === undefined
+            ? ""
+            : `Reaction ${reactions.lastAdded.emoji} added at ${clockLabel(reactions.lastAdded.atSeconds)}`}
+        </span>
+      </MediaReactionBar>
+    </div>
   );
 }

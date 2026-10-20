@@ -46,16 +46,22 @@ export function ItemViewer({
           >
             <ItemTopBar capturedOn={detail.capturedOn} />
           </div>
-          <div hidden={theater.presentation === "theater"}>
-            <button
-              className={classes.entry}
-              type="button"
-              data-theater-entry
-              onClick={theater.enter}
-              disabled={isPlaceholder}
-            >
-              Enter theater
-            </button>
+          <div
+            hidden={
+              theater.presentation === "theater" || detail.kind === "video"
+            }
+          >
+            {detail.kind === "photo" ? (
+              <button
+                className={classes.entry}
+                type="button"
+                data-theater-entry
+                onClick={theater.enter}
+                disabled={isPlaceholder}
+              >
+                Enter theater
+              </button>
+            ) : null}
           </div>
           <ItemNavigation
             detail={detail}

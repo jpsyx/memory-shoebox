@@ -9,6 +9,8 @@ import { ItemConversation } from "../ItemConversation/ItemConversation";
 import { ConversationPlayer } from "./ConversationPlayer/ConversationPlayer";
 import { useVideoPlayback } from "./useVideoPlayback/useVideoPlayback";
 import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
+import { clsx } from "clsx";
+import classes from "./ConversationPlayer/ConversationPlayer.module.css";
 import { VideoReactionBar } from "./VideoReactionBar/VideoReactionBar";
 
 type Props = {
@@ -22,6 +24,8 @@ type Props = {
   presentation: ItemPresentation;
   dockController: TheaterCommentDockController;
   onComment: () => void;
+  onEnterTheater: () => void;
+  playbackPreferences: RefObject<{ isMuted: boolean }>;
 };
 
 /**
@@ -39,6 +43,8 @@ export function VideoConversation({
   presentation,
   dockController,
   onComment,
+  onEnterTheater,
+  playbackPreferences,
 }: Readonly<Props>): ReactNode {
   const reactions = useVideoReactions({
     itemId: detail.itemId,
@@ -60,13 +66,19 @@ export function VideoConversation({
       presentation={presentation}
       dockController={dockController}
       media={
-        <div inert={isPlaceholder}>
+        <div
+          inert={isPlaceholder}
+          className={clsx(presentation === "theater" && classes.theaterMedia)}
+        >
           <VideoPlayer>
             <ConversationPlayer
               detail={detail}
               transport={transport}
               playback={playback}
               reactions={reactions}
+              presentation={presentation}
+              onEnterTheater={onEnterTheater}
+              playbackPreferences={playbackPreferences}
             />
           </VideoPlayer>
           <VideoReactionBar
@@ -74,6 +86,7 @@ export function VideoConversation({
             position={transport.position}
             canReact={detail.media.durationMs !== null && !isPlaceholder}
             onComment={onComment}
+            presentation={presentation}
           />
         </div>
       }

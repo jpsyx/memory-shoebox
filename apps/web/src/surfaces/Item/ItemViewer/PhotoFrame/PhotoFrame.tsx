@@ -13,6 +13,7 @@ type Props = {
   media: MediaRef;
   itemId: string;
   presentation?: "preview" | "selected";
+  appearance?: "paper" | "theater";
 };
 
 /**
@@ -22,6 +23,7 @@ export function PhotoFrame({
   media: initialMedia,
   itemId,
   presentation = "selected",
+  appearance = "paper",
 }: Readonly<Props>): ReactNode {
   const lease = useMediaLease({
     itemId,
@@ -67,6 +69,8 @@ export function PhotoFrame({
       : undefined;
   return (
     <PolaroidContainer
+      appearance={appearance}
+      data-appearance={appearance}
       ref={photo.frame}
       className={classes.photoFrame}
       data-photo-surface="viewer"

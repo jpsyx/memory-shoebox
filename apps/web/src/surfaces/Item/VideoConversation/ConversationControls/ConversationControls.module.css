@@ -19,3 +19,29 @@
     padding: 40px 10px 6px;
   }
 }
+
+.theater {
+  left: max(20px, env(safe-area-inset-left));
+  right: auto;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  width: min(620px, calc(100% - 460px));
+  padding: 22px 16px 8px;
+  border: 1px solid #ffffff2b;
+  border-radius: 12px;
+  color: #fff;
+  background: #171717e8;
+}
+@media (max-width: 1000px) {
+  .theater {
+    width: min(540px, calc(100% - 40px));
+  }
+}
+@media (max-width: 800px) {
+  .theater {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    width: auto;
+    padding: 20px 10px 4px;
+  }
+}

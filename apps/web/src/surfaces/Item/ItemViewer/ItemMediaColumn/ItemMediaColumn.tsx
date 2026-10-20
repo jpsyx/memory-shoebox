@@ -5,6 +5,8 @@ import type {
   MemberRef,
 } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
+import { clsx } from "clsx";
+import type { ItemPresentation } from "../ItemViewer.types";
 import classes from "./ItemMediaColumn.module.css";
 import { SiblingStrip } from "../../SiblingStrip/SiblingStrip";
 import { ItemReactions } from "../ItemReactions/ItemReactions";
@@ -16,6 +18,7 @@ type Props = {
   isPlaceholder: boolean;
   viewer: MemberRef;
   onComment: () => void;
+  presentation?: ItemPresentation;
 };
 
 /** The photo and its shared reaction bar; the sibling strip stays mounted. */
@@ -25,6 +28,7 @@ export function ItemMediaColumn({
   isPlaceholder,
   viewer,
   onComment,
+  presentation = "page",
 }: Readonly<Props>): ReactNode {
   return (
     <>
@@ -35,9 +39,15 @@ export function ItemMediaColumn({
           key={detail.itemId}
           media={detail.media}
           itemId={detail.itemId}
+          appearance={presentation === "theater" ? "theater" : "paper"}
         />
       )}
-      <div className={classes.itemMediaColumnFooter}>
+      <div
+        className={clsx(
+          classes.itemMediaColumnFooter,
+          presentation === "theater" && classes.theater,
+        )}
+      >
         <div inert={isPlaceholder}>
           <ItemReactions
             key={detail.itemId}
