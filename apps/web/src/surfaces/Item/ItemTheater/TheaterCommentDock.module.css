@@ -35,9 +35,7 @@
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transition:
-    opacity 130ms var(--ease),
-    visibility 130ms;
+  transition: opacity 130ms var(--ease);
 }
 .theater[data-open] .panel {
   opacity: 1;
@@ -60,9 +58,7 @@
   color: var(--on-print);
   background: var(--print);
   font-variant-numeric: tabular-nums;
-  transition:
-    opacity 100ms var(--ease),
-    visibility 100ms;
+  transition: opacity 100ms var(--ease);
 }
 .theater[data-open] .bubble {
   opacity: 0;

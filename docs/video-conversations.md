@@ -262,7 +262,9 @@ composer beneath them using CSS order. Collapsed content is inert and hidden fro
 assistive technology. Hover opening focuses the composer without pinning the
 panel: departure closes it after 450ms, and re-entry cancels that timer. Explicit
 keyboard or touch opening follows focus departure instead. Closing with focus
-inside returns focus to the bubble. Item, presentation and availability changes
+inside returns focus to the bubble. Visibility changes immediately at the state
+commit so browser focus works while opacity and dimensions animate. Item,
+presentation and availability changes
 reset the open state and retire departure timers.
 
 A stable portal target beside the clipped panel belongs to the dock in both
@@ -271,3 +273,12 @@ comment deletion dialogs there, preserving their ordinary implementations and
 focus behavior. An open nested interaction holds the dock; its first Escape
 closes that interaction. Draft capture, retries, reactions, editing, replies and
 submission still belong to the existing conversation components and write hooks.
+
+The focused browser regression in
+`e2e/admin/video-theater-comments-focus.spec.ts` runs the real shared components
+and their CSS with motion enabled in Chromium and WebKit. It uses an isolated
+test-only Vite page with no product route or API, through the existing video
+Playwright configuration. It verifies opening focus and moment capture plus
+Escape/navigation focus restoration; production viewer integration and fullscreen
+geometry remain separate coverage. Run it with
+`pnpm exec playwright test -c playwright.video.config.ts video-theater-comments-focus.spec.ts`.
