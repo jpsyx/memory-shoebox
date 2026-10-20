@@ -1,0 +1,61 @@
+@font-face {
+  font-family: Archivo;
+  src: url("/apps/web/public/fonts/Archivo.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Familjen Grotesk";
+  src: url("/apps/web/public/fonts/FamiljenGrotesk.woff2") format("woff2");
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+body {
+  background: #c9d6ed;
+  color: #12235e;
+  font-family: Archivo, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: default;
+}
+button,
+a,
+input,
+textarea,
+select {
+  outline-offset: 5px;
+}
+:focus-visible {
+  outline: 3px solid #d84326;
+}
+button svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+button {
+  touch-action: manipulation;
+}
+::selection {
+  background: #12235e;
+  color: #fff;
+}
