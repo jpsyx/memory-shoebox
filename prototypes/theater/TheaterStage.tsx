@@ -65,6 +65,10 @@ export function TheaterStage(props: Readonly<Props>): ReactNode {
     if (videoRef.current?.paused) play();
     else videoRef.current?.pause();
   };
+  const leave = () => {
+    videoRef.current?.pause();
+    props.onExit();
+  };
   const move = (direction: number) => {
     const index = props.selected + direction;
     if (index < 0 || index >= props.media.length) return;
@@ -112,7 +116,7 @@ export function TheaterStage(props: Readonly<Props>): ReactNode {
         event.preventDefault();
         if (!event.repeat) move(event.key === "ArrowRight" ? 1 : -1);
       }
-      if (event.key === "Escape" && !document.fullscreenElement) props.onExit();
+      if (event.key === "Escape" && !document.fullscreenElement) leave();
       if (
         event.code === "Space" &&
         item.kind === "video" &&
@@ -233,17 +237,16 @@ export function TheaterStage(props: Readonly<Props>): ReactNode {
         <button
           className={styles.chromeButton}
           aria-label="Exit theater"
-          onClick={props.onExit}
+          onClick={leave}
         >
           <IconArrowLeft />
           <span>Back</span>
         </button>
-        <div className={styles.stageIdentity}>
-          <strong>{item.title}</strong>
-          <span>
-            {item.date} <span aria-hidden="true">·</span> {props.selected + 1} /{" "}
-            {props.media.length}
-          </span>
+        <div
+          className={styles.stageIdentity}
+          title={`${item.title} · ${item.date} · ${props.selected + 1}/${props.media.length}`}
+        >
+          {`${item.title} · ${item.date} · ${props.selected + 1}/${props.media.length}`}
         </div>
         <button
           className={styles.chromeButton}
@@ -330,11 +333,7 @@ export function TheaterStage(props: Readonly<Props>): ReactNode {
             onSeek={seek}
           />
         </div>
-      ) : (
-        <p className={styles.photoHint}>
-          ← <span>Take your time. There’s more to see.</span> →
-        </p>
-      )}
+      ) : null}
       <CommentDock
         key={item.id}
         isVideo={item.kind === "video"}

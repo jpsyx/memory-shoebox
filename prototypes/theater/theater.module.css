@@ -148,6 +148,7 @@
   outline-offset: 4px;
 }
 .theater {
+  --theater-control-radius: 12px;
   position: fixed;
   inset: 0;
   width: 100%;
@@ -178,7 +179,7 @@
   position: absolute;
   inset: 22px 24px auto;
   display: flex;
-  align-items: start;
+  align-items: center;
   gap: 16px;
   z-index: 6;
   pointer-events: none;
@@ -207,24 +208,17 @@
   margin-left: auto;
 }
 .stageIdentity {
+  height: 48px;
+  min-width: 0;
+  padding: 0 16px;
   background: #111;
-  padding: 9px 16px;
-  max-width: min(55vw, 600px);
-  border-radius: 4px;
+  border-radius: var(--theater-control-radius);
   box-shadow: 0 3px 14px #0006;
-}
-.stageIdentity strong {
-  display: block;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 15px;
+  line-height: 48px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.stageIdentity > span {
-  display: block;
-  font-size: 15px;
-  color: #c9c9c9;
 }
 .edgeZone {
   position: absolute;
@@ -538,7 +532,7 @@
 .videoControls {
   padding: 0 16px 4px;
   background: #111;
-  border-radius: 12px;
+  border-radius: var(--theater-control-radius);
   box-shadow: 0 3px 15px #0007;
 }
 .scrubber {
@@ -606,21 +600,6 @@
     opacity: 0;
     transform: translate(-50%, -110px) rotate(-8deg);
   }
-}
-.photoHint {
-  position: absolute;
-  bottom: 22px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 15px;
-  display: flex;
-  gap: 20px;
-  background: #111;
-  color: #ddd;
-  padding: 8px 16px;
-  border-radius: 24px;
-  white-space: nowrap;
-  pointer-events: none;
 }
 .centerPlay {
   position: absolute;
@@ -766,13 +745,7 @@
   }
   .stageIdentity {
     max-width: calc(100vw - 140px);
-    padding: 5px 10px;
-  }
-  .stageIdentity strong {
-    font-size: 15px;
-  }
-  .stageIdentity > span {
-    font-size: 15px;
+    padding: 0 10px;
   }
   .edgeZone {
     width: 72px;
@@ -798,16 +771,6 @@
   }
   .commentList {
     padding: 0 20px 16px;
-  }
-  .photoHint {
-    left: 16px;
-    bottom: 28px;
-    transform: none;
-    padding: 4px 12px;
-    gap: 15px;
-  }
-  .photoHint span {
-    display: none;
   }
   .videoDock {
     width: calc(100% - 32px);
@@ -839,5 +802,53 @@
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
     transition-delay: 0ms !important;
+  }
+}
+
+.singleMediaHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 32px 0;
+}
+.singleMediaHeading h1 {
+  margin: 0;
+  font-family: "Familjen Grotesk", sans-serif;
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.singleMediaHeading p {
+  margin: 12px 0 0;
+  font-size: 15px;
+}
+.singleMediaFrame {
+  margin: 0;
+  padding: 5px;
+  background: #fbfcfe;
+  box-shadow: 0 5px 12px #12235e19;
+}
+.singleMediaFrame img,
+.singleMediaFrame video {
+  display: block;
+  width: 100%;
+  max-height: 70dvh;
+  object-fit: contain;
+}
+.singleMediaFrame video {
+  background: #000;
+}
+.singleMediaFrame figcaption {
+  padding: 14px;
+  font-size: 15px;
+}
+@media (max-width: 600px) {
+  .singleMediaHeading {
+    flex-direction: column;
+    align-items: start;
+  }
+  .singleMediaHeading h1 {
+    font-size: 26px;
   }
 }
