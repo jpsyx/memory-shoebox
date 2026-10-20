@@ -1,0 +1,40 @@
+.itemViewerPageControls[hidden] {
+  display: none;
+}
+
+.itemViewerEntry {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.itemViewerChrome {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-right: var(--sp-3);
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule);
+}
+
+.itemViewerPageControls {
+  min-width: 0;
+}
+
+.itemViewerPageControls > header {
+  position: static;
+  border-bottom: 0;
+}
+
+.itemViewerTheaterChrome {
+  display: contents;
+}

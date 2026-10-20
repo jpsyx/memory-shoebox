@@ -9,7 +9,9 @@ for (const mode of ["native", "window"] as const) {
     page,
     catalog,
   }, testInfo) => {
-    if (mode === "window") await useWindowTheater(page);
+    if (mode === "window") {
+      await useWindowTheater(page);
+    }
     await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
     const host = page.locator("[data-item-theater-host]");
     const originalHost = await host.elementHandle();
@@ -60,7 +62,9 @@ for (const mode of ["native", "window"] as const) {
       type: "fullscreen",
       description: `${mode}: native=${hasNative}`,
     });
-    if (mode === "window") expect(hasNative).toBe(false);
+    if (mode === "window") {
+      expect(hasNative).toBe(false);
+    }
     await moveTheater(page, "Previous");
     await expect(page).toHaveURL(new RegExp(`/items/${catalog.videoId}$`));
     await expect(page.locator("video")).toHaveCount(1);
@@ -127,12 +131,13 @@ for (const mode of ["native", "window"] as const) {
     ).toEqual(reads);
     await moveTheater(page, "Next");
     await expect(page).toHaveURL(new RegExp(`/items/${catalog.itemId}$`));
-    if (hasNative)
+    if (hasNative) {
       expect(
         await originalHost!.evaluate((element) => {
           return element === document.fullscreenElement;
         }),
       ).toBe(true);
+    }
   });
 }
 
@@ -187,7 +192,7 @@ test("accurate counter follows authorized neighbor walk and ancillary failure ne
   await expect(title).not.toContainText(/\d\/\d/);
 });
 
-test("Back restores actual page scroll without refetching detail", async ({
+test("Back restores actual page scroll and entry focus", async ({
   page,
   catalog,
 }) => {

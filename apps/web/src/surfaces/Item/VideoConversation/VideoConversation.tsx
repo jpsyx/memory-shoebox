@@ -10,7 +10,7 @@ import { ConversationPlayer } from "./ConversationPlayer/ConversationPlayer";
 import { useVideoPlayback } from "./useVideoPlayback/useVideoPlayback";
 import { useVideoReactions } from "./useVideoReactions/useVideoReactions";
 import { clsx } from "clsx";
-import classes from "./ConversationPlayer/ConversationPlayer.module.css";
+import classes from "./VideoConversation.module.css";
 import { VideoReactionBar } from "./VideoReactionBar/VideoReactionBar";
 
 type Props = {
@@ -68,7 +68,9 @@ export function VideoConversation({
       media={
         <div
           inert={isPlaceholder}
-          className={clsx(presentation === "theater" && classes.theaterMedia)}
+          className={clsx(
+            presentation === "theater" && classes.videoConversationTheaterMedia,
+          )}
         >
           <VideoPlayer>
             <ConversationPlayer

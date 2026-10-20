@@ -22,7 +22,7 @@ import {
   MIDDLE,
   respondWithNavigationItems,
   waitForNavigationReady,
-} from "../ItemViewer/ItemNavigation/__tests__/ItemNavigationTestHelpers";
+} from "../../ItemViewer/ItemNavigation/__tests__/ItemNavigationTestHelpers";
 
 async function enterTheater(): Promise<HTMLElement> {
   await userEvent.click(

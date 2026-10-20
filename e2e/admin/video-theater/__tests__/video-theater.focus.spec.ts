@@ -70,7 +70,7 @@ for (const activation of ["hover", "keyboard"] as const) {
   });
 }
 
-test("window focus wraps, Escape layers, and teardown restores page ownership", async ({
+test("window focus wraps, Escape layers, and document navigation leaves an unlocked page", async ({
   page,
   catalog,
 }) => {

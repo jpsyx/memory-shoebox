@@ -1,14 +1,14 @@
 import { StrictMode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useVideoTransport } from "../ItemViewer/useVideoTransport";
-import { useVideoPlayback } from "../VideoConversation/useVideoPlayback/useVideoPlayback";
-import { useVideoSourceRenewal } from "../VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
+import { useVideoTransport } from "../../ItemViewer/useVideoTransport";
+import { useVideoPlayback } from "../../VideoConversation/useVideoPlayback/useVideoPlayback";
+import { useVideoSourceRenewal } from "../../VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 import {
   createTestVideo,
   media,
-} from "../VideoConversation/videoSourceRenewalHelpers/__tests__/useVideoSourceRenewalTestHelpers";
-import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
+} from "../../VideoConversation/videoSourceRenewalHelpers/__tests__/useVideoSourceRenewalTestHelpers";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
 import { useTheaterVideoPlayback } from "./useTheaterVideoPlayback";
 
 function setup() {
@@ -217,18 +217,22 @@ describe("theater native playback intent", () => {
         source,
       });
       expect(video.play).not.toHaveBeenCalled();
-      if (action === "comment")
+      if (action === "comment") {
         act(() => {
           return view.result.current.transport.pause();
         });
-      if (action === "exit")
+      }
+      if (action === "exit") {
         view.rerender({
           presentation: "page",
           itemId: "first",
           node: video,
           source,
         });
-      if (action === "retire") view.unmount();
+      }
+      if (action === "retire") {
+        view.unmount();
+      }
       await act(async () => {
         return video.dispatchEvent(new Event("loadedmetadata"));
       });

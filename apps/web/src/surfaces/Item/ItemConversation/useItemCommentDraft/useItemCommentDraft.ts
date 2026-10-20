@@ -5,7 +5,7 @@ import {
   useCreateComment,
   type CommentSend,
 } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
-import { useItemCommentDraftMemory } from "./ItemCommentDraftProvider";
+import { useItemCommentDraftMemory } from "../ItemCommentDraftProvider/ItemCommentDraftProvider";
 
 type ItemCommentDraft = CommentSend & {
   body: string;

@@ -3,7 +3,7 @@ import {
   getWallClockFromCapture,
   timeOfDayLabel,
 } from "@/system/labelHelpers/labelHelpers";
-import { itemHeading } from "../itemCopyHelpers/itemCopyHelpers";
+import { itemHeading } from "../../itemCopyHelpers/itemCopyHelpers";
 
 /** The existing item heading with camera-local capture and optional position. */
 export function theaterTitleLabel({

@@ -2,8 +2,8 @@ import { MantineThemeProvider, Portal } from "@mantine/core";
 import { IconMessageCircle, IconX } from "@tabler/icons-react";
 import { useId, useMemo, type ReactNode } from "react";
 import { clsx } from "clsx";
-import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
-import type { TheaterCommentDockController } from "./useTheaterCommentDock";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
+import type { TheaterCommentDockController } from "../useTheaterCommentDock";
 import classes from "./TheaterCommentDock.module.css";
 
 type Props = {
@@ -37,7 +37,10 @@ export function TheaterCommentDock({
     <MantineThemeProvider theme={portalTheme}>
       <div
         data-theater-comment-dock
-        className={clsx(classes.dock, isTheater && classes.theater)}
+        className={clsx(
+          classes.theaterCommentDockRoot,
+          isTheater && classes.theaterCommentDockTheater,
+        )}
         data-open={controller.isOpen || undefined}
         inert={isUnavailable || undefined}
         aria-hidden={isUnavailable || undefined}
@@ -50,18 +53,18 @@ export function TheaterCommentDock({
         <div
           id={portalId}
           data-theater-comment-portals
-          className={classes.portals}
+          className={classes.theaterCommentDockPortals}
         />
         <div
           id={panelId}
           data-theater-comment-panel
-          className={classes.panel}
+          className={classes.theaterCommentDockPanel}
           inert={isCollapsed || isUnavailable || undefined}
           aria-hidden={isCollapsed || isUnavailable || undefined}
         >
           {isTheater ? (
             <button
-              className={classes.close}
+              className={classes.theaterCommentDockClose}
               type="button"
               aria-label="Close comments"
               onClick={controller.close}
@@ -74,7 +77,7 @@ export function TheaterCommentDock({
         {isTheater ? (
           <button
             data-theater-comment-trigger
-            className={classes.bubble}
+            className={classes.theaterCommentDockBubble}
             type="button"
             aria-label={`Open comments, ${commentCount} ${commentCount === 1 ? "comment" : "comments"}`}
             aria-controls={panelId}

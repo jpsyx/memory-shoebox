@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
-import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
 
 /** One application-owned fullscreen host and presentation for an item visit. */
 export type TheaterMode = {

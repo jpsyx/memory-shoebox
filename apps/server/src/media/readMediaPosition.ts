@@ -12,40 +12,6 @@ import {
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 
-/**
- * Counts and ranks one authorized selection in a single database snapshot.
- * Group anchors follow neighbors; frames use index ASC NULLS LAST, then ID.
- * This archive-wide read is deliberately separate from bounded neighbors.
- */
-export async function readMediaPosition(
-  options: Readonly<{
-    database: DatabaseExecutor;
-    viewer: Viewer;
-    request: MediaPositionRequest;
-  }>,
-): Promise<MediaPositionResponse> {
-  const request = mediaPositionRequestSchema.parse(options.request);
-  const selected = options.database
-    .selectFrom("items")
-    .select([
-      "id",
-      "captured_on",
-      "captured_at",
-      "seq",
-      "burst_id",
-      "burst_index",
-    ])
-    .where(
-      makeSelectionExpressionFromFilter({
-        viewer: options.viewer,
-        filter: makeTimelineFilterFromQuery(request.selection),
-      }),
-    );
-  const query = _buildPositionQuery({ selected, itemId: request.itemId });
-  const result = await query.execute(options.database);
-  return mediaPositionResponseSchema.parse(result.rows[0] ?? null);
-}
-
 /** Keeps all ordering and aggregate work inside the selected SQL snapshot. */
 function _buildPositionQuery(
   options: Readonly<{
@@ -78,4 +44,38 @@ function _buildPositionQuery(
     )
     select position, total from ranked where id = ${options.itemId}
   `;
+}
+
+/**
+ * Counts and ranks one authorized selection in a single database snapshot.
+ * Group anchors follow neighbors; frames use index ASC NULLS LAST, then ID.
+ * This archive-wide read is deliberately separate from bounded neighbors.
+ */
+export async function readMediaPosition(
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    request: MediaPositionRequest;
+  }>,
+): Promise<MediaPositionResponse> {
+  const request = mediaPositionRequestSchema.parse(options.request);
+  const selected = options.database
+    .selectFrom("items")
+    .select([
+      "id",
+      "captured_on",
+      "captured_at",
+      "seq",
+      "burst_id",
+      "burst_index",
+    ])
+    .where(
+      makeSelectionExpressionFromFilter({
+        viewer: options.viewer,
+        filter: makeTimelineFilterFromQuery(request.selection),
+      }),
+    );
+  const query = _buildPositionQuery({ selected, itemId: request.itemId });
+  const result = await query.execute(options.database);
+  return mediaPositionResponseSchema.parse(result.rows[0] ?? null);
 }

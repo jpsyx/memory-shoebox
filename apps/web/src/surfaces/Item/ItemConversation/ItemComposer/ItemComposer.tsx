@@ -6,7 +6,7 @@ import type { MemberRef } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
-import { useItemCommentDraft } from "../useItemCommentDraft";
+import { useItemCommentDraft } from "../useItemCommentDraft/useItemCommentDraft";
 import { submitCommentOnShortcut } from "../submitCommentOnShortcut";
 import classes from "./ItemComposer.module.css";
 

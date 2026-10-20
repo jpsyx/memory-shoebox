@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 import { useRef, useState, type ReactNode } from "react";
 import { ItemTopBar } from "./ItemTopBar";
 import { useTheaterCommentDock } from "../ItemTheater/useTheaterCommentDock";
-import classes from "../ItemTheater/ItemTheater.module.css";
+import classes from "./ItemViewer.module.css";
 import { ItemViewerConversation } from "./ItemViewerConversation";
 import type { Props } from "./ItemViewer.types";
 import { useWayBack } from "./useWayBack";
@@ -36,12 +36,13 @@ export function ItemViewer({
       <ViewerReadinessContext value={readiness}>
         <div
           className={clsx(
-            classes.viewerChrome,
-            theater.presentation === "theater" && classes.theaterChrome,
+            classes.itemViewerChrome,
+            theater.presentation === "theater" &&
+              classes.itemViewerTheaterChrome,
           )}
         >
           <div
-            className={classes.pageControls}
+            className={classes.itemViewerPageControls}
             hidden={theater.presentation === "theater"}
           >
             <ItemTopBar capturedOn={detail.capturedOn} />
@@ -53,7 +54,7 @@ export function ItemViewer({
           >
             {detail.kind === "photo" ? (
               <button
-                className={classes.entry}
+                className={classes.itemViewerEntry}
                 type="button"
                 data-theater-entry
                 onClick={theater.enter}

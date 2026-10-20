@@ -36,11 +36,6 @@
   background: #000;
 }
 
-.theaterMedia {
-  width: 100%;
-  height: 100%;
-}
-
 /* Theater's edge navigation must stay behind the shared transport controls. */
 .theater {
   isolation: auto;

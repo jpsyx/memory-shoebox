@@ -18,17 +18,20 @@ for (const kind of ["photo", "video"] as const) {
     await page
       .getByRole("button", { name: "Enter theater", exact: true })
       .click();
-    if (kind === "video") await pauseTheaterVideo(page, 0.4);
+    if (kind === "video") {
+      await pauseTheaterVideo(page, 0.4);
+    }
     const mediaReaction = page.getByRole("button", {
       name: kind === "photo" ? "React: Love" : "React: Laugh",
       exact: true,
     });
     await mediaReaction.click();
     const field = await openTheaterComments(page);
-    if (kind === "video")
+    if (kind === "video") {
       await expect(
         page.getByRole("button", { name: /Comment at / }),
       ).toHaveCount(0);
+    }
     await field.fill(`Shared ${kind} memory`);
     await field.press("ControlOrMeta+Enter");
     let article = page
@@ -63,9 +66,9 @@ for (const kind of ["photo", "video"] as const) {
       .getByRole("button", { name: "Enter theater", exact: true })
       .click();
     await openTheaterComments(page);
-    if (kind === "photo")
+    if (kind === "photo") {
       await expect(mediaReaction).toHaveAttribute("aria-pressed", "true");
-    else
+    } else {
       expect(
         await catalog.database
           .selectFrom("video_reactions")
@@ -73,6 +76,7 @@ for (const kind of ["photo", "video"] as const) {
           .where("item_id", "=", itemId)
           .execute(),
       ).toHaveLength(1);
+    }
     article = page
       .getByRole("article")
       .filter({ hasText: `Edited ${kind} memory` });
@@ -85,12 +89,13 @@ for (const kind of ["photo", "video"] as const) {
       .where("item_id", "=", itemId)
       .execute();
     expect(comments[0]!.at_seconds).toBeNull();
-    if (kind === "video")
+    if (kind === "video") {
       expect(
         comments.find((comment) => {
           return comment.parent_comment_id !== null;
         })?.at_seconds,
       ).toBeNull();
+    }
     await article.getByRole("button", { name: "Delete", exact: true }).click();
     const dialog = page.getByRole("dialog", {
       name: "Delete what you wrote?",

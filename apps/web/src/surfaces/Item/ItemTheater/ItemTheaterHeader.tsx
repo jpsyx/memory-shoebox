@@ -1,8 +1,8 @@
 import { IconArrowLeft, IconMaximize, IconMinimize } from "@tabler/icons-react";
 import type { ItemDetail, MediaPositionResponse } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import { theaterTitleLabel } from "./theaterTitleLabel";
-import type { TheaterMode } from "./useTheaterMode";
+import { theaterTitleLabel } from "./theaterTitleLabel/theaterTitleLabel";
+import type { TheaterMode } from "./useTheaterMode/useTheaterMode";
 import classes from "./ItemTheater.module.css";
 
 type Props = {
@@ -25,12 +25,12 @@ export function ItemTheaterHeader({
       : theaterTitleLabel({ detail, timezone, position });
   return (
     <header
-      className={classes.header}
+      className={classes.itemTheaterHeader}
       hidden={theater.presentation !== "theater"}
     >
       <button
         type="button"
-        className={classes.back}
+        className={classes.itemTheaterBack}
         data-theater-back
         onClick={theater.exit}
       >
@@ -38,7 +38,7 @@ export function ItemTheaterHeader({
         Back
       </button>
       <div
-        className={classes.title}
+        className={classes.itemTheaterTitle}
         title={label}
         aria-live="polite"
         aria-atomic="true"
@@ -47,7 +47,7 @@ export function ItemTheaterHeader({
       </div>
       <button
         type="button"
-        className={classes.fullscreen}
+        className={classes.itemTheaterFullscreen}
         onClick={theater.toggleFullscreen}
         aria-label={
           theater.isFullscreen ? "Leave fullscreen" : "Enter fullscreen"

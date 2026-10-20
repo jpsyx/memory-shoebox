@@ -96,22 +96,25 @@ for (const viewport of [
             expect(
               reactionBounds.y + reactionBounds.height,
             ).toBeLessThanOrEqual(controlsBounds.y - 8);
-          } else
+          } else {
             expect(
               reactionBounds.y + reactionBounds.height,
             ).toBeLessThanOrEqual(panelBounds.y - 8);
+          }
         }
-        if (kind === "video")
+        if (kind === "video") {
           await expect(
             visualPage.getByRole("button", { name: "Previous photo or video" }),
           ).toHaveCSS("border-top-width", "0px");
-        if (kind === "video")
+        }
+        if (kind === "video") {
           expect(
             (await visualPage
               .getByRole("slider", { name: "Where in the video" })
               .locator("../..")
               .boundingBox())!.height,
           ).toBeLessThanOrEqual(90);
+        }
         const close = visualPage.getByRole("button", {
           name: "Close comments",
           exact: true,

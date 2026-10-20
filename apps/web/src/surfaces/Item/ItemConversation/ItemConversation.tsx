@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { TheaterCommentDock } from "../ItemTheater/TheaterCommentDock";
+import { TheaterCommentDock } from "../ItemTheater/TheaterCommentDock/TheaterCommentDock";
 import type { TheaterCommentDockController } from "../ItemTheater/useTheaterCommentDock";
 import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
 import type { ReactNode, ComponentProps } from "react";

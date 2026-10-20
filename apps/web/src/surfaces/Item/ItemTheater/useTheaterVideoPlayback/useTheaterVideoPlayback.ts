@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
 import { playVideo } from "@/system/VideoFrame/playVideo";
-import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
-import type { VideoTransport } from "../ItemViewer/useVideoTransport";
-import type { VideoPlayback } from "../VideoConversation/useVideoPlayback/useVideoPlayback";
-import { getSourceRenewalFromVideo } from "../VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
+import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
+import type { VideoTransport } from "../../ItemViewer/useVideoTransport";
+import type { VideoPlayback } from "../../VideoConversation/useVideoPlayback/useVideoPlayback";
+import { getSourceRenewalFromVideo } from "../../VideoConversation/videoSourceRenewalHelpers/videoSourceRenewalHelpers";
 
 type Options = {
   itemId: string;

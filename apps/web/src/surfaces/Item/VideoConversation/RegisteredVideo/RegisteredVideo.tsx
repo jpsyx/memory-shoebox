@@ -5,7 +5,7 @@ import { useVideoReadiness } from "@/media/useVideoReadiness/useVideoReadiness";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import type { MediaRef } from "@memory-shoebox/shared";
-import { useTheaterVideoPlayback } from "../../ItemTheater/useTheaterVideoPlayback";
+import { useTheaterVideoPlayback } from "../../ItemTheater/useTheaterVideoPlayback/useTheaterVideoPlayback";
 import type { ItemPresentation } from "../../ItemViewer/ItemViewer.types";
 import { useContext, useRef, type ReactNode, type RefObject } from "react";
 import type { VideoPlayback } from "../useVideoPlayback/useVideoPlayback";

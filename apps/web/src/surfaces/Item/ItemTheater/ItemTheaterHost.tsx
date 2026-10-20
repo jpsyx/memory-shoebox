@@ -5,7 +5,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import type { TheaterMode } from "./useTheaterMode";
+import type { TheaterMode } from "./useTheaterMode/useTheaterMode";
 import classes from "./ItemTheater.module.css";
 
 type Props = { theater: TheaterMode; children: ReactNode };
@@ -168,7 +168,10 @@ export function ItemTheaterHost({
     <div
       ref={theater.hostRef}
       data-item-theater-host
-      className={clsx(classes.host, isTheater && classes.theater)}
+      className={clsx(
+        classes.itemTheaterHost,
+        isTheater && classes.itemTheaterStage,
+      )}
       role={isTheater ? "dialog" : undefined}
       aria-modal={isTheater || undefined}
       aria-label={isTheater ? "Media theater" : undefined}

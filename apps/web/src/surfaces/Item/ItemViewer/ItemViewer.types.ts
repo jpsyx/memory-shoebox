@@ -1,4 +1,4 @@
-import type { TheaterMode } from "../ItemTheater/useTheaterMode";
+import type { TheaterMode } from "../ItemTheater/useTheaterMode/useTheaterMode";
 import type { VideoTransport } from "./useVideoTransport";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { ItemDetail, MediaPreview } from "@memory-shoebox/shared";

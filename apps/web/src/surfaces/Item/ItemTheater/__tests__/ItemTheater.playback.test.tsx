@@ -19,7 +19,7 @@ import {
   LAST,
   respondWithNavigationItems,
   waitForNavigationReady,
-} from "../ItemViewer/ItemNavigation/__tests__/ItemNavigationTestHelpers";
+} from "../../ItemViewer/ItemNavigation/__tests__/ItemNavigationTestHelpers";
 
 beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);

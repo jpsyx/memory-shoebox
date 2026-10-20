@@ -9,7 +9,9 @@ neither action returns to the original entry item or the timeline.
 
 `ItemSurface` owns one actual-detail query, transport, draft provider and stable
 `ItemTheaterHost`. The host survives loading, route changes, errors and denials.
-Mode changes retain the current media node and composer. The existing
+`ItemSurfaceContent` keeps query/state ownership and renders query branches through
+the explicit `ItemQueryContent` component. Mode changes retain the current media
+node and composer. The existing
 `ItemNavigation` controller follows the originating timeline filters, burst order
 and day boundaries, without wrapping or introducing a theater playlist.
 
@@ -112,3 +114,15 @@ play tickets, fullscreen, scroll lock and focus ownership.
 The standalone [prototype](theater-prototype.md) remains a design reference and
 is not imported by production. [Production verification](theater-verification.md)
 maps acceptance groups to browser/unit evidence and documents platform limits.
+
+## Source organization
+
+Theater dock, title, mode and playback modules live in their own named
+directories under `ItemTheater/`; the shared navigation/playback integration
+suites live in `ItemTheater/__tests__/`. Draft provider/hook companions live in
+`ItemConversation/ItemCommentDraftProvider/` and
+`ItemConversation/useItemCommentDraft/`. Route draft authorization belongs to
+`ItemSurface/__tests__/`. Dock interaction and nested conversation suites share a
+test-only harness in `TheaterCommentDock/__tests__/`. Viewer chrome/entry and
+video-conversation wrapper styles are owned by their local component stylesheets;
+theater shell and dock selectors carry their component prefixes.

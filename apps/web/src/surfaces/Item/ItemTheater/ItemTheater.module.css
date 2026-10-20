@@ -1,7 +1,7 @@
-.host {
+.itemTheaterHost {
   min-width: 0;
 }
-.theater {
+.itemTheaterStage {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -12,7 +12,7 @@
   background: #000;
   color-scheme: dark;
 }
-.header {
+.itemTheaterHeader {
   position: absolute;
   top: max(18px, env(safe-area-inset-top));
   left: max(20px, env(safe-area-inset-left));
@@ -23,12 +23,12 @@
   align-items: center;
   pointer-events: none;
 }
-.header[hidden] {
+.itemTheaterHeader[hidden] {
   display: none;
 }
-.back,
-.title,
-.fullscreen {
+.itemTheaterBack,
+.itemTheaterTitle,
+.itemTheaterFullscreen {
   height: 48px;
   border: 1px solid #ffffff2b;
   border-radius: 12px;
@@ -37,8 +37,8 @@
   box-shadow: 0 3px 14px #0006;
   pointer-events: auto;
 }
-.back,
-.fullscreen {
+.itemTheaterBack,
+.itemTheaterFullscreen {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,7 +48,7 @@
   cursor: pointer;
   font: inherit;
 }
-.title {
+.itemTheaterTitle {
   min-width: 0;
   max-width: min(760px, calc(100% - 160px));
   padding: 0 16px;
@@ -57,52 +57,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.fullscreen {
+.itemTheaterFullscreen {
   margin-left: auto;
   width: 48px;
   padding: 0;
 }
-.pageControls[hidden] {
-  display: none;
-}
-.entry {
-  min-height: var(--tap);
-  padding: 0 12px;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-.theater :is(button, a):focus-visible {
+.itemTheaterStage :is(button, a):focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
 }
 
-.viewerChrome {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--sp-1);
-  padding-right: var(--sp-3);
-  background: var(--panel);
-  border-bottom: 1px solid var(--rule);
-}
-.pageControls {
-  min-width: 0;
-}
-.pageControls > header {
-  position: static;
-  border-bottom: 0;
-}
-.theaterChrome {
-  display: contents;
-}
-
-.theater > header:not(.header) {
+.itemTheaterStage > header:not(.itemTheaterHeader) {
   display: none;
 }

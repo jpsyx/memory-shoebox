@@ -1,6 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
-import type { ItemDetail, MediaPreview } from "@memory-shoebox/shared";
+import type { ItemDetail } from "@memory-shoebox/shared";
 import { idSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext, useLocation } from "@tanstack/react-router";
@@ -8,17 +7,15 @@ import { useMediaLoading } from "@/media/MediaLoadingContext";
 import { useLayoutEffect, type ReactNode } from "react";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import { itemQueryOptions } from "@/api/items/items";
-import { ItemFailed } from "@/surfaces/Item/ItemSurface/ItemFailed";
-import { ItemLoading } from "@/surfaces/Item/ItemSurface/ItemLoading/ItemLoading";
-import { ItemNotHere } from "@/surfaces/Item/ItemSurface/ItemNotHere";
-import { useItemCommentDraftMemory } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider";
+import { useItemCommentDraftMemory } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider/ItemCommentDraftProvider";
 import { ItemTheaterHeader } from "../ItemTheater/ItemTheaterHeader";
-import type { TheaterMode } from "../ItemTheater/useTheaterMode";
+import type { TheaterMode } from "../ItemTheater/useTheaterMode/useTheaterMode";
 import type { VideoTransport } from "../ItemViewer/useVideoTransport";
 import { mediaPositionQueryOptions } from "@/api/mediaPosition/mediaPosition";
 import { getViewFromSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
-import { ItemViewer } from "@/surfaces/Item/ItemViewer/ItemViewer";
+
+import { ItemQueryContent } from "./ItemQueryContent";
 
 type Props = {
   itemId: string;
@@ -91,39 +88,6 @@ function useCurrentTheaterPosition({
   return enabled && !query.isError ? query.data : undefined;
 }
 
-type ContentOptions = Props & {
-  query: UseQueryResult<ItemDetail, Error>;
-  isNotHere: boolean;
-  selectedPreview: MediaPreview | undefined;
-  viewer: Viewer;
-  timezone: string;
-};
-function _getContentFromQuery(options: Readonly<ContentOptions>): ReactNode {
-  return options.isNotHere ? (
-    <ItemNotHere />
-  ) : options.query.data === undefined || options.query.isError ? (
-    options.query.isError ? (
-      <ItemFailed
-        onRetry={() => {
-          void options.query.refetch();
-        }}
-      />
-    ) : (
-      <ItemLoading preview={options.selectedPreview} />
-    )
-  ) : (
-    <ItemViewer
-      selectedPreview={options.selectedPreview}
-      detail={options.query.data}
-      isPlaceholder={options.query.isPlaceholderData}
-      viewer={options.viewer}
-      timezone={options.timezone}
-      theater={options.theater}
-      transport={options.transport}
-    />
-  );
-}
-
 function useItemSurfaceState({
   itemId,
   theater,
@@ -193,16 +157,15 @@ export function ItemSurfaceContent({
         timezone={settings.timezone}
         position={position}
       />
-      {_getContentFromQuery({
-        itemId,
-        theater,
-        transport,
-        query,
-        isNotHere,
-        selectedPreview,
-        viewer,
-        timezone: settings.timezone,
-      })}
+      <ItemQueryContent
+        theater={theater}
+        transport={transport}
+        query={query}
+        isNotHere={isNotHere}
+        selectedPreview={selectedPreview}
+        viewer={viewer}
+        timezone={settings.timezone}
+      />
     </>
   );
 }

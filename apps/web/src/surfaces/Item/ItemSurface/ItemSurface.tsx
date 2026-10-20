@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { ItemCommentDraftProvider } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider";
+import { ItemCommentDraftProvider } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider/ItemCommentDraftProvider";
 import { useVideoTransport } from "../ItemViewer/useVideoTransport";
-import { useTheaterMode } from "../ItemTheater/useTheaterMode";
+import { useTheaterMode } from "../ItemTheater/useTheaterMode/useTheaterMode";
 import { ItemTheaterHost } from "../ItemTheater/ItemTheaterHost";
 import { ItemSurfaceContent } from "./ItemSurfaceContent";
 
