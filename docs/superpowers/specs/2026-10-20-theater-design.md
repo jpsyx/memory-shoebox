@@ -5,8 +5,8 @@ October 20, 2026. Architectural specification for the approved
 The prototype and its title, return-navigation, and hint-removal refinements are
 approved. This document records the production requirements. All six implementation tasks
 are complete and independently reviewed. Final broad review found no blockers.
-The seven Minor cleanup findings are addressed; scoped cleanup review remains
-pending.
+All seven Minor cleanup findings are addressed and independently re-reviewed
+with no new findings.
 See [production verification](../../theater-verification.md) for evidence and
 platform limits.
 

@@ -100,7 +100,8 @@ Root types, lint, formatting and build also pass. This cleanup moves existing
 modules/tests, extracts an explicit query-state renderer, adds conditional braces
 and narrows two evidence claims. No new behavior required red/green tests, and
 no full workspace unit suite was repeated. The prior broad review remains ready
-with no blockers; scoped review of this cleanup is pending.
+with no blockers; scoped review of cleanup commit `a3777b7e` confirmed all seven
+findings addressed with no new breakage.
 
 Existing jsdom scroll/navigation and Video.js notices, the build's React compiler
 module-directive advisory and Playwright's NO_COLOR/FORCE_COLOR notice are baseline
@@ -129,8 +130,8 @@ safe-area hardware and software-keyboard behavior on real devices remain
 platform-dependent. A 390×480 viewport proves constrained geometry, not actual
 keyboard animation or iOS fullscreen. No screen-reader or physical-device
 acceptance is claimed. All six tasks are independently reviewed; final broad review found no blockers.
-The seven Minor cleanup findings are addressed; scoped cleanup review remains
-pending. Review verdicts remain separate from implementation checks and do not
+All seven Minor cleanup findings are addressed and independently re-reviewed
+with no new findings. Review verdicts remain separate from implementation checks and do not
 authorize merge or publication.
 
 ## Reuse
