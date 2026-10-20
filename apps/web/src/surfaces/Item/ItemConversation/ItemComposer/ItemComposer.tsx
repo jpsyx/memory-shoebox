@@ -1,3 +1,5 @@
+import { clsx } from "clsx";
+import type { ItemPresentation } from "@/surfaces/Item/ItemViewer/ItemViewer.types";
 import { IconClock, IconSend, IconX } from "@tabler/icons-react";
 import type { ReactNode, RefObject } from "react";
 import type { MemberRef } from "@memory-shoebox/shared";
@@ -9,6 +11,7 @@ import { submitCommentOnShortcut } from "../submitCommentOnShortcut";
 import classes from "./ItemComposer.module.css";
 
 type Props = {
+  presentation?: ItemPresentation;
   itemId: string;
   viewer: MemberRef;
   transport?: VideoTransport;
@@ -23,11 +26,15 @@ export function ItemComposer({
   viewer,
   transport,
   fieldRef,
+  presentation = "page",
 }: Readonly<Props>): ReactNode {
   const draft = useItemCommentDraft({ itemId, transport, fieldRef });
   return (
     <form
-      className={classes.itemComposer}
+      className={clsx(
+        classes.itemComposer,
+        presentation === "theater" && classes.theater,
+      )}
       onSubmit={(event) => {
         event.preventDefault();
         draft.submit();

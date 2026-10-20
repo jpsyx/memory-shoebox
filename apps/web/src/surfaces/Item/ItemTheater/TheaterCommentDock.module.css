@@ -1,0 +1,105 @@
+.dock {
+  min-width: 0;
+  min-height: 0;
+}
+.panel {
+  min-width: 0;
+  min-height: 0;
+}
+.theater {
+  position: fixed;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 210;
+  width: 72px;
+  height: 64px;
+  color: var(--on-print);
+  background: var(--print);
+  border-radius: 32px;
+  box-shadow: 0 9px 36px #0007;
+  transition:
+    width 390ms var(--ease),
+    height 390ms var(--ease),
+    border-radius 390ms var(--ease);
+}
+.theater[data-open] {
+  width: min(400px, calc(100vw - 32px));
+  height: min(510px, calc(100dvh - 132px));
+  border-radius: 16px;
+}
+.theater .panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 130ms var(--ease),
+    visibility 130ms;
+}
+.theater[data-open] .panel {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 100ms;
+}
+.bubble {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 72px;
+  height: 64px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 32px;
+  color: var(--on-print);
+  background: var(--print);
+  font-variant-numeric: tabular-nums;
+  transition:
+    opacity 100ms var(--ease),
+    visibility 100ms;
+}
+.theater[data-open] .bubble {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--print);
+  color: var(--on-print);
+}
+.close:hover {
+  background: var(--print-sunk);
+}
+.portals {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 800px) {
+  .theater {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theater,
+  .theater .panel,
+  .bubble {
+    transition: none;
+  }
+}

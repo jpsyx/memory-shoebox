@@ -10,3 +10,6 @@ export type Props = {
   viewer: Viewer;
   timezone: string;
 };
+
+/** The same item tree in its ordinary page or fullscreen theater. */
+export type ItemPresentation = "page" | "theater";

@@ -85,3 +85,18 @@
     min-height: 36px;
   }
 }
+
+.theater {
+  order: 2;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--print-sunk);
+  margin-top: 12px;
+}
+.theater textarea {
+  resize: none;
+  background: transparent;
+}
+.theater .itemComposerSend {
+  border-radius: 12px;
+}

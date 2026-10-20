@@ -245,3 +245,29 @@ releases ownership, detaches readiness listeners, and suppresses late restore/pl
 work from the retired item or node.
 Native play/seek listeners follow the actual committed node, including a denied
 placeholder recovering to a playable video through the same transport ref.
+
+## Shared theater comment presentation
+
+`ItemTheater/TheaterCommentDock` supplies a presentation wrapper for the existing
+`ItemComments` and `ItemComposer`; it does not fetch item data or own a write path.
+Its controller is created by `useTheaterCommentDock` with the viewer's existing
+composer ref. The viewer can use the same controller for its Comment actions.
+These primitives are prepared for viewer integration; the ordinary item page
+continues using its current layout until that integration is connected.
+
+The wrapper and shared conversation stay mounted when presentation changes. Page
+presentation is passive. Theater presentation morphs the corner bubble into a
+light conversation panel, scrolls threads independently and places the same
+composer beneath them using CSS order. Collapsed content is inert and hidden from
+assistive technology. Hover opening focuses the composer without pinning the
+panel: departure closes it after 450ms, and re-entry cancels that timer. Explicit
+keyboard or touch opening follows focus departure instead. Closing with focus
+inside returns focus to the bubble. Item, presentation and availability changes
+reset the open state and retire departure timers.
+
+A stable portal target beside the clipped panel belongs to the dock in both
+presentations. Scoped Mantine Portal defaults send existing reaction pickers and
+comment deletion dialogs there, preserving their ordinary implementations and
+focus behavior. An open nested interaction holds the dock; its first Escape
+closes that interaction. Draft capture, retries, reactions, editing, replies and
+submission still belong to the existing conversation components and write hooks.

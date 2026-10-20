@@ -1,3 +1,5 @@
+import { clsx } from "clsx";
+import type { ItemPresentation } from "@/surfaces/Item/ItemViewer/ItemViewer.types";
 import type { ReactNode, RefObject } from "react";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
@@ -6,6 +8,7 @@ import { ItemComment } from "../ItemComment/ItemComment";
 import classes from "./ItemComments.module.css";
 
 type Props = {
+  presentation?: ItemPresentation;
   detail: ItemDetail;
   viewer: MemberRef;
   transport?: VideoTransport;
@@ -19,6 +22,7 @@ export function ItemComments({
   viewer,
   transport,
   fieldRef,
+  presentation = "page",
   onSeek,
 }: Readonly<Props>): ReactNode {
   const parents = detail.comments
@@ -34,7 +38,13 @@ export function ItemComments({
     fieldRef.current?.focus();
   };
   return (
-    <section className={classes.itemComments} aria-label="Comments">
+    <section
+      className={clsx(
+        classes.itemComments,
+        presentation === "theater" && classes.theater,
+      )}
+      aria-label="Comments"
+    >
       <h2 className={classes.itemCommentsHeading}>
         Comments <span>{detail.comments.length}</span>
       </h2>
@@ -43,6 +53,7 @@ export function ItemComments({
         viewer={viewer}
         transport={transport}
         fieldRef={fieldRef}
+        presentation={presentation}
       />
       <div className={classes.itemCommentsThreads}>
         {parents.length === 0 || detail.kind !== "video" ? null : (
