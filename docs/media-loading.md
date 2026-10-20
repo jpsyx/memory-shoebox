@@ -90,6 +90,14 @@ both cases and returns at most two rows per statement. EXPLAIN confirms use of
 all three navigation indexes without temporary sort trees. This is a query-shape
 regression, not a production latency benchmark.
 
+The theater position endpoint is a separate archive-wide SQL window read. It
+returns only one authorized counter and never joins the bounded neighbor path
+or media loading budgets. Its CPU cost grows with the selected archive, so the
+local sparse/dense measurements in `mediaPreview.scaling.test.ts` report time
+and statement count without claiming production latency. Both six-item and
+1,006-item fixtures use one position statement; neighbor SQL shapes remain
+identical before and after growth.
+
 `createMediaPreviewStore(memberId)` owns at most 64 entries in a memory-only LRU.
 Reads and writes promote an entry; removal and clearing drop it. Each store is
 independent, including a replacement for the same member. The store additionally

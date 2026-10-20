@@ -1,10 +1,12 @@
 import {
   mediaNeighborsRequestSchema,
+  mediaPositionRequestSchema,
   mediaPreviewRequestSchema,
 } from "@memory-shoebox/shared";
 import type { FastifyInstance } from "fastify";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import { readMediaPreviews } from "../media/readMediaPreviews.ts";
+import { readMediaPosition } from "../media/readMediaPosition.ts";
 import { readMediaNeighbors } from "../media/readMediaNeighbors.ts";
 
 /** Authenticated media-only reads under the existing route rate limiter. */
@@ -21,6 +23,14 @@ export async function mediaPreviewRoutes(app: FastifyInstance): Promise<void> {
       request: parsed,
     });
     return { items };
+  });
+  app.post("/media/position", async (request, reply) => {
+    reply.header("Cache-Control", "no-store");
+    return readMediaPosition({
+      database: app.database,
+      viewer: requireViewer(request),
+      request: mediaPositionRequestSchema.parse(request.body),
+    });
   });
   app.post("/media/neighbors", async (request, reply) => {
     reply.header("Cache-Control", "no-store");

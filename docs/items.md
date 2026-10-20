@@ -28,7 +28,7 @@ processing jobs are separate from these reads.
 Authenticated `POST /api/media/preview` reads at most eight requested IDs, with
 `speculative-preview` or `selected-view` source selection. IDs are validated before
 catalog reads, deduplicated in requested order, and hidden or missing IDs are
-omitted identically. Both preview endpoints send `Cache-Control: no-store` and
+omitted identically. All media metadata endpoints send `Cache-Control: no-store` and
 use the normal authenticated route rate limit.
 
 `POST /api/media/neighbors` accepts the current item, shared `TimelineSelection`,
@@ -49,6 +49,29 @@ carry media and layout only, without comments or mutation authority. Selected
 renewal may return original-video playback as the existing fallback; neighbor
 reads and speculative batches never return original-video playback. Actual item
 reads and their failure retry behavior remain separate.
+
+## Authorized theater position
+
+Authenticated `POST /api/media/position` accepts `{ itemId, selection }` with
+exactly the same `TimelineSelection` as neighbors, including effective jump
+boundaries. It returns `{ position, total }` with a dense one-based position
+among visible matching photos and videos, expanding every matching burst frame.
+Hidden, missing, deleted and out-of-selection current items return `null`,
+without exposing a total. The response uses `Cache-Control: no-store` and the
+normal authenticated rate limit.
+
+A single SQL selection and window query computes group anchors, total and rank
+in one snapshot. It uses the same earliest visible matching burst capture and
+capture/sequence/ID tie breaks as neighbors, then ascending burst index with
+nulls last and ID ties. It does not materialize archive rows in JavaScript or
+change the bounded neighbor query. This read creates no opens, seen state,
+activity events, email or storage signing work.
+
+The browser scopes the query to member and selection, retains freshness for
+30 seconds, and disables retries and focus refetch. The theater must enable it
+only after matching actual-detail authorization. A missing or refused counter
+omits that segment from the title; title copy continues to use `itemHeading`
+and the existing camera-offset/instance-timezone wall-clock rules.
 
 ## Browser consumption
 

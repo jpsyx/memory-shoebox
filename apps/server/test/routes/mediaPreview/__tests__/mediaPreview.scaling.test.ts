@@ -2,11 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { CompiledQuery } from "kysely";
 
+import { readMediaPosition } from "../../../../src/media/readMediaPosition.ts";
 import { readMediaNeighbors } from "../../../../src/media/readMediaNeighbors.ts";
 
 import { EVERYONE_VISIBILITY_RULE_ID } from "../../../../src/visibility/everyoneRule.ts";
 
-import { insertItem, NOW } from "../../../helpers/seedHelpers/seedHelpers.ts";
+import {
+  insertItem,
+  insertItemTag,
+  insertTag,
+  NOW,
+} from "../../../helpers/seedHelpers/seedHelpers.ts";
 import {
   createMediaPreviewContext,
   installMediaPreviewTestLifecycle,
@@ -35,18 +41,42 @@ describe("side-effect-free media reads", () => {
         return args.result;
       },
     });
+    const viewer = {
+      memberId: context.memberId,
+      sessionId: context.sessionId,
+      role: "viewer" as const,
+      isAdmin: false,
+      visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
+    };
+    const tagId = await insertTag(context.database, { name: "sparse" });
+    await insertItemTag(context.database, { itemId: before, tagId });
+    const measurePosition = async (isSparse: boolean) => {
+      const queryCountBefore = queries.length;
+      const startedAt = performance.now();
+      const result = await readMediaPosition({
+        database,
+        viewer,
+        request: {
+          itemId: before,
+          selection: isSparse ? { ...SELECTION, tags: [tagId] } : SELECTION,
+        },
+      });
+      return {
+        milliseconds: performance.now() - startedAt,
+        queryCount: queries.length - queryCountBefore,
+        result,
+      };
+    };
+    const smallDense = await measurePosition(false);
+    const smallSparse = await measurePosition(true);
+    queries.length = 0;
+    rowCounts.length = 0;
     const read = () => {
       return readMediaNeighbors({
         database,
         b2: context.b2,
         now: new Date(NOW),
-        viewer: {
-          memberId: context.memberId,
-          sessionId: context.sessionId,
-          role: "viewer",
-          isAdmin: false,
-          visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
-        },
+        viewer,
         request: {
           itemId: before,
           direction: "previous",
@@ -57,6 +87,9 @@ describe("side-effect-free media reads", () => {
     await read();
     const smallCount = queries.length;
     const smallRows = [...rowCounts];
+    const smallQueryShapes = queries.map((query) => {
+      return query.sql;
+    });
     await Promise.all(
       Array.from({ length: 1000 }, (_, index) => {
         return insertItem(context.database, {
@@ -75,6 +108,11 @@ describe("side-effect-free media reads", () => {
     expect(result.ahead).toHaveLength(2);
     expect(result.behind).toHaveLength(0);
     expect(queries.length).toBe(smallCount);
+    expect(
+      queries.map((query) => {
+        return query.sql;
+      }),
+    ).toEqual(smallQueryShapes);
     expect(queries.length).toBeLessThanOrEqual(16);
     expect(Math.max(...smallRows, ...rowCounts)).toBeLessThanOrEqual(3);
     const plans = await Promise.all(
@@ -107,5 +145,23 @@ describe("side-effect-free media reads", () => {
         return detail.includes("TEMP B-TREE");
       }),
     ).toEqual([]);
+    const largeDense = await measurePosition(false);
+    const largeSparse = await measurePosition(true);
+    expect(smallDense.result).toEqual({ position: 6, total: 6 });
+    expect(largeDense.result).toEqual({ position: 1006, total: 1006 });
+    [smallSparse, largeSparse].forEach((measurement) => {
+      expect(measurement.result).toEqual({ position: 1, total: 1 });
+    });
+    [smallDense, smallSparse, largeDense, largeSparse].forEach(
+      (measurement) => {
+        expect(measurement.queryCount).toBe(1);
+      },
+    );
+    console.info("media-position local growth measurements", {
+      smallDense,
+      smallSparse,
+      largeDense,
+      largeSparse,
+    });
   });
 });

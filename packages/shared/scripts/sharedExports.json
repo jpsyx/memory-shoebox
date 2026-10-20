@@ -730,5 +730,10 @@
     "module": "./getImageCapabilityFromContentType.ts",
     "values": ["getImageCapabilityFromContentType"],
     "types": []
+  },
+  {
+    "module": "./mediaPosition.ts",
+    "values": ["mediaPositionRequestSchema", "mediaPositionResponseSchema"],
+    "types": ["MediaPositionRequest", "MediaPositionResponse"]
   }
 ]
