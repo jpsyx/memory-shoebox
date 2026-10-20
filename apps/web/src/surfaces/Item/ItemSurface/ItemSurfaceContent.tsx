@@ -1,8 +1,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import type { ItemDetail } from "@memory-shoebox/shared";
+import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
+import type { ItemDetail, MediaPreview } from "@memory-shoebox/shared";
 import { idSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouteContext } from "@tanstack/react-router";
+import { useRouteContext, useLocation } from "@tanstack/react-router";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
 import { useLayoutEffect, type ReactNode } from "react";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
@@ -11,10 +12,18 @@ import { ItemFailed } from "@/surfaces/Item/ItemSurface/ItemFailed";
 import { ItemLoading } from "@/surfaces/Item/ItemSurface/ItemLoading/ItemLoading";
 import { ItemNotHere } from "@/surfaces/Item/ItemSurface/ItemNotHere";
 import { useItemCommentDraftMemory } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider";
+import { ItemTheaterHeader } from "../ItemTheater/ItemTheaterHeader";
+import type { TheaterMode } from "../ItemTheater/useTheaterMode";
+import type { VideoTransport } from "../ItemViewer/useVideoTransport";
+import { mediaPositionQueryOptions } from "@/api/mediaPosition/mediaPosition";
+import { getViewFromSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
+import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 import { ItemViewer } from "@/surfaces/Item/ItemViewer/ItemViewer";
 
 type Props = {
   itemId: string;
+  theater: TheaterMode;
+  transport: VideoTransport;
 };
 
 function useSelectedItemDetail({
@@ -57,22 +66,69 @@ function useDiscardDeniedItemDraft({
   }, [isDenied, itemId, remove]);
 }
 
-/**
- * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
- * know which kind it points at until then.
- *
- * **The fetch is here, never in a route loader**: every run of
- * `itemQueryOptions` counts an open, and a loader would run when a pointer so
- * much as rested on a link. An address that is not a UUID is not asked about
- * at all, since the answer can only be "not here".
- *
- * While detail loads, a cached preview supplies only the selected media.
- * Previous conversation controls stay inert until actual detail authorizes
- * the selected item. A refused read hides the preview; retry keeps the
- * original actual-detail semantics.
- */
-export function ItemSurfaceContent({ itemId }: Readonly<Props>): ReactNode {
-  const { viewer, settings } = useRouteContext({ from: "/_app" });
+function useCurrentTheaterPosition({
+  itemId,
+  theater,
+  memberId,
+  isAuthorized,
+}: Readonly<{
+  itemId: string;
+  theater: TheaterMode;
+  memberId: string;
+  isAuthorized: boolean;
+}>) {
+  const location = useLocation();
+  const selection = getNavigationSelectionFromView({
+    selection:
+      location.state.itemNavigationSelection ?? getViewFromSearch({}).selection,
+    at: undefined,
+  });
+  const enabled = theater.presentation === "theater" && isAuthorized;
+  const query = useQuery({
+    ...mediaPositionQueryOptions({ memberId, request: { itemId, selection } }),
+    enabled,
+  });
+  return enabled && !query.isError ? query.data : undefined;
+}
+
+type ContentOptions = Props & {
+  query: UseQueryResult<ItemDetail, Error>;
+  isNotHere: boolean;
+  selectedPreview: MediaPreview | undefined;
+  viewer: Viewer;
+  timezone: string;
+};
+function _getContentFromQuery(options: Readonly<ContentOptions>): ReactNode {
+  return options.isNotHere ? (
+    <ItemNotHere />
+  ) : options.query.data === undefined || options.query.isError ? (
+    options.query.isError ? (
+      <ItemFailed
+        onRetry={() => {
+          void options.query.refetch();
+        }}
+      />
+    ) : (
+      <ItemLoading preview={options.selectedPreview} />
+    )
+  ) : (
+    <ItemViewer
+      selectedPreview={options.selectedPreview}
+      detail={options.query.data}
+      isPlaceholder={options.query.isPlaceholderData}
+      viewer={options.viewer}
+      timezone={options.timezone}
+      theater={options.theater}
+      transport={options.transport}
+    />
+  );
+}
+
+function useItemSurfaceState({
+  itemId,
+  theater,
+  memberId,
+}: Readonly<Props & { memberId: string }>) {
   const resources = useMediaLoading();
   const selectedPreview = resources.previews.read(itemId);
   const isWellFormed = idSchema.safeParse(itemId).success;
@@ -88,27 +144,65 @@ export function ItemSurfaceContent({ itemId }: Readonly<Props>): ReactNode {
       isNotHere ||
       (query.error instanceof ApiRequestError && query.error.status === 403),
   });
-  if (isNotHere) {
-    return <ItemNotHere />;
-  }
-  if (query.data === undefined) {
-    return query.isError ? (
-      <ItemFailed
-        onRetry={() => {
-          void query.refetch();
-        }}
-      />
-    ) : (
-      <ItemLoading preview={selectedPreview} />
-    );
-  }
+  const isAuthorized =
+    !isNotHere &&
+    !query.isError &&
+    !query.isPlaceholderData &&
+    query.data?.itemId === itemId;
+  const position = useCurrentTheaterPosition({
+    itemId,
+    theater,
+    memberId,
+    isAuthorized,
+  });
+  return { query, isNotHere, isAuthorized, position, selectedPreview };
+}
+
+/**
+ * Surfaces 3 and 4, chosen between once the item has answered: a link cannot
+ * know which kind it points at until then.
+ *
+ * **The fetch is here, never in a route loader**: every run of
+ * `itemQueryOptions` counts an open, and a loader would run when a pointer so
+ * much as rested on a link. An address that is not a UUID is not asked about
+ * at all, since the answer can only be "not here".
+ *
+ * While detail loads, a cached preview supplies only the selected media.
+ * Previous conversation controls stay inert until actual detail authorizes
+ * the selected item. A refused read hides the preview; retry keeps the
+ * original actual-detail semantics.
+ */
+export function ItemSurfaceContent({
+  itemId,
+  theater,
+  transport,
+}: Readonly<Props>): ReactNode {
+  const { viewer, settings } = useRouteContext({ from: "/_app" });
+  const { query, isNotHere, isAuthorized, position, selectedPreview } =
+    useItemSurfaceState({
+      itemId,
+      theater,
+      transport,
+      memberId: viewer.memberId,
+    });
   return (
-    <ItemViewer
-      selectedPreview={selectedPreview}
-      detail={query.data}
-      isPlaceholder={query.isPlaceholderData}
-      viewer={viewer}
-      timezone={settings.timezone}
-    />
+    <>
+      <ItemTheaterHeader
+        theater={theater}
+        detail={isAuthorized ? query.data : undefined}
+        timezone={settings.timezone}
+        position={position}
+      />
+      {_getContentFromQuery({
+        itemId,
+        theater,
+        transport,
+        query,
+        isNotHere,
+        selectedPreview,
+        viewer,
+        timezone: settings.timezone,
+      })}
+    </>
   );
 }

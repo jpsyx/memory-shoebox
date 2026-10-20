@@ -1,3 +1,5 @@
+import type { TheaterMode } from "../ItemTheater/useTheaterMode";
+import type { VideoTransport } from "./useVideoTransport";
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import type { ItemDetail, MediaPreview } from "@memory-shoebox/shared";
 
@@ -9,6 +11,8 @@ export type Props = {
   isPlaceholder: boolean;
   viewer: Viewer;
   timezone: string;
+  theater: TheaterMode;
+  transport: VideoTransport;
 };
 
 /** The same item tree in its ordinary page or fullscreen theater. */

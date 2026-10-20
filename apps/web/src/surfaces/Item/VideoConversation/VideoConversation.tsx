@@ -1,7 +1,9 @@
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import type { ItemDetail, MemberRef } from "@memory-shoebox/shared";
 import { VideoPlayer } from "@videojs/react/video";
-import { useRef, type ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
+import type { ItemPresentation } from "../ItemViewer/ItemViewer.types";
+import type { TheaterCommentDockController } from "../ItemTheater/useTheaterCommentDock";
 import { ItemComments } from "../ItemConversation/ItemComments/ItemComments";
 import { ItemConversation } from "../ItemConversation/ItemConversation";
 import { ConversationPlayer } from "./ConversationPlayer/ConversationPlayer";
@@ -16,6 +18,10 @@ type Props = {
   isPlaceholder: boolean;
   transport: VideoTransport;
   onDeleted: () => void;
+  fieldRef: RefObject<HTMLTextAreaElement | null>;
+  presentation: ItemPresentation;
+  dockController: TheaterCommentDockController;
+  onComment: () => void;
 };
 
 /**
@@ -29,8 +35,11 @@ export function VideoConversation({
   isPlaceholder,
   transport,
   onDeleted,
+  fieldRef,
+  presentation,
+  dockController,
+  onComment,
 }: Readonly<Props>): ReactNode {
-  const fieldRef = useRef<HTMLTextAreaElement>(null);
   const reactions = useVideoReactions({
     itemId: detail.itemId,
     enabled: !isPlaceholder,
@@ -48,6 +57,8 @@ export function VideoConversation({
       timezone={timezone}
       isPlaceholder={isPlaceholder}
       onDeleted={onDeleted}
+      presentation={presentation}
+      dockController={dockController}
       media={
         <div inert={isPlaceholder}>
           <VideoPlayer>
@@ -62,9 +73,7 @@ export function VideoConversation({
             reactions={reactions}
             position={transport.position}
             canReact={detail.media.durationMs !== null && !isPlaceholder}
-            onComment={() => {
-              fieldRef.current?.focus();
-            }}
+            onComment={onComment}
           />
         </div>
       }
@@ -74,6 +83,7 @@ export function VideoConversation({
           viewer={viewer}
           transport={transport}
           fieldRef={fieldRef}
+          presentation={presentation}
           onSeek={(seconds) => {
             playback.seek({ seconds: seconds });
           }}

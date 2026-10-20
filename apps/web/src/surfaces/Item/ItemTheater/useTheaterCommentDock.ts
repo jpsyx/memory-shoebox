@@ -209,7 +209,9 @@ function _onDockKeyDown(
   if (event.key === "Escape") {
     if (
       event.target instanceof Element &&
-      event.target.closest('[role="dialog"], [role="menu"]')
+      _getRootFromOwner(owner)?.contains(
+        event.target.closest('[role="dialog"], [role="menu"]'),
+      )
     ) {
       return;
     }

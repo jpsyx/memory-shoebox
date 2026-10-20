@@ -1,3 +1,6 @@
+.navigation {
+  min-width: 0;
+}
 .navigationArrow {
   width: var(--tap);
   min-width: var(--tap);
@@ -9,4 +12,53 @@
 .navigationError {
   max-width: 24rem;
   font-size: var(--micro);
+}
+
+.theater .navigationArrow {
+  position: fixed;
+  top: 80px;
+  bottom: 0;
+  z-index: 205;
+  width: clamp(80px, 8vw, 112px);
+  height: calc(100dvh - 80px);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 150ms var(--ease);
+}
+.theater .navigationArrow[aria-label^="Previous"] {
+  left: 0;
+}
+.theater .navigationArrow[aria-label^="Next"] {
+  right: 0;
+}
+.theater .navigationArrow svg {
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  border: 1px solid #ffffff7a;
+  border-radius: 50%;
+  background: #171717c9;
+  box-shadow: 0 3px 16px #0008;
+}
+.theater .navigationArrow:hover,
+.theater .navigationArrow:focus-visible {
+  opacity: 1;
+}
+.theater .navigationError {
+  position: fixed;
+  top: 78px;
+  left: 20px;
+  z-index: 220;
+}
+@media (hover: none) {
+  .theater .navigationArrow {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theater .navigationArrow {
+    transition: none;
+  }
 }

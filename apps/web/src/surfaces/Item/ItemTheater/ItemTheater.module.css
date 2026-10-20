@@ -1,0 +1,108 @@
+.host {
+  min-width: 0;
+}
+.theater {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  color: #fff;
+  background: #000;
+  color-scheme: dark;
+}
+.header {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(20px, env(safe-area-inset-right));
+  z-index: 220;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  pointer-events: none;
+}
+.header[hidden] {
+  display: none;
+}
+.back,
+.title,
+.fullscreen {
+  height: 48px;
+  border: 1px solid #ffffff2b;
+  border-radius: 12px;
+  color: #fff;
+  background: #171717d9;
+  box-shadow: 0 3px 14px #0006;
+  pointer-events: auto;
+}
+.back,
+.fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  cursor: pointer;
+  font: inherit;
+}
+.title {
+  min-width: 0;
+  max-width: min(760px, calc(100% - 160px));
+  padding: 0 16px;
+  line-height: 46px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fullscreen {
+  margin-left: auto;
+  width: 48px;
+  padding: 0;
+}
+.pageControls[hidden] {
+  display: none;
+}
+.entry {
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.theater :is(button, a):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.viewerChrome {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-1);
+  padding-right: var(--sp-3);
+  background: var(--panel);
+  border-bottom: 1px solid var(--rule);
+}
+.pageControls {
+  min-width: 0;
+}
+.pageControls > header {
+  position: static;
+  border-bottom: 0;
+}
+.theaterChrome {
+  display: contents;
+}
+
+.theater > header:not(.header) {
+  display: none;
+}

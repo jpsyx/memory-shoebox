@@ -246,14 +246,47 @@ work from the retired item or node.
 Native play/seek listeners follow the actual committed node, including a denied
 placeholder recovering to a playable video through the same transport ref.
 
+## Theater host and navigation
+
+`ItemSurface` retains one `ItemTheaterHost`, theater controller, video transport
+and shared draft provider for the item-route visit. The host is not keyed by
+item ID and wraps every actual-detail state, so loading, denied detail, failures
+and retry retain the same Back and fullscreen controls. The item bar exposes
+**Enter theater**. Back pauses through the existing transport, returns to the
+ordinary view of the current route item, releases the scroll lock and restores
+focus to that item's entry control. Switching presentation preserves the native
+media and composer nodes and does not reopen actual detail.
+
+Entry requests fullscreen on the stable host in the activation gesture. Refusal
+or unsupported fullscreen leaves window theater available. Browser fullscreen
+exit also leaves window theater open; exit and route cleanup release fullscreen
+only when this host owns it. Window theater contains focus and makes the rest of
+the page inert. The existing comment dock handles Escape before the host, while
+nested comment dialogs retain their own dismissal and keyboard behavior.
+
+One `ItemNavigation` follows the existing timeline selection, burst ordering,
+route replacement, safe previews and readiness serialization in both views. Its
+single shortcut listener permits the owned theater dialog and fullscreen root.
+Typing, composition, repeated keydown events, scrubbers, speed controls, menus,
+nested dialogs and unrelated fullscreen keep their own keys. Focusing the video
+picture permits media navigation in theater. Edge controls use the same existing
+navigation state and retain first/last bounds.
+
+The header derives its label from the existing item heading and capture clock.
+Its independent position query uses the same originating filters and runs only
+in theater after current actual detail authorizes the requested item. Placeholder
+detail, denial and failure cannot authorize a count or display the prior item's
+counter. Counting never blocks media or changes actual-detail open semantics.
+
 ## Shared theater comment presentation
 
 `ItemTheater/TheaterCommentDock` supplies a presentation wrapper for the existing
 `ItemComments` and `ItemComposer`; it does not fetch item data or own a write path.
-Its controller is created by `useTheaterCommentDock` with the viewer's existing
-composer ref. The viewer can use the same controller for its Comment actions.
-These primitives are prepared for viewer integration; the ordinary item page
-continues using its current layout until that integration is connected.
+`ItemViewer` creates one controller with `useTheaterCommentDock` and its shared
+composer ref, passing both through the photo/video conversation paths. The media
+reaction bars open that same dock in theater and focus the same composer in page
+presentation. `ItemConversation` retains the same dock/media layout across
+presentation changes.
 
 The wrapper and shared conversation stay mounted when presentation changes. Page
 presentation is passive. Theater presentation morphs the corner bubble into a

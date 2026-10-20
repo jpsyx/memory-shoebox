@@ -1,3 +1,5 @@
+import { clsx } from "clsx";
+import type { ItemPresentation } from "../ItemViewer.types";
 import { Group, Tooltip } from "@mantine/core";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { ItemDetail } from "@memory-shoebox/shared";
@@ -8,20 +10,39 @@ import { useItemNavigation } from "./useItemNavigation";
 import { useItemNavigationKeys } from "./useItemNavigationKeys";
 import classes from "./ItemNavigation.module.css";
 
-type Props = { detail: ItemDetail; isPlaceholder: boolean; memberId: string };
+type Props = {
+  detail: ItemDetail;
+  isPlaceholder: boolean;
+  memberId: string;
+  presentation?: ItemPresentation;
+  fullscreenRoot?: HTMLElement | null;
+};
 
 /** Full-size previous/next targets shared by the photo and video viewer. */
 export function ItemNavigation({
   detail,
   isPlaceholder,
   memberId,
+  presentation = "page",
+  fullscreenRoot,
 }: Readonly<Props>): ReactNode {
   const navigation = useItemNavigation({ detail, isPlaceholder, memberId });
-  useItemNavigationKeys(navigation.move);
+  useItemNavigationKeys(navigation.move, {
+    fullscreenRoot: presentation === "theater" ? fullscreenRoot : undefined,
+  });
   return (
-    <nav aria-label="Photo and video navigation">
+    <nav
+      aria-label="Photo and video navigation"
+      className={clsx(
+        classes.navigation,
+        presentation === "theater" && classes.theater,
+      )}
+    >
       <Group gap={0} wrap="nowrap">
-        <Tooltip label="Previous (← or h)">
+        <Tooltip
+          label="Previous (← or h)"
+          withinPortal={presentation !== "theater"}
+        >
           <FocusKeepingButton
             className={classes.navigationArrow}
             variant="subtle"
@@ -35,7 +56,10 @@ export function ItemNavigation({
             <IconChevronLeft {...ICON_PROPS} />
           </FocusKeepingButton>
         </Tooltip>
-        <Tooltip label="Next (→ or l)">
+        <Tooltip
+          label="Next (→ or l)"
+          withinPortal={presentation !== "theater"}
+        >
           <FocusKeepingButton
             className={classes.navigationArrow}
             variant="subtle"
