@@ -34,7 +34,7 @@ export function useItemCommentDraft(
     }
     hasStarted.current = true;
     transport.pause();
-    setAtSeconds(transport.getAnnotationPosition());
+    setAtSeconds(_getMomentFromTransport(transport));
   };
   return {
     body,
@@ -50,7 +50,7 @@ export function useItemCommentDraft(
       transport.pause();
       setAtSeconds((current) => {
         return current === undefined
-          ? transport.getAnnotationPosition()
+          ? _getMomentFromTransport(transport)
           : undefined;
       });
       fieldRef.current?.focus();
@@ -80,4 +80,12 @@ export function useItemCommentDraft(
       });
     },
   };
+}
+
+/** Positions displayed as 0:00 mean the whole video. */
+function _getMomentFromTransport(
+  transport: VideoTransport,
+): number | undefined {
+  const position = transport.getAnnotationPosition();
+  return position < 1 ? undefined : position;
 }

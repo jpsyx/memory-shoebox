@@ -57,9 +57,11 @@ guard. Opening the drawer does not replace or reset the video. The duplicate
 whole-item React button is
 removed from the video surface. Existing whole-item reaction data is unchanged.
 
-Focusing a new comment pauses playback and captures its timestamp. Seeking while
-writing does not move that draft. The timestamp control switches to a whole-video
-comment. Failed submissions retain the text and anchor. Comment timestamps and
+Focusing a new comment pauses playback and captures its timestamp. Any position
+displayed as `0:00` (less than one second) selects **Whole video**, including when
+the member tries to attach that position with the timestamp control. The × on an
+attached timestamp also switches to **Whole video**. Seeking while writing does
+not move that draft. Failed submissions retain the text and anchor. Comment timestamps and
 timeline markers seek the actual media. Crowded moments group into an accessible
 list. Every marker, including a single comment, opens a Mantine popover with
 separate author, timestamp, and full comment text. Comment line breaks are
@@ -130,7 +132,11 @@ creation time, with item/member foreign keys that cascade. It also adds nullable
 `comments.parent_comment_id`, a self-reference with `ON DELETE SET NULL`. Existing
 comment data is preserved. `CreateCommentRequest` accepts an optional nullable
 `parentCommentId`; `CommentDto` returns it. The server accepts only a top-level
-parent on the same visible video and inherits its timestamp. Comment emails keep
+parent on the same visible video and inherits its timestamp. After clamping to
+the video duration, comment creation stores positions below one second as
+untimed (`atSeconds: null`). Replies to legacy comments below one second are also
+untimed; existing comments are not rewritten. This rule applies only to comments,
+not moment reactions. Comment emails keep
 the existing item-level notification behavior.
 
 The migration runs through the normal application migration workflow. No manual

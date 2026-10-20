@@ -33,7 +33,10 @@ export async function getCommentAnchorFromRequest(
       parentCommentId: ["Replies need a top-level comment on this video."],
     });
   }
-  return { parentCommentId, atSeconds: parent.at_seconds };
+  return {
+    parentCommentId,
+    atSeconds: _getCommentMoment(parent.at_seconds),
+  };
 }
 
 function _getMomentFromRequest(
@@ -51,5 +54,12 @@ function _getMomentFromRequest(
       atSeconds: ["A photograph has no transport to pin a comment to."],
     });
   }
-  return Math.min(atSeconds, (options.item.durationMs ?? 0) / 1000);
+  return _getCommentMoment(
+    Math.min(atSeconds, (options.item.durationMs ?? 0) / 1000),
+  );
+}
+
+/** Whole-video comments include every position displayed as 0:00. */
+function _getCommentMoment(atSeconds: number | null): number | null {
+  return atSeconds === null || atSeconds < 1 ? null : atSeconds;
 }

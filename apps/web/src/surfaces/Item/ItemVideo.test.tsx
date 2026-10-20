@@ -176,6 +176,76 @@ describe("video conversations", () => {
       }),
     ).toBeVisible();
   });
+  it.each([0, 0.5, 0.999])(
+    "keeps a comment at %s seconds on the whole video through focus and attachment",
+    async (position) => {
+      respondWithItem({ detail: makeVideoDetail() });
+      const { container } = renderItem(ITEM_ID);
+      const video = await _video(container);
+      video.currentTime = position;
+      fireEvent.timeUpdate(video);
+      await userEvent.type(
+        screen.getByRole("textbox", { name: "Write a comment" }),
+        "All of it.",
+      );
+      const wholeVideo = screen.getByRole("button", {
+        name: "Whole video; attach current moment",
+      });
+      expect(wholeVideo).toHaveAttribute("aria-pressed", "false");
+      await userEvent.click(wholeVideo);
+      expect(wholeVideo).toHaveTextContent("Whole video");
+      expect(wholeVideo).toHaveAttribute("aria-pressed", "false");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Post comment" }),
+      );
+      await waitFor(() => {
+        expect(
+          getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
+        ).toEqual({ body: "All of it.", atSeconds: null });
+      });
+    },
+  );
+
+  it("keeps whole video when attaching at zero after clearing a later moment", async () => {
+    respondWithItem({ detail: makeVideoDetail() });
+    const { container } = renderItem(ITEM_ID);
+    const video = await _video(container);
+    video.currentTime = 4.37;
+    fireEvent.timeUpdate(video);
+    await userEvent.click(
+      screen.getByRole("textbox", { name: "Write a comment" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Comment at 0:04; switch to whole video",
+      }),
+    );
+    video.currentTime = 0;
+    fireEvent.timeUpdate(video);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Whole video; attach current moment",
+      }),
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Whole video; attach current moment",
+      }),
+    ).toHaveAttribute("aria-pressed", "false");
+    video.currentTime = 1;
+    fireEvent.timeUpdate(video);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Whole video; attach current moment",
+      }),
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Comment at 0:01; switch to whole video",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps whole-video choice on refocus and clears only after success", async () => {
     respondWithItem({
       detail: makeVideoDetail(),
@@ -187,13 +257,15 @@ describe("video conversations", () => {
       },
     });
     const { container } = renderItem(ITEM_ID);
-    await _video(container);
+    const video = await _video(container);
+    video.currentTime = 4.37;
+    fireEvent.timeUpdate(video);
     await userEvent.click(
       screen.getByRole("textbox", { name: "Write a comment" }),
     );
     await userEvent.click(
       screen.getByRole("button", {
-        name: "Comment at 0:00; switch to whole video",
+        name: "Comment at 0:04; switch to whole video",
       }),
     );
     await userEvent.type(

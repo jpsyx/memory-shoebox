@@ -90,6 +90,43 @@ describe("POST /api/items/:itemId/comments", () => {
     await close();
   });
 
+  it.each([
+    { atSeconds: 0, durationMs: 30_000, expected: null },
+    { atSeconds: 0.999, durationMs: 30_000, expected: null },
+    { atSeconds: 1, durationMs: 30_000, expected: 1 },
+    { atSeconds: 2, durationMs: 500, expected: null },
+    { atSeconds: 2, durationMs: null, expected: null },
+  ])(
+    "stores $atSeconds seconds on a $durationMs ms video as $expected",
+    async ({ atSeconds, durationMs, expected }) => {
+      const { app, database, close } = await makeApp();
+      try {
+        const { cookie, memberId } = await insertSignedInMember({ database });
+        const itemId = await insertItem(database, {
+          uploadedBy: memberId,
+          kind: "video",
+          duration_ms: durationMs,
+        });
+        const response = await app.inject({
+          method: "POST",
+          url: `/api/items/${itemId}/comments`,
+          headers: { cookie },
+          payload: { body: "All of it", atSeconds },
+        });
+        expect(response.statusCode).toBe(201);
+        expect(response.json().atSeconds).toBe(expected);
+        const stored = await database
+          .selectFrom("comments")
+          .select("at_seconds")
+          .where("id", "=", response.json().commentId)
+          .executeTakeFirstOrThrow();
+        expect(stored.at_seconds).toBe(expected);
+      } finally {
+        await close();
+      }
+    },
+  );
+
   it("refuses a pin on a photograph, which has no transport", async () => {
     const { app, database, close } = await makeApp();
     const { cookie, memberId } = await insertSignedInMember({ database });

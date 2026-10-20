@@ -90,6 +90,28 @@ describe("video comment replies", () => {
     },
   );
 
+  it.each([0, 0.999])(
+    "makes a reply to a legacy %s-second comment untimed",
+    async (atSeconds) => {
+      const parent = await _postComment({ body: "Parent" });
+      const parentCommentId = parent.json().commentId;
+      await context.database
+        .updateTable("comments")
+        .set({ at_seconds: atSeconds })
+        .where("id", "=", parentCommentId)
+        .execute();
+      const reply = await _postComment({ body: "All of it", parentCommentId });
+      expect(reply.statusCode).toBe(201);
+      expect(reply.json()).toMatchObject({ parentCommentId, atSeconds: null });
+      const stored = await context.database
+        .selectFrom("comments")
+        .select("at_seconds")
+        .where("id", "=", reply.json().commentId)
+        .executeTakeFirstOrThrow();
+      expect(stored.at_seconds).toBeNull();
+    },
+  );
+
   it("rejects a parent from a different item, a missing parent, and a reply as parent", async () => {
     const parent = await _postComment({ body: "Parent", atSeconds: 4 });
     const reply = await _postComment({
