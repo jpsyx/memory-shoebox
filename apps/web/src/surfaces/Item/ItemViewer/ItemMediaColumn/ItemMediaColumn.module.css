@@ -36,8 +36,14 @@
 .theater > div > div {
   padding-top: 0;
 }
-.theater p {
+.theater p:not([role="alert"]) {
   display: none;
+}
+.theater [role="alert"] {
+  max-width: min(36rem, calc(100vw - 40px));
+  padding: 8px 12px;
+  color: var(--chip-white);
+  background: var(--chip-black);
 }
 @media (max-width: 800px) {
   .theater {

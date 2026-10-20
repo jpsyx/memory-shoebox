@@ -76,6 +76,84 @@ import { test, expect } from "./admin.fixtures.ts";
 });
 
 [
+  { width: 1440, height: 1000 },
+  { width: 390, height: 844 },
+].forEach((viewport) => {
+  test(`failed photo reaction stays visible in theater at ${viewport.width}px`, async ({
+    page,
+    catalog,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.route(
+      `**/api/items/${catalog.itemId}/reaction`,
+      async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "internal",
+            message: "Reaction failed",
+          }),
+        });
+      },
+    );
+    await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
+    await expect(
+      page.getByRole("img", { name: "A family memory" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Enter theater", exact: true })
+      .click();
+    const theater = page.getByRole("dialog", { name: "Media theater" });
+    await expect(theater).toBeVisible();
+    await theater
+      .getByRole("button", { name: "React: Love", exact: true })
+      .click();
+    const failure = theater.getByRole("alert", { includeHidden: true });
+    await expect(failure).toHaveText(/That reaction did not go through/);
+    await expect(failure).toBeVisible();
+    await expect(theater.getByRole("alert")).toHaveCount(1);
+    await expect(failure).toBeInViewport();
+    const contrast = await failure.evaluate((alert) => {
+      const styles = getComputedStyle(alert);
+      const getLuminanceFromColor = (color: string) => {
+        const channels = color
+          .match(/[\d.]+/g)!
+          .slice(0, 3)
+          .map(Number)
+          .map((channel) => {
+            const value = channel / 255;
+            return value <= 0.04045
+              ? value / 12.92
+              : ((value + 0.055) / 1.055) ** 2.4;
+          });
+        return (
+          channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722
+        );
+      };
+      const foreground = getLuminanceFromColor(styles.color);
+      const getBackgroundColorFromElement = (element: Element): string => {
+        const color = getComputedStyle(element).backgroundColor;
+        return color === "rgba(0, 0, 0, 0)" && element.parentElement !== null
+          ? getBackgroundColorFromElement(element.parentElement)
+          : color;
+      };
+      const background = getLuminanceFromColor(
+        getBackgroundColorFromElement(alert),
+      );
+      return (
+        (Math.max(foreground, background) + 0.05) /
+        (Math.min(foreground, background) + 0.05)
+      );
+    });
+    expect(contrast).toBeGreaterThanOrEqual(4.5);
+    await expect(
+      theater.getByRole("button", { name: "React: Love", exact: true }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+[
   { width: 1366, height: 768, minimumPhotoHeight: 537 },
   { width: 1280, height: 800, minimumPhotoHeight: 528 },
   { width: 1440, height: 900, minimumPhotoHeight: 630 },

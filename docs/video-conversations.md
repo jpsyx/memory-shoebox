@@ -180,7 +180,9 @@ expecting decoded frames, respecting WebKit's metadata-only preload.
 
 `e2e/admin/item-conversation.spec.ts` covers photo comments, item and comment
 reactions, reload persistence, More drawer focus and phone layout using the same
-production app and an isolated catalog.
+production app and an isolated catalog. It also forces a failed photo reaction
+in theater at desktop and phone widths, checking visible, announced feedback,
+contrast and optimistic rollback.
 
 `e2e/admin/video-moments.spec.ts` covers single-comment previews, keyboard
 reopening, outside dismissal, transparent reaction markers, viewport bounds,
@@ -301,7 +303,9 @@ than becoming a load error. Explicit source retry retains its existing safe-medi
 request and readiness gate before a fresh theater node attempts playback.
 
 The same timeline, speed, mute and play controls sit near the lower stage edge;
-the existing reaction bar remains available while playing or commenting. On
+the existing reaction bar remains available while playing or commenting. Photo
+reaction failures retain their existing announced alert, with a contrasting
+backing over the stage and image. On
 narrow screens the comment dock reserves space above those controls and reactions,
 using viewport height and safe-area insets. The video picture permits media
 navigation in theater while its nested controls retain their keyboard exclusions.
