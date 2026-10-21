@@ -17,7 +17,7 @@ for (const activation of ["hover", "keyboard"] as const) {
       `/api/evidence/session/viewer?to=/items/${catalog.videoId}`,
     );
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     await pauseTheaterVideo(page, 6);
     const trigger = page.getByRole("button", { name: /^Open comments,/ });
@@ -77,7 +77,7 @@ test("window focus wraps, Escape layers, and document navigation leaves an unloc
   await useWindowTheater(page);
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   const back = page.getByRole("button", { name: "Back", exact: true });
   await expect(back).toBeFocused();
@@ -100,15 +100,13 @@ test("window focus wraps, Escape layers, and document navigation leaves an unloc
     "aria-hidden",
     "true",
   );
-  await expect(
-    page.getByRole("dialog", { name: "Media theater" }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Full screen" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(
-    page.getByRole("button", { name: "Enter theater", exact: true }),
+    page.getByRole("button", { name: "Enter full screen", exact: true }),
   ).toBeFocused();
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await page.goto("/");
   expect(
@@ -133,7 +131,7 @@ for (const exitDuringPending of [false, true]) {
       `/api/evidence/session/viewer?to=/items/${catalog.videoId}`,
     );
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     await (
       await openTheaterComments(page)
@@ -151,7 +149,7 @@ for (const exitDuringPending of [false, true]) {
       .dispatchEvent("click");
     await expect(page).toHaveURL(new RegExp(`/items/${catalog.itemId}$`));
     const control = page.getByRole("button", {
-      name: exitDuringPending ? "Back" : "Enter fullscreen",
+      name: exitDuringPending ? "Back" : "Enter full screen",
       exact: true,
     });
     await control.focus();
@@ -159,10 +157,10 @@ for (const exitDuringPending of [false, true]) {
     releaseDetail();
     if (exitDuringPending) {
       await expect(
-        page.getByRole("button", { name: "Enter theater", exact: true }),
+        page.getByRole("button", { name: "Enter full screen", exact: true }),
       ).toBeFocused();
       await expect(
-        page.getByRole("dialog", { name: "Media theater" }),
+        page.getByRole("dialog", { name: "Full screen" }),
       ).toHaveCount(0);
     } else {
       await expect(
@@ -181,7 +179,7 @@ test("reduced-motion change permits immediate comment reopening after collapse",
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   const field = await openTheaterComments(page);
   await field.fill("Reopen the same composer");

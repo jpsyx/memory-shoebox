@@ -75,7 +75,7 @@ export function VideoControls({
       {presentation === "page" ? (
         <button
           type="button"
-          aria-label="Enter theater"
+          aria-label="Enter full screen"
           data-theater-entry
           onClick={onEnterTheater}
         >

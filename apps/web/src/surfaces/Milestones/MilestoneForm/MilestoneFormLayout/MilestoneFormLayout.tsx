@@ -1,6 +1,6 @@
 import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
-import { Stack } from "@mantine/core";
+import { Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import {
   useMilestoneForm,
@@ -27,7 +27,9 @@ export function MilestoneFormLayout({
         title={
           options.detail
             ? options.detail.milestone.name
-            : "A new milestone, from nothing"
+            : options.selection?.length
+              ? "A new milestone"
+              : "A new milestone, from nothing"
         }
       />
       <form
@@ -38,6 +40,12 @@ export function MilestoneFormLayout({
         aria-busy={form.isSaving}
       >
         <Stack gap="md">
+          {options.selection?.length ? (
+            <Text>
+              {options.selection.length} selected photos and videos will be
+              included. Their capture dates will stay unchanged.
+            </Text>
+          ) : null}
           <MilestoneFormFields
             form={form}
             options={options}

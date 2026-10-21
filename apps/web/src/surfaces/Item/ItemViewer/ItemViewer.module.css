@@ -3,36 +3,52 @@
 }
 
 .itemViewerEntry {
-  min-height: var(--tap);
-  padding: 0 12px;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
+  padding-inline: var(--sp-2);
+  border-color: var(--rule);
+}
+
+.itemViewerEntry:disabled {
+  border-color: var(--rule);
+  color: var(--on-panel-quiet);
 }
 
 .itemViewerChrome {
   position: sticky;
   top: 0;
   z-index: 30;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-1);
-  padding-right: var(--sp-3);
+  padding: var(--sp-1) var(--sp-3);
   background: var(--panel);
   border-bottom: 1px solid var(--rule);
 }
 
 .itemViewerPageControls {
+  flex: 1;
   min-width: 0;
 }
 
 .itemViewerPageControls > header {
   position: static;
+  padding: 0;
   border-bottom: 0;
+}
+
+@media (max-width: 44rem) {
+  .itemViewerEntryIcon {
+    display: none;
+  }
+  .itemViewerChrome {
+    padding-inline: var(--sp-2);
+  }
+  .itemViewerPageControls {
+    flex-basis: 100%;
+  }
+  .itemViewerChrome > nav {
+    margin-inline-start: auto;
+  }
 }
 
 .itemViewerTheaterChrome {

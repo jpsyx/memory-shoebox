@@ -72,7 +72,7 @@ test("video comments, replies and timed reactions persist through a reload", asy
     await seekVideo({ video: page.locator("video"), atSeconds: 3 });
     await chooseVisiblePlaybackSpeeds(page);
     await expectWithinVideoPlayer(
-      page.getByRole("button", { name: "Enter theater", exact: true }),
+      page.getByRole("button", { name: "Enter full screen", exact: true }),
     );
     await page.getByRole("combobox", { name: "Playback speed" }).click();
     await page.screenshot({
@@ -118,7 +118,7 @@ test("grouped moments stay inside the fullscreen player", async ({
   }
   await page.reload();
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await chooseVisiblePlaybackSpeeds(page);
   await page

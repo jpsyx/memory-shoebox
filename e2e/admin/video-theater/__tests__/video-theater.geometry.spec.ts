@@ -34,7 +34,7 @@ for (const viewport of [
         `/api/evidence/session/admin?to=/items/${catalog.itemId}`,
       );
       await visualPage
-        .getByRole("button", { name: "Enter theater", exact: true })
+        .getByRole("button", { name: "Enter full screen", exact: true })
         .click();
       const title = visualPage
         .locator("[data-item-theater-host] [title]")
@@ -201,7 +201,7 @@ for (const fixture of [
       `/api/evidence/session/admin?to=/items/00000000-0000-4000-8000-${fixture.suffix}`,
     );
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     const photo = page.getByRole("img", { name: "A family memory" });
     await expect(photo).toHaveCSS("object-fit", "contain");

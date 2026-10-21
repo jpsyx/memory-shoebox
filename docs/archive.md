@@ -599,6 +599,13 @@ unloaded days or bypass the active filters. Selection is capped at 500 items;
 a larger loaded selection is refused with an explanation instead of being
 silently truncated. Changing filters or jumping to another date clears ticks.
 
+**Put under a milestone** offers both existing occasions and **Create a new
+milestone**, including when the directory is empty. Creation carries the frozen
+selection into the milestone form, suggests dates from available capture days,
+and attaches the selected photos and videos when the new milestone is saved.
+Capture dates are unchanged. See [milestones](milestones.md) for the creation
+handoff and save behavior.
+
 **Delete** opens a modal naming the selected count and warning that deletion,
 including comments and reactions, cannot be undone. Cancel is focused first.
 The chosen IDs stay frozen while the modal is open, and submission locks the

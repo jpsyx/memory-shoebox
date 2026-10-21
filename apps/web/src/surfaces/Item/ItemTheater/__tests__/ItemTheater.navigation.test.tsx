@@ -26,9 +26,9 @@ import {
 
 async function enterTheater(): Promise<HTMLElement> {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Enter theater" }),
+    await screen.findByRole("button", { name: "Enter full screen" }),
   );
-  return screen.getByRole("dialog", { name: "Media theater" });
+  return screen.getByRole("dialog", { name: "Full screen" });
 }
 function positionRequests(): ReturnType<typeof getRecordedRequests> {
   return getRecordedRequests().filter((request) => {
@@ -96,7 +96,7 @@ describe("persistent media theater", () => {
         `/items/${MIDDLE.itemId}`,
       );
     });
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(
       originalHost,
     );
     await userEvent.click(
@@ -117,9 +117,11 @@ describe("persistent media theater", () => {
     );
     expect(videoComposer).toHaveValue("Video draft");
     expect(container.querySelector("video")).toBe(video);
-    expect(screen.getByRole("button", { name: "Enter theater" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Enter full screen" }),
+    ).toHaveFocus();
     await enterTheater();
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(
       originalHost,
     );
     expect(
@@ -208,14 +210,12 @@ describe("persistent media theater", () => {
         name:
           status === 403 ? "This one did not open." : "This one is not here.",
       });
-      expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(host);
+      expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(host);
       expect(container.querySelector("video")).toBeNull();
       expect(container.querySelector("textarea")).toBeNull();
       expect(positionRequests()).toHaveLength(1);
       await userEvent.click(screen.getByRole("button", { name: "Back" }));
-      expect(
-        screen.queryByRole("dialog", { name: "Media theater" }),
-      ).toBeNull();
+      expect(screen.queryByRole("dialog", { name: "Full screen" })).toBeNull();
       expect(document.body.style.overflow).toBe("");
     },
   );
@@ -235,16 +235,16 @@ describe("persistent media theater", () => {
       screen.getByRole("button", { name: "Next photo or video" }),
     );
     const retry = await screen.findByRole("button", { name: "Try again" });
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(host);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(host);
     answer.status = 200;
     answer.body = MIDDLE;
     await userEvent.click(retry);
     await screen.findByLabelText("Video player");
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(host);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(host);
     await act(async () => {
       await router.navigate({ to: "/" });
     });
-    expect(screen.queryByRole("dialog", { name: "Media theater" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Full screen" })).toBeNull();
     expect(document.body.style.overflow).toBe("");
     expect(document.querySelector("[data-item-theater-host]")).toBeNull();
   });
@@ -322,7 +322,7 @@ describe("persistent media theater", () => {
         `/items/${LAST.itemId}`,
       );
     });
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(theater);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(theater);
   });
 
   it("keeps a real nested comment dialog inside theater and layers Escape before dock dismissal", async () => {
@@ -361,10 +361,10 @@ describe("persistent media theater", () => {
     expect(
       screen.getByRole("textbox", { name: "Write a comment" }),
     ).toBeVisible();
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(theater);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(theater);
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(theater);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(theater);
   });
 
   it("closes the dock before window theater on Escape and keeps typing arrows in the composer", async () => {
@@ -381,11 +381,11 @@ describe("persistent media theater", () => {
     await userEvent.type(field, "hello{ArrowLeft}{ArrowRight}");
     expect(router.state.location.pathname).toBe(`/items/${FIRST.itemId}`);
     await userEvent.keyboard("{Escape}");
-    expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(theater);
+    expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(theater);
     expect(
       screen.getByRole("button", { name: "Open comments, 0 comments" }),
     ).toHaveFocus();
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Media theater" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Full screen" })).toBeNull();
   });
 });

@@ -55,11 +55,9 @@ test("playback retry uses refreshed rendition URLs", async ({
     page.getByText("This video couldn’t play", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
-  await expect(
-    page.getByRole("dialog", { name: "Media theater" }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Full screen" })).toBeVisible();
   expect(numRenewals).toBe(1);
   await expectDisabledPlayback(page);
   expect(numRenewals).toBe(1);

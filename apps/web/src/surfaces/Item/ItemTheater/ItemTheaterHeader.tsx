@@ -21,7 +21,7 @@ export function ItemTheaterHeader({
 }: Readonly<Props>): ReactNode {
   const label =
     detail === undefined
-      ? "Media theater"
+      ? "Full screen"
       : theaterTitleLabel({ detail, timezone, position });
   return (
     <header
@@ -50,7 +50,7 @@ export function ItemTheaterHeader({
         className={classes.itemTheaterFullscreen}
         onClick={theater.toggleFullscreen}
         aria-label={
-          theater.isFullscreen ? "Leave fullscreen" : "Enter fullscreen"
+          theater.isFullscreen ? "Leave full screen" : "Enter full screen"
         }
       >
         {theater.isFullscreen ? (

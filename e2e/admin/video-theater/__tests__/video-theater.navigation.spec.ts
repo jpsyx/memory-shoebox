@@ -26,10 +26,10 @@ for (const mode of ["native", "window"] as const) {
       .getByRole("textbox", { name: "Write a comment" })
       .elementHandle();
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     await expect(
-      page.getByRole("dialog", { name: "Media theater" }),
+      page.getByRole("dialog", { name: "Full screen" }),
     ).toBeVisible();
     expect(
       await photo!.evaluate((element) => {
@@ -80,13 +80,13 @@ for (const mode of ["native", "window"] as const) {
         }),
       ).toBe(true);
       await page
-        .getByRole("button", { name: "Leave fullscreen", exact: true })
+        .getByRole("button", { name: "Leave full screen", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Enter fullscreen", exact: true }),
+        page.getByRole("button", { name: "Enter full screen", exact: true }),
       ).toBeVisible();
       await page
-        .getByRole("button", { name: "Enter fullscreen", exact: true })
+        .getByRole("button", { name: "Enter full screen", exact: true })
         .click();
       await expect
         .poll(() => {
@@ -105,7 +105,7 @@ for (const mode of ["native", "window"] as const) {
       .executeTakeFirstOrThrow();
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: "Enter theater", exact: true }),
+      page.getByRole("button", { name: "Enter full screen", exact: true }),
     ).toBeFocused();
     await expect(page).toHaveURL(new RegExp(`/items/${catalog.videoId}$`));
     expect(
@@ -114,7 +114,7 @@ for (const mode of ["native", "window"] as const) {
       }),
     ).toBe(true);
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     expect(
       await video!.evaluate((element) => {
@@ -156,7 +156,7 @@ test("accurate counter follows authorized neighbor walk and ancillary failure ne
     await route.continue();
   });
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await expect(page.locator("video")).toBeVisible();
   const title = page.locator('[data-item-theater-host] [aria-live="polite"]');
@@ -184,7 +184,7 @@ test("accurate counter follows authorized neighbor walk and ancillary failure ne
   });
   await page.reload();
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await expect(
     page.getByRole("img", { name: "A family memory" }),
@@ -210,7 +210,7 @@ test("Back restores actual page scroll and entry focus", async ({
   });
   expect(before).toBeGreaterThan(0);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await page.getByRole("button", { name: "Back", exact: true }).click();
   await expect
@@ -221,6 +221,6 @@ test("Back restores actual page scroll and entry focus", async ({
     })
     .toBe(before);
   await expect(
-    page.getByRole("button", { name: "Enter theater", exact: true }),
+    page.getByRole("button", { name: "Enter full screen", exact: true }),
   ).toBeFocused();
 });

@@ -73,6 +73,7 @@ export function ItemViewerConversation({
             <ItemMediaColumn
               {...props}
               onComment={onComment}
+              onEnterTheater={theater.enter}
               presentation={presentation}
             />
           }

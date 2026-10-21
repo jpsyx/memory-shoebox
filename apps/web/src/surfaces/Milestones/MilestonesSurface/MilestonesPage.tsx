@@ -1,10 +1,9 @@
 import type { Viewer } from "@/session/requireSignedIn/requireSignedIn";
 import { Page } from "@/system/Chrome/Page";
 import { Lede } from "@/system/typography/Lede";
-import { Prose } from "@/system/typography/Prose";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
-import { MilestoneForm } from "../MilestoneForm/MilestoneForm";
+import { MilestoneCreationForm } from "./MilestoneCreationForm";
 import { MilestoneDeleteNotice } from "./MilestoneDeleteNotice";
 import { MilestoneDirectory } from "./MilestoneDirectory/MilestoneDirectory";
 import { MilestoneSelection } from "./MilestoneSelection/MilestoneSelection";
@@ -20,19 +19,13 @@ export function MilestonesPage({ viewer }: Readonly<Props>): ReactNode {
         <Lede>Milestones.</Lede>
         <MilestoneDeleteNotice deleted={deleted} />
         {search.mode === "create" ? (
-          viewer.role === "viewer" ? (
-            <Prose onPanel>
-              Only uploaders and admins can create milestones.
-            </Prose>
-          ) : (
-            <MilestoneForm
-              key={`${viewer.memberId}:create`}
-              onSaved={onSaved}
-              onCancel={() => {
-                return onNavigate({});
-              }}
-            />
-          )
+          <MilestoneCreationForm
+            viewer={viewer}
+            onSaved={onSaved}
+            onCancel={() => {
+              onNavigate({});
+            }}
+          />
         ) : null}
         {search.milestone ? (
           <MilestoneSelection

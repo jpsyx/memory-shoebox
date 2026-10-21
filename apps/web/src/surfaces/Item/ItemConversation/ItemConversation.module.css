@@ -58,7 +58,6 @@
 }
 .itemConversationMediaColumn {
   min-width: 0;
-  padding: var(--sp-1) 0;
 }
 .itemConversationMediaColumn [role="alert"] {
   color: var(--on-panel);

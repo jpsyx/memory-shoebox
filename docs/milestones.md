@@ -143,9 +143,17 @@ server-backed controller described below.
 
 The form uses the shared one-day/span fields. A day submits equal inclusive
 ends, spans need both ordered ends, and an optional blank blurb submits null.
-Names accept 200 characters and blurbs 280. An existing explicit caller may
-supply landed item IDs and available capture days; those days seed the form
-once and never replace later edits. There is no new timeline selection flow.
+Names accept 200 characters and blurbs 280. An explicit caller may supply
+landed item IDs and available capture days; those days seed the form once and
+never replace later edits. The timeline selection dialog offers an existing
+milestone or **Create a new milestone**, including when the directory is empty.
+Creation opens this same form with the frozen selected IDs and available
+capture days from loaded prints and their same-day stacks. Member-scoped
+browser history state retains the selection across refresh without a long URL.
+IDs remain included even if their day has left the loaded timeline. The form
+confirms the selected count and **Create and attach** sends those IDs in the
+existing atomic create request. Cancel writes nothing, and ordinary creation
+starts without a carried selection.
 Confirmed creation enters `created`; cancelling that saved step retains the
 occasion. A confirmed edit enters `fix` when the response reports mismatches,
 and otherwise returns to the directory.

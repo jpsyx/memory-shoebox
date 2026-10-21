@@ -39,7 +39,7 @@ describe("theater media shortcuts", () => {
     const { router } = renderItem(MIDDLE.itemId);
     await waitForNavigationReady();
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     const picture = screen.getAllByRole("button", { name: "Play video" })[0]!;
     picture.focus();
@@ -63,9 +63,9 @@ describe("theater media shortcuts", () => {
     const { router } = renderItem(FIRST.itemId);
     await waitForNavigationReady();
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
-    const theater = screen.getByRole("dialog", { name: "Media theater" });
+    const theater = screen.getByRole("dialog", { name: "Full screen" });
     let fullscreenElement: Element | null = theater;
     Object.defineProperty(document, "fullscreenElement", {
       configurable: true,
@@ -78,7 +78,7 @@ describe("theater media shortcuts", () => {
         document.dispatchEvent(new Event("fullscreenchange"));
       });
       expect(
-        screen.getByRole("button", { name: "Leave fullscreen" }),
+        screen.getByRole("button", { name: "Leave full screen" }),
       ).toBeInTheDocument();
       fireEvent.keyDown(theater, { key: "ArrowRight" });
       await waitForNavigationReady();
@@ -90,9 +90,7 @@ describe("theater media shortcuts", () => {
       act(() => {
         document.dispatchEvent(new Event("fullscreenchange"));
       });
-      expect(screen.getByRole("dialog", { name: "Media theater" })).toBe(
-        theater,
-      );
+      expect(screen.getByRole("dialog", { name: "Full screen" })).toBe(theater);
       fireEvent.keyDown(theater, { key: "ArrowRight" });
       await waitFor(() => {
         return expect(router.state.location.pathname).toBe(
@@ -109,9 +107,9 @@ describe("theater media shortcuts", () => {
     const { router } = renderItem(MIDDLE.itemId);
     await waitForNavigationReady();
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
-    const theater = screen.getByRole("dialog", { name: "Media theater" });
+    const theater = screen.getByRole("dialog", { name: "Full screen" });
     for (const role of ["slider", "menu", "listbox", "dialog"]) {
       const control = document.createElement("div");
       control.setAttribute("role", role);
@@ -134,9 +132,9 @@ describe("theater media shortcuts", () => {
     const { router } = renderItem(FIRST.itemId);
     await waitForNavigationReady();
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
-    fireEvent.keyDown(screen.getByRole("dialog", { name: "Media theater" }), {
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "Full screen" }), {
       key: "ArrowLeft",
     });
     expect(router.state.location.pathname).toBe(`/items/${FIRST.itemId}`);
@@ -152,7 +150,7 @@ describe("theater media shortcuts", () => {
         screen.getByRole("button", { name: "Next photo or video" }),
       ).toHaveAttribute("aria-disabled", "true");
     });
-    fireEvent.keyDown(screen.getByRole("dialog", { name: "Media theater" }), {
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "Full screen" }), {
       key: "ArrowRight",
     });
     expect(router.state.location.pathname).toBe(`/items/${LAST.itemId}`);

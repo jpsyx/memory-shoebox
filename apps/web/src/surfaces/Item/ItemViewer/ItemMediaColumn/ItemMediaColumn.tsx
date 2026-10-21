@@ -18,6 +18,7 @@ type Props = {
   isPlaceholder: boolean;
   viewer: MemberRef;
   onComment: () => void;
+  onEnterTheater: () => void;
   presentation?: ItemPresentation;
 };
 
@@ -28,6 +29,7 @@ export function ItemMediaColumn({
   isPlaceholder,
   viewer,
   onComment,
+  onEnterTheater,
   presentation = "page",
 }: Readonly<Props>): ReactNode {
   return (
@@ -39,6 +41,7 @@ export function ItemMediaColumn({
           key={detail.itemId}
           media={detail.media}
           itemId={detail.itemId}
+          onEnterTheater={onEnterTheater}
           appearance={presentation === "theater" ? "theater" : "paper"}
         />
       )}

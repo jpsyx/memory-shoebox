@@ -28,7 +28,9 @@ export function MilestoneFormControls({
         >
           {options.detail
             ? "Save the changes"
-            : "Create it and find its photographs"}
+            : options.selection?.length
+              ? `Create and attach ${options.selection.length}`
+              : "Create it and find its photographs"}
         </Button>
         <Button
           variant="default"

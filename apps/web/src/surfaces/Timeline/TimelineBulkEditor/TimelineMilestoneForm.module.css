@@ -1,0 +1,23 @@
+.createButton {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--tap);
+  padding-block: var(--sp-1);
+}
+
+.createLabel {
+  white-space: normal;
+  text-align: left;
+}
+
+@media (max-width: 32rem) {
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-1);
+  }
+
+  .actions > button {
+    padding-inline: var(--sp-1);
+  }
+}

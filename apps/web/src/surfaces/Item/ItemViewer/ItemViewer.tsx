@@ -4,6 +4,9 @@ import {
   type ViewerReadiness,
 } from "@/media/PhotoReadinessContext";
 import { clsx } from "clsx";
+import { Button } from "@mantine/core";
+import { IconMaximize } from "@tabler/icons-react";
+import { ICON_PROPS } from "@/system/icons";
 import { useRef, useState, type ReactNode } from "react";
 import { ItemTopBar } from "./ItemTopBar";
 import { useTheaterCommentDock } from "../ItemTheater/useTheaterCommentDock";
@@ -53,15 +56,18 @@ export function ItemViewer({
             }
           >
             {detail.kind === "photo" ? (
-              <button
+              <Button
+                variant="panel"
+                leftSection={<IconMaximize {...ICON_PROPS} />}
                 className={classes.itemViewerEntry}
+                classNames={{ section: classes.itemViewerEntryIcon }}
                 type="button"
                 data-theater-entry
                 onClick={theater.enter}
                 disabled={isPlaceholder}
               >
-                Enter theater
-              </button>
+                Enter full screen
+              </Button>
             ) : null}
           </div>
           <ItemNavigation

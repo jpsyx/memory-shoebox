@@ -12,7 +12,7 @@ test("slow then denied actual detail keeps host and never exposes old conversati
   await useWindowTheater(page);
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await (await openTheaterComments(page)).fill("Private previous draft");
   let releaseDetail!: () => void;
@@ -49,7 +49,7 @@ test("slow then denied actual detail keeps host and never exposes old conversati
     0,
   );
   await page.getByRole("button", { name: "Back", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Media theater" })).toHaveCount(
+  await expect(page.getByRole("dialog", { name: "Full screen" })).toHaveCount(
     0,
   );
 });
@@ -61,7 +61,7 @@ test("actual detail retry retains host and grants no writes before authorization
   await useWindowTheater(page);
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   const host = await page.locator("[data-item-theater-host]").elementHandle();
   await page.route(
@@ -113,7 +113,7 @@ test("autoplay refusal leaves usable Play and controls keep their arrow keys", a
   });
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await expect(page.locator("video")).toHaveJSProperty("paused", true);
   await page.getByRole("button", { name: "Play", exact: true }).click();

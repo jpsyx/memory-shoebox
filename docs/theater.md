@@ -1,9 +1,21 @@
-# Shared photo and video theater
+# Full screen photo and video viewer
 
-The production item viewer offers **Enter theater** for both photos and videos.
+The production item viewer offers **Enter full screen** for both photos and videos.
+**Full screen** is the public name, including accessible labels; **theater** stays
+an internal implementation term. Clicking the displayed photo or activating its
+**View photo in full screen** action with Enter/Space opens the same viewer as the
+header button. The photo's image node stays mounted across the change. Loading
+previews awaiting item authorization and photo retry controls do not expose this
+action. The embedded video full-screen button opens the shared viewer, including
+comments and media navigation, rather than the video element's native fullscreen.
 The same viewer fills a black stage and fits the complete media without cropping.
 Back returns to the normal view of the **current** item. Re-entering starts there;
 neither action returns to the original entry item or the timeline.
+
+The page header keeps its full-screen and previous/next controls at 48px with
+space above and below. They use the shared square-edged button styling and panel
+palette. At phone widths, the back link sits above the action row so the complete
+full-screen label remains visible.
 
 ## Presentation and navigation
 

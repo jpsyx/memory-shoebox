@@ -5,11 +5,13 @@ import { useTimelineBulkMutation } from "./useTimelineBulkMutation";
 import { TimelineDeleteConfirmation } from "./TimelineDeleteConfirmation";
 import { TimelineLabelForm } from "./TimelineLabelForm";
 import { TimelineMilestoneForm } from "./TimelineMilestoneForm";
+import type { MilestoneSelection } from "@/surfaces/Milestones/useMilestoneForm/milestoneFormHelpers";
 
 /** The dialog owns a frozen selection until it is cancelled or confirmed. */
 export type TimelineBulkChoice = {
   kind: "tag" | "person" | "milestone" | "delete";
   itemIds: string[];
+  milestoneSelection?: MilestoneSelection;
 };
 
 type Props = {
@@ -60,6 +62,7 @@ export function TimelineBulkDialog(props: Readonly<Props>): ReactNode {
   };
   const formProps = {
     itemIds: props.choice.itemIds,
+    milestoneSelection: props.choice.milestoneSelection,
     isBusy: mutation.isPending,
     isBlocked: mutation.isPending || mutation.needsReview,
     onSubmit: mutation.submit,
@@ -86,6 +89,7 @@ export function TimelineBulkDialog(props: Readonly<Props>): ReactNode {
 /** Inputs shared by the existing upload-style forms and delete confirmation. */
 export type TimelineBulkFormProps = {
   itemIds: readonly string[];
+  milestoneSelection?: MilestoneSelection;
   isBusy: boolean;
   isBlocked: boolean;
   onSubmit: (body: BulkEditItemsRequest) => void;

@@ -174,7 +174,7 @@ export function ItemTheaterHost({
       )}
       role={isTheater ? "dialog" : undefined}
       aria-modal={isTheater || undefined}
-      aria-label={isTheater ? "Media theater" : undefined}
+      aria-label={isTheater ? "Full screen" : undefined}
       tabIndex={isTheater ? -1 : undefined}
       onKeyDown={(event) => {
         _onHostKeyDown(event, theater);

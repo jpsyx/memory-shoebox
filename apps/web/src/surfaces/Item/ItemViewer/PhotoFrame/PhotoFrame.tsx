@@ -14,6 +14,8 @@ type Props = {
   itemId: string;
   presentation?: "preview" | "selected";
   appearance?: "paper" | "theater";
+  /** Only authorized item views offer full-screen entry from the photo. */
+  onEnterTheater?: () => void;
 };
 
 /**
@@ -24,6 +26,7 @@ export function PhotoFrame({
   itemId,
   presentation = "selected",
   appearance = "paper",
+  onEnterTheater,
 }: Readonly<Props>): ReactNode {
   const lease = useMediaLease({
     itemId,
@@ -97,6 +100,18 @@ export function PhotoFrame({
             failure.onError();
           }}
         />
+        {onEnterTheater !== undefined &&
+        presentation === "selected" &&
+        appearance === "paper" &&
+        !failure.hasError ? (
+          <button
+            type="button"
+            className={classes.photoFrameEntry}
+            aria-label="View photo in full screen"
+            title="View photo in full screen"
+            onClick={onEnterTheater}
+          />
+        ) : null}
         {failure.hasError ? (
           <button type="button" onClick={failure.retry}>
             Try loading photo again

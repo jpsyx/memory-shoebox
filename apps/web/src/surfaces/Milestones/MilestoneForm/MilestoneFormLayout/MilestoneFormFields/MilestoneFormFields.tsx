@@ -30,8 +30,8 @@ export function MilestoneFormFields({
           error={dateErrors.join(" ") || undefined}
           span={form.span}
           onChange={form.setSpan}
-          coveredDates={options.selection?.map((item) => {
-            return item.capturedOn;
+          coveredDates={options.selection?.flatMap((item) => {
+            return item.capturedOn ? [item.capturedOn] : [];
           })}
         />
         <Textarea

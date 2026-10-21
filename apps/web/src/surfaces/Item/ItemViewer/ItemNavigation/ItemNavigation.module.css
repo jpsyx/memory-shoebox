@@ -9,6 +9,17 @@
   color: var(--ink);
 }
 
+.navigation:not(.theater) .navigationArrow {
+  border-color: var(--rule);
+}
+.navigation:not(.theater) .navigationArrow + .navigationArrow {
+  margin-inline-start: var(--sp-1);
+}
+.navigation:not(.theater) .navigationArrow[data-disabled] {
+  color: var(--on-panel-quiet);
+  opacity: 0.5;
+}
+
 .navigationError {
   max-width: 24rem;
   font-size: var(--micro);

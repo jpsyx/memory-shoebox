@@ -10,7 +10,7 @@ type MilestoneBodyFields = {
 
 /** The explicit originating selection, when a caller already has one. */
 export type MilestoneSelection = Array<
-  Pick<ItemSummary, "itemId" | "capturedOn">
+  Pick<ItemSummary, "itemId"> & Partial<Pick<ItemSummary, "capturedOn">>
 >;
 /** Seeds fields once from stored detail or available selected capture days. */
 export function makeInitialMilestoneFieldsFromOptions({
@@ -21,8 +21,8 @@ export function makeInitialMilestoneFieldsFromOptions({
   selection?: Readonly<MilestoneSelection>;
 }>): { name: string; blurb: string; span: MilestoneSpan } {
   const dates = selection
-    .map((item) => {
-      return item.capturedOn;
+    .flatMap((item) => {
+      return item.capturedOn ? [item.capturedOn] : [];
     })
     .sort();
   const startsOn = detail?.milestone.startsOn ?? dates[0];

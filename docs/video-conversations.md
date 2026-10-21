@@ -7,6 +7,8 @@ square edges. The rounded **reaction bar** (also called the **emoji bar** or
 conversation stacks beneath the player. Photos and videos reuse `ItemConversation`
 for the page layout: the heading and metadata sit directly on the page background,
 while the media frame and the entire white comments panel have their own elevation.
+Their top edges align when displayed side by side; phones keep space between the
+stacked media and comments.
 The shared `PolaroidContainer` supplies the same white paper edge and shadow to
 photos and videos, and also frames timeline thumbnails. Video controls stay inside
 the paper edge. Theater switches the same frame to a black full-viewport
@@ -255,7 +257,8 @@ placeholder recovering to a playable video through the same transport ref.
 and shared draft provider for the item-route visit. The host is not keyed by
 item ID and wraps every actual-detail state, so loading, denied detail, failures
 and retry retain the same Back and fullscreen controls. The photo item bar exposes
-**Enter theater**; the video toolbar replaces its prior fullscreen action with
+**Enter full screen**, and the displayed photo is also a keyboard-accessible
+entry point; the video toolbar replaces its prior fullscreen action with
 the same entry, which is hidden while in theater. Back pauses through the existing transport, returns to the
 ordinary view of the current route item, releases the scroll lock and restores
 focus to that item's entry control. Switching presentation preserves the native

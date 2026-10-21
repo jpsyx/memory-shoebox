@@ -17,6 +17,7 @@ import {
 import { useTimelineSelection } from "./useTimelineSelection";
 import classes from "./TimelineBulkEditor.module.css";
 import { TimelineSelectionHeaderButton } from "./TimelineSelectionHeaderButton";
+import { getMilestoneSelectionFromTimeline } from "./getMilestoneSelectionFromTimeline";
 
 type Props = {
   days: readonly TimelineDay[];
@@ -67,10 +68,33 @@ function _makeLifecycleHandlers(
   };
 }
 
+function _getBulkChoiceFromSelection(
+  kind: TimelineBulkChoice["kind"],
+  options: Readonly<{
+    selection: SelectionState;
+    days: readonly TimelineDay[];
+  }>,
+): TimelineBulkChoice {
+  const itemIds = [...options.selection.selectedItemIds];
+  return {
+    kind,
+    itemIds,
+    milestoneSelection:
+      kind === "milestone"
+        ? getMilestoneSelectionFromTimeline({
+            itemIds,
+            days: options.days,
+            framesByBurstId: options.selection.framesByBurstId,
+          })
+        : undefined,
+  };
+}
+
 function useEditorControls(
   options: Readonly<{
     selection: SelectionState;
     onChanged: () => void;
+    days: readonly TimelineDay[];
   }>,
 ): EditorControls {
   const [choice, setChoice] = useState<TimelineBulkChoice>();
@@ -100,7 +124,7 @@ function useEditorControls(
       options.selection.start();
     },
     onOpen: (kind) => {
-      setChoice({ kind, itemIds: [...options.selection.selectedItemIds] });
+      setChoice(_getBulkChoiceFromSelection(kind, options));
     },
   };
 }
@@ -146,7 +170,11 @@ function _getPileSelectionFromState(
 /** Wraps the existing pile in optional upload-style tick mode. */
 export function TimelineBulkEditor(props: Readonly<Props>): ReactNode {
   const selection = useTimelineSelection(props.days, props.filterSelection);
-  const editor = useEditorControls({ selection, onChanged: props.onChanged });
+  const editor = useEditorControls({
+    selection,
+    days: props.days,
+    onChanged: props.onChanged,
+  });
   const isBusy = selection.isLoading || editor.choice !== undefined;
   const context = _getPileSelectionFromState(selection, isBusy);
   return (

@@ -102,9 +102,9 @@ import { test, expect } from "./admin.fixtures.ts";
       page.getByRole("img", { name: "A family memory" }),
     ).toBeVisible();
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
-    const theater = page.getByRole("dialog", { name: "Media theater" });
+    const theater = page.getByRole("dialog", { name: "Full screen" });
     await expect(theater).toBeVisible();
     await theater
       .getByRole("button", { name: "React: Love", exact: true })

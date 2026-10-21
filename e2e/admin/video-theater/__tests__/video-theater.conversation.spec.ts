@@ -16,7 +16,7 @@ for (const kind of ["photo", "video"] as const) {
     const itemId = kind === "photo" ? catalog.itemId : catalog.videoId;
     await page.goto(`/api/evidence/session/viewer?to=/items/${itemId}`);
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     if (kind === "video") {
       await pauseTheaterVideo(page, 0.4);
@@ -63,7 +63,7 @@ for (const kind of ["photo", "video"] as const) {
       .click();
     await page.reload();
     await page
-      .getByRole("button", { name: "Enter theater", exact: true })
+      .getByRole("button", { name: "Enter full screen", exact: true })
       .click();
     await openTheaterComments(page);
     if (kind === "photo") {
@@ -138,7 +138,7 @@ test("late successful real post preserves a newer draft across mixed navigation"
   );
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await pauseTheaterVideo(page, 4);
   const field = await openTheaterComments(page);
@@ -195,7 +195,7 @@ test("failed post retains anchor and real retry; viewers cannot edit others, adm
   ).toBe(true);
   await page.goto(`/api/evidence/session/viewer?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await pauseTheaterVideo(page, 3);
   const field = await openTheaterComments(page);
@@ -236,7 +236,7 @@ test("failed post retains anchor and real retry; viewers cannot edit others, adm
   ).toBeVisible();
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.videoId}`);
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await openTheaterComments(page);
   const viewerComment = page
@@ -264,7 +264,7 @@ test("native host contains shared media picker, comment picker and delete dialog
   ).toBe(true);
   await page.reload();
   await page
-    .getByRole("button", { name: "Enter theater", exact: true })
+    .getByRole("button", { name: "Enter full screen", exact: true })
     .click();
   await page
     .getByRole("button", { name: "More reactions", exact: true })

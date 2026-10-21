@@ -95,9 +95,11 @@ describe("shared theater playback", () => {
     video.currentTime = 9;
     video.playbackRate = 1.5;
     video.volume = 0.35;
-    const entry = within(player).getByRole("button", { name: "Enter theater" });
+    const entry = within(player).getByRole("button", {
+      name: "Enter full screen",
+    });
     expect(
-      screen.getAllByRole("button", { name: "Enter theater" }),
+      screen.getAllByRole("button", { name: "Enter full screen" }),
     ).toHaveLength(1);
     await userEvent.click(entry);
     await waitFor(() => {
@@ -108,13 +110,15 @@ describe("shared theater playback", () => {
     expect(video.currentTime).toBe(9);
     expect(video.playbackRate).toBe(1.5);
     expect(video.volume).toBe(0.35);
-    expect(screen.queryByRole("button", { name: "Enter theater" })).toBeNull();
+    expect(
+      within(player).queryByRole("button", { name: "Enter full screen" }),
+    ).toBeNull();
     await userEvent.click(
       screen.getByRole("button", { name: "More reactions" }),
     );
     const heart = await screen.findByRole("button", { name: "React: Heart" });
     expect(
-      screen.getByRole("dialog", { name: "Media theater" }),
+      screen.getByRole("dialog", { name: "Full screen" }),
     ).toContainElement(heart);
     await userEvent.keyboard("{Escape}");
     await userEvent.click(
@@ -130,7 +134,9 @@ describe("shared theater playback", () => {
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(container.querySelector("video")).toBe(video);
     expect(video.currentTime).toBe(9);
-    expect(screen.getByRole("button", { name: "Enter theater" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Enter full screen" }),
+    ).toHaveFocus();
   });
 
   it("enters from a photo then autoplays each selected video with mute carryover and fresh speed", async () => {
@@ -153,7 +159,7 @@ describe("shared theater playback", () => {
     await waitForNavigationReady();
     const photo = container.querySelector("[data-photo-surface=viewer]");
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     expect(container.querySelector("[data-photo-surface=viewer]")).toBe(photo);
     await userEvent.click(
@@ -194,7 +200,7 @@ describe("shared theater playback", () => {
       .spyOn(video, "play")
       .mockRejectedValue(new DOMException("Policy refused", "NotAllowedError"));
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     await waitFor(() => {
       return expect(play).toHaveBeenCalledOnce();
@@ -224,7 +230,7 @@ describe("shared theater playback", () => {
     const { container, router } = renderItem(ITEM_ID);
     await screen.findByLabelText("Video player");
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     expect(container.querySelector("video")).toBeNull();
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
@@ -281,7 +287,7 @@ describe("shared theater playback", () => {
       },
     });
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     await waitFor(() => {
       return expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce();
@@ -364,7 +370,7 @@ describe("shared theater playback", () => {
       return expect(video).toHaveAttribute("src", renewed.playback.url);
     });
     await userEvent.click(
-      screen.getByRole("button", { name: "Enter theater" }),
+      screen.getByRole("button", { name: "Enter full screen" }),
     );
     expect(video.play).not.toHaveBeenCalled();
     await userEvent.click(
