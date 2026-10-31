@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -78,7 +78,7 @@ with `items.uploaded_by`. Do not join matching tags into the outer item query.
 Use the existing uploader/capture and item-person indexes first; add a new index
 only if an EXPLAIN fixture demonstrates an uncovered lookup.
 
-- [ ] **Red:** Build one fixture with uploaded-only, tagged-only, overlap, video, same-name ad-hoc, other member, and two inaccessible items:
+- [x] **Red:** Build one fixture with uploaded-only, tagged-only, overlap, video, same-name ad-hoc, other member, and two inaccessible items:
 
 ```ts
 expect(visibleItemIds).toEqual([uploadedId, taggedId, overlapId, videoId]);
@@ -95,10 +95,10 @@ IDs, media positions/neighbors, filtered attachment picking, and pure person
 filters against the same expected fixture. Assert unknown IDs yield zero rows
 without distinguishing hidden account/content counts.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/memberCollection.test.ts test/archive/selectionFilterHelpers.test.ts`; run shared selection/media schema tests.
-- [ ] **Green:** Extend the shared field and central predicate. Inventory with `rg -l 'TimelineSelection|makeTimelineFilterFromQuery|makeSelectionExpressionFromFilter' apps/server/src packages/shared/src`; inspect each result for manual field copies. Update all selection copies in timeline, rail/facets, bursts, seen, bulk, milestone attachments, media-position and preview handlers. Readers already receiving the complete filter need no redundant edit. Record the touched inventory in the task commit.
-- [ ] **Verify:** Rerun focused tests plus existing timeline/media-preview/bulk tests. Check a representative query plan against the fixture. Update `docs/archive.md`, `docs/shared.md`, and `docs/theater.md`.
-- [ ] **Commit:** `feat: filter the archive by member uploads or photo tags`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/memberCollection.test.ts test/archive/selectionFilterHelpers.test.ts`; run shared selection/media schema tests.
+- [x] **Green:** Extend the shared field and central predicate. Inventory with `rg -l 'TimelineSelection|makeTimelineFilterFromQuery|makeSelectionExpressionFromFilter' apps/server/src packages/shared/src`; inspect each result for manual field copies. Update all selection copies in timeline, rail/facets, bursts, seen, bulk, milestone attachments, media-position and preview handlers. Readers already receiving the complete filter need no redundant edit. Record the touched inventory in the task commit.
+- [x] **Verify:** Rerun focused tests plus existing timeline/media-preview/bulk tests. Check a representative query plan against the fixture. Update `docs/archive.md`, `docs/shared.md`, and `docs/theater.md`.
+- [x] **Commit:** `feat: filter the archive by member uploads or photo tags`.
 
 ### Task C2: Collection URL, heading, filter, and cache isolation
 
@@ -128,7 +128,7 @@ to comment” is rendered only when T5 supplies a valid in-memory return journey
 direct/shared collection URLs work without one. No new profile tabs/navigation.
 Keep a generic heading when identity is unknown and show the same empty copy.
 
-- [ ] **Red:** Assert round-trip selection and link construction:
+- [x] **Red:** Assert round-trip selection and link construction:
 
 ```ts
 expect(makeMemberCollectionHrefFromMemberId(memberId)).toBe(
@@ -149,7 +149,7 @@ Also test removing only the member filter, unknown/removed identity, failed iden
 fetch with retry, member-to-member navigation during an in-flight page read, and
 new-tab entry without session journey data.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/web test src/api/timelineHelpers src/surfaces/Timeline/MemberCollectionHeader src/routes/search.test.ts`.
-- [ ] **Green:** Implement the heading and narrow identity query. Carry member through cursor/query keys, timeline memory identity, bulk selection, media preview/position, and theater selection. Do not hand-spread only the preexisting fields.
-- [ ] **Verify:** Rerun tests and web type check. Update `docs/archive.md` and `docs/theater.md`. T5 owns actual draft/scroll restoration.
-- [ ] **Commit:** `feat: show member collections in the existing archive`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/web test src/api/timelineHelpers src/surfaces/Timeline/MemberCollectionHeader src/routes/search.test.ts`.
+- [x] **Green:** Implement the heading and narrow identity query. Carry member through cursor/query keys, timeline memory identity, bulk selection, media preview/position, and theater selection. Do not hand-spread only the preexisting fields.
+- [x] **Verify:** Rerun tests and web type check. Update `docs/archive.md` and `docs/theater.md`. T5 owns actual draft/scroll restoration.
+- [x] **Commit:** `feat: show member collections in the existing archive`.

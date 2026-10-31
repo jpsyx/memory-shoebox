@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -106,7 +106,7 @@ batches metadata, then signs current keys via `b2.presignGet` with a one-hour TT
 archive rendition IDs or add avatars to rendition-purpose schemas. Every renewed
 reference reports the signature's actual expiry; no signed URL is stored in SQL.
 
-- [ ] **Red:** Test the HTTP envelopes, self-ownership, null/unknown reads, and atomic version checks:
+- [x] **Red:** Test the HTTP envelopes, self-ownership, null/unknown reads, and atomic version checks:
 
 ```ts
 expect(viewerReservation.statusCode).toBe(201);
@@ -119,10 +119,10 @@ expect(publicAvatarRead.statusCode).toBe(401);
 Pin rollback when cleanup enqueue fails and preservation of the current image
 on a losing publication. Account removal must not queue the historical avatar.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/shared test test/avatars.test.ts`; `pnpm --filter @memory-shoebox/server test test/avatars/avatarLifecycle.test.ts`.
-- [ ] **Green:** Implement schemas, migration, lifecycle actions, signing reader, and JSON routes. A2 supplies the binary PUT handler. Extend `readMemberRefs` to take `{ database, b2, now }` and `getMeDtoFromMemberId` to also require `b2` and `now`; propagate those through their existing callers. Hydrate avatars in the central readers, use null for missing-member fallbacks, and regenerate shared exports.
-- [ ] **Verify:** Rerun focused tests plus server schema tests and type checks. Update `docs/member-profiles.md`, `docs/shared.md`, and `docs/server.md`.
-- [ ] **Commit:** `feat: add private avatar ownership and lifecycle`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/shared test test/avatars.test.ts`; `pnpm --filter @memory-shoebox/server test test/avatars/avatarLifecycle.test.ts`.
+- [x] **Green:** Implement schemas, migration, lifecycle actions, signing reader, and JSON routes. A2 supplies the binary PUT handler. Extend `readMemberRefs` to take `{ database, b2, now }` and `getMeDtoFromMemberId` to also require `b2` and `now`; propagate those through their existing callers. Hydrate avatars in the central readers, use null for missing-member fallbacks, and regenerate shared exports.
+- [x] **Verify:** Rerun focused tests plus server schema tests and type checks. Update `docs/member-profiles.md`, `docs/shared.md`, and `docs/server.md`.
+- [x] **Commit:** `feat: add private avatar ownership and lifecycle`.
 
 ### Task A2: Bounded image processing and crash-safe cleanup
 
@@ -165,7 +165,7 @@ job lifecycle. Reuse the deletion drain's late-PUT/retry strategy; a request tha
 finishes after retirement must enqueue deletion again, even if an earlier delete
 saw 404. Do not delete an object still referenced by a published pointer.
 
-- [ ] **Red:** Use tiny generated fixtures plus forged metadata/headers and the existing fake B2 seam:
+- [x] **Red:** Use tiny generated fixtures plus forged metadata/headers and the existing fake B2 seam:
 
 ```ts
 expect(metadata).toMatchObject({ format: "webp", width: 256, height: 256 });
@@ -184,10 +184,10 @@ replay, late-PUT deletion retry, and test/production-prefix isolation. Normalize
 "avatar_too_large", message: "Choose a photo smaller than 10 MB." }` for this
 route only; add 413 to `ApiErrorStatus` for that typed response.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/server test test/avatars test/jobs/avatarReservationSweep.test.ts test/jobs/runObjectDeletionDrain`.
-- [ ] **Green:** Implement transform, route, lifecycle, and sweep. Use installed Sharp; no new image library. Do not log image bytes, original metadata, or signed URLs.
-- [ ] **Verify:** Rerun tests. V2 separately measures the maximum accepted decode in the target runtime before shipping; do not assert resource safety from unit fixtures alone. Document this explicit small-upload exception in `docs/architecture.md` and storage cleanup in `docs/member-profiles.md`.
-- [ ] **Commit:** `feat: process avatars and recover abandoned uploads`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/server test test/avatars test/jobs/avatarReservationSweep.test.ts test/jobs/runObjectDeletionDrain`.
+- [x] **Green:** Implement transform, route, lifecycle, and sweep. Use installed Sharp; no new image library. Do not log image bytes, original metadata, or signed URLs.
+- [x] **Verify:** Rerun tests. V2 separately measures the maximum accepted decode in the target runtime before shipping; do not assert resource safety from unit fixtures alone. Document this explicit small-upload exception in `docs/architecture.md` and storage cleanup in `docs/member-profiles.md`.
+- [x] **Commit:** `feat: process avatars and recover abandoned uploads`.
 
 ### Task A3: Shared avatar and accessible crop controls
 
@@ -223,7 +223,7 @@ Tag picker and collection consume this component in later plans. Decorative
 images have empty alt text. Use 30px in existing comments, 80px in account preview,
 and the shape's 48px option rows later.
 
-- [ ] **Red:** Test decoded preview/crop mapping, keyboard controls, save/remove rollback, stale-version choices, account change during upload, and renewal:
+- [x] **Red:** Test decoded preview/crop mapping, keyboard controls, save/remove rollback, stale-version choices, account change during upload, and renewal:
 
 ```ts
 expect(screen.getByRole("slider", { name: "Zoom" })).toHaveFocus();
@@ -233,7 +233,7 @@ expect(revokeObjectURL).toHaveBeenCalledWith(previousPreviewUrl);
 expect(avatarRenewalCalls).toBe(1);
 ```
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/web test src/api/avatars src/system/MemberAvatar src/surfaces/Account/AvatarEditor src/surfaces/ProfileCompletion`.
-- [ ] **Green:** Build the components using Mantine and incumbent tokens. Complete profile independently of optional photo processing; a successful name claim may proceed even if the avatar fails. Preserve explicit error/retry state.
-- [ ] **Verify:** Rerun tests and web type check; update `docs/member-profiles.md` and `docs/theater.md`. Browser crop/touch proof is V1.
-- [ ] **Commit:** `feat: add profile photo editing and comment avatars`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/web test src/api/avatars src/system/MemberAvatar src/surfaces/Account/AvatarEditor src/surfaces/ProfileCompletion`.
+- [x] **Green:** Build the components using Mantine and incumbent tokens. Complete profile independently of optional photo processing; a successful name claim may proceed even if the avatar fails. Preserve explicit error/retry state.
+- [x] **Verify:** Rerun tests and web type check; update `docs/member-profiles.md` and `docs/theater.md`. Browser crop/touch proof is V1.
+- [x] **Commit:** `feat: add profile photo editing and comment avatars`.

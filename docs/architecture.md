@@ -404,7 +404,20 @@ version before publication and never span decoding or B2 I/O. The publication
 clock is read after storage completes, so an expired request cannot publish even
 before the next sweep. Archive transfers and downloads retain their direct path.
 
-These limits and tiny-fixture tests are not a deployment memory-safety result.
-V2 acceptance must measure maximum accepted 50MP decodes and concurrent 10 MiB
-requests in an equivalent target runtime and serving memory envelope before
-shipping. See [member profiles](member-profiles.md#private-avatars) for recovery.
+These limits and tiny-fixture tests alone are not a deployment memory-safety
+result. V2 measured maximum accepted 50 MP decodes and concurrent 10 MiB requests
+in the explicit local serving envelope recorded below. The actual deployed
+target still needs its own configuration/headroom check before shipping. See
+[member profiles](member-profiles.md#private-avatars) for recovery.
+
+## Profile/tagging acceptance and decoder admission
+
+Small own-avatar originals are the bounded exception to direct browser-to-B2
+archive transfer: Fastify validates and produces one private 256-square WebP.
+Its pre-body permit shares the existing media/fingerprint decode coordinator,
+rejecting concurrent request bodies while jobs wait for the admitted request to
+settle. Large WebP uses bounded reduced decoding and fractional crop mapping;
+other archive transfer and media-worker isolation boundaries are unchanged.
+See [member profiles](member-profiles.md#avatar-processing-budget), the
+[local resource evidence](superpowers/verification/2026-10-31-comment-tagging.md#v2-avatar-resource-boundary),
+and [rollout/recovery](comment-tagging-rollout.md) before release.

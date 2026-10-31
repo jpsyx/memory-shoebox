@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -94,7 +94,7 @@ notify schema permits omission of only this new field, preserving its stored
 value for older four-boolean payloads. Existing four fields retain their contract.
 Do not `.default(true)` this field on a PATCH input.
 
-- [ ] **Red:** Pin UTF-16 normalization and update compatibility:
+- [x] **Red:** Pin UTF-16 normalization and update compatibility:
 
 ```ts
 expect(
@@ -117,10 +117,10 @@ expect(
 Add invalid overlap/surrogate/trim cases, 4,000/4,001 limits, legacy migration,
 FK cascade, duplicate ledger refusal, and preservation of existing outbox rows.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/shared test src/commentTags test/comments.test.ts test/auth.test.ts`; `pnpm --filter @memory-shoebox/server test test/schema/commentTagsMigration.test.ts`.
-- [ ] **Green:** Implement normalization, schemas, migration, manifests, and generated exports. Keep empty tags on all existing comment DTO producers until T2 connects persisted reads. Wire the new preference through `members/getMeDtoFromMemberId.ts` and `routes/me.ts` now: select/return the stored boolean and update it only when the PATCH field is supplied. Update existing fixtures for the required response fields; T3 owns its UI and email behavior.
-- [ ] **Verify:** Rerun focused tests and server migration/schema checks. Update `docs/shared.md` and create `docs/comment-tagging.md` with offset and compatibility rules.
-- [ ] **Commit:** `feat: define persisted comment tags and notification preferences`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/shared test src/commentTags test/comments.test.ts test/auth.test.ts`; `pnpm --filter @memory-shoebox/server test test/schema/commentTagsMigration.test.ts`.
+- [x] **Green:** Implement normalization, schemas, migration, manifests, and generated exports. Keep empty tags on all existing comment DTO producers until T2 connects persisted reads. Wire the new preference through `members/getMeDtoFromMemberId.ts` and `routes/me.ts` now: select/return the stored boolean and update it only when the PATCH field is supplied. Update existing fixtures for the required response fields; T3 owns its UI and email behavior.
+- [x] **Verify:** Rerun focused tests and server migration/schema checks. Update `docs/shared.md` and create `docs/comment-tagging.md` with offset and compatibility rules.
+- [x] **Commit:** `feat: define persisted comment tags and notification preferences`.
 
 ### Task T2: Eligible-member lookup and transactional tag writes
 
@@ -165,7 +165,7 @@ all. Create with supplied retained IDs is invalid. Write comment and ranges in
 one immediate transaction; batch-read all occurrences for a thread without N+1.
 T3 wires outbox reconciliation into these same transactions.
 
-- [ ] **Red:** Exercise real create/update routes, candidate privacy, and rollback:
+- [x] **Red:** Exercise real create/update routes, candidate privacy, and rollback:
 
 ```ts
 expect(candidates.members.map((member) => member.memberId)).toEqual(
@@ -182,10 +182,10 @@ Test same-name ad-hoc exclusion, incomplete profiles, hidden/missing item parity
 self-selection, repeated member tags, forged retained IDs, concurrent rename,
 non-author edit, immutable moment/reply parent, and rollback after tag insertion.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/comments test/items/readCommentThread.test.ts`.
-- [ ] **Green:** Implement lookup and occurrence actions inside the existing create/edit transactions. Treat stored label as authoritative for retained tags; never resolve historical text to a different member by name. Keep current comment permission behavior.
-- [ ] **Verify:** Rerun tests; update `docs/comment-tagging.md`, `docs/server.md`, and `docs/video-conversations.md`.
-- [ ] **Commit:** `feat: validate member tags in comment writes`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/comments test/items/readCommentThread.test.ts`.
+- [x] **Green:** Implement lookup and occurrence actions inside the existing create/edit transactions. Treat stored label as authoritative for retained tags; never resolve historical text to a different member by name. Keep current comment permission behavior.
+- [x] **Verify:** Rerun tests; update `docs/comment-tagging.md`, `docs/server.md`, and `docs/video-conversations.md`.
+- [x] **Commit:** `feat: validate member tags in comment writes`.
 
 ### Task T3: Email preference, recipient arbitration, and last delivery gate
 
@@ -240,7 +240,7 @@ on every attempt. False transitions the claimed tag row to cancelled through
 existing finalization without a provider call. Durable sender/idempotency rules
 remain unchanged. Access changes after provider handoff cannot recall email.
 
-- [ ] **Red:** Table-drive preference combinations and lifecycle transitions:
+- [x] **Red:** Table-drive preference combinations and lifecycle transitions:
 
 ```ts
 expect(queuedKindsForTaggedUploader).toEqual(["comment_tag"]);
@@ -257,10 +257,10 @@ replies, retry after opt-out, visibility revocation while renderer is paused,
 removed recipient, failed database enqueue rollback, and local HTML/plain-text
 snapshot assertions. A recording sender is mandatory.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/emails test test/CommentTagEmail.test.tsx`; `pnpm --filter @memory-shoebox/server test test/items/commentTagEmails.test.ts test/mail/commentTagDelivery.test.ts`; run the web EmailSheet test.
-- [ ] **Green:** Implement registry/copy and arbitration together. Add the preference to existing independent account saving and bulk buttons. Fix the canonical item path only for this new email flow; do not expand scope to rewriting unrelated legacy queued mail.
-- [ ] **Verify:** Rerun targeted tests and existing outbox retry/suppression tests. Update `docs/mail.md`, `docs/emails.md`, and `docs/comment-tagging.md`.
-- [ ] **Commit:** `feat: notify eligible comment-tag recipients once`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/emails test test/CommentTagEmail.test.tsx`; `pnpm --filter @memory-shoebox/server test test/items/commentTagEmails.test.ts test/mail/commentTagDelivery.test.ts`; run the web EmailSheet test.
+- [x] **Green:** Implement registry/copy and arbitration together. Add the preference to existing independent account saving and bulk buttons. Fix the canonical item path only for this new email flow; do not expand scope to rewriting unrelated legacy queued mail.
+- [x] **Verify:** Rerun targeted tests and existing outbox retry/suppression tests. Update `docs/mail.md`, `docs/emails.md`, and `docs/comment-tagging.md`.
+- [x] **Commit:** `feat: notify eligible comment-tag recipients once`.
 
 ### Task T4: One range-aware input and renderer across conversations
 
@@ -319,7 +319,7 @@ Use snapshot wording, underlining, medium weight, restrained ink wash, and C2's
 collection href. No `dangerouslySetInnerHTML`. A3 supplies author and picker
 avatars. New draft selection creates no clickable link while editing.
 
-- [ ] **Red:** Pin edit behavior and keyboard interaction:
+- [x] **Red:** Pin edit behavior and keyboard interaction:
 
 ```ts
 expect(
@@ -344,10 +344,10 @@ Add selection-over-tags, copy/plain paste, undo/redo, emoji, trigger boundaries,
 IME, spaces in names, stale lookup/name, unavailable target repair, 4,000-character
 over-limit selection, and revised draft surviving a late successful send.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/web test src/system/commentDraftHelpers src/system/CommentTagInputField src/system/CommentTagText src/api/commentTagCandidates`.
-- [ ] **Green:** Implement the pure reducers and component, then wire main/reply/edit/Talk/moment previews through the shared input/renderer. Preserve pin capture and send authority in existing hooks. Use approved plain-text correction actions for stale or unavailable tags.
-- [ ] **Verify:** Rerun tests and existing item/theater conversation tests. Update `docs/comment-tagging.md`, `docs/video-conversations.md`, and `docs/theater.md`. V1 supplies real-browser mirror/IME evidence, not jsdom claims.
-- [ ] **Commit:** `feat: select and render member tags in conversations`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/web test src/system/commentDraftHelpers src/system/CommentTagInputField src/system/CommentTagText src/api/commentTagCandidates`.
+- [x] **Green:** Implement the pure reducers and component, then wire main/reply/edit/Talk/moment previews through the shared input/renderer. Preserve pin capture and send authority in existing hooks. Use approved plain-text correction actions for stale or unavailable tags.
+- [x] **Verify:** Rerun tests and existing item/theater conversation tests. Update `docs/comment-tagging.md`, `docs/video-conversations.md`, and `docs/theater.md`. V1 supplies real-browser mirror/IME evidence, not jsdom claims.
+- [x] **Commit:** `feat: select and render member tags in conversations`.
 
 ### Task T5: Deep-link entry and session-owned return restoration
 
@@ -398,7 +398,7 @@ uses existing refusal. Never autoplay/seek on email arrival; preserve comment
 search through N4 sign-in/completion. Escape respects the innermost overlay and
 native fullscreen behavior. Returning from collection does not auto-resume video.
 
-- [ ] **Red:** Test main/reply/edit round trips and stale completion:
+- [x] **Red:** Test main/reply/edit round trips and stale completion:
 
 ```ts
 expect(restoredDraft).toEqual(draftBeforeLeaving);
@@ -413,7 +413,7 @@ Add access loss, expired session followed by another login, deleted comment,
 unknown ID, new-tab link, incomplete-profile redirect, and stale navigation
 responses. Do not assert preservation across reload or tab close.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/web test src/session/ConversationJourneyProvider src/session/conversationJourneyHelpers src/surfaces/Item/CommentArrival src/routes/-bootstrap-redirect.test.ts`.
-- [ ] **Green:** Hoist ownership and adapt existing providers rather than keeping parallel memories. Wire deep-link arrival, parent expansion, focus, and same-tab return. Preserve the existing theater host and draft revision semantics.
-- [ ] **Verify:** Rerun focused tests and all existing item/theater tests. Update `docs/theater.md`, `docs/video-conversations.md`, and `docs/comment-tagging.md` to replace the old route-visit-only draft statement.
-- [ ] **Commit:** `feat: restore conversations after member collection visits`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/web test src/session/ConversationJourneyProvider src/session/conversationJourneyHelpers src/surfaces/Item/CommentArrival src/routes/-bootstrap-redirect.test.ts`.
+- [x] **Green:** Hoist ownership and adapt existing providers rather than keeping parallel memories. Wire deep-link arrival, parent expansion, focus, and same-tab return. Preserve the existing theater host and draft revision semantics.
+- [x] **Verify:** Rerun focused tests and all existing item/theater tests. Update `docs/theater.md`, `docs/video-conversations.md`, and `docs/comment-tagging.md` to replace the old route-visit-only draft statement.
+- [x] **Commit:** `feat: restore conversations after member collection visits`.

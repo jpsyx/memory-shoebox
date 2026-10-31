@@ -136,7 +136,9 @@ async function _retireRejectedRequest(request: FastifyRequest): Promise<void> {
 }
 
 type AvatarPermit = {
-  owner: { request: FastifyRequest; hasStarted: boolean } | undefined;
+  owner:
+    | { request: FastifyRequest; hasStarted: boolean; release: () => void }
+    | undefined;
 };
 
 function _registerAdmissionHooks(
@@ -145,19 +147,21 @@ function _registerAdmissionHooks(
 ): void {
   const releaseUnstarted = (request: FastifyRequest): void => {
     if (permit.owner?.request === request && !permit.owner.hasStarted) {
+      permit.owner.release();
       permit.owner = undefined;
     }
   };
   app.addHook("onRequest", async (request) => {
     _checkUploadRate(request);
-    if (permit.owner !== undefined) {
+    const release = request.server.mediaDecodeCoordinator.tryAcquire();
+    if (release === undefined) {
       throw new ApiError({
         statusCode: 503,
         code: "avatar_busy",
         message: "Another photo is processing. Try again shortly.",
       });
     }
-    permit.owner = { request, hasStarted: false };
+    permit.owner = { request, hasStarted: false, release };
   });
   app.addHook("onRequestAbort", async (request) => {
     const isUnstarted =
@@ -209,6 +213,7 @@ async function _registerBinaryRoutes(app: FastifyInstance): Promise<void> {
         return await _uploadAvatar(request);
       } finally {
         if (permit.owner?.request === request) {
+          permit.owner.release();
           permit.owner = undefined;
         }
       }

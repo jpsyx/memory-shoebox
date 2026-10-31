@@ -14,13 +14,15 @@ export function registerAppBackgroundWork(
 ): void {
   const { app, deps } = options;
   const backgroundShutdown = new AbortController();
+  const coordinator = createMediaDecodeCoordinator();
+  app.decorate("mediaDecodeCoordinator", coordinator);
   const processingDependencies = {
     database: deps.database,
     b2: app.b2,
     clock: app.clock,
     logger: app.log,
     signal: backgroundShutdown.signal,
-    coordinator: createMediaDecodeCoordinator(),
+    coordinator,
     runtime: createMediaProcessingRuntime(deps.config.mediaProcessing),
   };
   const jobRunner = createJobRunner({

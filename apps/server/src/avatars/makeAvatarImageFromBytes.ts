@@ -1,4 +1,5 @@
-import sharp from "sharp";
+import { makeAvatarFromWebpImage } from "./makeAvatarFromWebpImage.ts";
+import sharp, { type Metadata } from "sharp";
 import {
   avatarCropSchema,
   getExtractionFromAvatarCrop,
@@ -9,6 +10,9 @@ import { ApiError } from "../http/ApiError.ts";
 /** The only accepted original byte budget, checked before Sharp sees input. */
 export const AVATAR_BYTE_LIMIT = 10 * 1024 * 1024;
 const PIXEL_LIMIT = 50_000_000;
+// Match the existing isolated media recipes: no retained pixels or parallel tiles.
+sharp.concurrency(1);
+sharp.cache(false);
 const FORMATS: Readonly<Record<string, string>> = {
   "image/jpeg": "jpeg",
   "image/png": "png",
@@ -23,13 +27,15 @@ function _invalidImage(): ApiError {
   });
 }
 
+type AvatarImageInput = {
+  bytes: Uint8Array;
+  contentType: string;
+  crop: AvatarCrop;
+};
+
 /** Decodes one bounded still image, orients/crops it and strips all metadata. */
 export async function makeAvatarImageFromBytes(
-  options: Readonly<{
-    bytes: Uint8Array;
-    contentType: string;
-    crop: AvatarCrop;
-  }>,
+  options: Readonly<AvatarImageInput>,
 ): Promise<Uint8Array> {
   _assertByteLimit(options.bytes);
   const crop = avatarCropSchema.safeParse(options.crop);
@@ -42,27 +48,53 @@ export async function makeAvatarImageFromBytes(
       failOn: "warning",
     });
     const metadata = await image.metadata();
-    if (
-      metadata.format !== FORMATS[options.contentType] ||
-      (metadata.pages ?? 1) !== 1 ||
-      (metadata.format === "png" && _hasPngAnimation(options.bytes)) ||
-      !metadata.width ||
-      !metadata.height
-    ) {
-      throw _invalidImage();
+    const { width, height } = _getOrientedDimensionsFromMetadata(
+      metadata,
+      options,
+    );
+    const square = getExtractionFromAvatarCrop({
+      width,
+      height,
+      crop: crop.data,
+    });
+    if (metadata.format === "webp" && width * height > 4_000_000) {
+      return await makeAvatarFromWebpImage({
+        image,
+        width,
+        height,
+        square,
+        orientation: metadata.orientation ?? 1,
+      });
     }
-    const swapsAxes = (metadata.orientation ?? 1) >= 5;
-    const width = swapsAxes ? metadata.height : metadata.width;
-    const height = swapsAxes ? metadata.width : metadata.height;
     return await image
       .autoOrient()
-      .extract(getExtractionFromAvatarCrop({ width, height, crop: crop.data }))
+      .extract(square)
       .resize(256, 256)
       .webp()
       .toBuffer();
   } catch {
     throw _invalidImage();
   }
+}
+
+function _getOrientedDimensionsFromMetadata(
+  metadata: Metadata,
+  options: { bytes: Uint8Array; contentType: string },
+): { width: number; height: number } {
+  if (
+    metadata.format !== FORMATS[options.contentType] ||
+    (metadata.pages ?? 1) !== 1 ||
+    (metadata.format === "png" && _hasPngAnimation(options.bytes)) ||
+    !metadata.width ||
+    !metadata.height
+  ) {
+    throw _invalidImage();
+  }
+  const swapsAxes = (metadata.orientation ?? 1) >= 5;
+  const width = swapsAxes ? metadata.height : metadata.width;
+  const height = swapsAxes ? metadata.width : metadata.height;
+
+  return { width, height };
 }
 
 // libvips exposes only APNG's default still, so page count alone is insufficient.

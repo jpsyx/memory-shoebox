@@ -171,9 +171,10 @@ Posting success makes no claim about email delivery.
 
 The early isolated Chromium prototype verified matching mirror/input wrapping,
 scroll metrics and unchanged glyph rectangles at desktop, phone width and 200%
-CSS scale, plus reference-aware undo and CDP engine composition. Physical mobile
-keyboards, OS IMEs and integrated cross-browser/fullscreen acceptance remain
-separate verification work; DOM tests do not claim those results.
+CSS scale, plus reference-aware undo and CDP engine composition. Integrated Chromium/WebKit acceptance is recorded in the
+[verification record](superpowers/verification/2026-10-31-comment-tagging.md).
+Physical mobile keyboards, OS IMEs, actual screen readers and OS-native
+fullscreen remain separate limitations; DOM tests do not claim those results.
 
 ## Comment arrival and collection return
 
@@ -215,3 +216,7 @@ The shared writing, reply and edit field displays “Type @ to tag a member.” 
 its own line below the input. Phone-width and coarse-pointer layouts use at
 least 16px native input text, with matching mirror metrics; the helper stays
 at least 15px. Desktop input sizing remains unchanged.
+
+Migration execution, permanent-ledger compatibility and backup recovery are
+covered by the [rollout guide](comment-tagging-rollout.md). Local acceptance does
+not authorize production migration, mail tests, deployment or publication.

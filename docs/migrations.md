@@ -197,3 +197,12 @@ The read-only audit, verified staging backup, durable staging table, bounded
 identity fingerprint, import atomicity and rollback/recovery workflow are covered
 in [member names and catalog rollout](member-profiles.md). Run this staging before
 starting the release that contains 0019, with all application processes stopped.
+
+## Profile and tagging release recovery
+
+Migrations 0019-0021 are one pending transaction: permanent names, avatar
+reservations/pointers, then comment occurrences, scheduling ledger, preference
+and outbox kind. The [rollout guide](comment-tagging-rollout.md) records the
+pre-stage backup choice, original owner/group/mode restoration, and actual
+matching-old-release rehearsal. Retain the pre-stage backup for old code; the
+migrator backup after staging can contain the rollout staging table.

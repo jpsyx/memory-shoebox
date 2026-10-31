@@ -374,3 +374,8 @@ reply or edit leaves newer input open. The existing moment capture and fixed
 reply/edit timestamps are unchanged. Timeline grouping carries stored tag ranges
 into `VideoMomentPreview`, which uses the same native-link renderer as the thread.
 See [comment tagging](comment-tagging.md) for range and correction semantics.
+
+Comment-tag links, fixed moments and restored drafts are exercised together by
+the [integrated acceptance suite](superpowers/verification/2026-10-31-comment-tagging.md).
+The captured-email arrival test confirms that returning to a comment never
+autoplays or seeks the video.

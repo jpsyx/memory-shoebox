@@ -288,3 +288,16 @@ matching member references throughout the current cache. Failed/expired signed
 sources share one private renewal attempt per immutable avatar ID and lifetime;
 a failed renewal does not loop. A held renewal can update only references still
 pointing at the expected ID, so removing/replacing an image cannot restore it.
+
+## Avatar processing budget
+
+The accepted original remains 10 MiB and 50 MP. Large WebP uses a reduced raster
+capped at 12 MP, an enclosing crop ROI, fractional edge mapping and final-square
+orientation. The original shared integer crop remains authoritative. At extreme
+zoom a smaller intermediate crop is reconstructed to 256 pixels, so output
+sampling can differ from a full-resolution decode. JPEG, PNG and small-WebP
+processing retain their existing path. Sharp uses one thread and no retained
+pixel cache. The pre-body avatar permit shares the existing heavy-decoder lane
+with media/fingerprint jobs and stays held until actual work settles. See the
+[measured acceptance record](superpowers/verification/2026-10-31-comment-tagging.md#v2-avatar-resource-boundary)
+for the original OOM, correction, tested bounds and target-runtime limitations.

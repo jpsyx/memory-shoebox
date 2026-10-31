@@ -1,3 +1,4 @@
+import type { MediaDecodeCoordinator } from "../mediaProcessing/createMediaDecodeCoordinator.ts";
 import { memberAvatarRoutes } from "../routes/memberAvatars.ts";
 import {
   makeReleaseStatusReaderFromDependencies,
@@ -65,6 +66,8 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
+    /** Shared admission for avatars, media processing and fingerprint work. */
+    mediaDecodeCoordinator: MediaDecodeCoordinator;
     emailService: EmailService | undefined;
     /** Read-only provider verification seam. */
     mailDomainReader: MailDomainReader | undefined;

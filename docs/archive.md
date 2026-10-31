@@ -712,3 +712,7 @@ navigation, media previews and theater positions use that same selection.
 Private identity requests consume cancellation and verify the current reader's
 private lifetime before returning. Direct/shared URLs offer Back to the timeline;
 comment return journeys are supplied separately by the same-tab journey owner.
+
+The integrated [comment-tagging acceptance record](superpowers/verification/2026-10-31-comment-tagging.md)
+covers the combined member collection, hidden totals, independent same-name
+people, and same-tab return journey using disposable member sessions.

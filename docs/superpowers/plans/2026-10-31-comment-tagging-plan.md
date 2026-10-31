@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -18,7 +18,7 @@
 - Use **comment tagging / comment-tagged** and **photo tagging / photo-tagged**.
 - Only member accounts appear in `@`; keep account emails private.
 - Unique account names, own avatars, combined visible photos/videos, and separate comment-tag emails defaulting on are approved requirements.
-- This is planning work. Execution, deployment, push, merge, and PR creation are not part of this change.
+- Subsequent explicit implementation authorization activated this plan. Deployment, push, merge, and PR creation remain outside execution scope.
 
 ## Review Focus
 
@@ -132,4 +132,4 @@ Each plan ends in passing focused tests and current documentation, not a deploye
 feature. V1/V2 own final evidence. Record actual commands, results, captures, and
 limitations in `docs/superpowers/verification/2026-10-31-comment-tagging.md` at
 execution time. Do not mark unsupported browser, screen-reader, or runtime claims
-as passing. No remaining product decision blocks implementation planning.
+as passing. Implementation decisions and measured resource corrections are recorded in the verification record.

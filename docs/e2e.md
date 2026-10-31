@@ -1188,3 +1188,14 @@ The shared fixture still validates the real current account for every context.
 This avoids charging each controlled capture's synthetic navigation to the same
 live session and keeps these layout fixtures distinct from real authorization
 flows. Product limits, counters, auth behavior and live-flow helpers are unchanged.
+
+## Comment-tagging release gates
+
+The [integrated acceptance record](superpowers/verification/2026-10-31-comment-tagging.md)
+separates the three-project browser suite from the disposable migration/restore
+and 512 MiB no-swap avatar HTTP rehearsal. Fixture generation occurs outside the
+measured API. Its raw archive includes failed OOM runs and final passing evidence;
+a solid-color boundary unit test alone is not resource proof. Force the web
+TypeScript build before the workspace check so stale incremental results cannot
+hide shared-contract producer errors. Native/physical accessibility limitations
+and target-runtime provisioning remain named in the acceptance record.

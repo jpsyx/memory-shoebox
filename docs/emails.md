@@ -356,3 +356,7 @@ The existing shell supplies the masthead, quotation style and source footer.
 never changes a preference. HTML and plain text include the same information,
 with escaped names/body and no image, hidden preheader or attachment. The
 snapshot can differ from edits made after scheduling.
+
+Comment-tag HTML/plain text and captured-link arrival are covered by the local
+[acceptance suite](superpowers/verification/2026-10-31-comment-tagging.md), using a
+recording service. No real recipient/provider delivery is used for verification.

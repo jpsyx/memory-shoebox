@@ -533,3 +533,48 @@ async function pngFixture(): Promise<Buffer> {
     .png()
     .toBuffer();
 }
+
+it("refuses an avatar before reading its body while background decoding owns the shared lane", async () => {
+  const context = await fixture();
+  const avatarId = await context.reserve();
+  const release = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const pending = context.app.mediaDecodeCoordinator.run({
+    signal: new AbortController().signal,
+    work: async () => {
+      entered.resolve();
+      await release.promise;
+    },
+  });
+  await entered.promise;
+  try {
+    expect(
+      (await context.upload(avatarId, Buffer.alloc(10485761))).statusCode,
+    ).toBe(503);
+  } finally {
+    release.resolve();
+    await pending;
+  }
+  expect((await context.upload(avatarId)).statusCode).toBe(200);
+});
+
+it("keeps background decoding queued until an admitted avatar really finishes", async () => {
+  const context = await fixture();
+  const avatarId = await context.reserve();
+  const held = await holdPut(context, avatarId);
+  let hasStarted = false;
+  const pending = context.app.mediaDecodeCoordinator.run({
+    signal: new AbortController().signal,
+    work: async () => {
+      hasStarted = true;
+    },
+  });
+  await new Promise<void>((resolve) => {
+    setImmediate(resolve);
+  });
+  expect(hasStarted).toBe(false);
+  held.release();
+  expect((await held.pending).statusCode).toBe(200);
+  await pending;
+  expect(hasStarted).toBe(true);
+});

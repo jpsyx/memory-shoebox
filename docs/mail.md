@@ -620,3 +620,8 @@ Failed configuration recovery validates the real tag payload and extant comment
 trigger, restoring `/items/<itemId>?comment=<commentId>` and the focused account
 preference link without scheduling another notification. Legacy message links
 retain their existing paths.
+
+The [rollout and compatibility guide](comment-tagging-rollout.md#compatibility-to-retain)
+requires no retroactive tag mail. The local populated migration rehearsal preserved
+queued rows and repeated startup did not duplicate scheduling or mail. Production
+provider sends are not part of acceptance.

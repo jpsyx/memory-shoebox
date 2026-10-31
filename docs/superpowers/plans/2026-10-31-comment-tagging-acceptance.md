@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -68,7 +68,7 @@ never read ignored production environment files. Compile the app using the
 existing browser test pattern. Use semantic role/label locators and event-based
 waits, not sleeps or screenshots as the only assertions.
 
-- [ ] **Red:** Add end-to-end assertions before fixing missing integration behavior. When plans 1-4 already satisfy a scenario, record it as a passing integration check instead of manufacturing a failure. For actual gaps, demonstrate the failing user behavior before fixing it in the owning task. Minimum flow assertions:
+- [x] **Red:** Add end-to-end assertions before fixing missing integration behavior. When plans 1-4 already satisfy a scenario, record it as a passing integration check instead of manufacturing a failure. For actual gaps, demonstrate the failing user behavior before fixing it in the owning task. Minimum flow assertions:
 
 ```ts
 await expect(
@@ -97,10 +97,10 @@ link behavior; no hidden rows/counts; member filter changes while paging; avatar
 replacement conflict; sign-out/access loss during pending saves; and updated
 photo-tag suffixes in item, upload, bulk, filters, and directory.
 
-- [ ] **Run:** `pnpm exec playwright test -c playwright.comment-tagging.config.ts`. Expected PASS after integration; any unsupported native feature is documented explicitly and receives a separate manual check, not silently skipped coverage.
-- [ ] **Implement corrections:** Fix only demonstrated gaps in their owning modules with the same targeted red/green cycle. Keep the browser harness independent of production configuration. Load `playwright-best-practices` before adding the tests.
+- [x] **Run:** `pnpm exec playwright test -c playwright.comment-tagging.config.ts`. Expected PASS after integration; any unsupported native feature is documented explicitly and receives a separate manual check, not silently skipped coverage.
+- [x] **Implement corrections:** Fix only demonstrated gaps in their owning modules with the same targeted red/green cycle. Keep the browser harness independent of production configuration. Load `playwright-best-practices` before adding the tests.
 - [ ] **Verify visual/interaction acceptance:** Capture desktop and phone together, use real long names, 4,000-character text, avatar failures, empty/error states, and every rendition. Inspect one batch, fix the findings, and confirm once through Impeccable. Test 200% zoom, touch scrolling with keyboard open, all crop controls without dragging, focus announcements, no-motion settings, and real native fullscreen where supported. IME and screen-reader behavior need actual browser/assistive checks; unit tests alone do not establish them. Save verified captures in the feature's Downloads folder and evidence in `docs/superpowers/verification/2026-10-31-comment-tagging.md`.
-- [ ] **Commit:** `test: cover comment tagging and member identity journeys`.
+- [x] **Commit:** `test: cover comment tagging and member identity journeys`.
 
 ### Task V2: Migration recovery, resource rehearsal, and release evidence
 
@@ -120,9 +120,9 @@ restore order, compatibility limits, and actual resource observations. Productio
 commands are instructions for the eventual operator, not actions in this task.
 Read `docs/migrations.md#offline-restore` before writing those instructions.
 
-- [ ] **Prepare rehearsal:** Create disposable pre-0019 fixtures containing valid accounts, duplicate normalized/fallback names, invalid names, removed accounts, invited names, existing comments/replies and queued mail. Add a late migration failure to prove whole-transaction rollback. Use fake B2 with a deliberately abandoned avatar key. These are generated fixtures, not a production catalog download.
-- [ ] **Run and assert:** Audit must make zero writes. An unresolved or stale mapping must stop without changing members, people, comments, mail, or migration history. A valid explicit mapping must preserve identity IDs and references, then complete all migrations. Repeat startup to prove no duplicate claims or mail. Verify the backup with integrity/foreign-key checks and restore it while the rehearsal app is stopped. The restored catalog runs with its matching old release, not new schema with old code.
-- [ ] **Write exact rehearsal commands:** From repository root, document the implemented command syntax and a user-owned absolute disposable path. For example, after the tools exist:
+- [x] **Prepare rehearsal:** Create disposable pre-0019 fixtures containing valid accounts, duplicate normalized/fallback names, invalid names, removed accounts, invited names, existing comments/replies and queued mail. Add a late migration failure to prove whole-transaction rollback. Use fake B2 with a deliberately abandoned avatar key. These are generated fixtures, not a production catalog download.
+- [x] **Run and assert:** Audit must make zero writes. An unresolved or stale mapping must stop without changing members, people, comments, mail, or migration history. A valid explicit mapping must preserve identity IDs and references, then complete all migrations. Repeat startup to prove no duplicate claims or mail. Verify the backup with integrity/foreign-key checks and restore it while the rehearsal app is stopped. The restored catalog runs with its matching old release, not new schema with old code.
+- [x] **Write exact rehearsal commands:** From repository root, document the implemented command syntax and a user-owned absolute disposable path. For example, after the tools exist:
 
 ```sh
 node apps/server/scripts/backupDatabase.ts "$REHEARSAL_DB" "$REHEARSAL_BACKUP"
@@ -139,7 +139,7 @@ release. Include the existing backup tool's refusal to overwrite destinations.
 Do not invent Fly app names or run deployments. No name mapping is needed until
 an actual collision report exists; no production collision-free claim is made.
 
-- [ ] **Measure avatar resources:** In an equivalent disposable runtime, send maximum accepted JPEG/PNG/WebP dimensions/bytes, rejected animation/corruption,
+- [x] **Measure avatar resources:** In an equivalent disposable runtime, send maximum accepted JPEG/PNG/WebP dimensions/bytes, rejected animation/corruption,
       and concurrent requests through the actual route. Record peak resident memory,
       response time, active decoder count, rejection behavior, and background-job
       interaction. Require the deployed memory envelope to remain viable. If it does
@@ -153,7 +153,7 @@ an actual collision report exists; no production collision-free claim is made.
       old notification preferences), and the permanent notification-ledger behavior.
       Update all affected docs and copy Markdown/PDF artifacts to Downloads. Do not
       rerun the complete suite absent a new change or unresolved failure.
-- [ ] **Commit:** `docs: record comment tagging acceptance and rollout`.
+- [x] **Commit:** `docs: record comment tagging acceptance and rollout`.
 
 ## Release handoff
 
@@ -162,3 +162,20 @@ operator action. The handoff must identify any unresolved measured runtime or
 assistive-technology limitation, require an actual preflight on the target
 catalog before enabling new code, and give exact backup/restore steps. There is
 no automatic push, merge, production migration, email test, or deployment.
+
+## Execution qualifications
+
+V1 automated/visual acceptance passed with the explicitly recorded native limits.
+The visual/interaction checkbox remains open for actual physical keyboard/touch,
+OS IME, assistive technology and OS-native fullscreen checks; engine simulations
+are not substitutes. V2 rehearsed real rollback, pre-stage backup restoration,
+old-release startup and bounded avatar HTTP processing. The measured WebP remedy
+uses a 12 MP intermediate raster and the existing shared decoder lane; approved
+50 MP originals, exact crop framing and zoom 8 remain. Independent final review
+and actual-target preflight precede any operator rollout. See the verification
+record for gate results, not the original expected-output snippets above.
+
+The V2 final-verification checkbox remains open only for the controller-owned
+Downloads Markdown/PDF/archive delivery. Both required executable checks passed:
+`pnpm check` and all 60 browser tests. The server suite has seven existing environment-gated skips, recorded
+explicitly in the verification record.

@@ -185,3 +185,8 @@ moment. Local undo/redo survives ordinary provider rerenders by comparing the
 actual controlled body/range values. Reply/edit forms keep their current mounted
 lifetime and only clear/close a matching successful submission. This change does
 not add session journey persistence or a separate conversation write pipeline.
+
+The [integrated acceptance record](superpowers/verification/2026-10-31-comment-tagging.md)
+records comment-tag arrival, draft return and nested Escape behavior. Engine
+fullscreen API tests do not establish OS-native fullscreen, physical keyboard
+behavior or screen-reader interaction; those limitations remain explicit.

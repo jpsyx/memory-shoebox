@@ -198,3 +198,184 @@ and its sibling `visual-r1-before-mirror/`. Both are copied, with SHA-256
 manifests, under
 `~/Downloads/memory-shoebox_comment-tags/comment-tagging/v1-browser/`.
 The original `visual/` directory remains explicitly pre-R1 evidence.
+
+## V2 catalog recovery rehearsal
+
+All data was generated locally. The rehearsal source, command transcripts, fixtures,
+container metadata and assertions are retained in the execution evidence archive
+under `v2-evidence/`. No production catalog, provider, mail recipient or deployment
+was accessed. `migration.mjs` and `migration2.log` record the successful sequence;
+the initial harness typo (`parent_id` instead of `parent_comment_id`) is retained
+in `migration.log` and is not a product failure or TDD red result.
+
+Eight pre-0019 identities covered normalized duplicate names, an email-local
+fallback collision, an invalid name, a removed account, an unjoined invitation,
+a valid unique name and a unique fallback. The fixture included linked and ad-hoc
+people, photo associations, a comment and reply, and a queued mail row. Assertions
+verified:
+
+- Audit left both catalog bytes and every schema/data snapshot unchanged.
+- Unresolved/stale stage inputs, unstaged collisions and a subsequently stale
+  staged fingerprint failed without changing identities, people, comments, mail
+  or migration history.
+- A deliberate exception **after real 0021 finished** rolled all three pending
+  migrations, staging consumption, data changes and history back together.
+- Explicit choices preserved member/person/comment/reply/item/outbox IDs and
+  references through 0019-0021. Eight claims and one existing mail row remained
+  stable through repeated migration and two real application startups.
+- The real startup/sweep/drain lifecycle retired a deliberately abandoned avatar
+  reservation and deleted its fake stored object. No mail service was installed.
+- Both the manual backup and stage's independent **pre-stage** backup passed
+  `integrity_check`, `foreign_key_check` and standalone DELETE-journal checks.
+  The CLI refused an existing backup destination.
+
+`restore-sidecars.mjs` additionally killed a disposable SQLite writer after a
+committed WAL write, stopped every owner, retained the actual main/WAL/SHM files
+in one diagnosis directory, and restored the verified pre-stage snapshot. Numeric
+owner/group 501/20 and mode 0640 were restored and checked on this Mac. The actual
+archived release `187e8baf95836195e1b07b14041ce65abedde010` then reported no pending
+migrations through 0018 and served HTTP health 200 with owned jobs started and
+fake B2/no mail. `old-release-provenance.json` records the resolved archived shared
+source and archived compiled email entry point; identical-lock third-party
+modules were reused. This was a source archive, not another worktree. The
+[rollout guide](../../comment-tagging-rollout.md) gives operator commands and the
+matching-release restore order.
+
+## V2 avatar resource boundary
+
+The measured environment was a disposable Linux ARM64 Docker container, Node
+22.23.3, Sharp 0.35.5, libvips 8.18.7 and libwebp 1.6.0. The actual cgroup values
+were `memory.max=536870912`, `memory.swap.max=0`, and `cpu.max=100000 100000`.
+No swap or unbounded CPU could hide an overrun. This is an explicitly chosen
+512 MiB equivalent bound: no tracked `fly.toml` establishes deployed settings and
+none were inspected. Docker image IDs and full codec versions are in the archive.
+
+Pre-generated procedural images contained varying RGB and alpha values, including
+many distinct noisy tiles. Generation ran outside the measured API/container.
+The input manifest includes dimensions, encoded sizes and SHA-256 hashes. Natural
+encoded sizes ranged from 642,263 to 7,575,149 bytes; separate exact-10-MiB variants
+padded those same nontrivial images. Padding alone was not the codec memory proof.
+The alpha PNG depth was inspected as 16 bits per sample. Actual HTTP reservation
+and binary upload routes, real sessions, fake B2 and no-mail services were used.
+
+The original implementation was unsafe: valid 50 MP alpha WebP killed the API
+with Docker `OOMKilled=true`, exit 137. Pre-resize extraction disabled WebP
+shrink-on-load. A second measured failure exposed full reduced-frame rotation;
+a third exposed the no-shrink corner at a 256-pixel selected crop. The final
+implementation keeps the shared full-resolution integer square authoritative,
+inverse-maps it into the encoded orientation, limits the reduced WebP raster to
+12 MP, reads a small enclosing ROI, and maps fractional crop edges to the 256
+output using affine sampling. It rotates only the final square. The ROI is at
+most 261 pixels per side. All eight EXIF transforms, including mirrored 5 and 7,
+were compared with literal original crop rectangles. Eight full-size extreme
+comparisons had mean absolute channel error 3.65-7.75 out of 255. This proves
+framing and measured visual parity, **not pixel identity**: extreme zoom can
+sample an intermediate crop smaller than 256 pixels and reconstruct the output.
+No original size, byte limit, zoom range or shared geometry contract was reduced.
+
+Sharp uses one processing thread and no retained image cache, matching the
+existing media recipe settings. The existing shared decode coordinator now offers
+immediate admission: avatars reject before buffering when background work owns
+or waits for the lane; background work waits until the admitted avatar actually
+settles. Aborts do not release started work prematurely. No Promise timeout is
+claimed to cancel native work. A translucent-color regression caught and fixed
+incorrect reuse of `OutputInfo.premultiplied` as raw-input metadata.
+
+The complete 16 MP intermediate matrix (`resource4.log`, `resource-results4.json`) completed
+34 cases: 32 valid uploads returned 200, corrupt and animated inputs returned 400.
+Every image had centered, off-center fractional zoom, zoom 8 and exact-10-MiB
+cases. Concurrent maximum-body requests returned 503 `avatar_busy`; sampled
+native work never exceeded one active decoder.
+
+| Input                        | Dimensions   | Maximum request ms | Sampled container MiB | Sampled API RSS MiB |
+| ---------------------------- | ------------ | -----------------: | --------------------: | ------------------: |
+| EXIF JPEG                    | 10000 x 5000 |              399.7 |                 310.4 |               362.5 |
+| Alpha PNG, 8-bit             | 7071 x 7071  |              166.8 |                 235.8 |               287.5 |
+| Alpha WebP                   | 10000 x 5000 |              568.6 |                 312.4 |               364.7 |
+| Wide alpha WebP              | 16383 x 3051 |              394.3 |                 370.0 |               422.1 |
+| Wide oriented alpha WebP     | 16383 x 3051 |              419.3 |                 382.2 |               434.2 |
+| Alpha PNG, 16-bit            | 7071 x 7071  |              345.3 |                 373.1 |               424.7 |
+| 256px maximum-zoom crop WebP | 16383 x 2055 |              390.9 |                 463.3 |               515.2 |
+| Oriented 256px crop WebP     | 16383 x 2055 |              444.5 |                 476.7 |               528.8 |
+
+The kernel's cumulative `memory.peak` was **499,859,456 bytes (476.7 MiB)**;
+`memory.events` reported no OOM/kill, and the app shut down normally. Sampled
+process RSS reached **528.8 MiB**, which includes mapped/shared pages accounted
+for differently by the cgroup. These are separate measurements. That limited headroom prompted one bounded
+comparison at 12 MP, which is the selected final intermediate cap below. Neither
+measurement establishes a universal ceiling for all codec content or inspects
+the actual deployed target. Maximum concurrent health
+latency was 59.5 ms; every health response was 200.
+
+Real sweep, deletion, mail, media-processing and fingerprint job-runner calls
+settled while avatars ran; the two decoder jobs waited for the shared lane.
+Automatic media codecs were disabled in this fixture because no delegated worker
+cgroup was configured. A separate controlled probe ran the actual native photo
+fingerprint helper through that same coordinator: an avatar was refused with 503
+in 10.1 ms, then succeeded after decoding finished, with one active decoder and
+202.6 MiB cgroup peak. This proves lane interaction, not production worker-cgroup
+provisioning. The existing isolated media runtime still fails closed when its
+own prerequisites are unavailable.
+
+### Selected 12 MP cap
+
+One final bounded comparison lowered only the **intermediate** WebP raster cap
+to 12 MP. The same eight full-size reference comparisons passed at 3.65-7.75 mean
+absolute channel error. The four widest/small-crop inputs, orientations 1 and 6,
+ran through the actual route at maximum zoom twice each: eight successes, no
+OOM, maximum 429.4 ms. Kernel peak was **324,067,328 bytes (309.1 MiB)**;
+sampled API RSS was **378,138,624 bytes (360.6 MiB)**. Linux `smaps_rollup`
+maxima were RSS 369,792 KiB, PSS 369,788 KiB, private clean 64,028 KiB,
+private dirty 305,760 KiB and shared clean 4 KiB. File-backed page accounting
+explains why process residency and cgroup charges are not interchangeable.
+The final cap leaves measured resident headroom as well as cgroup headroom.
+`full-parity-12mp.log`, `resource-12mp.log` and `resource-results-12mp.json`
+retain this comparison. The final selected implementation then repeated the **complete 34-case matrix**
+(`resource-final.log`, `resource-results-final.json`) and the shared native-lane
+probe. All 32 valid requests returned 200; corruption/animation returned 400;
+concurrent requests returned 503. Kernel peak was **428,945,408 bytes (409.1 MiB)**,
+sampled API RSS **486,043,648 bytes (463.5 MiB)**. Sampled rollup maxima were RSS
+473,336 KiB, PSS 473,332 KiB, private clean 64,556 KiB, private dirty 409,032 KiB
+and shared clean 4 KiB. OOM/kill counters remained zero and shutdown exited 0.
+Every health request returned 200, maximum 71.6 ms. Maximum upload time was
+1,499.5 ms while workspace/browser verification also used the host; these are
+observations under the recorded CPU quota, not latency guarantees. The native
+background probe returned 503 in 7.1 ms and then 200 after work settled; active
+decoders never exceeded one. JPEG/PNG behavior and source limits are unchanged.
+Actual target configuration remains a deployment gate.
+
+## V2 final integration gates
+
+The migration and resource proof introduced a server runtime correction, so the
+full three-project browser suite ran again. Existing V1 inspected visual captures
+remain valid for the unchanged UI; physical/native limitations above remain open.
+
+- `pnpm --filter @memory-shoebox/web exec tsc -b --force`: passed before workspace
+  verification, avoiding stale incremental types (`forced-types.log`).
+- `pnpm check`: exit 0 (`check-verified.log`). Format, lint, all workspace types,
+  web/email builds, root 299, shared 367, emails 56, web 2,447 and server 2,433
+  tests passed. Seven existing environment-gated tests were skipped: three delegated-Linux
+  runtime cases on macOS, three fake-email PDF cases without the server
+  package's Chromium, and one opt-in built-SPA case without
+  `STATIC_SPA_BUILT_OUTPUT`. The resource rehearsal establishes its stated local
+  bound, not those missing isolated-runtime checks.
+- `pnpm exec playwright test -c playwright.comment-tagging.config.ts`: all 60
+  tests passed across three projects, no retries/skips, 1.6 minutes
+  (`browser-final.log`). No provider calls or real mail were used.
+
+Actual earlier workspace failures and scoped corrections remain in the evidence:
+Sharp type imports, the email public-export expectation for the new tag template,
+and a SignIn unit helper that mixed the distinct create-session and current-me
+response shapes. The corrected helper explicitly maps the session marker; schemas
+were not relaxed. Focused email tests passed 2/2 and all SignIn/setup helper
+consumers passed 39/39. The final full check includes those corrections. Existing
+jsdom `scrollTo()` notices and the third-party build directive warning remain;
+they did not fail the checks.
+
+The final resource image, browser run and current source share the selected
+12 MP runtime behavior. Only erased type annotations and unit-test fixtures
+changed after the image build; source hashes and that distinction are retained
+in `source-manifest.json`. No repeated resource or visual sweep was required.
+Independent task/whole-branch review and consolidated Downloads Markdown/PDF/archive
+delivery remain controller-owned. Actual-target preflight and the native/assistive
+limitations above remain operator gates. Publication and deployment did not run.

@@ -376,3 +376,8 @@ preference schema requires the original four booleans and allows only the new
 field to be omitted. An older four-switch PATCH preserves the stored tag
 preference; it does not reset it to the default. The persisted preference defaults
 on for existing and newly created members.
+
+The [rollout compatibility record](comment-tagging-rollout.md#compatibility-to-retain)
+keeps legacy creates plain, rejects omission on an already-tagged edit, and
+preserves the new preference when an older four-switch client saves. The shared
+full-resolution crop helper remains unchanged by the bounded server decoder.

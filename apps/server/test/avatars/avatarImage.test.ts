@@ -258,3 +258,111 @@ it("extracts the shared floored square for odd dimensions and fractional zoom", 
   expect(data.at(-3)).toBeGreaterThan(240);
   expect(data.at(-1)).toBeLessThan(15);
 });
+
+async function webpParityFixture(orientation: number): Promise<Buffer> {
+  const width = 2501;
+  const height = 1703;
+  const imagePixels = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      imagePixels[offset] = Math.floor(x / 10) % 256;
+      imagePixels[offset + 1] = Math.floor(y / 7) % 256;
+      imagePixels[offset + 2] = ((x + y) >> 4) % 256;
+      imagePixels[offset + 3] = 128 + ((x >> 5) % 128);
+    }
+  }
+  return sharp(imagePixels, {
+    raw: { width, height, channels: 4 },
+  })
+    .withMetadata({ orientation })
+    .webp()
+    .toBuffer();
+}
+
+it.each([
+  ...[2, 3, 4].map((orientation) => {
+    return {
+      orientation,
+      crop: { centerX: 0.71, centerY: 0.36, zoom: 1.7 },
+      square: { left: 1275, top: 112, width: 1001, height: 1001 },
+    };
+  }),
+  ...[5, 7, 8].map((orientation) => {
+    return {
+      orientation,
+      crop: { centerX: 0.71, centerY: 0.36, zoom: 1.7 },
+      square: { left: 702, top: 399, width: 1001, height: 1001 },
+    };
+  }),
+  {
+    orientation: 1,
+    crop: { centerX: 0.71, centerY: 0.36, zoom: 1.7 },
+    square: { left: 1275, top: 112, width: 1001, height: 1001 },
+  },
+  {
+    orientation: 6,
+    crop: { centerX: 0.71, centerY: 0.36, zoom: 1.7 },
+    square: { left: 702, top: 399, width: 1001, height: 1001 },
+  },
+  {
+    orientation: 1,
+    crop: { centerX: 0.95, centerY: 0.1, zoom: 8 },
+    square: { left: 2269, top: 64, width: 212, height: 212 },
+  },
+])(
+  "preserves full-resolution WebP crop edges through reduced decode: $orientation/$crop.zoom",
+  async ({ orientation, crop: chosenCrop, square }) => {
+    const bytes = await webpParityFixture(orientation);
+    const expected = await sharp(
+      await sharp(bytes)
+        .autoOrient()
+        .extract(square)
+        .resize(256, 256)
+        .webp()
+        .toBuffer(),
+    )
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+    const output = await makeAvatarImageFromBytes({
+      bytes,
+      contentType: "image/webp",
+      crop: chosenCrop,
+    });
+    const actual = await sharp(output).ensureAlpha().raw().toBuffer();
+    expect(actual.length).toBe(expected.length);
+    const error =
+      actual.reduce((sum, value, index) => {
+        return sum + Math.abs(value - expected[index]!);
+      }, 0) / actual.length;
+    expect(error).toBeLessThan(8);
+    expect(await sharp(output).metadata()).toMatchObject({
+      width: 256,
+      height: 256,
+    });
+  },
+);
+
+it("preserves translucent WebP colors across the bounded raw-image stages", async () => {
+  const bytes = await sharp({
+    create: {
+      width: 2501,
+      height: 1703,
+      channels: 4,
+      background: { r: 30, g: 70, b: 110, alpha: 0.25 },
+    },
+  })
+    .webp()
+    .toBuffer();
+  const output = await makeAvatarImageFromBytes({
+    bytes,
+    contentType: "image/webp",
+    crop,
+  });
+  const imagePixels = await sharp(output).ensureAlpha().raw().toBuffer();
+  expect(Math.abs(imagePixels[0]! - 30)).toBeLessThan(8);
+  expect(Math.abs(imagePixels[1]! - 70)).toBeLessThan(8);
+  expect(Math.abs(imagePixels[2]! - 110)).toBeLessThan(8);
+  expect(Math.abs(imagePixels[3]! - 64)).toBeLessThan(2);
+});

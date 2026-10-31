@@ -10,7 +10,7 @@
 
 **Spec:** [Approved scope](../specs/2026-10-31-comment-tagging-design.md) and [approved UI/UX shape](../specs/2026-10-31-comment-tagging-ux-shape.md). Read both before execution.
 
-**Status:** Prepared for implementation review on 2026-10-31. No implementation or passing feature tests are claimed.
+**Status:** Implementation, local recovery/resource acceptance, and final workspace/browser checks passed on 2026-10-31. Independent task/whole-branch review and consolidated artifact delivery remain pending in the [verification record](../verification/2026-10-31-comment-tagging.md). Native/assistive limits remain open. Deployment has not run.
 
 ## Global Constraints
 
@@ -54,7 +54,7 @@ helper; do not change existing vocabulary normalization as incidental cleanup.
 N3 will adopt this schema in `UpdateMeRequest.displayName`; this task does not
 change existing request/response shapes.
 
-- [ ] **Red:** Add these assertions plus empty, newline, format-control, and 81-character refusal cases:
+- [x] **Red:** Add these assertions plus empty, newline, format-control, and 81-character refusal cases:
 
 ```ts
 expect(makeAccountNameKeyFromName("  JoHN   M ")).toBe("john m");
@@ -64,10 +64,10 @@ expect(accountNameSchema.safeParse("@John").success).toBe(false);
 expect(accountNameSchema.safeParse(null).success).toBe(false);
 ```
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/shared test src/accountNames/accountNames.test.ts`. Expect the new contracts to fail before implementation.
-- [ ] **Green:** Implement the named exports and schemas. Generate shared exports; preserve existing payload privacy.
-- [ ] **Verify:** Rerun the command and shared `check:exports`; expect PASS. Update `docs/shared.md` with the normalization rule.
-- [ ] **Commit:** `feat: define unique account name contracts`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/shared test src/accountNames/accountNames.test.ts`. Expect the new contracts to fail before implementation.
+- [x] **Green:** Implement the named exports and schemas. Generate shared exports; preserve existing payload privacy.
+- [x] **Verify:** Rerun the command and shared `check:exports`; expect PASS. Update `docs/shared.md` with the normalization rule.
+- [x] **Commit:** `feat: define unique account name contracts`.
 
 ### Task N2: Claims, collision staging, and atomic migration
 
@@ -120,7 +120,7 @@ with validated names become complete; unjoined invited accounts remain incomplet
 For new invitations after N3, suggestions never claim names. Empty fresh catalogs
 migrate without a mapping. Do not choose a winner or number conflicting names.
 
-- [ ] **Red:** Test historical subset migration and two independent DB connections contending for a claim. Assert no partial member/person/claim writes on late failure:
+- [x] **Red:** Test historical subset migration and two independent DB connections contending for a claim. Assert no partial member/person/claim writes on late failure:
 
 ```ts
 expect(winningClaims).toHaveLength(1);
@@ -134,10 +134,10 @@ Also test CLI help before file access, read-only audit, stale mapping refusal,
 backup creation, redirected JSON stdout, progress/recovery on stderr, cancellation,
 and the bare-command action wizard per `cli-command-conventions`.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/server test test/members/claimMemberName.test.ts test/members/memberNameRollout.test.ts test/schema/memberNameClaimsMigration.test.ts`.
-- [ ] **Green:** Implement the transaction action, bounded small-member audit, command, and additive migration. Keep legacy normalization frozen in this migration's helper so later product changes cannot reinterpret an old migration.
-- [ ] **Verify:** Rerun focused tests, then `pnpm --filter @memory-shoebox/server test test/schema test/db/migrationSafety.test.ts`. Update `docs/migrations.md` and create `docs/member-profiles.md` with staging and claim ownership.
-- [ ] **Commit:** `feat: enforce permanent member name claims`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/server test test/members/claimMemberName.test.ts test/members/memberNameRollout.test.ts test/schema/memberNameClaimsMigration.test.ts`.
+- [x] **Green:** Implement the transaction action, bounded small-member audit, command, and additive migration. Keep legacy normalization frozen in this migration's helper so later product changes cannot reinterpret an old migration.
+- [x] **Verify:** Rerun focused tests, then `pnpm --filter @memory-shoebox/server test test/schema test/db/migrationSafety.test.ts`. Update `docs/migrations.md` and create `docs/member-profiles.md` with staging and claim ownership.
+- [x] **Commit:** `feat: enforce permanent member name claims`.
 
 ### Task N3: Claim names on every write path and enforce completion
 
@@ -177,7 +177,7 @@ item-visibility 404 checks before detailed target errors. Never expose an email
 fallback in public member/person refs; unnamed identities use “Member” until they
 claim a name and remain excluded from `@`.
 
-- [ ] **Red:** Exercise the real routes with existing `createTestApp`, `insertSignedInMember`, and seed helpers:
+- [x] **Red:** Exercise the real routes with existing `createTestApp`, `insertSignedInMember`, and seed helpers:
 
 ```ts
 expect(taken.statusCode).toBe(409);
@@ -191,10 +191,10 @@ Pin rollback on person-sync failure, invitation suggestion collisions being
 allowed, restored claimed-name clearing being refused, anonymous non-enumeration,
 and complete-profile admin/viewer role behavior.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/profileCompletion.test.ts test/seedMember.test.ts test/setup test/auth test/administration`.
-- [ ] **Green:** Route every actual claimed-name write through N2; do not rename ad-hoc people. Update test seed helpers to create a valid unique claimed account by default, with an explicit incomplete fixture. Add profile completion guards to all affected write entry points.
-- [ ] **Verify:** Rerun the command; expect PASS. Update `docs/auth.md`, `docs/administration.md`, `docs/setup.md`, and `docs/member-profiles.md`.
-- [ ] **Commit:** `feat: require claimed names before participation`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/server test test/routes/profileCompletion.test.ts test/seedMember.test.ts test/setup test/auth test/administration`.
+- [x] **Green:** Route every actual claimed-name write through N2; do not rename ad-hoc people. Update test seed helpers to create a valid unique claimed account by default, with an explicit incomplete fixture. Add profile completion guards to all affected write entry points.
+- [x] **Verify:** Rerun the command; expect PASS. Update `docs/auth.md`, `docs/administration.md`, `docs/setup.md`, and `docs/member-profiles.md`.
+- [x] **Commit:** `feat: require claimed names before participation`.
 
 ### Task N4: Profile form, account rename, and membership labels
 
@@ -231,7 +231,7 @@ external and protocol-relative destinations fall back to `/`. The photo row is
 added by A3, not a fake upload control in this task. Account saves retain current
 independent field reconciliation and give focus to the invalid name on conflict.
 
-- [ ] **Red:** Test completion redirect, name conflict and retry, no email-as-name placeholder, and pending edits surviving failed saves:
+- [x] **Red:** Test completion redirect, name conflict and retry, no email-as-name placeholder, and pending edits surviving failed saves:
 
 ```ts
 expect(personLabel({ personId, displayName: "Jorge", isMember: false })).toBe(
@@ -247,7 +247,7 @@ expect(destination).toBe(`/items/${itemId}?comment=${commentId}`);
 Cover selected chips, new ad-hoc choices, bulk/upload, directory and filters,
 removed linked identities, safe redirects, and changed account during save.
 
-- [ ] **Run red:** `pnpm --filter @memory-shoebox/web test src/surfaces/ProfileCompletion src/system/personLabel src/system/PeopleField src/surfaces/Account/YouSheet src/routes/-bootstrap-redirect.test.ts`.
-- [ ] **Green:** Implement the form and shared label, wire every named consumer and shared photo-tagging picker, and add explicit “Photo-tag someone” copy from the approved shape. Generate routes through the normal Vite tooling.
-- [ ] **Verify:** Rerun focused tests and server people-reader tests, then both package type checks. Update `docs/member-profiles.md`, `docs/archive.md`, and the obsolete member/non-member presentation rule in `DESIGN.md`.
-- [ ] **Commit:** `feat: complete profiles and distinguish photo-tag identities`.
+- [x] **Run red:** `pnpm --filter @memory-shoebox/web test src/surfaces/ProfileCompletion src/system/personLabel src/system/PeopleField src/surfaces/Account/YouSheet src/routes/-bootstrap-redirect.test.ts`.
+- [x] **Green:** Implement the form and shared label, wire every named consumer and shared photo-tagging picker, and add explicit “Photo-tag someone” copy from the approved shape. Generate routes through the normal Vite tooling.
+- [x] **Verify:** Rerun focused tests and server people-reader tests, then both package type checks. Update `docs/member-profiles.md`, `docs/archive.md`, and the obsolete member/non-member presentation rule in `DESIGN.md`.
+- [x] **Commit:** `feat: complete profiles and distinguish photo-tag identities`.
