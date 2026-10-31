@@ -20,7 +20,9 @@ type Props = {
   onSeek?: (seconds: number) => void;
   /** Saves an edit. Call `onSaved` once the server has the new words. */
   onSaveEdit?: (
-    options: Readonly<CommentDraft & { onSaved: () => void }>,
+    options: Readonly<
+      CommentDraft & { onSaved: (comment: CommentDto) => void }
+    >,
   ) => void;
   isSaving?: boolean;
   onDelete?: () => void;

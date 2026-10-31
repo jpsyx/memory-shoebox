@@ -128,7 +128,10 @@ describe("one comment", () => {
     ).toBeVisible();
 
     act(() => {
-      onSaveEdit.mock.calls[0]?.[0].onSaved();
+      onSaveEdit.mock.calls[0]?.[0].onSaved({
+        ...COMMENT,
+        body: "His father's chin, then.",
+      });
     });
     expect(
       screen.queryByRole("textbox", { name: "What you wrote" }),
@@ -360,4 +363,35 @@ it("uses the author's chosen decorative photo in the existing comment position",
     width: "30px",
     height: "30px",
   });
+});
+
+it("ignores a saved acknowledgement after the edit instance was cancelled", async () => {
+  const onSaveEdit =
+    vi.fn<NonNullable<ComponentProps<typeof CommentRow>["onSaveEdit"]>>();
+  _render(
+    <CommentRow
+      itemId="photo"
+      comment={{ ...COMMENT, canEdit: true }}
+      viewer={VIEWER}
+      onSaveEdit={onSaveEdit}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  await userEvent.type(screen.getByRole("textbox"), " More words");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Save the change" }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Leave it as it was" }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  act(() => {
+    onSaveEdit.mock.calls[0]?.[0].onSaved({
+      ...COMMENT,
+      body: "Saved old edit",
+    });
+  });
+  expect(screen.getByRole("textbox", { name: "What you wrote" })).toHaveValue(
+    COMMENT.body,
+  );
 });

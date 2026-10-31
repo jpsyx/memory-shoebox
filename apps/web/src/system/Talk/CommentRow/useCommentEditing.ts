@@ -1,4 +1,8 @@
-import type { CommentDto } from "@memory-shoebox/shared";
+import {
+  makeCommentDraftFromSavedTagIds,
+  recordSavedCommentTagIdsInPlace,
+} from "@/system/commentDraftHelpers/commentTagProvenance";
+import type { CommentDto, CommentTagInput } from "@memory-shoebox/shared";
 import {
   getFailedCommentTagsFromDraft,
   type CommentTagFailure,
@@ -66,7 +70,7 @@ type EditorOptions = {
   comment: CommentDto;
   isSaving: boolean;
   tagFailure?: CommentTagFailure[];
-  onSave: (draft: CommentDraft, onSaved: () => void) => void;
+  onSave: (draft: CommentDraft, onSaved: (comment: CommentDto) => void) => void;
   onCancel: () => void;
 };
 type EditorDraft = {
@@ -81,12 +85,10 @@ export function useCommentEditorDraft(
   options: Readonly<EditorOptions>,
 ): EditorDraft {
   const { comment } = options;
-  const [draft, setDraft] = useState<CommentDraft>({
-    body: comment.body,
-    commentTags: comment.commentTags,
-  });
-  const currentDraft = useRef(draft);
-  currentDraft.current = draft;
+  const local = useLocalCommentDraft(comment);
+  const { draft, setDraft } = local;
+  const owner = useRef(comment.commentId);
+  owner.current = comment.commentId;
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const isMounted = useRef(false);
   useLayoutEffect(() => {
@@ -101,10 +103,14 @@ export function useCommentEditorDraft(
       return;
     }
     const submitted = draft;
-    options.onSave(draft, () => {
-      if (isMounted.current && currentDraft.current === submitted) {
-        options.onCancel();
-      }
+    options.onSave(draft, (saved) => {
+      _acceptSavedComment(saved, {
+        options,
+        local,
+        owner,
+        isMounted,
+        submitted,
+      });
     });
   };
   return { draft, setDraft, fieldRef, save, canSave };
@@ -125,4 +131,60 @@ function _canSaveCommentDraft(
     getFailedCommentTagsFromDraft({ draft, failures: options.tagFailure ?? [] })
       .length === 0
   );
+}
+
+function useLocalCommentDraft(comment: Readonly<CommentDto>): Pick<
+  EditorDraft,
+  "draft" | "setDraft"
+> & {
+  currentDraft: RefObject<CommentDraft>;
+  savedTagIds: RefObject<WeakMap<CommentTagInput, string>>;
+} {
+  const savedTagIds = useRef(new WeakMap<CommentTagInput, string>());
+  const [draft, setDraftValue] = useState<CommentDraft>({
+    body: comment.body,
+    commentTags: comment.commentTags,
+  });
+  const currentDraft = useRef(draft);
+  currentDraft.current = draft;
+  const setDraft = (updatedDraft: CommentDraft) => {
+    setDraftValue(
+      makeCommentDraftFromSavedTagIds({
+        draft: updatedDraft,
+        tagIds: savedTagIds.current,
+      }),
+    );
+  };
+  return { draft, setDraft, currentDraft, savedTagIds };
+}
+
+type SavedEdit = {
+  options: Readonly<EditorOptions>;
+  local: ReturnType<typeof useLocalCommentDraft>;
+  owner: RefObject<string>;
+  isMounted: RefObject<boolean>;
+  submitted: CommentDraft;
+};
+function _acceptSavedComment(
+  saved: Readonly<CommentDto>,
+  context: Readonly<SavedEdit>,
+): void {
+  const { options, local, owner, isMounted, submitted } = context;
+  if (
+    !isMounted.current ||
+    saved.commentId !== owner.current ||
+    saved.commentId !== options.comment.commentId
+  ) {
+    return;
+  }
+  recordSavedCommentTagIdsInPlace({
+    submitted,
+    savedTags: saved.commentTags,
+    tagIds: local.savedTagIds.current,
+  });
+  if (local.currentDraft.current === submitted) {
+    options.onCancel();
+  } else {
+    local.setDraft(local.currentDraft.current);
+  }
 }

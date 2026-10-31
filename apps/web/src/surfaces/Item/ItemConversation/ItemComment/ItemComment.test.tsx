@@ -238,3 +238,115 @@ it("does not attach a late tag refusal to a replacement selection at the same in
     screen.queryByRole("button", { name: "Keep as plain text" }),
   ).not.toBeInTheDocument();
 });
+
+it.each(["append", "shift", "replace"])(
+  "reconciles a fresh saved occurrence after %s while retaining newer edits",
+  async (change) => {
+    const hold = makeHold();
+    const saved = makeComment({
+      ...comment,
+      body: "@Jorge",
+      commentTags: [
+        {
+          memberId: SIGNED_IN.memberId,
+          tagId: "00000000-0000-4000-8000-000000000099",
+          start: 0,
+          end: 6,
+          label: "Jorge",
+        },
+      ],
+    });
+    stubFetch({
+      [`PATCH /api/comments/${comment.commentId}`]: {
+        status: 200,
+        body: saved,
+        waitFor: hold.hold,
+      },
+      [`GET /api/items/${ITEM_ID}/comment-tag-candidates`]: {
+        status: 200,
+        body: { members: [{ ...SIGNED_IN, displayName: "Jorge" }] },
+      },
+    });
+    const client = setup();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const field = screen.getByRole("textbox", {
+      name: "What you wrote",
+    }) as HTMLTextAreaElement;
+    await user.clear(field);
+    await user.type(field, "  @");
+    await user.click(await screen.findByRole("option", { name: "Jorge" }));
+    await user.click(screen.getByRole("button", { name: "Save the change" }));
+    await waitFor(() => {
+      expect(
+        getRecordedRequests().some((request) => {
+          return request.method === "PATCH";
+        }),
+      ).toBe(true);
+    });
+    if (change === "append") {
+      await user.type(field, "more");
+    }
+    if (change === "shift") {
+      await user.click(field);
+      field.setSelectionRange(0, 0);
+      await user.keyboard("Wow ");
+    }
+    if (change === "replace") {
+      await user.clear(field);
+      await user.type(field, "  @");
+      await user.click(await screen.findByRole("option", { name: "Jorge" }));
+    }
+    const newer = field.value;
+    await act(async () => {
+      hold.letGo();
+    });
+    await waitForWritesToSettle(client);
+    expect(field).toHaveValue(newer);
+    if (change === "shift") {
+      await user.keyboard("{Control>}z{/Control}");
+      expect(field.value).not.toBe(newer);
+      await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+      expect(field).toHaveValue(newer);
+    }
+    // The member's current eligible directory no longer contains the saved name.
+    stubFetch({
+      [`PATCH /api/comments/${comment.commentId}`]: {
+        status: 200,
+        body: saved,
+      },
+      [`GET /api/items/${ITEM_ID}/comment-tag-candidates`]: {
+        status: 200,
+        body: { members: [] },
+      },
+    });
+    await user.click(screen.getByRole("button", { name: "Save the change" }));
+    await waitFor(() => {
+      expect(
+        getRecordedRequests().filter((request) => {
+          return request.method === "PATCH";
+        }),
+      ).toHaveLength(1);
+    });
+    const submittedRequest = getRecordedRequests().find((request) => {
+      return request.method === "PATCH";
+    })?.body;
+    expect(submittedRequest).toMatchObject({
+      body: newer,
+      commentTags: [
+        {
+          memberId: SIGNED_IN.memberId,
+          start: change === "shift" ? 6 : 2,
+          end: change === "shift" ? 12 : 8,
+        },
+      ],
+    });
+    const tag = (submittedRequest as { commentTags: Array<{ tagId?: string }> })
+      .commentTags[0];
+    if (change === "replace") {
+      expect(tag?.tagId).toBeUndefined();
+    } else {
+      expect(tag?.tagId).toBe(saved.commentTags[0]?.tagId);
+    }
+  },
+);

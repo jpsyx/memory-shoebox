@@ -145,7 +145,14 @@ Near 4,000 UTF-16 units the field shows a counter. Over-limit input is retained,
 including a long member selection, with the number of characters to remove;
 posting/saving is blocked until it fits. Pending writes leave editing available.
 Main, reply and edit success callbacks only clear/close the matching submitted
-revision, preserving any newer words and selected members.
+revision, preserving any newer words and selected members. A successful edit
+also carries its saved occurrences back to the still-open draft. Surviving
+occurrences acquire their server `tagId` even after prefix edits move their
+ranges; newly selected replacements never inherit another occurrence's ID.
+Immutable internal provenance on derived ranges establishes that continuity.
+An editor-lifetime acknowledgement map also restores those known IDs when
+undo/redo revisits an earlier snapshot. Neither internal provenance nor the map
+is serialized or shared across editor/account lifetimes.
 
 Structured tag failures identify submitted occurrences. A still-current refused
 tag offers Keep as plain text or Choose another member. A refreshed account name

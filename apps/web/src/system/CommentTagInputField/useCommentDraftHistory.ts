@@ -1,3 +1,4 @@
+import { hasSameCommentDraftOccurrences } from "../commentDraftHelpers/commentTagProvenance";
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import {
   makeCommentDraftFromEdit,
@@ -40,10 +41,7 @@ function useHistorySelection(
 ): void {
   useLayoutEffect(() => {
     const state = memory.current;
-    if (
-      state.lastValue.body !== options.value.body ||
-      state.lastValue.commentTags !== options.value.commentTags
-    ) {
+    if (!hasSameCommentDraftOccurrences(state.lastValue, options.value)) {
       state.past = [];
       state.future = [];
       state.before = undefined;

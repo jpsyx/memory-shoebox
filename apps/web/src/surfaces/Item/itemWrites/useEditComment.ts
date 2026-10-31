@@ -1,3 +1,4 @@
+import type { CommentDto } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +19,11 @@ import { useUpdateCachedItem } from "@/surfaces/Item/itemWrites/useUpdateCachedI
 export function useEditComment(
   options: Readonly<{ itemId: string; commentId: string }>,
 ): {
-  save: (options: Readonly<CommentDraft & { onSaved: () => void }>) => void;
+  save: (
+    options: Readonly<
+      CommentDraft & { onSaved: (comment: CommentDto) => void }
+    >,
+  ) => void;
   isSaving: boolean;
   error: string | undefined;
   tagFailure: CommentTagFailure[];
@@ -43,7 +48,24 @@ export function useEditComment(
   });
   return {
     save: ({ body, commentTags, onSaved }) => {
-      mutation.mutate({ body, commentTags }, { onSuccess: onSaved });
+      const queryKey = ["items", itemId];
+      const submittedQuery = queryClient
+        .getQueryCache()
+        .find({ queryKey, exact: true });
+      mutation.mutate(
+        { body, commentTags },
+        {
+          onSuccess: (saved) => {
+            if (
+              submittedQuery &&
+              queryClient.getQueryCache().find({ queryKey, exact: true }) ===
+                submittedQuery
+            ) {
+              onSaved(saved);
+            }
+          },
+        },
+      );
     },
     isSaving: mutation.isPending,
     tagFailure: getCommentTagFailuresFromError(

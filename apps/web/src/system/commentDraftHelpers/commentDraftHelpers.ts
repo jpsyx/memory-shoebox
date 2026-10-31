@@ -1,3 +1,4 @@
+import { makeCommentTagFromSource } from "./commentTagProvenance";
 import type { CommentTagInput, MemberRef } from "@memory-shoebox/shared";
 /** Words and only the member references explicitly selected by their author. */
 export type CommentDraft = { body: string; commentTags: CommentTagInput[] };
@@ -21,7 +22,12 @@ export function makeCommentDraftFromEdit(
       if (tag.start >= end) {
         return offset === 0
           ? [tag]
-          : [{ ...tag, start: tag.start + offset, end: tag.end + offset }];
+          : [
+              makeCommentTagFromSource({
+                source: tag,
+                changes: { start: tag.start + offset, end: tag.end + offset },
+              }),
+            ];
       }
       return [];
     }),

@@ -1,3 +1,4 @@
+import type { CommentTagInput } from "@memory-shoebox/shared";
 import { describe, expect, it } from "vitest";
 import {
   makeCommentDraftFromEdit,
@@ -105,5 +106,65 @@ describe("query boundaries", () => {
         end: 3,
       }),
     ).toBeUndefined();
+  });
+});
+
+it("preserves immutable occurrence provenance through shifts and restores only its acknowledged ID", async () => {
+  const { makeCommentDraftFromSavedTagIds, recordSavedCommentTagIdsInPlace } =
+    await import("./commentTagProvenance");
+  const selected = makeCommentDraftFromMemberSelection({
+    draft: { body: "  @", commentTags: [] },
+    start: 2,
+    end: 3,
+    member,
+  });
+  const shifted = makeCommentDraftFromEdit({
+    draft: selected,
+    start: 0,
+    end: 0,
+    text: "😀 ",
+  });
+  const replacement = makeCommentDraftFromMemberSelection({
+    draft: { body: selected.body, commentTags: [] },
+    start: 2,
+    end: selected.body.length,
+    member,
+  });
+  const tagIds = new WeakMap<CommentTagInput, string>();
+  recordSavedCommentTagIdsInPlace({
+    submitted: selected,
+    savedTags: [
+      {
+        memberId: member.memberId,
+        tagId: "persisted",
+        start: 0,
+        end: 14,
+        label: member.displayName,
+      },
+    ],
+    tagIds,
+  });
+  const updated = makeCommentDraftFromSavedTagIds({ draft: shifted, tagIds });
+  expect(updated.body).toBe(shifted.body);
+  expect(updated.commentTags[0]).toMatchObject({
+    tagId: "persisted",
+    start: 5,
+    end: 19,
+  });
+  expect(
+    makeCommentDraftFromSavedTagIds({ draft: replacement, tagIds })
+      .commentTags[0]?.tagId,
+  ).toBeUndefined();
+  expect(
+    makeCommentDraftFromSavedTagIds({ draft: selected, tagIds }).commentTags[0]
+      ?.tagId,
+  ).toBe("persisted");
+  expect(selected.commentTags[0]?.tagId).toBeUndefined();
+  expect(shifted.commentTags[0]?.tagId).toBeUndefined();
+  expect(JSON.parse(JSON.stringify(updated.commentTags[0]))).toEqual({
+    memberId: member.memberId,
+    start: 5,
+    end: 19,
+    tagId: "persisted",
   });
 });

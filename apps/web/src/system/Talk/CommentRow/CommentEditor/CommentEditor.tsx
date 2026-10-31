@@ -13,7 +13,7 @@ type Props = {
   itemId: string;
   tagFailure?: CommentTagFailure[];
   isSaving: boolean;
-  onSave: (draft: CommentDraft, onSaved: () => void) => void;
+  onSave: (draft: CommentDraft, onSaved: (comment: CommentDto) => void) => void;
   onCancel: () => void;
 };
 /** Edits the author's words and references, keeping newer edits after a save. */
