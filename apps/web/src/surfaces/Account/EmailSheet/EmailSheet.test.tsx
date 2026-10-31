@@ -310,3 +310,41 @@ it("keeps focus and restores the saved tag value with a nearby failure", async (
     "Couldn't change that email preference. Try again.",
   );
 });
+
+it.each([false, true])(
+  "restores a switch blurred by saving without stealing moved focus: %s",
+  async (hasMovedFocus) => {
+    const onSave = vi.fn();
+    const view = (isSaving: boolean, error?: string) => {
+      return _inTheme(
+        <>
+          <button>Another control</button>
+          <EmailSheet
+            notify={ALL_ON}
+            onSave={onSave}
+            isSaving={isSaving}
+            error={error}
+          />
+        </>,
+      );
+    };
+    const { rerender } = render(view(false));
+    const toggle = screen.getByLabelText("Somebody tags you in a comment");
+    await userEvent.setup().click(toggle);
+    rerender(view(true));
+    expect(toggle).toBeDisabled();
+    // Chromium blurs a newly disabled input; jsdom does not model that step.
+    const otherControl = screen.getByRole("button", {
+      name: "Another control",
+    });
+    otherControl.focus();
+    otherControl.blur();
+    expect(document.body).toHaveFocus();
+    if (hasMovedFocus) {
+      otherControl.focus();
+    }
+    rerender(view(false, "Failed"));
+    expect(toggle).toBeChecked();
+    expect(hasMovedFocus ? otherControl : toggle).toHaveFocus();
+  },
+);

@@ -101,7 +101,8 @@ The fifth account switch, immediately after comments on uploads, reads
 “Somebody tags you in a comment” and “An email when someone uses @ to get your
 attention.” It defaults on, saves independently and participates in all-off and
 all-on. A failed save restores the cached saved value and presents a nearby
-retry message. When off it explains that other enabled upload/conversation
+retry message. After the saving state disables a focused switch, focus returns
+to that switch unless the member has moved to another control. When off it explains that other enabled upload/conversation
 settings can still send ordinary mail. `/account?email=comment-tag` focuses
 this switch after sign-in or required profile completion; arbitrary search
 values cannot select other targets or trigger preference writes.

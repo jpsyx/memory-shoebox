@@ -27,12 +27,7 @@ export function NotifyRow({
   shouldFocus,
   error,
 }: Readonly<Props>): ReactNode {
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (shouldFocus) {
-      inputRef.current?.focus();
-    }
-  }, [shouldFocus]);
+  const { inputRef, onSaveStart } = useNotifyRowFocus(disabled, shouldFocus);
   return (
     <div className={classes.notifyRow} data-notify-kind={kind.key}>
       <Switch
@@ -41,6 +36,7 @@ export function NotifyRow({
         checked={checked}
         disabled={disabled}
         onChange={(event) => {
+          onSaveStart();
           onChange(event.currentTarget.checked);
         }}
         label={kind.label}
@@ -62,4 +58,29 @@ export function NotifyRow({
       ) : null}
     </div>
   );
+}
+
+function useNotifyRowFocus(isSaving: boolean, shouldFocus?: boolean) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasSavedFocus = useRef(false);
+  useEffect(() => {
+    if (shouldFocus) {
+      inputRef.current?.focus();
+    }
+  }, [shouldFocus]);
+  useEffect(() => {
+    if (!isSaving && hasSavedFocus.current) {
+      // Native disabling blurs the switch. Respect focus moved elsewhere.
+      if (document.activeElement === document.body) {
+        inputRef.current?.focus();
+      }
+      hasSavedFocus.current = false;
+    }
+  }, [isSaving]);
+  return {
+    inputRef,
+    onSaveStart: () => {
+      hasSavedFocus.current = document.activeElement === inputRef.current;
+    },
+  };
 }
