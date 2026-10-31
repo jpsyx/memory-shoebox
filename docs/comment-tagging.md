@@ -44,10 +44,52 @@ Account reads return `onCommentTag` from the stored preference. PATCH accepts th
 original four booleans without the new field and preserves its current value;
 an explicit fifth boolean updates it. Responses require all five fields.
 
+## Candidate lookup
+
+`GET /api/items/:itemId/comment-tag-candidates?q=<name>` returns
+`{ members: MemberRef[] }`. The caller must first have item access. Hidden and
+missing items return the same 404, and lookup never records an item open.
+The query defaults to empty and accepts at most 80 UTF-16 units.
+
+Only active members with a completed, nonempty account name and current item
+access appear. The ordinary visibility predicate includes uploader and admin
+access and current group membership. Photo tags and email preferences grant
+no eligibility. Self-selection is allowed. Responses expose only member ID,
+display name, and avatar, with no email, status, preferences or exclusion reason.
+
+Search uses the N1 NFC/whitespace/lowercase comparison key, keeping accents
+meaningful. Results rank exact, prefix, then substring matches; normalized name
+and member ID break ties using deterministic code-unit comparison. An empty
+query returns the full eligible directory alphabetically, without pagination.
+
+## Transactional writes and historical identity
+
+Create and edit routes validate references inside their immediate write
+transaction. Current account names, item visibility and rule membership are
+read under that lock. A new occurrence must match the exact current account
+name prefixed by `@` and pass eligibility. Names never resolve identity.
+
+A retained occurrence ID must belong to the edited comment, appear once, keep
+its member ID, and match its stored label snapshot. Its offsets may move.
+Renamed or now-ineligible members remain valid historical references; a copied
+occurrence without its retained ID must pass current eligibility again.
+
+Stale names or forged retained identities return `409 comment_tag_stale`.
+Unavailable targets return `409 comment_tag_unavailable` with the same generic
+response whether missing, removed, incomplete or unable to view the item.
+Both identify the input position through `details.fieldErrors.commentTags.N`.
+Omitted tags on an already-tagged comment return
+`409 comment_tags_reload_required` on `details.fieldErrors.commentTags`.
+Explicit `[]` removes all references.
+
+The body, ranges, and existing ordinary comment mail commit or roll back
+together. Author-only edits, fixed moments and one-level reply rules remain
+unchanged. Thread reads batch occurrences in one query alongside the existing
+comment and reaction queries; historical labels do not change on account rename.
+
 ## Implementation boundary
 
-The contracts and migration are present. Existing comment DTO producers currently
-return empty occurrence arrays. Persisted reads/writes, candidate eligibility,
-notification scheduling/delivery, and the composer and preference UI are connected
-in the subsequent implementation tasks. The current email repair helper excludes
-the new kind until its payload and template are introduced.
+Contracts, migration, candidate lookup, persisted reads and transactional writes
+are connected. Tag-specific notification scheduling/delivery and the composer
+and preference UI are connected in subsequent tasks. The current email repair
+helper excludes the new kind until its payload and template are introduced.

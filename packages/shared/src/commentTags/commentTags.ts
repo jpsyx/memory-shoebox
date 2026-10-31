@@ -1,4 +1,9 @@
-import { commentTagInputSchema, type CommentTagInput } from "../dtos.ts";
+import { z } from "zod";
+import {
+  commentTagInputSchema,
+  memberRefSchema,
+  type CommentTagInput,
+} from "../dtos.ts";
 import { LIMITS } from "../limits.ts";
 
 function _isSurrogateBoundary(body: string, offset: number): boolean {
@@ -62,3 +67,23 @@ export function makeNormalizedCommentFromDraft(
   });
   return { body, commentTags };
 }
+
+/** An optional name query for the complete, small family directory. */
+export const commentTagCandidatesQuerySchema = z.object({
+  q: z.string().max(80).default(""),
+});
+
+/** Only public member references, never membership status or email preferences. */
+export const commentTagCandidatesResponseSchema = z.object({
+  members: z.array(memberRefSchema),
+});
+
+/** Validated candidate-search parameters. */
+export type CommentTagCandidatesQuery = z.infer<
+  typeof commentTagCandidatesQuerySchema
+>;
+
+/** Eligible public account references for one visible item. */
+export type CommentTagCandidatesResponse = z.infer<
+  typeof commentTagCandidatesResponseSchema
+>;

@@ -159,7 +159,7 @@ respect.
 | `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                            |
 | `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging                      |
 | `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                                   |
-| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                        |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with reactions and batched comment-tag occurrences        |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                         |
 | `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                          |
 | `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                        |
@@ -257,6 +257,20 @@ it, `itemPermissionsMatrix.batch` runs the selection route beside it, and
 `itemPermissionsMatrix.demotedUploader` covers the persona the four columns
 cannot express. The expected column is the table above. **If a row fails, fix
 the route.**
+
+### Comment account references
+
+`src/commentTags/` owns eligible account lookup, occurrence validation and
+persistence. `GET /api/items/:itemId/comment-tag-candidates` authorizes the
+requester's item before searching completed active accounts through the actual
+visibility predicate. It returns public member references only.
+
+Both comment creation and editing validate current names and new-target access
+inside `BEGIN IMMEDIATE`, then write body and occurrence ranges atomically.
+Existing occurrence IDs preserve historical member identity and label snapshots.
+Older clients omitting tags cannot overwrite a tagged comment. Thread reads add
+one batch for all occurrences, independent of thread length. See
+[comment tagging](comment-tagging.md) for search order and recoverable errors.
 
 ### One composer
 

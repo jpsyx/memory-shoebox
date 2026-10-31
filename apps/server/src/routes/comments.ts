@@ -1,3 +1,8 @@
+import { validateCommentTags } from "../commentTags/validateCommentTags.ts";
+import {
+  readCommentTags,
+  replaceCommentTags,
+} from "../commentTags/replaceCommentTags.ts";
 import { requireCompleteProfile } from "../members/requireCompleteProfile.ts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
@@ -5,6 +10,8 @@ import {
   setReactionRequestSchema,
   updateCommentRequestSchema,
   type CommentDto,
+  type CommentTag,
+  type UpdateCommentRequest,
   type ReactionSummary,
 } from "@memory-shoebox/shared";
 import { readMemberRefs } from "../archive/readMemberRefs.ts";
@@ -13,7 +20,10 @@ import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer, type Viewer } from "../http/requestContextHelpers.ts";
 import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
-import { getVisibleItemOr404 } from "../items/getVisibleItemOr404.ts";
+import {
+  getVisibleItemOr404,
+  type VisibleItem,
+} from "../items/getVisibleItemOr404.ts";
 import { readCommentThread } from "../items/readCommentThread.ts";
 import {
   makeEmptyReactionSummary,
@@ -24,6 +34,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 /** One comment, with the item it hangs off already checked. */
 type VisibleComment = {
+  item: VisibleItem;
   commentId: string;
   itemId: string;
   authorMemberId: string;
@@ -62,42 +73,90 @@ async function _getVisibleCommentOr404(options: {
 
   // The item's predicate, checked before anything else and reported as the
   // comment's own 404.
-  await getVisibleItemOr404({
+  const item = await getVisibleItemOr404({
     database: options.database,
     viewer: options.viewer,
     itemId: comment.itemId,
     code: "comment_not_found",
   });
 
-  return comment;
+  return { ...comment, item };
 }
 
-/** `PATCH /comments/:commentId`: edit a comment's own words. */
-async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
-  const viewer = requireViewer(request);
-  const { commentId } = commentIdParamsSchema.parse(request.params);
-  const body = updateCommentRequestSchema.parse(request.body);
-  const now = request.server.clock().toISOString();
+type CommentEditOptions = {
+  database: DatabaseExecutor;
+  viewer: Viewer;
+  commentId: string;
+  body: UpdateCommentRequest;
+  now: string;
+};
 
-  const comment = await _getVisibleCommentOr404({
-    database: request.server.database,
-    viewer,
-    commentId,
-  });
-
-  requireCompleteProfile(viewer);
-  if (comment.authorMemberId !== viewer.memberId) {
-    // An admin gets this too: Decision 8 grants admins "delete anything",
-    // not edit anything. Nobody edits another person's words.
-    throw ApiError.forbidden("comment_edit_forbidden");
+async function _readTagsForEdit(
+  options: Readonly<CommentEditOptions>,
+): Promise<CommentTag[]> {
+  const existingTags =
+    (
+      await readCommentTags({
+        database: options.database,
+        commentIds: [options.commentId],
+      })
+    ).get(options.commentId) ?? [];
+  if (options.body.commentTags === undefined && existingTags.length > 0) {
+    throw ApiError.conflict({
+      code: "comment_tags_reload_required",
+      details: {
+        fieldErrors: {
+          commentTags: ["Reload this comment before editing its tags."],
+        },
+      },
+    });
   }
+  return existingTags;
+}
 
-  await request.server.database
-    .updateTable("comments")
-    .set({ body: body.body, edited_at: now })
-    .where("id", "=", commentId)
-    .execute();
+async function _writeCommentEdit(
+  options: Readonly<CommentEditOptions>,
+): Promise<void> {
+  await runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      const comment = await _getVisibleCommentOr404({
+        ...options,
+        database: transaction,
+      });
+      if (comment.authorMemberId !== options.viewer.memberId)
+        throw ApiError.forbidden("comment_edit_forbidden");
+      const existingTags = await _readTagsForEdit({
+        ...options,
+        database: transaction,
+      });
+      const tags = await validateCommentTags({
+        database: transaction,
+        viewer: options.viewer,
+        item: comment.item,
+        body: options.body.body,
+        commentTags: options.body.commentTags ?? [],
+        existingTags,
+      });
+      await transaction
+        .updateTable("comments")
+        .set({ body: options.body.body, edited_at: options.now })
+        .where("id", "=", options.commentId)
+        .execute();
+      await replaceCommentTags({
+        transaction,
+        commentId: options.commentId,
+        tags,
+      });
+    },
+  });
+}
 
+async function _readUpdatedComment(
+  request: FastifyRequest,
+  comment: Readonly<VisibleComment>,
+  viewer: Viewer,
+): Promise<CommentDto> {
   const thread = await readCommentThread({
     database: request.server.database,
     itemId: comment.itemId,
@@ -109,12 +168,35 @@ async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
     }),
   });
   const updated = thread.find((entry) => {
-    return entry.commentId === commentId;
+    return entry.commentId === comment.commentId;
   });
-  if (updated === undefined) {
-    throw ApiError.notFound("comment_not_found");
-  }
+  if (updated === undefined) throw ApiError.notFound("comment_not_found");
   return updated;
+}
+
+/** `PATCH /comments/:commentId`: edit a comment's own words and explicit ranges. */
+async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
+  const viewer = requireViewer(request);
+  const { commentId } = commentIdParamsSchema.parse(request.params);
+  const body = updateCommentRequestSchema.parse(request.body);
+  const now = request.server.clock().toISOString();
+  const comment = await _getVisibleCommentOr404({
+    database: request.server.database,
+    viewer,
+    commentId,
+  });
+  requireCompleteProfile(viewer);
+  // Admins may delete another person's words but may never edit them.
+  if (comment.authorMemberId !== viewer.memberId)
+    throw ApiError.forbidden("comment_edit_forbidden");
+  await _writeCommentEdit({
+    database: request.server.database,
+    viewer,
+    commentId,
+    body,
+    now,
+  });
+  return _readUpdatedComment(request, comment, viewer);
 }
 
 /**

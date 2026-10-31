@@ -621,4 +621,10 @@ export {
   memberCollectionResponseSchema,
   type MemberCollectionResponse,
 } from "./memberCollections.ts";
-export { makeNormalizedCommentFromDraft } from "./commentTags/commentTags.ts";
+export {
+  makeNormalizedCommentFromDraft,
+  commentTagCandidatesQuerySchema,
+  commentTagCandidatesResponseSchema,
+  type CommentTagCandidatesQuery,
+  type CommentTagCandidatesResponse,
+} from "./commentTags/commentTags.ts";

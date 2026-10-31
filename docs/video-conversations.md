@@ -90,6 +90,12 @@ spacing, and contact-shadow tokens. Reduced motion suppresses floating emoji mot
 Ctrl+Enter submits a comment or reply through the same form as Send. Plain Enter
 still inserts a newline; composing input and repeated keydown events do not send.
 
+Comments and replies can carry explicit account-reference ranges alongside
+plain text. Candidate lookup requires item access; new selections require current
+member eligibility. Edits retain validated historical labels and write their
+ranges with the body atomically. These references do not alter the fixed moment
+or parent of an existing comment. See [comment tagging](comment-tagging.md).
+
 Replies are one level deep and inherit the parent comment's timestamp. Cancelling
 a pending reply retires that composer: the saved reply still joins the thread,
 but its eventual success cannot close a newly opened reply or discard new words.

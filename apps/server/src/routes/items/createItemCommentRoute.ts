@@ -1,3 +1,5 @@
+import { validateCommentTags } from "../../commentTags/validateCommentTags.ts";
+import { replaceCommentTags } from "../../commentTags/replaceCommentTags.ts";
 import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -5,6 +7,7 @@ import {
   createCommentRequestSchema,
   itemIdParamsSchema,
   type CommentDto,
+  type CommentTag,
   type CreateCommentRequest,
 } from "@memory-shoebox/shared";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
@@ -26,52 +29,87 @@ import {
 } from "../../items/getVisibleItemOr404.ts";
 import { makeEmptyReactionSummary } from "../../items/readReactionSummaries.ts";
 
-/**
- * The row and its notifications, in one transaction.
- *
- * Together on purpose: a message is never queued for a comment that did not
- * land, and the comment never lands without its message.
- */
-async function _writeCommentAndQueueItsMail(options: {
+type WriteCommentOptions = {
   database: DatabaseExecutor;
   viewer: Viewer;
   item: VisibleItem;
   commentId: string;
   request: CreateCommentRequest;
   now: string;
-}): Promise<CommentAnchor> {
+};
+
+async function _insertCommentAndQueueMail(
+  options: Readonly<
+    WriteCommentOptions & {
+      transaction: DatabaseExecutor;
+      anchor: CommentAnchor;
+      commentTags: CommentTag[];
+    }
+  >,
+): Promise<void> {
+  const { transaction, anchor, commentTags } = options;
+  await transaction
+    .insertInto("comments")
+    .values({
+      id: options.commentId,
+      item_id: options.item.itemId,
+      author_member_id: options.viewer.memberId,
+      body: options.request.body,
+      at_seconds: anchor.atSeconds,
+      parent_comment_id: anchor.parentCommentId,
+      created_at: options.now,
+      edited_at: null,
+    })
+    .execute();
+  await replaceCommentTags({
+    transaction,
+    commentId: options.commentId,
+    tags: commentTags,
+  });
+  await enqueueCommentEmails({
+    transaction,
+    viewer: options.viewer,
+    item: options.item,
+    commentId: options.commentId,
+    body: options.request.body,
+    atSeconds: anchor.atSeconds,
+    now: options.now,
+  });
+}
+
+/** Validates and writes the comment, occurrences and ordinary mail under one write lock. */
+async function _writeCommentAndQueueItsMail(
+  options: Readonly<WriteCommentOptions>,
+): Promise<CommentAnchor & { commentTags: CommentTag[] }> {
   return runInImmediateTransaction({
     database: options.database,
     callback: async (transaction) => {
+      const item = await getVisibleItemOr404({
+        database: transaction,
+        viewer: options.viewer,
+        itemId: options.item.itemId,
+      });
+      const commentTags = await validateCommentTags({
+        database: transaction,
+        viewer: options.viewer,
+        item,
+        body: options.request.body,
+        commentTags: options.request.commentTags,
+        existingTags: [],
+      });
       const anchor = await getCommentAnchorFromRequest({
         database: transaction,
-        item: options.item,
+        item,
         request: options.request,
       });
-      await transaction
-        .insertInto("comments")
-        .values({
-          id: options.commentId,
-          item_id: options.item.itemId,
-          author_member_id: options.viewer.memberId,
-          body: options.request.body,
-          at_seconds: anchor.atSeconds,
-          parent_comment_id: anchor.parentCommentId,
-          created_at: options.now,
-          edited_at: null,
-        })
-        .execute();
-
-      await enqueueCommentEmails({
+      await _insertCommentAndQueueMail({
+        ...options,
+        item,
         transaction,
-        viewer: options.viewer,
-        item: options.item,
-        commentId: options.commentId,
-        body: options.request.body,
-        atSeconds: anchor.atSeconds,
-        now: options.now,
+        anchor,
+        commentTags,
       });
-      return anchor;
+      return { ...anchor, commentTags };
     },
   });
 }
@@ -89,6 +127,7 @@ async function _makeCommentDtoForAuthor(options: {
   viewer: Viewer;
   commentId: string;
   body: string;
+  commentTags: CommentTag[];
   atSeconds: number | null;
   parentCommentId: string | null;
   now: string;
@@ -106,7 +145,7 @@ async function _makeCommentDtoForAuthor(options: {
       avatar: null,
     },
     body: options.body,
-    commentTags: [],
+    commentTags: options.commentTags,
     atSeconds: options.atSeconds,
     parentCommentId: options.parentCommentId,
     createdAt: options.now,

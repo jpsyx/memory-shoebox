@@ -188,10 +188,22 @@ describe("readCommentThread's query plan", () => {
     const smallItemId = await insertItem(small.database, {
       uploadedBy: smallMemberId,
     });
-    await insertComment(small.database, {
+    const smallCommentId = await insertComment(small.database, {
       itemId: smallItemId,
       authorMemberId: smallMemberId,
+      body: "@Historical name",
     });
+    await small.database
+      .insertInto("comment_tags")
+      .values({
+        id: createId(),
+        comment_id: smallCommentId,
+        member_id: smallMemberId,
+        start_offset: 0,
+        end_offset: 16,
+        label_snapshot: "Historical name",
+      })
+      .execute();
     const smallMembers = await readMemberRefs({
       database: small.database,
       b2: createFakeB2Client(),
@@ -223,11 +235,23 @@ describe("readCommentThread's query plan", () => {
       uploadedBy: largeMemberId,
     });
     await Promise.all(
-      Array.from({ length: 12 }, () => {
-        return insertComment(large.database, {
+      Array.from({ length: 12 }, async () => {
+        const commentId = await insertComment(large.database, {
           itemId: largeItemId,
           authorMemberId: largeMemberId,
+          body: "@Historical name",
         });
+        await large.database
+          .insertInto("comment_tags")
+          .values({
+            id: createId(),
+            comment_id: commentId,
+            member_id: largeMemberId,
+            start_offset: 0,
+            end_offset: 16,
+            label_snapshot: "Historical name",
+          })
+          .execute();
       }),
     );
     const largeMembers = await readMemberRefs({
@@ -237,7 +261,7 @@ describe("readCommentThread's query plan", () => {
     });
 
     large.reset();
-    await readCommentThread({
+    const largeThread = await readCommentThread({
       database: large.database,
       itemId: largeItemId,
       viewer: {
@@ -253,9 +277,18 @@ describe("readCommentThread's query plan", () => {
     const largeQueries = large.getQueryCount();
 
     // The comments, then every reaction on all of them in one
-    // `comment_id IN (...)`: two queries whatever the thread's size.
-    expect(smallQueries).toBe(2);
+    // `comment_id IN (...)`, and one occurrence batch: three queries at any size.
+    expect(smallQueries).toBe(3);
     expect(largeQueries).toBe(smallQueries);
+    expect(largeThread).toHaveLength(12);
+    expect(
+      largeThread.every((comment) => {
+        return (
+          comment.commentTags.length === 1 &&
+          comment.commentTags[0]?.label === "Historical name"
+        );
+      }),
+    ).toBe(true);
 
     await small.database.destroy();
     await large.database.destroy();

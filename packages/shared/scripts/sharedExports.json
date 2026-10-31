@@ -774,7 +774,11 @@
   },
   {
     "module": "./commentTags/commentTags.ts",
-    "values": ["makeNormalizedCommentFromDraft"],
-    "types": []
+    "values": [
+      "makeNormalizedCommentFromDraft",
+      "commentTagCandidatesQuerySchema",
+      "commentTagCandidatesResponseSchema"
+    ],
+    "types": ["CommentTagCandidatesQuery", "CommentTagCandidatesResponse"]
   }
 ]
