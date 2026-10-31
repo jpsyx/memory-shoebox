@@ -93,7 +93,7 @@ Contracts, migration, candidate lookup, persisted reads, transactional writes,
 notification scheduling/delivery and the account preference are connected.
 The shared range-aware composer and posted-tag renderer are connected across
 main comments, replies, edits, Talk rows and video moment previews. Comment
-arrival and collection-return journeys are connected in subsequent tasks.
+arrival and collection-return journeys are connected through the signed-in session owner.
 
 ## Email preference and delivery
 
@@ -150,9 +150,10 @@ also carries its saved occurrences back to the still-open draft. Surviving
 occurrences acquire their server `tagId` even after prefix edits move their
 ranges; newly selected replacements never inherit another occurrence's ID.
 Immutable internal provenance on derived ranges establishes that continuity.
-An editor-lifetime acknowledgement map also restores those known IDs when
+A session-owned per-editor acknowledgement map also restores those known IDs when
 undo/redo revisits an earlier snapshot. Neither internal provenance nor the map
-is serialized or shared across editor/account lifetimes.
+is serialized or shared across cancelled drafts or account/session lifetimes.
+A remounted field starts fresh local undo history from the restored current draft.
 
 Structured tag failures identify submitted occurrences. A still-current refused
 tag offers Keep as plain text or Choose another member. A refreshed account name
@@ -172,3 +173,39 @@ scroll metrics and unchanged glyph rectangles at desktop, phone width and 200%
 CSS scale, plus reference-aware undo and CDP engine composition. Physical mobile
 keyboards, OS IMEs and integrated cross-browser/fullscreen acceptance remain
 separate verification work; DOM tests do not claim those results.
+
+## Comment arrival and collection return
+
+The item route accepts only an optional UUID `comment` search field. Sign-in and
+required profile completion retain the intended deep link. After a fresh item
+read authorizes the current entry, arrival reveals the parent/reply thread and
+focuses the readable comment container, never Edit or Delete. Visible items with
+an unknown/deleted comment show **That comment is no longer available.** Missing
+or invisible items keep their ordinary refusal without cached conversation text.
+Arrival does not seek or play video.
+
+Normal same-tab posted-tag links navigate to the clean member collection and
+record one return entry in `ConversationJourneyProvider`. Modified clicks and
+new-tab actions retain native anchor semantics and create no new return promise.
+Only the matching session journey adds **Back to comment** to the collection.
+Talk and moment-preview links carry existing item/comment IDs as return anchors;
+no server comment body or media URL enters the journey.
+
+The same owner retains main/reply/edit draft values, ranges, revision, selection,
+captured moment and started state across route departure. Back and **Back to
+comment** restore draft, scroll and focus after a new current-entry authorization
+response; old cached detail and abandoned responses cannot unlock restoration.
+Window/native fullscreen intent uses the existing host, with window fallback and
+unchanged innermost-overlay Escape handling. Returning never auto-resumes video.
+Late sends/saves clear only their submitted revision, and successful edits hydrate
+surviving occurrence provenance even when their editor has unmounted. Mutation
+cache reconciliation and acknowledgements are fenced by submitted item-query and
+private authority lifetimes. Pending writes stay exclusive after remount.
+
+Sign-out, account/role changes, observed actual session replacement and explicit
+private-cache retirement destroy the owner, including captured action closures.
+Item refusal retires that item's main/reply/edit and return metadata. The self
+response's `sessionId` identifies the authenticated device; member-global
+`lastSignedInAt` is deliberately not a lifetime marker. Another device's sign-in
+does not erase this tab. State exists only in memory for the signed-in tab: no
+URL/localStorage text, cross-account singleton or reload/tab-close promise.

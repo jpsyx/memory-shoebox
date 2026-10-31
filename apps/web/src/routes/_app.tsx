@@ -1,3 +1,4 @@
+import { ConversationJourneyProvider } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
 import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 import type { ReactNode } from "react";
 import { MediaLoadingProvider } from "@/media/MediaLoadingProvider/MediaLoadingProvider";
@@ -90,7 +91,9 @@ function AppShell(): ReactNode {
         committedSurfaceKey={committedSurfaceKey}
       >
         <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
-          <Outlet />
+          <ConversationJourneyProvider>
+            <Outlet />
+          </ConversationJourneyProvider>
         </UploadSessionProvider>
       </MediaLoadingProvider>
     </div>

@@ -10,9 +10,9 @@ import type { MemberRole } from "@/system/memberRole";
  * Who is looking.
  *
  * A narrower thing than the server's request context in `conventions.md`
- * § The request context: the browser never needs `sessionId` or the expanded
- * `visibleRuleIds`, and carrying either would put the visibility predicate's
- * inputs on the wire for no reason.
+ * § The request context: expanded `visibleRuleIds` stay on the server.
+ * The self-response keeps its session ID separately for private client
+ * lifetime retirement; ordinary viewer props do not need it.
  *
  * Its fields stay `readonly` on the alias itself rather than only at a
  * function boundary: a `Viewer` is a shared reference to who is signed in,

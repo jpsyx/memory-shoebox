@@ -1,3 +1,4 @@
+import { createMeResponse } from "@/testing/createMeResponse";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   renderHook,
@@ -41,6 +42,7 @@ export function makeQueryClientFromItemDetail(
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  queryClient.setQueryData(["me"], createMeResponse());
   const options = itemQueryOptions(detail.itemId);
   queryClient.setQueryDefaults(options.queryKey, {
     queryFn: () => {

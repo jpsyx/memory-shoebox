@@ -65,6 +65,7 @@ it("publishes a viewer's real binary image and replays without another PUT", asy
   };
   const response = await context.upload(avatarId);
   expect(response.statusCode).toBe(200);
+  expect(response.json().sessionId).toBe(context.owner.sessionId);
   expect(response.json().me.member.avatar.avatarId).toBe(avatarId);
   const key = `avatars/${context.owner.memberId}/${avatarId}.webp`;
   expect(context.b2.storedObjects.get(key)?.contentType).toBe("image/webp");

@@ -1,3 +1,4 @@
+import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
 import { Button, Group, Stack } from "@mantine/core";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -14,13 +15,30 @@ export function MemberCollectionHeader({
   memberId,
 }: Readonly<Props>): ReactNode {
   const identity = useMemberCollection(memberId);
+  const returning = useConversationJourney()?.readReturn();
   return (
     <section className={classes.pageWide} aria-label="Member collection">
       <Stack gap="md">
-        <Link to="/" search={{}} className={classes.backlink}>
-          <IconArrowLeft {...ICON_PROPS} />
-          Back to the timeline
-        </Link>
+        {returning?.memberId === memberId ? (
+          <Link
+            to="/items/$itemId"
+            params={{ itemId: returning.itemId }}
+            search={
+              returning.href.includes("?comment=")
+                ? { comment: returning.href.split("?comment=")[1] }
+                : {}
+            }
+            className={classes.backlink}
+          >
+            <IconArrowLeft {...ICON_PROPS} />
+            Back to comment
+          </Link>
+        ) : (
+          <Link to="/" search={{}} className={classes.backlink}>
+            <IconArrowLeft {...ICON_PROPS} />
+            Back to the timeline
+          </Link>
+        )}
         <MemberCollectionIdentity
           member={identity.data?.member ?? undefined}
           isPending={identity.isPending}

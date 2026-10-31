@@ -32,7 +32,9 @@ The contract modules are:
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
   and the email module imports it, so the six digits are spelled once rather than
-  once per side of the round trip.
+  once per side of the round trip. The self-scoped `MeResponse` also requires a
+  top-level current `sessionId` for private client lifetime retirement. `MeDto`
+  stays unchanged; the marker is a session row ID, never a cookie credential.
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.

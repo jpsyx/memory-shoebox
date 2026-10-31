@@ -52,6 +52,7 @@ describe("navigation bootstrap", () => {
       expect(pending.json()).toMatchObject({
         setup: { isRequired: false },
         account: {
+          sessionId: owner.sessionId,
           me: { role: "admin", member: { memberId: owner.memberId } },
         },
         progress: { needsInvitations: true },

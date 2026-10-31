@@ -194,6 +194,8 @@ export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
  * resource in its post-mutation read shape (`conventions.md` § Envelope).
  */
 export const meResponseSchema = z.object({
+  /** Current device identity, never the cookie token. */
+  sessionId: idSchema,
   me: meDtoSchema,
   settings: shellSettingsSchema,
 });

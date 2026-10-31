@@ -13,7 +13,7 @@ describe("GET /api/me", () => {
         return new Date(NOW);
       },
     });
-    const { cookie, memberId } = await insertSignedInMember({
+    const { cookie, memberId, sessionId } = await insertSignedInMember({
       database,
       member: {
         email: "abuela@example.com",
@@ -34,6 +34,7 @@ describe("GET /api/me", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
+      sessionId,
       me: {
         member: { avatar: null, memberId, displayName: "Member" },
         storedDisplayName: null,
@@ -72,7 +73,7 @@ describe("GET /api/me", () => {
 describe("PATCH /api/me", () => {
   it("corrects the display name and answers the read shape", async () => {
     const { app, database, close } = await createTestApp();
-    const { cookie, memberId } = await insertSignedInMember({
+    const { cookie, memberId, sessionId } = await insertSignedInMember({
       database,
       member: { email: "abuela@example.com", display_name: "Rosa" },
     });
@@ -85,6 +86,7 @@ describe("PATCH /api/me", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(response.json().sessionId).toBe(sessionId);
     expect(response.json().me.storedDisplayName).toBe("Abuela Rosa");
     expect(response.json().me.member.displayName).toBe("Abuela Rosa");
 

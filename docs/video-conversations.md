@@ -64,10 +64,12 @@ Focusing a new comment pauses playback and captures its timestamp. Any position
 displayed as `0:00` (less than one second) selects **Whole video**, including when
 the member tries to attach that position with the timestamp control. The × on an
 attached timestamp also switches to **Whole video**. Seeking while writing does
-not move that draft. Failed submissions retain the text and anchor. The main composer shares per-item
-in-memory drafts for the item-route visit, so changing items or remounting the
-composer preserves its words, captured moment and started state. Leaving the
-item route or changing member discards that memory; a denied or deleted item
+not move that draft. Failed submissions retain the text and anchor. Main, reply
+and edit drafts share the signed-in tab's conversation owner above item routes.
+Changing items, remounting a form and visiting a member collection preserve its
+words, selected references, caret/selection, captured moment and started state.
+Fresh item authorization gates restoration on return. Account/session replacement
+or private-cache retirement destroys the memory; a denied or deleted item
 loses only its own draft. An in-flight send remains owned by its original item
 through navigation and blocks another send for that item until it settles.
 Successful writes clear only the submitted draft revision, including after
@@ -260,7 +262,7 @@ placeholder recovering to a playable video through the same transport ref.
 ## Theater host and navigation
 
 `ItemSurface` retains one `ItemTheaterHost`, theater controller, video transport
-and shared draft provider for the item-route visit. The host is not keyed by
+and main-draft adapter for the item-route visit; the signed-in shell owns draft memory. The host is not keyed by
 item ID and wraps every actual-detail state, so loading, denied detail, failures
 and retry retain the same Back and fullscreen controls. The photo item bar exposes
 **Enter full screen**, and the displayed photo is also a keyboard-accessible
@@ -303,11 +305,11 @@ preference follows native volume-change events and carries across selected video
 
 `useTheaterVideoPlayback` runs beside the existing renewal registration in
 `RegisteredVideo`, where lease changes and retry mounts expose the actual playable
-node. It selects one explicit play intent per theater entry/new node and waits
+node. It selects one explicit play intent per user theater entry/new node and waits
 through `beforePlay`. A new comment or exit pauses through the same transport and
 supersedes that ticket. Retired nodes/items cannot play after readiness settles.
-Metadata edits, routine renewal and ordinary page presentation create no autoplay
-intent. Browser play rejection leaves the normal paused controls usable rather
+Metadata edits, routine renewal, ordinary page presentation and collection-return
+restoration create no autoplay intent. Comment deep-link arrival never seeks. Browser play rejection leaves the normal paused controls usable rather
 than becoming a load error. Explicit source retry retains its existing safe-media
 request and readiness gate before a fresh theater node attempts playback.
 

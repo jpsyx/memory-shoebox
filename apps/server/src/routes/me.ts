@@ -50,6 +50,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       // `role` is read on this request, so a demotion takes effect on the
       // next one. The visibility side of a role change is the generation
       // bump's job, not this route's.
+      sessionId: viewer.sessionId,
       me: await getMeDtoFromMemberId({
         database: request.server.database,
         b2: request.server.b2,
@@ -92,6 +93,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     // not bump `visibility.generation`: only group membership, a rule's
     // subjects and a member's role do.
     return {
+      sessionId: viewer.sessionId,
       me: await getMeDtoFromMemberId({
         database: request.server.database,
         b2: request.server.b2,

@@ -51,7 +51,7 @@ export function CommentRow({
   onReact,
   error,
 }: Readonly<Props>): ReactNode {
-  const editing = useCommentEditing(comment.canEdit);
+  const editing = useCommentEditing(comment.canEdit, { itemId, comment });
   return editing.isEditorShown ? (
     <>
       <CommentEditor
@@ -68,6 +68,7 @@ export function CommentRow({
     </>
   ) : (
     <CommentView
+      itemId={itemId}
       comment={comment}
       viewer={viewer}
       onSeek={onSeek}

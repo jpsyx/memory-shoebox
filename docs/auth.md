@@ -180,3 +180,20 @@ identities can sign in, read, complete profile/avatar setup and sign out, but
 comment creation/editing and archive-upload mutations require completion with
 `403 profile_required`. Public unnamed identities use “Member”, never an email
 local part. See [member profiles](member-profiles.md).
+
+## Private client session lifetime
+
+`MeResponse` includes a top-level `sessionId` alongside `me` and `settings`.
+GET/PATCH `/me`, bootstrap's account, and own-avatar mutation responses take it
+from the authenticated request viewer. This is the self-visible session row ID
+already available from `/me/sessions`, never the cookie token. Sign-in and setup
+publish their newly created `session.sessionId` into the same account cache.
+
+Private client authority includes account, role and this actual session ID.
+A fresh server read observing another same-account cookie session retires private
+queries, conversation drafts and captured continuations. Local sign-in also
+explicitly rotates the private generation before publishing the new account.
+Existing read/publication ordering guards continue to reject old responses.
+Member-global `lastSignedInAt` remains informational: another device signing in
+must not retire this tab. This adds no polling or broadcast mechanism; replacement
+is detected when a server account response is observed.

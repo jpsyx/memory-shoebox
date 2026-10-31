@@ -1,3 +1,4 @@
+import { getCommentSearchFromSearch } from "@/session/conversationJourneyHelpers/conversationJourneyHelpers";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ItemSurface } from "@/surfaces/Item/ItemSurface/ItemSurface";
@@ -11,6 +12,7 @@ import { ItemSurface } from "@/surfaces/Item/ItemSurface/ItemSurface";
  * and a test preloads a link to prove it.
  */
 export const Route = createFileRoute("/_app/items/$itemId")({
+  validateSearch: getCommentSearchFromSearch,
   staticData: { hasOwnBar: true },
   component: ItemPage,
 });

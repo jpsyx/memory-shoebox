@@ -78,7 +78,7 @@ describe("the shared photo and video view", () => {
     expect(await screen.findByText("Lovely day.")).toBeVisible();
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "Lovely day.", atSeconds: null });
+    ).toEqual({ body: "Lovely day.", atSeconds: null, commentTags: [] });
     expect(
       screen.queryByRole("button", { name: /Whole video|Reply to/ }),
     ).toBeNull();

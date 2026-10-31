@@ -1,13 +1,13 @@
+import { useConversationEditorDraft } from "@/session/ConversationJourneyProvider/useConversationEditorDraft";
 import { getFailedCommentTagsFromDraft } from "@/api/comments/comments";
 import { Group } from "@mantine/core";
 import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { IconSend } from "@tabler/icons-react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
 import classes from "./VideoReply.module.css";
 import { CommentTagInputField } from "@/system/CommentTagInputField/CommentTagInputField";
-import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
 
 type Props = {
   itemId: string;
@@ -25,13 +25,11 @@ export function VideoReply({
   onSent,
   onCancel,
 }: Readonly<Props>): ReactNode {
-  const [draft, setDraft] = useState<CommentDraft>({
-    body: "",
-    commentTags: [],
-  });
-  const currentDraft = useRef(draft);
-  currentDraft.current = draft;
-  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const local = useConversationEditorDraft(
+    { itemId, mode: "reply", commentId: parent.commentId },
+    { body: "", commentTags: [] },
+  );
+  const { draft, setDraft, fieldRef, memory, key } = local;
   const body = draft.body;
   const write = useCreateComment(itemId);
   const isMounted = useRef(false);
@@ -51,11 +49,15 @@ export function VideoReply({
     ) {
       return;
     }
-    const submitted = draft;
+    const submitted = memory.readDraft(key);
     write.send({
       draft: { ...draft, parentCommentId: parent.commentId },
       onSent: () => {
-        if (isMounted.current && currentDraft.current === submitted) {
+        const matches = memory.readDraft(key)?.revision === submitted?.revision;
+        if (submitted) {
+          memory.removeDraft(key, submitted.revision);
+        }
+        if (isMounted.current && matches) {
           onSent();
         }
       },
@@ -85,7 +87,13 @@ export function VideoReply({
         />
       </Group>
       <div className={classes.videoReplyActions}>
-        <button type="button" onClick={onCancel}>
+        <button
+          type="button"
+          onClick={() => {
+            local.cancel();
+            onCancel();
+          }}
+        >
           Cancel
         </button>
         <button

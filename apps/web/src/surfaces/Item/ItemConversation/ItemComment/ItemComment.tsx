@@ -1,3 +1,4 @@
+import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
 import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import { useState, type ReactNode } from "react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
@@ -30,11 +31,21 @@ export function ItemComment({
   onSeek,
   onFocusLost,
 }: Readonly<Props>): ReactNode {
-  const editing = useCommentEditing(comment.canEdit);
+  const editing = useCommentEditing(comment.canEdit, { itemId, comment });
   const write = useEditComment({ itemId, commentId: comment.commentId });
   const [isReplying, setIsReplying] = useState(false);
+  const memory = useConversationJourney();
+  const hasReply = !!memory?.readDraft({
+    itemId,
+    mode: "reply",
+    commentId: comment.commentId,
+  });
   return (
-    <article className={classes.itemComment}>
+    <article
+      className={classes.itemComment}
+      data-comment-id={comment.commentId}
+      tabIndex={-1}
+    >
       <MemberAvatar member={comment.author} size={30} />
       <div className={classes.itemCommentContent}>
         {editing.isEditorShown ? (
@@ -70,6 +81,8 @@ export function ItemComment({
             </div>
             <p className={classes.itemCommentBody}>
               <CommentTagText
+                itemId={itemId}
+                commentId={comment.commentId}
                 body={comment.body}
                 commentTags={comment.commentTags}
               />
@@ -99,7 +112,7 @@ export function ItemComment({
             {write.error}
           </p>
         )}
-        {isReplying ? (
+        {isReplying || hasReply ? (
           <VideoReply
             itemId={itemId}
             viewer={viewer}

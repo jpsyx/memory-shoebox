@@ -22,7 +22,11 @@ async function _createOrRecoverSetup(
   const { body, client } = options;
   try {
     const created = await createSetup(body);
-    return { me: created.me, settings: created.settings };
+    return {
+      sessionId: created.session.sessionId,
+      me: created.me,
+      settings: created.settings,
+    };
   } catch (failure: unknown) {
     if (
       failure instanceof ApiRequestError &&

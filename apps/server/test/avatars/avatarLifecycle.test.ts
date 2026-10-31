@@ -283,6 +283,7 @@ describe("atomic avatar publication", () => {
         payload: { expectedAvatarId: replacement },
       });
       expect(removed.statusCode).toBe(200);
+      expect(removed.json().sessionId).toBe(context.owner.sessionId);
       expect(removed.json().me.member.avatar).toBeNull();
     } finally {
       await context.close();

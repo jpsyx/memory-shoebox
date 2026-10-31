@@ -13,13 +13,24 @@ export function ItemSurface({ itemId }: Readonly<Props>): ReactNode {
   const theater = useTheaterMode({ onBeforeExit: transport.pause });
   return (
     <ItemCommentDraftProvider>
-      <ItemTheaterHost theater={theater}>
-        <ItemSurfaceContent
-          itemId={itemId}
-          theater={theater}
-          transport={transport}
-        />
-      </ItemTheaterHost>
+      <div
+        data-conversation-item={itemId}
+        data-conversation-theater={
+          theater.presentation === "page"
+            ? "page"
+            : theater.isFullscreen
+              ? "native"
+              : "window"
+        }
+      >
+        <ItemTheaterHost theater={theater}>
+          <ItemSurfaceContent
+            itemId={itemId}
+            theater={theater}
+            transport={transport}
+          />
+        </ItemTheaterHost>
+      </div>
     </ItemCommentDraftProvider>
   );
 }

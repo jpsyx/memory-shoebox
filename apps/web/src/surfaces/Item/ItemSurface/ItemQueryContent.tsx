@@ -14,6 +14,7 @@ type Props = {
   transport: VideoTransport;
   query: UseQueryResult<ItemDetail, Error>;
   isNotHere: boolean;
+  isAwaitingAuthorization?: boolean;
   selectedPreview: MediaPreview | undefined;
   viewer: Viewer;
   timezone: string;
@@ -22,7 +23,9 @@ type Props = {
 export function ItemQueryContent(options: Readonly<Props>): ReactNode {
   return options.isNotHere ? (
     <ItemNotHere />
-  ) : options.query.data === undefined || options.query.isError ? (
+  ) : options.query.data === undefined ||
+    options.query.isError ||
+    options.isAwaitingAuthorization ? (
     options.query.isError ? (
       <ItemFailed
         onRetry={() => {

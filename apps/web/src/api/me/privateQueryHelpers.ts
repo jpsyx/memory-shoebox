@@ -1,6 +1,21 @@
 import type { MeResponse } from "@memory-shoebox/shared";
 import type { Query, QueryClient } from "@tanstack/react-query";
 
+const PRIVATE_RETIREMENTS = new WeakMap<QueryClient, Set<() => void>>();
+
+/** Observes explicit private-cache retirement even when its cache is empty. */
+export function subscribePrivateRetirement(
+  client: QueryClient,
+  listener: () => void,
+): () => void {
+  const listeners = PRIVATE_RETIREMENTS.get(client) ?? new Set<() => void>();
+  PRIVATE_RETIREMENTS.set(client, listeners);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 const PRIVATE_GENERATIONS = new WeakMap<QueryClient, number>();
 
 /**
@@ -12,6 +27,9 @@ export function removePrivateQueries(queryClient: QueryClient): void {
     queryClient,
     (PRIVATE_GENERATIONS.get(queryClient) ?? 0) + 1,
   );
+  PRIVATE_RETIREMENTS.get(queryClient)?.forEach((listener) => {
+    return listener();
+  });
   queryClient.removeQueries({
     predicate: (query) => {
       const key = JSON.stringify(query.queryKey);
@@ -22,11 +40,15 @@ export function removePrivateQueries(queryClient: QueryClient): void {
   });
 }
 
-/** Identifies the member and role that own private client state. */
+/** Identifies the account, role and actual session owning private state. */
 export function getAuthorityFromAccount(
   account: Readonly<MeResponse> | undefined,
 ): string {
-  return JSON.stringify([account?.me.member.memberId, account?.me.role]);
+  return JSON.stringify([
+    account?.me.member.memberId,
+    account?.me.role,
+    account?.sessionId,
+  ]);
 }
 
 /** Identifies one account query and its private continuation lifetime. */

@@ -14,6 +14,7 @@ import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
+  itemId: string;
   comment: CommentDto;
   viewer: MemberRef;
   onSeek?: (seconds: number) => void;
@@ -32,6 +33,7 @@ type Props = {
  */
 export function CommentView({
   comment,
+  itemId,
   viewer,
   onSeek,
   onReact,
@@ -48,7 +50,12 @@ export function CommentView({
       </span>
       <CommentWhen comment={comment} onSeek={onSeek} />
       <p className={classes.commentBody}>
-        <CommentTagText body={comment.body} commentTags={comment.commentTags} />
+        <CommentTagText
+          itemId={itemId}
+          commentId={comment.commentId}
+          body={comment.body}
+          commentTags={comment.commentTags}
+        />
         {comment.editedAt === null ? null : (
           <>
             {" "}

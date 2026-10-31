@@ -55,6 +55,7 @@ export function VideoMomentPreview({
       {moment.body !== undefined ? (
         <p className={classes.videoMomentPreviewBody}>
           <CommentTagText
+            commentId={moment.id}
             body={moment.body}
             commentTags={moment.commentTags ?? []}
           />

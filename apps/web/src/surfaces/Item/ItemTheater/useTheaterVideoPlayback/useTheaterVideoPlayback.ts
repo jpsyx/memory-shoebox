@@ -10,7 +10,10 @@ type Options = {
   presentation: ItemPresentation;
   transport: VideoTransport;
   playback: VideoPlayback;
-  preferences: RefObject<{ isMuted: boolean }>;
+  preferences: RefObject<{
+    isMuted: boolean;
+    preventAutoplayForItemId?: string;
+  }>;
 };
 type Owner = {
   itemId: string;
@@ -81,6 +84,9 @@ function _watchNativePreferences({
 function _syncPlaybackOwner(owner: Owner, options: Readonly<Options>): void {
   const { itemId, presentation, transport, playback, preferences } = options;
   const video = transport.videoRef.current;
+  if (preferences.current.preventAutoplayForItemId !== itemId) {
+    preferences.current.preventAutoplayForItemId = undefined;
+  }
   const hasChangedNode = owner.video !== video || owner.itemId !== itemId;
   const hasEntered =
     owner.presentation !== "theater" && presentation === "theater";
@@ -101,6 +107,7 @@ function _syncPlaybackOwner(owner: Owner, options: Readonly<Options>): void {
   }
   if (
     presentation === "theater" &&
+    preferences.current.preventAutoplayForItemId !== itemId &&
     video !== null &&
     (hasEntered || hasChangedNode)
   ) {

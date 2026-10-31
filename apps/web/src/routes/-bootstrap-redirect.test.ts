@@ -295,8 +295,8 @@ it("a preload between redirect legs neither reads nor consumes the receipt", asy
 });
 
 it.each([
-  "/items/photo?comment=thread",
-  "/sign-in?redirect=%2Fitems%2Fphoto%3Fcomment%3Dthread",
+  "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
+  "/sign-in?redirect=%2Fitems%2F00000000-0000-4000-8000-000000000001%3Fcomment%3D00000000-0000-4000-8000-000000000002",
 ])(
   "preserves the original deep link on profile completion from %s",
   async (initialHref) => {
@@ -310,7 +310,8 @@ it.each([
     await router.load();
     expect(router.state.location.pathname).toBe("/complete-profile");
     expect(router.state.location.search).toEqual({
-      redirect: "/items/photo?comment=thread",
+      redirect:
+        "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
     });
     client.clear();
   },
@@ -319,12 +320,31 @@ it("preserves the original destination when completion loses its session", async
   const { router, client } = _makeRouterFromResponse({
     initial: ANONYMOUS,
     initialHref:
-      "/complete-profile?redirect=%2Fitems%2Fphoto%3Fcomment%3Dthread",
+      "/complete-profile?redirect=%2Fitems%2F00000000-0000-4000-8000-000000000001%3Fcomment%3D00000000-0000-4000-8000-000000000002",
   });
   await router.load();
   expect(router.state.location.pathname).toBe("/sign-in");
   expect(router.state.location.search).toEqual({
-    redirect: "/items/photo?comment=thread",
+    redirect:
+      "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
+  });
+  client.clear();
+});
+it("retires private data when a fresh bootstrap observes another session of the same account", async () => {
+  const first = createMeResponse();
+  const { router, client, setResponse } = _makeRouterFromResponse({
+    initial: { ...ANONYMOUS, account: first },
+  });
+  await router.load();
+  client.setQueryData(["items", "private"], { body: "old data" });
+  setResponse({
+    ...ANONYMOUS,
+    account: { ...first, sessionId: "00000000-0000-4000-8000-000000000099" },
+  });
+  await router.navigate({ to: "/people" });
+  expect(client.getQueryData(["items", "private"])).toBeUndefined();
+  expect(client.getQueryData(["me"])).toMatchObject({
+    sessionId: "00000000-0000-4000-8000-000000000099",
   });
   client.clear();
 });

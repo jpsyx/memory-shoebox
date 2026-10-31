@@ -45,6 +45,7 @@ function _registerRemovalRoute(app: FastifyInstance): void {
       now,
     });
     return {
+      sessionId: viewer.sessionId,
       me: await getMeDtoFromMemberId({
         database,
         b2,
@@ -96,6 +97,7 @@ async function _uploadAvatar(request: FastifyRequest) {
     now: clock().toISOString(),
   });
   return {
+    sessionId: viewer.sessionId,
     me: await getMeDtoFromMemberId({
       database,
       b2,

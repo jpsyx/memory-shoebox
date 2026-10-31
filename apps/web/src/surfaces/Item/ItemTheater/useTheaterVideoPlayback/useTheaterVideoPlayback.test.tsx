@@ -16,7 +16,9 @@ function setup() {
   const renew = vi.fn(async () => {
     return media;
   });
-  const preferences = { current: { isMuted: false } };
+  const preferences: {
+    current: { isMuted: boolean; preventAutoplayForItemId?: string };
+  } = { current: { isMuted: false } };
   const view = renderHook(
     ({ presentation, itemId, node, source }) => {
       const transport = useVideoTransport(itemId);
@@ -308,5 +310,23 @@ describe("theater native playback intent", () => {
     await waitFor(() => {
       return expect(available.play).toHaveBeenCalledOnce();
     });
+  });
+});
+
+it("keeps a restored item paused but preserves normal autoplay for subsequent explicit navigation", async () => {
+  const harness = setup();
+  harness.preferences.current.preventAutoplayForItemId = "first";
+  harness.enter();
+  await act(async () => {});
+  expect(harness.video.play).not.toHaveBeenCalled();
+  const other = createTestVideo(true);
+  harness.view.rerender({
+    presentation: "theater",
+    itemId: "second",
+    node: other,
+    source: media.playback!,
+  });
+  await waitFor(() => {
+    expect(other.play).toHaveBeenCalledOnce();
   });
 });

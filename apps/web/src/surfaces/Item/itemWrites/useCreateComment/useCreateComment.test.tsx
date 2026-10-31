@@ -1,3 +1,4 @@
+import { createMeResponse } from "@/testing/createMeResponse";
 import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
@@ -183,6 +184,10 @@ describe("per-item pending writes", () => {
       },
     });
     const queryClient = makeQueryClientFromItemDetail();
+    queryClient.setQueryData(["items", otherItemId], {
+      ...getCachedItemFromQueryClient(queryClient)!,
+      itemId: otherItemId,
+    });
     let itemId = ITEM_ID;
     const sender = renderHookWithQueryClient({
       queryClient,
@@ -245,3 +250,46 @@ describe("per-item pending writes", () => {
     );
   });
 });
+it.each(["query", "session"])(
+  "never publishes an old send into a replacement private %s",
+  async (replacement) => {
+    const deferred = makeHold();
+    const comment = makeComment({
+      author: SIGNED_IN,
+      body: "Old session text",
+    });
+    stubFetch({
+      [COMMENT_POST]: { status: 201, body: comment, waitFor: deferred.hold },
+    });
+    const queryClient = makeQueryClientFromItemDetail();
+    const { result } = renderHookWithQueryClient({
+      useHook: () => {
+        return useCreateComment(ITEM_ID);
+      },
+      queryClient,
+    });
+    const onSent = vi.fn();
+    act(() => {
+      result.current.send({
+        draft: { body: "Old session text", commentTags: [] },
+        onSent,
+      });
+    });
+    const detail = getCachedItemFromQueryClient(queryClient)!;
+    if (replacement === "query") {
+      queryClient.removeQueries({ queryKey: ["items", ITEM_ID], exact: true });
+      queryClient.setQueryData(["items", ITEM_ID], detail);
+    } else {
+      queryClient.setQueryData(
+        ["me"],
+        createMeResponse({ sessionId: "00000000-0000-4000-8000-000000000099" }),
+      );
+    }
+    await act(async () => {
+      deferred.letGo();
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(getCachedItemFromQueryClient(queryClient)?.comments).toEqual([]);
+    expect(onSent).not.toHaveBeenCalled();
+  },
+);

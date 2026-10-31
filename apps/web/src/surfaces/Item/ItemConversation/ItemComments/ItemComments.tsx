@@ -55,7 +55,7 @@ export function ItemComments({
         fieldRef={fieldRef}
         presentation={presentation}
       />
-      <div className={classes.itemCommentsThreads}>
+      <div className={classes.itemCommentsThreads} data-conversation-scroll>
         {parents.length === 0 || detail.kind !== "video" ? null : (
           <p className={classes.itemCommentsThreadHeading}>In video order</p>
         )}

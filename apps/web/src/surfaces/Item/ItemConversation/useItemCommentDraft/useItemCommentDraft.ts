@@ -1,3 +1,4 @@
+import { useConversationField } from "@/session/ConversationJourneyProvider/useConversationField";
 import { getFailedCommentTagsFromDraft } from "@/api/comments/comments";
 import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
@@ -91,9 +92,7 @@ function _submitDraft({
       atSeconds: submitted.atSeconds ?? null,
     },
     onSent: () => {
-      if (memory.read(itemId).revision === submitted.revision) {
-        memory.remove(itemId);
-      }
+      memory.remove(itemId, submitted.revision);
       if (
         transport === undefined &&
         owner.current === itemId &&
@@ -113,6 +112,7 @@ export function useItemCommentDraft(
 ): ItemCommentDraft {
   const { itemId, transport } = options;
   const memory = useItemCommentDraftMemory();
+  useConversationField({ itemId, mode: "main" }, options.fieldRef);
   const draft = memory.read(itemId);
   const value = useMemo(() => {
     return { body: draft.body, commentTags: draft.commentTags };

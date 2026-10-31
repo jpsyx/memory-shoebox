@@ -14,6 +14,7 @@ import type { MeResponse } from "@memory-shoebox/shared";
 export function createMeResponse(
   overrides: Readonly<{
     memberId?: string;
+    sessionId?: string;
     avatar?: MeResponse["me"]["member"]["avatar"];
     displayName?: string;
     storedDisplayName?: string | null;
@@ -33,6 +34,7 @@ export function createMeResponse(
   } = overrides;
 
   return {
+    sessionId: overrides.sessionId ?? "018f0000-0000-7000-8000-000000000001",
     me: {
       member: { avatar, memberId, displayName },
       storedDisplayName,

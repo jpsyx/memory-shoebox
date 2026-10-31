@@ -19,7 +19,7 @@ full-screen label remains visible.
 
 ## Presentation and navigation
 
-`ItemSurface` owns one actual-detail query, transport, draft provider and stable
+`ItemSurface` owns one actual-detail query, transport, draft adapter and stable
 `ItemTheaterHost`. The host survives loading, route changes, errors and denials.
 `ItemSurfaceContent` keeps query/state ownership and renders query branches through
 the explicit `ItemQueryContent` component. Mode changes retain the current media
@@ -89,14 +89,26 @@ interactions hold the panel open; Escape closes the innermost overlay first.
 Modal fixed positioning is anchored to the viewport, including when its portal
 origin is the corner dock. No second comment/reaction pipeline exists.
 
-`ItemCommentDraftProvider` stores main-composer values per item for the item-route
-visit. Collapse, presentation changes and mixed navigation preserve them.
-`useItemCommentDraft` remains the capture/submission authority. A late success
-reconciles only its matching submitted revision; it cannot clear newer text or a
-different item's draft. Failed writes retain body/anchor, and pending writes
-cannot be submitted twice. Denial discards that item's draft; member/route
-retirement destroys the visit memory. Reply/edit forms survive collapse and
-presentation changes; retention across item navigation is outside scope.
+`ConversationJourneyProvider` owns main, reply and edit drafts above item routes
+for the current signed-in tab session. `ItemCommentDraftProvider` adapts the
+existing main-composer API to that same owner. Collapse, presentation changes,
+item navigation and same-tab member-collection visits preserve words, references,
+selection endpoints, captured moment and started state. `useItemCommentDraft`
+remains the capture/submission authority. A late success clears only the
+submitted revision; edits also acknowledge saved tag IDs in surviving occurrences
+while the form is away. Pending writes stay exclusive across form remounts.
+
+A normal tag activation records one return journey, replacing the preceding one.
+Back and **Back to comment** restore scroll, editor or readable comment focus and
+window/native fullscreen intent only after a fresh current-entry item read.
+Cached detail and responses from abandoned entries cannot reveal retained drafts.
+Native fullscreen refusal falls back to window theater. Restoration never starts
+or seeks a video; subsequent explicit media navigation retains ordinary playback
+behavior. Unknown/deleted comments on visible items show **That comment is no
+longer available.** A refused item retires all its drafts and return metadata.
+Account, role, actual session replacement, sign-out and private-cache retirement
+retire the owner and its captured callbacks. There is no reload/tab-close recovery,
+URL draft text, localStorage copy, stored media URL or server conversation snapshot.
 
 ## Playback, geometry and privacy
 

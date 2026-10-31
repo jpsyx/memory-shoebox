@@ -1,4 +1,10 @@
 import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  type PrivateAuthority,
+} from "@/api/me/privateQueryHelpers";
+import type { Query } from "@tanstack/react-query";
+import {
   useIsMutating,
   useMutation,
   useQueryClient,
@@ -18,6 +24,10 @@ import {
 import { useUpdateCachedItem } from "@/surfaces/Item/itemWrites/useUpdateCachedItem";
 
 type CommentSubmission = { draft: CreateCommentRequest; onSent: () => void };
+type PendingSubmission = CommentSubmission & {
+  submittedQuery: Query | undefined;
+  authority: PrivateAuthority;
+};
 
 /** What the composer needs. `onSent` clears it, and only on success. */
 export type CommentSend = {
@@ -36,23 +46,50 @@ export function useCreateComment(itemId: string): CommentSend {
   const queryClient = useQueryClient();
   const updateCachedItem = useUpdateCachedItem(itemId);
   const mutationKey = ["items", itemId, "comments"];
-  const filters = { mutationKey, exact: true };
+  const isCurrent = (submission: PendingSubmission) => {
+    return (
+      isPrivateAuthorityCurrent(queryClient, submission.authority) &&
+      !!submission.submittedQuery &&
+      queryClient
+        .getQueryCache()
+        .find({ queryKey: ["items", itemId], exact: true }) ===
+        submission.submittedQuery
+    );
+  };
+  const filters = {
+    mutationKey,
+    exact: true,
+    predicate: (mutation: { state: { variables?: unknown } }) => {
+      const submitted = mutation.state.variables as
+        | PendingSubmission
+        | undefined;
+      return (
+        !!submitted &&
+        isPrivateAuthorityCurrent(queryClient, submitted.authority)
+      );
+    },
+  };
   const numPendingSends = useIsMutating(filters);
   const mutation = useMutation({
     mutationKey,
     scope: makeWriteScopeFromItemId(itemId),
-    mutationFn: ({ draft }: CommentSubmission) => {
+    mutationFn: ({ draft }: PendingSubmission) => {
       return createComment({ itemId, body: draft });
     },
-    onSuccess: (comment, { onSent }) => {
+    onSuccess: (comment, submitted) => {
+      if (!isCurrent(submitted)) {
+        return;
+      }
       updateCachedItem((detail) => {
         return makeItemDetailFromSavedComment({ detail, comment });
       });
       // Mutation-level callbacks survive composer observer unmount.
-      onSent();
+      submitted.onSent();
     },
-    onError: (error) => {
-      refetchItemWhenRefused({ queryClient, itemId, error });
+    onError: (error, submitted) => {
+      if (isCurrent(submitted)) {
+        refetchItemWhenRefused({ queryClient, itemId, error });
+      }
     },
   });
   return {
@@ -61,7 +98,14 @@ export function useCreateComment(itemId: string): CommentSend {
       if (queryClient.isMutating(filters) > 0) {
         return;
       }
-      mutation.mutate({ draft, onSent });
+      mutation.mutate({
+        draft,
+        onSent,
+        authority: capturePrivateAuthority(queryClient),
+        submittedQuery: queryClient
+          .getQueryCache()
+          .find({ queryKey: ["items", itemId], exact: true }),
+      });
     },
     isSending: numPendingSends > 0,
     tagFailure: getCommentTagFailuresFromError(

@@ -1,3 +1,4 @@
+import { getAuthorityFromAccount } from "@/api/me/privateQueryHelpers";
 import type { ReactNode } from "react";
 import {
   applyNavigationBootstrap,
@@ -38,7 +39,7 @@ type BootstrapNavigationOptions = {
   buildLocation: AnyRouter["buildLocation"];
 };
 
-/** Discards private state whenever the current identity or role changes. */
+/** Discards private state when the current account, role or session changes. */
 function _seedBootstrap({
   queryClient,
   bootstrap,
@@ -51,8 +52,7 @@ function _seedBootstrap({
   if (
     account === null ||
     (previous &&
-      (previous.me.member.memberId !== account.me.member.memberId ||
-        previous.me.role !== account.me.role))
+      getAuthorityFromAccount(previous) !== getAuthorityFromAccount(account))
   ) {
     queryClient.removeQueries({
       predicate: (query) => {

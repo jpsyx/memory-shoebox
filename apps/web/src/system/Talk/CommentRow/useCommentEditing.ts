@@ -1,8 +1,7 @@
-import {
-  makeCommentDraftFromSavedTagIds,
-  recordSavedCommentTagIdsInPlace,
-} from "@/system/commentDraftHelpers/commentTagProvenance";
-import type { CommentDto, CommentTagInput } from "@memory-shoebox/shared";
+import { useConversationEditorDraft } from "@/session/ConversationJourneyProvider/useConversationEditorDraft";
+import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
+import { EMPTY_CONVERSATION_DRAFT } from "@/session/conversationJourneyHelpers/conversationJourneyHelpers";
+import type { CommentDto } from "@memory-shoebox/shared";
 import {
   getFailedCommentTagsFromDraft,
   type CommentTagFailure,
@@ -15,7 +14,6 @@ import {
   useState,
   type RefObject,
 } from "react";
-
 /** Whether a comment's editor is open, and how focus gets back to Edit. */
 export type CommentEditing = {
   isEditorShown: boolean;
@@ -31,7 +29,18 @@ export type CommentEditing = {
  *
  * @param canEdit The server's `canEdit` for the comment, as it stands now.
  */
-export function useCommentEditing(canEdit: boolean): CommentEditing {
+export function useCommentEditing(
+  canEdit: boolean,
+  source?: Readonly<{ itemId: string; comment: CommentDto }>,
+): CommentEditing {
+  const memory = useConversationJourney();
+  const key = source
+    ? {
+        itemId: source.itemId,
+        mode: "edit" as const,
+        commentId: source.comment.commentId,
+      }
+    : undefined;
   const [isEditing, setIsEditing] = useState(false);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const wasEditorShown = useRef(false);
@@ -40,7 +49,8 @@ export function useCommentEditing(canEdit: boolean): CommentEditing {
   // pressed: a refetch can take the right away underneath somebody who is
   // mid-sentence, and leaving the form up would offer a save the server is
   // going to refuse.
-  const isEditorShown = isEditing && canEdit;
+  const isEditorShown =
+    (isEditing || !!(key && memory?.readDraft(key))) && canEdit;
 
   useEffect(
     function returnFocusToEdit() {
@@ -58,15 +68,27 @@ export function useCommentEditing(canEdit: boolean): CommentEditing {
     isEditorShown,
     editButtonRef,
     openEditor: () => {
+      if (key && source && memory) {
+        memory.writeDraft(key, {
+          ...EMPTY_CONVERSATION_DRAFT,
+          body: source.comment.body,
+          commentTags: source.comment.commentTags,
+          hasStarted: true,
+        });
+      }
       setIsEditing(true);
     },
     closeEditor: () => {
+      if (key) {
+        memory?.removeDraft(key);
+      }
       setIsEditing(false);
     },
   };
 }
 
 type EditorOptions = {
+  itemId: string;
   comment: CommentDto;
   isSaving: boolean;
   tagFailure?: CommentTagFailure[];
@@ -80,16 +102,16 @@ type EditorDraft = {
   save: () => void;
   canSave: boolean;
 };
-/** Keeps edit text and references local, closing only the submitted revision. */
+/** Keeps edit input in the session, closing only the submitted revision. */
 export function useCommentEditorDraft(
   options: Readonly<EditorOptions>,
 ): EditorDraft {
   const { comment } = options;
-  const local = useLocalCommentDraft(comment);
-  const { draft, setDraft } = local;
-  const owner = useRef(comment.commentId);
-  owner.current = comment.commentId;
-  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const local = useConversationEditorDraft(
+    { itemId: options.itemId, mode: "edit", commentId: comment.commentId },
+    { body: comment.body, commentTags: comment.commentTags },
+  );
+  const { draft, setDraft, fieldRef } = local;
   const isMounted = useRef(false);
   useLayoutEffect(() => {
     isMounted.current = true;
@@ -102,15 +124,20 @@ export function useCommentEditorDraft(
     if (options.isSaving || !canSave) {
       return;
     }
-    const submitted = draft;
+    const submitted = local.memory.readDraft(local.key);
     options.onSave(draft, (saved) => {
-      _acceptSavedComment(saved, {
-        options,
-        local,
-        owner,
-        isMounted,
-        submitted,
-      });
+      if (!submitted || saved.commentId !== comment.commentId) {
+        return;
+      }
+      const matches =
+        local.memory.readDraft(local.key)?.revision === submitted.revision;
+      local.memory.acknowledge(local.key, submitted, saved.commentTags);
+      if (matches) {
+        local.memory.removeDraft(local.key, submitted.revision);
+        if (isMounted.current) {
+          options.onCancel();
+        }
+      }
     });
   };
   return { draft, setDraft, fieldRef, save, canSave };
@@ -131,60 +158,4 @@ function _canSaveCommentDraft(
     getFailedCommentTagsFromDraft({ draft, failures: options.tagFailure ?? [] })
       .length === 0
   );
-}
-
-function useLocalCommentDraft(comment: Readonly<CommentDto>): Pick<
-  EditorDraft,
-  "draft" | "setDraft"
-> & {
-  currentDraft: RefObject<CommentDraft>;
-  savedTagIds: RefObject<WeakMap<CommentTagInput, string>>;
-} {
-  const savedTagIds = useRef(new WeakMap<CommentTagInput, string>());
-  const [draft, setDraftValue] = useState<CommentDraft>({
-    body: comment.body,
-    commentTags: comment.commentTags,
-  });
-  const currentDraft = useRef(draft);
-  currentDraft.current = draft;
-  const setDraft = (updatedDraft: CommentDraft) => {
-    setDraftValue(
-      makeCommentDraftFromSavedTagIds({
-        draft: updatedDraft,
-        tagIds: savedTagIds.current,
-      }),
-    );
-  };
-  return { draft, setDraft, currentDraft, savedTagIds };
-}
-
-type SavedEdit = {
-  options: Readonly<EditorOptions>;
-  local: ReturnType<typeof useLocalCommentDraft>;
-  owner: RefObject<string>;
-  isMounted: RefObject<boolean>;
-  submitted: CommentDraft;
-};
-function _acceptSavedComment(
-  saved: Readonly<CommentDto>,
-  context: Readonly<SavedEdit>,
-): void {
-  const { options, local, owner, isMounted, submitted } = context;
-  if (
-    !isMounted.current ||
-    saved.commentId !== owner.current ||
-    saved.commentId !== options.comment.commentId
-  ) {
-    return;
-  }
-  recordSavedCommentTagIdsInPlace({
-    submitted,
-    savedTags: saved.commentTags,
-    tagIds: local.savedTagIds.current,
-  });
-  if (local.currentDraft.current === submitted) {
-    options.onCancel();
-  } else {
-    local.setDraft(local.currentDraft.current);
-  }
 }
