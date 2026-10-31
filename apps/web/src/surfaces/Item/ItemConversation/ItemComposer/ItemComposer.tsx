@@ -5,7 +5,7 @@ import type { ReactNode, RefObject } from "react";
 import type { MemberRef } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
-import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { useItemCommentDraft } from "../useItemCommentDraft/useItemCommentDraft";
 import { submitCommentOnShortcut } from "../submitCommentOnShortcut";
 import classes from "./ItemComposer.module.css";
@@ -41,9 +41,7 @@ export function ItemComposer({
       }}
     >
       <div className={classes.itemComposerInput}>
-        <span className={classes.itemComposerAvatar} aria-hidden="true">
-          {getInitialsFromDisplayName(viewer.displayName)}
-        </span>
+        <MemberAvatar member={viewer} size={30} />
         <textarea
           ref={fieldRef}
           rows={2}

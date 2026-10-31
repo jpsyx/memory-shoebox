@@ -232,3 +232,29 @@ it.each(["truncated", "forged-length"])(
     ).rejects.toMatchObject({ statusCode: 400 });
   },
 );
+
+it("extracts the shared floored square for odd dimensions and fractional zoom", async () => {
+  const square = await sharp({
+    create: { width: 33, height: 33, channels: 3, background: "red" },
+  })
+    .png()
+    .toBuffer();
+  const bytes = await sharp({
+    create: { width: 101, height: 57, channels: 3, background: "blue" },
+  })
+    .composite([{ input: square, left: 55, top: 4 }])
+    .png()
+    .toBuffer();
+  const output = await makeAvatarImageFromBytes({
+    bytes,
+    contentType: "image/png",
+    crop: { centerX: 0.71, centerY: 0.36, zoom: 1.7 },
+  });
+  const { data } = await sharp(output)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  expect(data[0]).toBeGreaterThan(240);
+  expect(data[2]).toBeLessThan(15);
+  expect(data.at(-3)).toBeGreaterThan(240);
+  expect(data.at(-1)).toBeLessThan(15);
+});

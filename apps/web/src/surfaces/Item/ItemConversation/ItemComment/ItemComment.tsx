@@ -6,7 +6,7 @@ import { CommentEditor } from "@/system/Talk/CommentRow/CommentEditor/CommentEdi
 import { useEditComment } from "@/surfaces/Item/itemWrites/useEditComment";
 import { ItemCommentActions } from "../ItemCommentActions/ItemCommentActions";
 import { VideoReply } from "../../VideoConversation/VideoReply/VideoReply";
-import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import classes from "./ItemComment.module.css";
 
 type Props = {
@@ -34,9 +34,7 @@ export function ItemComment({
   const [isReplying, setIsReplying] = useState(false);
   return (
     <article className={classes.itemComment}>
-      <span className={classes.itemCommentAvatar} aria-hidden="true">
-        {getInitialsFromDisplayName(comment.author.displayName)}
-      </span>
+      <MemberAvatar member={comment.author} size={30} />
       <div className={classes.itemCommentContent}>
         {editing.isEditorShown ? (
           <CommentEditor
@@ -98,6 +96,7 @@ export function ItemComment({
         {isReplying ? (
           <VideoReply
             itemId={itemId}
+            viewer={viewer}
             parent={comment}
             onSent={() => {
               setIsReplying(false);

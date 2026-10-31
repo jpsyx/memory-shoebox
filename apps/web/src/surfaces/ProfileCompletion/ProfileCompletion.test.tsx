@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { createMeResponse } from "@/testing/createMeResponse";
 import { meQueryOptions } from "@/api/me/me";
+import * as avatarHelpers from "@/surfaces/Account/AvatarEditor/avatarCropHelpers/avatarCropHelpers";
 import { ProfileCompletion } from "./ProfileCompletion";
 
 function _render(redirect = "/items/photo?comment=thread") {
@@ -31,7 +32,8 @@ function _render(redirect = "/items/photo?comment=thread") {
   return { client, onContinue };
 }
 afterEach(() => {
-  return vi.unstubAllGlobals();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 it("saves a raw name and preserves the complete safe local destination", async () => {
   const fetcher = vi.fn(async (_path: string, _init?: RequestInit) => {
@@ -163,4 +165,130 @@ it.each([
   expect(screen.getByText(error)).toBeVisible();
   expect(screen.getByLabelText("Your name")).toHaveFocus();
   expect(fetcher).not.toHaveBeenCalled();
+});
+
+it.each(["retry", "skip"] as const)(
+  "claims a name before an optional staged photo and can %s a failed photo",
+  async (recovery) => {
+    vi.spyOn(avatarHelpers, "getDimensionsFromAvatarUrl").mockResolvedValue({
+      width: 101,
+      height: 57,
+    });
+    vi.stubGlobal(
+      "URL",
+      class extends URL {
+        static createObjectURL = vi.fn(() => {
+          return "blob:staged";
+        });
+        static revokeObjectURL = vi.fn();
+      },
+    );
+    const avatar = {
+      avatarId: "018f0000-0000-7000-8000-000000000010",
+      url: "https://example.com/photo",
+      issuedAt: "2026-10-31T00:00:00.000Z",
+      expiresAt: "2099-10-31T01:00:00.000Z",
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json(createMeResponse({ displayName: "John M" })),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          avatarId: avatar.avatarId,
+          expiresAt: avatar.expiresAt,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: "internal_error", message: "Failed" },
+          { status: 500 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          avatarId: avatar.avatarId,
+          expiresAt: avatar.expiresAt,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json(createMeResponse({ storedDisplayName: null, avatar })),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    const { client, onContinue } = _render();
+    await userEvent.type(screen.getByLabelText("Your name"), "John M");
+    await userEvent.upload(
+      screen.getByLabelText("Choose photo file"),
+      new File(["pixels"], "face.png", { type: "image/png" }),
+    );
+    await screen.findByRole("slider", { name: "Photo zoom" });
+    await userEvent.click(screen.getByRole("button", { name: "Save photo" }));
+    expect(fetcher).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("button", { name: "Continue without a photo" });
+    expect(onContinue).not.toHaveBeenCalled();
+    expect(
+      client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me
+        .profileComplete,
+    ).toBe(true);
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: recovery === "retry" ? "Try again" : "Continue without a photo",
+      }),
+    );
+    await vi.waitFor(() => {
+      return expect(onContinue).toHaveBeenCalledWith(
+        "/items/photo?comment=thread",
+      );
+    });
+    expect(
+      client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me
+        .member.displayName,
+    ).toBe("John M");
+  },
+);
+
+it("retains a staged crop and name draft independently after a name conflict", async () => {
+  vi.spyOn(avatarHelpers, "getDimensionsFromAvatarUrl").mockResolvedValue({
+    width: 101,
+    height: 57,
+  });
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL = vi.fn(() => {
+        return "blob:staged";
+      });
+      static revokeObjectURL = vi.fn();
+    },
+  );
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(
+      Response.json({ error: "name_taken", message: "Taken" }, { status: 409 }),
+    );
+  vi.stubGlobal("fetch", fetcher);
+  const { onContinue } = _render();
+  await userEvent.type(screen.getByLabelText("Your name"), "John");
+  expect(screen.getByText("J")).toBeVisible();
+  await userEvent.upload(
+    screen.getByLabelText("Choose photo file"),
+    new File(["pixels"], "face.png", { type: "image/png" }),
+  );
+  await screen.findByRole("slider", { name: "Photo zoom" });
+  await userEvent.click(screen.getByRole("button", { name: "Save photo" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByText(
+    "That name is already taken. Try adding your last-name initial, like John M.",
+  );
+  expect(screen.getByLabelText("Your name")).toHaveValue("John");
+  expect(
+    screen.getAllByAltText("").every((image) => {
+      return image.getAttribute("src") === "blob:staged";
+    }),
+  ).toBe(true);
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+  expect(onContinue).not.toHaveBeenCalled();
+  expect(fetcher).toHaveBeenCalledTimes(1);
 });

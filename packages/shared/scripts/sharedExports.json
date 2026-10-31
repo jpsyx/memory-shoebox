@@ -1,5 +1,10 @@
 [
   {
+    "module": "./avatarGeometry/avatarGeometry.ts",
+    "values": ["getExtractionFromAvatarCrop"],
+    "types": []
+  },
+  {
     "module": "./accountNames/accountNames.ts",
     "values": ["accountNameSchema", "makeAccountNameKeyFromName"],
     "types": ["AccountName"]

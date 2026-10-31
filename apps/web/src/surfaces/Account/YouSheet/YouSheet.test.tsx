@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,9 +11,14 @@ import { theme } from "@/theme/theme";
 
 function _inTheme(node: ReactNode): ReactNode {
   return (
-    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      {node}
-    </MantineProvider>
+    <QueryClientProvider client={new QueryClient()}>
+      <MantineProvider
+        theme={theme}
+        cssVariablesResolver={cssVariablesResolver}
+      >
+        {node}
+      </MantineProvider>
+    </QueryClientProvider>
   );
 }
 

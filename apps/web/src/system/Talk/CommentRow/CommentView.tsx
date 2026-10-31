@@ -4,6 +4,7 @@ import type {
   MemberRef,
   ReactionKind,
 } from "@memory-shoebox/shared";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
 import { Reactions } from "@/system/Reactions/Reactions";
 import { CommentOwnActions } from "@/system/Talk/CommentRow/CommentOwnActions/CommentOwnActions";
@@ -40,7 +41,10 @@ export function CommentView({
 }: Readonly<Props>): ReactNode {
   return (
     <div className={classes.comment}>
-      <span className={classes.commentWho}>{comment.author.displayName}</span>
+      <span className={classes.commentWho}>
+        <MemberAvatar member={comment.author} size={30} />{" "}
+        {comment.author.displayName}
+      </span>
       <CommentWhen comment={comment} onSeek={onSeek} />
       <p className={classes.commentBody}>
         {comment.body}

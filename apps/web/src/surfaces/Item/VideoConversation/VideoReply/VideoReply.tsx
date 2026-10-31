@@ -1,6 +1,8 @@
+import { Group } from "@mantine/core";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { IconSend } from "@tabler/icons-react";
-import type { CommentDto } from "@memory-shoebox/shared";
+import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
 import classes from "./VideoReply.module.css";
 import { submitCommentOnShortcut } from "../../ItemConversation/submitCommentOnShortcut";
@@ -8,6 +10,7 @@ import { submitCommentOnShortcut } from "../../ItemConversation/submitCommentOnS
 type Props = {
   itemId: string;
   parent: CommentDto;
+  viewer: MemberRef;
   onSent: () => void;
   onCancel: () => void;
 };
@@ -16,6 +19,7 @@ type Props = {
 export function VideoReply({
   itemId,
   parent,
+  viewer,
   onSent,
   onCancel,
 }: Readonly<Props>): ReactNode {
@@ -45,17 +49,20 @@ export function VideoReply({
         }
       }}
     >
-      <textarea
-        rows={2}
-        autoFocus
-        aria-label={`Reply to ${parent.author.displayName}`}
-        placeholder="Write a reply…"
-        value={body}
-        onKeyDown={submitCommentOnShortcut}
-        onChange={(event) => {
-          setBody(event.currentTarget.value);
-        }}
-      />
+      <Group align="flex-start" wrap="nowrap">
+        <MemberAvatar member={viewer} size={30} />
+        <textarea
+          rows={2}
+          autoFocus
+          aria-label={`Reply to ${parent.author.displayName}`}
+          placeholder="Write a reply…"
+          value={body}
+          onKeyDown={submitCommentOnShortcut}
+          onChange={(event) => {
+            setBody(event.currentTarget.value);
+          }}
+        />
+      </Group>
       <div className={classes.videoReplyActions}>
         <button type="button" onClick={onCancel}>
           Cancel

@@ -13,8 +13,12 @@ import {
 import type { MeResponse, UpdateMeRequest } from "@memory-shoebox/shared";
 import { deleteSession } from "@/api/auth/auth";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import { meQueryOptions, updateMe } from "@/api/me/me";
-import { getAuthorityFromAccount } from "@/api/me/privateQueryHelpers";
+import { updateMe } from "@/api/me/me";
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  reconcileAccountFields,
+} from "@/api/me/privateQueryHelpers";
 import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 import { profileNameError, profileNameFailure } from "../profileNameCopy";
 
@@ -32,19 +36,23 @@ type SaveOptions = ProfileCompletionOptions & {
 
 function useCompletionSave(options: Readonly<SaveOptions>) {
   const client = useQueryClient();
-  const authority = getAuthorityFromAccount(options.account);
   return useMutation({
     scope: { id: "me" },
     mutationFn: updateMe,
-    onSuccess: (updated) => {
-      const current = client.getQueryData(meQueryOptions.queryKey);
-      if (getAuthorityFromAccount(current ?? undefined) !== authority) return;
-      client.setQueryData(meQueryOptions.queryKey, updated);
+    onMutate: () => {
+      return { ticket: capturePrivateAuthority(client) };
+    },
+    onSuccess: (updated, _body, context) => {
+      if (!isPrivateAuthorityCurrent(client, context.ticket)) {
+        return;
+      }
+      reconcileAccountFields(client, updated, "name", context.ticket);
       options.onContinue(makeSafeHrefFromRedirect(options.redirect));
     },
-    onError: (failure) => {
-      const current = client.getQueryData(meQueryOptions.queryKey);
-      if (getAuthorityFromAccount(current ?? undefined) !== authority) return;
+    onError: (failure, _body, context) => {
+      if (!context || !isPrivateAuthorityCurrent(client, context.ticket)) {
+        return;
+      }
       if (failure instanceof ApiRequestError && failure.status === 401) {
         options.onExpired();
         client.clear();

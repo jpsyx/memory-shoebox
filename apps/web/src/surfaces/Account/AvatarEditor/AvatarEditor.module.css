@@ -1,0 +1,16 @@
+.file {
+  display: none;
+}
+.staged {
+  position: relative;
+  display: inline-block;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.staged img {
+  position: absolute;
+  max-width: none;
+}

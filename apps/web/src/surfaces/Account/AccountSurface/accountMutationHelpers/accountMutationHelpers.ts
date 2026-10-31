@@ -1,4 +1,8 @@
-import { getAuthorityFromAccount } from "@/api/me/privateQueryHelpers";
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  reconcileAccountFields,
+} from "@/api/me/privateQueryHelpers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type {
@@ -85,20 +89,10 @@ export function useSaveMe(): AccountSave<UpdateMeRequest> & {
     scope: ACCOUNT_MUTATION_SCOPE,
     mutationFn: updateMe,
     onMutate: () => {
-      return {
-        authority: getAuthorityFromAccount(
-          queryClient.getQueryData(meQueryOptions.queryKey) ?? undefined,
-        ),
-      };
+      return { ticket: capturePrivateAuthority(queryClient) };
     },
     onSuccess: (updated, _body, context) => {
-      const current = queryClient.getQueryData(meQueryOptions.queryKey);
-      if (
-        current === null ||
-        (current && getAuthorityFromAccount(current) !== context?.authority)
-      )
-        return;
-      queryClient.setQueryData(meQueryOptions.queryKey, updated);
+      reconcileAccountFields(queryClient, updated, "name", context.ticket);
     },
   });
 
@@ -147,13 +141,23 @@ export function useSaveNotify(): AccountSave<NotifyPreferences> {
           ? current
           : { ...current, me: { ...current.me, notify } };
       });
-      return { previous };
+      return { previous, ticket: capturePrivateAuthority(queryClient) };
     },
     onError: (_error, _notify, context) => {
-      queryClient.setQueryData(meQueryOptions.queryKey, context?.previous);
+      if (
+        context?.previous &&
+        isPrivateAuthorityCurrent(queryClient, context.ticket)
+      ) {
+        reconcileAccountFields(
+          queryClient,
+          context.previous,
+          "notify",
+          context.ticket,
+        );
+      }
     },
-    onSuccess: (updated) => {
-      queryClient.setQueryData(meQueryOptions.queryKey, updated);
+    onSuccess: (updated, _notify, context) => {
+      reconcileAccountFields(queryClient, updated, "notify", context.ticket);
     },
   });
 

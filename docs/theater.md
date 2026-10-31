@@ -70,6 +70,10 @@ and the existing reaction widgets and write hooks implement both presentations.
 target. It wraps the same mounted comment subtree; CSS orders scrolling threads
 above the composer. Closed contents are inert and absent from the accessible UI.
 Photos retain their existing comment model; one-level replies belong to videos.
+Comment authors and composer/reply identities share the 30px `MemberAvatar`
+presentation with private signed-source renewal and fixed-size initials fallback.
+Avatar changes reconcile current cached identities without remounting comments
+or disturbing their drafts.
 
 Hover opens and autofocuses the composer while the approximately 390ms morph runs.
 Leaving starts a 450ms delay; returning cancels it. Hover autofocus does not keep

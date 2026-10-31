@@ -6,6 +6,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { meQueryOptions } from "../me";
 import {
   getAuthorityFromAccount,
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
   removePrivateQueries,
 } from "../privateQueryHelpers";
 
@@ -16,7 +18,15 @@ export function hasPendingAccountWrite(queryClient: QueryClient): boolean {
   return (
     queryClient.isMutating({
       predicate: (mutation) => {
-        return mutation.options.scope?.id === "me";
+        const ticket = mutation.options.meta?.privateAuthority as
+          | ReturnType<typeof capturePrivateAuthority>
+          | undefined;
+        return (
+          mutation.options.scope?.id === "me" ||
+          (mutation.options.mutationKey?.[0] === "avatar" &&
+            !!ticket &&
+            isPrivateAuthorityCurrent(queryClient, ticket))
+        );
       },
     }) > 0
   );
@@ -34,7 +44,9 @@ export function ensureAccountReadProtection(queryClient: QueryClient): void {
     if (
       event.type === "updated" &&
       event.action.type === "pending" &&
-      event.mutation.options.scope?.id === "me"
+      (event.mutation.options.scope?.id === "me" ||
+        (event.mutation.options.mutationKey?.[0] === "avatar" &&
+          hasPendingAccountWrite(queryClient)))
     ) {
       cancelNavigationBootstrap(queryClient);
       void queryClient.cancelQueries({

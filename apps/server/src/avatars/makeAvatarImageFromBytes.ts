@@ -1,5 +1,9 @@
 import sharp from "sharp";
-import { avatarCropSchema, type AvatarCrop } from "@memory-shoebox/shared";
+import {
+  avatarCropSchema,
+  getExtractionFromAvatarCrop,
+  type AvatarCrop,
+} from "@memory-shoebox/shared";
 import { ApiError } from "../http/ApiError.ts";
 
 /** The only accepted original byte budget, checked before Sharp sees input. */
@@ -17,26 +21,6 @@ function _invalidImage(): ApiError {
     code: "avatar_invalid_image",
     message: "Choose a still JPEG, PNG, or WebP photo up to 50 megapixels.",
   });
-}
-
-function _getExtractionFromCrop(
-  width: number,
-  height: number,
-  crop: AvatarCrop,
-) {
-  const side = Math.floor(Math.min(width, height) / crop.zoom);
-  return {
-    left: Math.max(
-      0,
-      Math.min(width - side, Math.floor(crop.centerX * width - side / 2)),
-    ),
-    top: Math.max(
-      0,
-      Math.min(height - side, Math.floor(crop.centerY * height - side / 2)),
-    ),
-    width: side,
-    height: side,
-  };
 }
 
 /** Decodes one bounded still image, orients/crops it and strips all metadata. */
@@ -72,7 +56,7 @@ export async function makeAvatarImageFromBytes(
     const height = swapsAxes ? metadata.width : metadata.height;
     return await image
       .autoOrient()
-      .extract(_getExtractionFromCrop(width, height, crop.data))
+      .extract(getExtractionFromAvatarCrop({ width, height, crop: crop.data }))
       .resize(256, 256)
       .webp()
       .toBuffer();

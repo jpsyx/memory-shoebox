@@ -303,3 +303,31 @@ describe("one comment", () => {
     expect(screen.getByText("Edited elsewhere.")).toBeVisible();
   });
 });
+
+it("uses the author's chosen decorative photo in the existing comment position", () => {
+  _render(
+    <CommentRow
+      comment={{
+        ...COMMENT,
+        author: {
+          ...COMMENT.author,
+          avatar: {
+            avatarId: "photo",
+            url: "https://example.com/author",
+            issuedAt: "2026-10-31T00:00:00.000Z",
+            expiresAt: "2099-10-31T01:00:00.000Z",
+          },
+        },
+      }}
+      viewer={VIEWER}
+    />,
+  );
+  expect(screen.getByAltText("")).toHaveAttribute(
+    "src",
+    "https://example.com/author",
+  );
+  expect(screen.getByAltText("").parentElement).toHaveStyle({
+    width: "30px",
+    height: "30px",
+  });
+});

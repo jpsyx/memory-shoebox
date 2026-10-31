@@ -61,8 +61,7 @@ draft and return to sign-in with an explanation and the original destination.
 My account uses the same name validation and conflict wording. An empty claimed
 name cannot be saved. Name and notification saves retain their independent
 reconciliation; a held name response cannot overwrite a different account's
-current cache. Pending edits remain in the input after a failed save. The optional
-profile-photo row is a separate capability and is not simulated by this form.
+current cache. Pending edits remain in the input after a failed save. The optional profile-photo row saves independently of the name and notification fields.
 
 ## Photo-tag identity labels
 
@@ -242,3 +241,44 @@ re-arms its captured key for immediate deletion after failed publication, even
 when an earlier delete saw 404. Tombstones survive a process crash between a
 late PUT and its catch handler. Published pointers remain protected throughout;
 account-access removal keeps the previous chosen historical avatar.
+
+## Photo editing in the web app
+
+My account places an 80px photo preview before the name field. Add/change opens
+an explicit circular crop dialog with a keyboard-operable Photo zoom slider,
+zoom buttons, named move arrows, Reset, and Choose another photo. Phones use a
+full-height sheet. Backdrop clicks keep the crop open; Cancel/Escape discard
+only that crop and return focus to the opener. Removing a photo confirms that
+initials will appear instead, with Keep photo focused initially.
+
+The browser uses decoded, orientation-aware image dimensions. Preview and server
+processing share one pure integer floor/clamp extraction helper, including odd
+dimensions and fractional zoom. Local file checks reject unsupported types and
+the 10 MiB limit before decoding; the server remains the binary validation
+boundary. Replacing, cancelling or unmounting a selection revokes its object URL.
+Failed saves keep the current photo, selected file and crop for retry. A stale
+version offers Use latest photo or Save this photo instead; replacement rereads
+the pointer and reserves against exactly that version, so a further change still
+conflicts rather than being silently overwritten.
+
+Profile completion stages an optional crop locally. Continue claims the name
+first and then saves the confirmed photo. A name conflict preserves the crop;
+a photo failure preserves the successful name and offers Try again or Continue
+without a photo. The mounted editor owns the draft throughout that handoff.
+Initials reflect the typed name before publication.
+
+Name, notification and avatar responses reconcile only the fields each write
+owns. Private continuations capture the account query identity, member/role and
+retirement generation; cache clear, account replacement and private retirement
+invalidate them. An old upload cannot continue from reservation to PUT or
+publish after retirement. Avatar writes cancel preceding account/bootstrap reads
+and hold background account reads only for their live authority. Terminal writes
+release that hold independently of another account's pending work.
+
+`MemberAvatar` reserves its requested circular footprint, uses decorative images
+with empty alt text and falls back to initials without a layout change. Existing
+comment authors and reply/composer identities use 30px. Save/removal reconciles
+matching member references throughout the current cache. Failed/expired signed
+sources share one private renewal attempt per immutable avatar ID and lifetime;
+a failed renewal does not loop. A held renewal can update only references still
+pointing at the expected ID, so removing/replacing an image cannot restore it.
