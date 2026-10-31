@@ -210,7 +210,8 @@ history, content ownership, person links and other historical associations.
 New invitations keep the optional name as an unclaimed suggestion, allowing
 duplicate suggestions. Restoring a claimed identity preserves its name when
 omitted. A replacement uses the permanent name claim action and cannot be null.
-An incomplete restored identity can replace or clear its suggestion.
+An incomplete restored identity without retained claims can replace or clear its
+suggestion.
 
 The immediate transaction writes the invited identity, a seven-day invitation,
 `member_invited` audit event and outbound email together. Database enqueue

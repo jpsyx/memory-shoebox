@@ -113,10 +113,9 @@ async function _makeCommentDtoForAuthor(options: {
  * `POST /items/:itemId/comments`: say something, optionally pinned to a
  * moment in a video.
  *
- * **Not role-gated.** Holding the payload is the permission: everybody who
- * can open an item can comment on it (`PRODUCT.md` § Visibility), a
- * `viewer` included. Only `getVisibleItemOr404` stands between a request
- * and a write.
+ * **Not role-gated.** Every member with a complete profile who can open an
+ * item can comment on it (`PRODUCT.md` § Visibility), a `viewer` included.
+ * `getVisibleItemOr404` checks access before profile completion is required.
  */
 export async function postItemComment(
   request: FastifyRequest,

@@ -22,6 +22,8 @@ function _expectCreatedAdminResponse(
   expect(createSetupResponseSchema.parse(created.json())).toMatchObject({
     me: {
       storedDisplayName: "Rosa",
+      profileComplete: true,
+      suggestedDisplayName: null,
       email: "rosa@example.com",
       role: "admin",
       joinedAt: NOW,
@@ -59,7 +61,22 @@ async function _expectInitialAdminCatalog(
     joined_at: NOW,
     last_signed_in_at: NOW,
     removed_at: null,
+    profile_completed_at: NOW,
+    suggested_display_name: null,
   });
+  expect(
+    await context.database
+      .selectFrom("member_name_claims")
+      .selectAll()
+      .execute(),
+  ).toEqual([
+    {
+      name_key: "rosa",
+      member_id: members[0]!.id,
+      display_name: "Rosa",
+      created_at: NOW,
+    },
+  ]);
   expect(
     await context.database.selectFrom("invitations").selectAll().execute(),
   ).toEqual([]);
