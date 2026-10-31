@@ -190,7 +190,16 @@ archive upload and comment participation. `POST /api/me/avatar-uploads` accepts 
 expected current avatar ID (nullable), JPEG/PNG/WebP content type, a positive byte
 size up to 10 MiB, and orientation-relative crop center coordinates in [0, 1]
 with zoom in [1, 8]. It returns an immutable avatar ID and a ten-minute deadline.
-The binary upload and processing handler is a separate implementation slice.
+`PUT /api/me/avatar-uploads/:avatarId` accepts the reserved binary image with
+its declared content type and exact byte length, processes it, and returns the
+canonical account/settings envelope. Replaying the current publication performs
+no further storage write. The route accepts only still JPEG, PNG, and WebP, rejects
+MIME mismatches, animation (including APNG), corrupt input and images over 50MP,
+and emits a metadata-free 256-square WebP after orientation and the chosen crop.
+Oversized bodies return `413 avatar_too_large`: “Choose a photo smaller than
+10 MB.” Three attempts per member per five-minute window return `429` with
+`Retry-After` when exceeded. One pre-body admission slot returns `503 avatar_busy`
+for concurrent work, without queuing buffered images.
 
 Migration 0020 adds `member_avatar_uploads` and the nullable `members.avatar_id`
 pointer. Reservation keys are `avatars/<memberId>/<avatarId>.webp`; B2 adds its
@@ -216,3 +225,20 @@ signature at the explicit whole-second signing clock. The reported interval is t
 one the signer uses. SQL never stores signed URLs. Directory, group, observation,
 milestone creator, and settings provenance responses use the same batched reader.
 Avatars have no archive item, rendition purpose, photo tag, upload count, or email.
+
+Avatar reservation expiry runs hourly and on application startup through the
+owned job runner. Expired `reserved` or `uploading` rows become irreversibly
+`retired`, covering crashes before or after B2 PUT. Failed decode/PUT/publication
+and rejected or aborted admitted bodies also retire their reservation and queue
+its immutable key. Removing an avatar retires all owned pending reservations in
+the same transaction, even when the current pointer is already empty; a stale
+removal leaves the current image and pending work untouched.
+
+The object-deletion drain protects every current pointer and unretired live
+reservation. Retired avatar keys retain durable deletion tombstones using the
+existing settling-window and daily recheck strategy. Repeated checks HEAD first,
+so an absent object does not create repeated hide markers. A late writer also
+re-arms its captured key for immediate deletion after failed publication, even
+when an earlier delete saw 404. Tombstones survive a process crash between a
+late PUT and its catch handler. Published pointers remain protected throughout;
+account-access removal keeps the previous chosen historical avatar.

@@ -39,7 +39,7 @@ async function _createRegistry() {
 }
 
 describe("createJobRegistry", () => {
-  it("registers the seven jobs conventions.md names, with their cadences", async () => {
+  it("registers the core jobs and avatar recovery with their cadences", async () => {
     const { database, jobs } = await _createRegistry();
 
     expect(
@@ -47,6 +47,7 @@ describe("createJobRegistry", () => {
         return [job.name, job.intervalMs];
       }),
     ).toEqual([
+      ["avatar-reservation-sweep", 3_600_000],
       ["session-sweep", 3_600_000],
       ["invitation-lapse", 3_600_000],
       ["sign-in-code-sweep", 3_600_000],

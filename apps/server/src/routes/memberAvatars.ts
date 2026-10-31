@@ -1,9 +1,17 @@
-import type { FastifyInstance } from "fastify";
 import {
+  idSchema,
   memberIdParamsSchema,
   removeAvatarRequestSchema,
   reserveAvatarRequestSchema,
 } from "@memory-shoebox/shared";
+import { ApiError } from "../http/ApiError.ts";
+import { RATE_LIMIT_RULES } from "../http/rateLimit/rateLimit.constants.ts";
+import { AVATAR_BYTE_LIMIT } from "../avatars/makeAvatarImageFromBytes.ts";
+import {
+  uploadMemberAvatar,
+  retireMemberAvatarUpload,
+} from "../avatars/uploadMemberAvatar.ts";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import { reserveMemberAvatar } from "../avatars/reserveMemberAvatar.ts";
 import { removeMemberAvatar } from "../avatars/publishMemberAvatar.ts";
@@ -67,4 +75,141 @@ export async function memberAvatarRoutes(app: FastifyInstance): Promise<void> {
   _registerReservationRoute(app);
   _registerRemovalRoute(app);
   _registerRenewalRoute(app);
+  await app.register(_registerBinaryRoutes);
+}
+
+function _getAvatarIdFromRequest(request: FastifyRequest): string {
+  return idSchema.parse((request.params as { avatarId: unknown }).avatarId);
+}
+
+async function _uploadAvatar(request: FastifyRequest) {
+  const viewer = requireViewer(request);
+  const { database, b2, clock } = request.server;
+  await uploadMemberAvatar({
+    database,
+    b2,
+    clock,
+    memberId: viewer.memberId,
+    avatarId: _getAvatarIdFromRequest(request),
+    bytes: request.body as Buffer,
+    contentType: request.headers["content-type"]?.split(";")[0]?.trim() ?? "",
+    now: clock().toISOString(),
+  });
+  return {
+    me: await getMeDtoFromMemberId({
+      database,
+      b2,
+      memberId: viewer.memberId,
+      now: clock().toISOString(),
+    }),
+    settings: await readShellSettings(database),
+  };
+}
+
+function _checkUploadRate(request: FastifyRequest): void {
+  const viewer = requireViewer(request);
+  const outcome = request.server.rateLimiter.consume({
+    key: `avatarUploadPerMember:${viewer.memberId}`,
+    windows: RATE_LIMIT_RULES.avatarUploadPerMember.windows,
+    nowMs: request.server.clock().getTime(),
+  });
+  if (!outcome.isAllowed) {
+    throw ApiError.rateLimited(outcome.retryAfterSeconds);
+  }
+}
+
+async function _retireRejectedRequest(request: FastifyRequest): Promise<void> {
+  const params = request.params as { avatarId?: unknown };
+  const avatarId = idSchema.safeParse(params.avatarId);
+  if (request.viewer === undefined || !avatarId.success) {
+    return;
+  }
+  await retireMemberAvatarUpload({
+    database: request.server.database,
+    memberId: request.viewer.memberId,
+    avatarId: avatarId.data,
+    now: request.server.clock().toISOString(),
+    reservedOnly: true,
+  });
+}
+
+type AvatarPermit = {
+  owner: { request: FastifyRequest; hasStarted: boolean } | undefined;
+};
+
+function _registerAdmissionHooks(
+  app: FastifyInstance,
+  permit: AvatarPermit,
+): void {
+  const releaseUnstarted = (request: FastifyRequest): void => {
+    if (permit.owner?.request === request && !permit.owner.hasStarted) {
+      permit.owner = undefined;
+    }
+  };
+  app.addHook("onRequest", async (request) => {
+    _checkUploadRate(request);
+    if (permit.owner !== undefined) {
+      throw new ApiError({
+        statusCode: 503,
+        code: "avatar_busy",
+        message: "Another photo is processing. Try again shortly.",
+      });
+    }
+    permit.owner = { request, hasStarted: false };
+  });
+  app.addHook("onRequestAbort", async (request) => {
+    const isUnstarted =
+      permit.owner?.request === request && !permit.owner.hasStarted;
+    if (isUnstarted) {
+      try {
+        await _retireRejectedRequest(request);
+      } finally {
+        releaseUnstarted(request);
+      }
+    }
+  });
+  app.addHook("onResponse", async (request) => {
+    releaseUnstarted(request);
+  });
+  app.addHook("onError", async (request) => {
+    if (permit.owner?.request === request && !permit.owner.hasStarted) {
+      try {
+        await _retireRejectedRequest(request);
+      } finally {
+        releaseUnstarted(request);
+      }
+    }
+  });
+}
+
+// This child contains only the binary endpoint. Its parser cannot affect JSON.
+async function _registerBinaryRoutes(app: FastifyInstance): Promise<void> {
+  const permit: AvatarPermit = { owner: undefined };
+  app.removeAllContentTypeParsers();
+  app.addContentTypeParser(
+    "*",
+    { parseAs: "buffer", bodyLimit: AVATAR_BYTE_LIMIT },
+    (_request, body, done) => {
+      done(null, body);
+    },
+  );
+  _registerAdmissionHooks(app, permit);
+  app.put(
+    "/me/avatar-uploads/:avatarId",
+    { bodyLimit: AVATAR_BYTE_LIMIT },
+    async (request) => {
+      // An aborted pre-handler request must never start with a released permit.
+      if (permit.owner?.request !== request || request.raw.aborted) {
+        throw ApiError.gone("avatar_upload_expired");
+      }
+      permit.owner.hasStarted = true;
+      try {
+        return await _uploadAvatar(request);
+      } finally {
+        if (permit.owner?.request === request) {
+          permit.owner = undefined;
+        }
+      }
+    },
+  );
 }

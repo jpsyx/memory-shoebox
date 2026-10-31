@@ -385,3 +385,26 @@ fake loopback bucket and injected no-mail services. Compilation mode and runtime
 email policy are separate. The ordinary E2E runner checks the exact owned catalog
 path and fake endpoint before opening resources, and retains real background
 job, outbox and shutdown behavior.
+
+## Small profile-image upload exception
+
+Avatar originals use a dedicated authenticated binary PUT through Fastify rather
+than an archive upload session. The encapsulated parser accepts at most 10 MiB;
+a single slot is acquired before buffering and has no waiting queue. Contention
+returns `503 avatar_busy`, and each member has three attempts per five-minute
+window. A parsing abort releases only unstarted work. Once processing begins,
+the slot stays held until Sharp and B2 actually settle, even after client abort.
+
+Sharp checks actual JPEG/PNG/WebP format, still-image frame count and a
+50-megapixel input limit before raster allocation. PNG chunk inspection also
+rejects APNG, whose animation Sharp's PNG decoder does not expose as pages.
+Orientation precedes square cropping and 256-by-256 WebP output; originals and
+metadata are not stored. SQLite transactions fence ownership, expiry and current
+version before publication and never span decoding or B2 I/O. The publication
+clock is read after storage completes, so an expired request cannot publish even
+before the next sweep. Archive transfers and downloads retain their direct path.
+
+These limits and tiny-fixture tests are not a deployment memory-safety result.
+V2 acceptance must measure maximum accepted 50MP decodes and concurrent 10 MiB
+requests in an equivalent target runtime and serving memory envelope before
+shipping. See [member profiles](member-profiles.md#private-avatars) for recovery.

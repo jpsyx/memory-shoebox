@@ -43,7 +43,7 @@ export function registerAppBackgroundWork(
   app.decorate("jobRunner", jobRunner);
 
   if (deps.startBackgroundWork === true) {
-    jobRunner.start();
+    _startAppJobs(app);
   }
 
   // Fly stops a machine with SIGTERM, and index.ts closes the app on it. The
@@ -52,5 +52,12 @@ export function registerAppBackgroundWork(
   app.addHook("onClose", async () => {
     backgroundShutdown.abort();
     await jobRunner.stop();
+  });
+}
+
+function _startAppJobs(app: FastifyInstance): void {
+  app.jobRunner.start();
+  app.addHook("onReady", async () => {
+    await app.jobRunner.runOnce("avatar-reservation-sweep");
   });
 }

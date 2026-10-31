@@ -144,6 +144,23 @@ export async function removeMemberAvatar(
         .where("id", "=", options.memberId)
         .execute();
       await _retireAvatar(transaction, currentAvatarId, options.now);
+      await _retirePendingAvatars(transaction, options);
     },
   });
+}
+
+async function _retirePendingAvatars(
+  transaction: DatabaseExecutor,
+  options: AvatarOwnerOptions,
+): Promise<void> {
+  const rows = await transaction
+    .selectFrom("member_avatar_uploads")
+    .select("id")
+    .where("member_id", "=", options.memberId)
+    .where("state", "in", ["reserved", "uploading"])
+    .execute();
+  await rows.reduce(async (previous, row) => {
+    await previous;
+    await _retireAvatar(transaction, row.id, options.now);
+  }, Promise.resolve());
 }

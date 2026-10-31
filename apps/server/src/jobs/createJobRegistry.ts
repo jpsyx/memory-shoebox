@@ -1,3 +1,4 @@
+import { runAvatarReservationSweep } from "./runAvatarReservationSweep.ts";
 import type { Kysely } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
@@ -16,13 +17,11 @@ const FIVE_MINUTES_MS = 300_000;
 const ONE_DAY_MS = 86_400_000;
 
 /**
- * The seven background jobs, with the cadences
+ * The core background jobs plus avatar reservation recovery, with the cadences
  * `apis/conventions.md` § The job runner gives them.
  *
- * **Seven, and the set is closed.** The document names them so a slice can
- * cite one, and nothing else may join the list: the mail queue runs on the
- * same runner and is deliberately not in here, because it is not one of the
- * seven and its cadence is seconds rather than minutes.
+ * Avatar expiry extends the original seven-job set. The mail queue runs on
+ * the same runner but is separate because its cadence is seconds.
  *
  * Order matches the document's table, so the two can be read side by side.
  *
@@ -49,6 +48,16 @@ export function createJobRegistry(deps: {
   };
 
   return [
+    {
+      name: "avatar-reservation-sweep",
+      intervalMs: ONE_HOUR_MS,
+      run: async () => {
+        await runAvatarReservationSweep({
+          database: deps.database,
+          now: now(),
+        });
+      },
+    },
     {
       name: "session-sweep",
       intervalMs: ONE_HOUR_MS,

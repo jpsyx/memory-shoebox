@@ -7,6 +7,7 @@ import { getUploadFileRefFromStorageKey } from "./presignUploadFile/uploadStorag
  *
  * In use means either:
  *
+ * - a current avatar pointer or unretired avatar reservation holds the key;
  * - an `item_renditions` row holds the key;
  * - a processing output reserves it in reserved/uploading/uploaded state; or
  * - an `upload_files` row owns it, found by the session and file ids in an
@@ -33,6 +34,9 @@ export async function isStorageKeyInUse(
   }>,
 ): Promise<boolean> {
   const { database, storageKey } = options;
+  if (await _isAvatarKeyInUse(options)) {
+    return true;
+  }
   const rendition = await database
     .selectFrom("item_renditions")
     .select("id")
@@ -52,6 +56,36 @@ export async function isStorageKeyInUse(
     return true;
   }
 
+  return _isUploadFileKeyInUse(options);
+}
+
+async function _isAvatarKeyInUse(
+  options: Readonly<{ database: DatabaseExecutor; storageKey: string }>,
+): Promise<boolean> {
+  const { database, storageKey } = options;
+  const avatar = await database
+    .selectFrom("member_avatar_uploads")
+    .select("id")
+    .where("storage_key", "=", storageKey)
+    .where((expression) => {
+      return expression.or([
+        expression("state", "in", ["reserved", "uploading"]),
+        expression.exists(
+          expression
+            .selectFrom("members")
+            .select("id")
+            .whereRef("members.avatar_id", "=", "member_avatar_uploads.id"),
+        ),
+      ]);
+    })
+    .executeTakeFirst();
+  return avatar !== undefined;
+}
+
+async function _isUploadFileKeyInUse(
+  options: Readonly<{ database: DatabaseExecutor; storageKey: string }>,
+): Promise<boolean> {
+  const { database, storageKey } = options;
   const ref = getUploadFileRefFromStorageKey(storageKey);
   const file = await database
     .selectFrom("upload_files")
