@@ -190,9 +190,15 @@ already available from `/me/sessions`, never the cookie token. Sign-in and setup
 publish their newly created `session.sessionId` into the same account cache.
 
 Private client authority includes account, role and this actual session ID.
-A fresh server read observing another same-account cookie session retires private
-queries, conversation drafts and captured continuations. Local sign-in also
-explicitly rotates the private generation before publishing the new account.
+A fresh self-response, including a name, notification or own-avatar mutation,
+observing another same-account cookie session retires private queries,
+conversation drafts and captured continuations. Within the existing publication
+ordering fence, a changed account/role/session publishes the complete new response
+as its baseline; fields from different identities are never merged. Same-session
+mutations still merge only their own fields, preserving independent name/avatar
+ordering, and responses captured under an already retired lifetime are rejected.
+Local sign-in also explicitly rotates the private generation before publishing
+the new account.
 Existing read/publication ordering guards continue to reject old responses.
 Member-global `lastSignedInAt` remains informational: another device signing in
 must not retire this tab. This adds no polling or broadcast mechanism; replacement

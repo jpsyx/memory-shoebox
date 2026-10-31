@@ -216,40 +216,151 @@ it.each(["replacement", "removal"] as const)(
   },
 );
 
-it("keeps a newer removal when an explicit fresh-version replacement returns late", async () => {
+it.each([false, true])(
+  "keeps a newer removal when an explicit fresh-version replacement returns late (changed response session: %s)",
+  async (hasDifferentSession) => {
+    const client = new QueryClient();
+    client.setQueryData(["me"], createMeResponse());
+    const writeContext = captureAvatarWrite(client);
+    const latest = {
+      ...avatar,
+      avatarId: "018f0000-0000-7000-8000-000000000011",
+    };
+    const saved = {
+      ...avatar,
+      avatarId: "018f0000-0000-7000-8000-000000000012",
+    };
+    const held = Promise.withResolvers<Response>();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ avatarId: saved.avatarId, expiresAt: saved.expiresAt }),
+      )
+      .mockReturnValueOnce(held.promise)
+      .mockResolvedValueOnce(Response.json(createMeResponse()));
+    vi.stubGlobal("fetch", fetcher);
+    const saving = saveAvatar({
+      client,
+      file: new File(["pixels"], "face.png", { type: "image/png" }),
+      crop: { centerX: 0.5, centerY: 0.5, zoom: 1 },
+      expectedAvatarId: latest.avatarId,
+      write: { context: writeContext, freshExpectedAvatarId: latest.avatarId },
+    });
+    await vi.waitFor(() => {
+      return expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+    client.setQueryData(["me"], createMeResponse({ avatar: saved }));
+    await removeAvatar({ client, expectedAvatarId: saved.avatarId });
+    held.resolve(
+      Response.json(
+        createMeResponse({
+          avatar: saved,
+          sessionId: hasDifferentSession
+            ? "018f0000-0000-7000-8000-000000000099"
+            : undefined,
+        }),
+      ),
+    );
+    await saving;
+    expect(
+      client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me
+        .member.avatar,
+    ).toBeNull();
+  },
+);
+
+it.each(["name", "avatar", "notify"] as const)(
+  "publishes a complete new-member baseline from a %s response without mixing identities",
+  (field) => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["me"],
+      createMeResponse({ email: "old@example.com", avatar }),
+    );
+    const ticket = capturePrivateAuthority(client);
+    const replacement = createMeResponse({
+      memberId: "018f0000-0000-7000-8000-000000000098",
+      sessionId: "018f0000-0000-7000-8000-000000000099",
+      email: "replacement@example.com",
+      displayName: "Replacement",
+      role: "viewer",
+    });
+    reconcileAccountFields(client, replacement, field, ticket);
+    expect(client.getQueryData(["me"])).toEqual(replacement);
+    expect(isPrivateAuthorityCurrent(client, ticket)).toBe(false);
+  },
+);
+it.each(["upload", "remove"] as const)(
+  "observes replacement session in an avatar %s response before any account read",
+  async (operation) => {
+    const client = new QueryClient();
+    client.setQueryData(["me"], createMeResponse());
+    client.setQueryData(["items", "private"], {
+      member: createMeResponse().me.member,
+    });
+    const ticket = capturePrivateAuthority(client);
+    const replacement = createMeResponse({
+      sessionId: "018f0000-0000-7000-8000-000000000099",
+      displayName: "Replacement",
+      avatar: operation === "upload" ? avatar : null,
+    });
+    const fetcher = vi.fn();
+    if (operation === "upload") {
+      fetcher.mockResolvedValueOnce(
+        Response.json({
+          avatarId: avatar.avatarId,
+          expiresAt: avatar.expiresAt,
+        }),
+      );
+    }
+    const held = Promise.withResolvers<Response>();
+    fetcher.mockReturnValueOnce(held.promise);
+    vi.stubGlobal("fetch", fetcher);
+    const saving =
+      operation === "upload"
+        ? saveAvatar({
+            client,
+            file: new File(["x"], "face.png", { type: "image/png" }),
+            crop: { centerX: 0.5, centerY: 0.5, zoom: 1 },
+            expectedAvatarId: null,
+          })
+        : removeAvatar({ client, expectedAvatarId: null });
+    await vi.waitFor(() => {
+      expect(fetcher).toHaveBeenCalledTimes(operation === "upload" ? 2 : 1);
+    });
+    // A same-session independent avatar publication must not hide the observed
+    // replacement session merely because the old expected pointer changed.
+    client.setQueryData(
+      ["me"],
+      createMeResponse({
+        avatar: { ...avatar, avatarId: "018f0000-0000-7000-8000-000000000011" },
+      }),
+    );
+    held.resolve(Response.json(replacement));
+    await saving;
+    expect(client.getQueryData(["me"])).toEqual(replacement);
+    expect(client.getQueryData(["items", "private"])).toBeUndefined();
+    expect(isPrivateAuthorityCurrent(client, ticket)).toBe(false);
+  },
+);
+it("rejects a late old avatar response after same-member session replacement", async () => {
   const client = new QueryClient();
-  client.setQueryData(["me"], createMeResponse());
-  const writeContext = captureAvatarWrite(client);
-  const latest = {
-    ...avatar,
-    avatarId: "018f0000-0000-7000-8000-000000000011",
-  };
-  const saved = { ...avatar, avatarId: "018f0000-0000-7000-8000-000000000012" };
+  client.setQueryData(["me"], createMeResponse({ avatar }));
   const held = Promise.withResolvers<Response>();
-  const fetcher = vi
-    .fn()
-    .mockResolvedValueOnce(
-      Response.json({ avatarId: saved.avatarId, expiresAt: saved.expiresAt }),
-    )
-    .mockReturnValueOnce(held.promise)
-    .mockResolvedValueOnce(Response.json(createMeResponse()));
-  vi.stubGlobal("fetch", fetcher);
-  const saving = saveAvatar({
-    client,
-    file: new File(["pixels"], "face.png", { type: "image/png" }),
-    crop: { centerX: 0.5, centerY: 0.5, zoom: 1 },
-    expectedAvatarId: latest.avatarId,
-    write: { context: writeContext, freshExpectedAvatarId: latest.avatarId },
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => {
+      return held.promise;
+    }),
+  );
+  const removing = removeAvatar({ client, expectedAvatarId: avatar.avatarId });
+  const rejected = expect(removing).rejects.toThrow("Account changed.");
+  const replacement = createMeResponse({
+    sessionId: "018f0000-0000-7000-8000-000000000099",
+    avatar,
   });
-  await vi.waitFor(() => {
-    return expect(fetcher).toHaveBeenCalledTimes(2);
-  });
-  client.setQueryData(["me"], createMeResponse({ avatar: saved }));
-  await removeAvatar({ client, expectedAvatarId: saved.avatarId });
-  held.resolve(Response.json(createMeResponse({ avatar: saved })));
-  await saving;
-  expect(
-    client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me.member
-      .avatar,
-  ).toBeNull();
+  client.setQueryData(["me"], replacement);
+  held.resolve(Response.json(createMeResponse()));
+  await rejected;
+  expect(client.getQueryData(["me"])).toEqual(replacement);
 });

@@ -82,7 +82,7 @@ export function isPrivateAuthorityCurrent(
   );
 }
 
-/** Merges only the fields owned by one independent account mutation. */
+/** Merges same-session fields; a newly observed authority replaces the baseline. */
 export function reconcileAccountFields(
   client: QueryClient,
   response: Readonly<MeResponse>,
@@ -90,6 +90,11 @@ export function reconcileAccountFields(
   ticket: Readonly<ReturnType<typeof capturePrivateAuthority>>,
 ): void {
   if (!isPrivateAuthorityCurrent(client, ticket)) {
+    return;
+  }
+  if (getAuthorityFromAccount(response) !== ticket.authority) {
+    removePrivateQueries(client);
+    client.setQueryData<MeResponse>(["me"], response);
     return;
   }
   client.setQueryData<MeResponse>(["me"], (current) => {

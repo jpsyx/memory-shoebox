@@ -2,7 +2,12 @@ import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, it } from "vitest";
 import { createMeResponse } from "@/testing/createMeResponse";
-import { removePrivateQueries } from "@/api/me/privateQueryHelpers";
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  reconcileAccountFields,
+  removePrivateQueries,
+} from "@/api/me/privateQueryHelpers";
 import {
   ConversationJourneyProvider,
   useConversationJourney,
@@ -126,3 +131,52 @@ it("preserves this tab when a different device updates the member-global sign-in
   expect(result.current!.readDraft(key)?.body).toBe("This tab's words");
   expect(result.current).toBe(original);
 });
+
+it.each(["name", "avatar"] as const)(
+  "retires drafts and captured actions when a %s response first observes replacement session",
+  (field) => {
+    const client = new QueryClient();
+    const original = createMeResponse();
+    client.setQueryData(["me"], original);
+    client.setQueryData(["items", "private"], { body: "Old private cache" });
+    const { result } = renderHook(useConversationJourney, {
+      wrapper: ({ children }) => {
+        return (
+          <QueryClientProvider client={client}>
+            <ConversationJourneyProvider>
+              {children}
+            </ConversationJourneyProvider>
+          </QueryClientProvider>
+        );
+      },
+    });
+    const old = result.current!;
+    const ticket = capturePrivateAuthority(client);
+    act(() => {
+      old.writeDraft(key, { ...EMPTY_CONVERSATION_DRAFT, body: "Old words" });
+    });
+    const replacement = createMeResponse({
+      sessionId: "018f0000-0000-7000-8000-000000000099",
+      displayName: "Replacement name",
+    });
+    act(() => {
+      reconcileAccountFields(client, replacement, field, ticket);
+    });
+    expect(client.getQueryData(["me"])).toEqual(replacement);
+    expect(client.getQueryData(["items", "private"])).toBeUndefined();
+    expect(isPrivateAuthorityCurrent(client, ticket)).toBe(false);
+    expect(result.current!.readDraft(key)).toBeUndefined();
+    act(() => {
+      result.current!.writeDraft(key, {
+        ...EMPTY_CONVERSATION_DRAFT,
+        body: "New words",
+      });
+      old.removeDraft(key);
+      old.writeDraft(key, { ...EMPTY_CONVERSATION_DRAFT, body: "Stale words" });
+      reconcileAccountFields(client, original, field, ticket);
+    });
+    expect(client.getQueryData(["me"])).toEqual(replacement);
+    expect(result.current!.readDraft(key)?.body).toBe("New words");
+    expect(old.readDraft(key)).toBeUndefined();
+  },
+);

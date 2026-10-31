@@ -10,6 +10,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
 import {
   capturePrivateAuthority,
+  getAuthorityFromAccount,
   isPrivateAuthorityCurrent,
   reconcileAccountFields,
 } from "@/api/me/privateQueryHelpers";
@@ -87,6 +88,10 @@ function _publishOwnAvatar(options: Readonly<PublicationOptions>): void {
     return;
   }
   publication.owner.published = publication.sequence;
+  if (getAuthorityFromAccount(response) !== ticket.authority) {
+    reconcileAccountFields(client, response, "avatar", ticket);
+    return;
+  }
   const currentId =
     client.getQueryData<MeResponse>(["me"])?.me.member.avatar?.avatarId ?? null;
   if (

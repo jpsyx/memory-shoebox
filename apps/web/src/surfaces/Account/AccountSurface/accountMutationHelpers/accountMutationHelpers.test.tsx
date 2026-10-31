@@ -192,3 +192,53 @@ it("does not roll back a newer avatar when a held name response arrives", async 
     client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me.member,
   ).toMatchObject({ displayName: "New", avatar });
 });
+
+it.each([false, true])(
+  "publishes a first-observed replacement name response unless its lifetime already retired (%s)",
+  async (hasRetired) => {
+    const client = new QueryClient();
+    client.setQueryData(["me"], createMeResponse());
+    const held = Promise.withResolvers<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        return held.promise;
+      }),
+    );
+    const { result } = renderHook(useSaveMe, {
+      wrapper: ({ children }) => {
+        return (
+          <AccountMutationFixture client={client}>
+            {children}
+          </AccountMutationFixture>
+        );
+      },
+    });
+    act(() => {
+      result.current.save({ displayName: "Saved" });
+    });
+    await vi.waitFor(() => {
+      expect(fetch).toHaveBeenCalled();
+    });
+    const replacement = createMeResponse({
+      sessionId: "018f0000-0000-7000-8000-000000000099",
+      displayName: "Replacement",
+    });
+    if (hasRetired) {
+      client.setQueryData(["me"], replacement);
+    }
+    await act(async () => {
+      held.resolve(
+        Response.json(
+          hasRetired
+            ? createMeResponse({ displayName: "Old save" })
+            : replacement,
+        ),
+      );
+      await vi.waitFor(() => {
+        expect(result.current.isSaving).toBe(false);
+      });
+    });
+    expect(client.getQueryData(["me"])).toEqual(replacement);
+  },
+);
