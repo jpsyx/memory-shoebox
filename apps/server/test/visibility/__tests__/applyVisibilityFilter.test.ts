@@ -200,6 +200,7 @@ describe("applyVisibilityFilter", () => {
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [],
     };
     expect(await _getVisibleItemIdsFromViewer({ database, viewer })).toEqual([
@@ -228,6 +229,7 @@ describe("applyVisibilityFilter", () => {
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     };
     const rows = await applyVisibilityFilter({
@@ -261,6 +263,7 @@ describe("applyVisibilityFilter", () => {
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     };
     const rows = await applyVisibilityFilter({
@@ -290,6 +293,7 @@ describe("applyVisibilityFilter", () => {
       sessionId: createId(),
       role: "viewer",
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [],
     };
     expect(await _getVisibleItemIdsFromViewer({ database, viewer })).toEqual(

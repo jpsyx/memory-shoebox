@@ -22,10 +22,8 @@ type Props = {
  * sections (the name, the address) rather than as this field's state.
  *
  * `storedDisplayName` is the raw column, null until somebody types a name of
- * their own. `member.displayName` is resolved, falling back to the email's
- * local part. The field's value starts from the first and its placeholder is
- * the second, so the fallback shows as a hint rather than as text the member
- * appears to have typed.
+ * their own. `member.displayName` is the public name or Member. The field's
+ * value starts from the stored name and its placeholder is the public label.
  */
 export function NameField({
   me,
@@ -40,7 +38,7 @@ export function NameField({
   const hasChanged = trimmed !== storedValue;
 
   const onSubmit = () => {
-    onSave({ displayName: trimmed === "" ? null : trimmed });
+    onSave({ displayName: trimmed });
   };
 
   return (

@@ -55,6 +55,7 @@ async function _readItemCount(
             ? "uploader"
             : "viewer",
       isAdmin: options.invitee.role === "admin",
+      profileComplete: options.invitee.profile_completed_at !== null,
       visibleRuleIds,
     },
   }).executeTakeFirstOrThrow();

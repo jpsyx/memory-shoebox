@@ -58,7 +58,7 @@ async function _insertLifecycleMembers(
   const requester = await insertSignedInMember({
     database,
     token: "requester",
-    member: { role: "viewer", notify_on_removal: 0 },
+    member: { role: "viewer", notify_on_removal: 0, display_name: "Requester" },
   });
   const admin = await insertSignedInMember({
     database,

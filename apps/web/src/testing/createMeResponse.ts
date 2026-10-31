@@ -34,6 +34,8 @@ export function createMeResponse(
     me: {
       member: { memberId, displayName },
       storedDisplayName,
+      profileComplete: storedDisplayName !== null,
+      suggestedDisplayName: null,
       email,
       role,
       notify: {

@@ -120,6 +120,7 @@ it("bounds the uploader arm of the actual viewer timeline by capture day", async
         sessionId: member.sessionId,
         role: "viewer",
         isAdmin: false,
+        profileComplete: true,
         visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
       },
     });

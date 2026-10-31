@@ -207,7 +207,10 @@ Invited admins never count toward the last-active-admin flag.
 optional name. Existing active or invited identities return a conflict with
 their member ID. Removed identities reuse their row, preserving join/sign-in
 history, content ownership, person links and other historical associations.
-An omitted name preserves the old name; a supplied null clears it.
+New invitations keep the optional name as an unclaimed suggestion, allowing
+duplicate suggestions. Restoring a claimed identity preserves its name when
+omitted. A replacement uses the permanent name claim action and cannot be null.
+An incomplete restored identity can replace or clear its suggestion.
 
 The immediate transaction writes the invited identity, a seven-day invitation,
 `member_invited` audit event and outbound email together. Database enqueue

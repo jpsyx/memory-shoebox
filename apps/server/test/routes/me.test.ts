@@ -35,8 +35,10 @@ describe("GET /api/me", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       me: {
-        member: { memberId, displayName: "abuela" },
+        member: { memberId, displayName: "Member" },
         storedDisplayName: null,
+        profileComplete: false,
+        suggestedDisplayName: null,
         email: "abuela@example.com",
         role: "viewer",
         notify: {
@@ -94,7 +96,7 @@ describe("PATCH /api/me", () => {
     await close();
   });
 
-  it("clears the name back to the fallback with null", async () => {
+  it("refuses clearing a claimed name with null", async () => {
     const { app, database, close } = await createTestApp();
     const { cookie } = await insertSignedInMember({
       database,
@@ -108,8 +110,8 @@ describe("PATCH /api/me", () => {
       payload: { displayName: null },
     });
 
-    expect(response.json().me.storedDisplayName).toBeNull();
-    expect(response.json().me.member.displayName).toBe("abuela");
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_request");
     await close();
   });
 

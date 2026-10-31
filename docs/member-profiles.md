@@ -11,13 +11,43 @@ inserts an absent claim, updates profile state and calls `syncMemberPerson` in t
 caller's immediate transaction. The member, claim and linked person commit or
 roll back together. A conflict returns `name_taken` with field guidance and no
 owner details. Profile completion keeps its original timestamp on later renames;
-suggestions clear when a name is claimed. Route and invitation integration uses
-this action in the subsequent profile-completion slice.
+suggestions clear when a name is claimed. Profile updates, first-admin setup,
+restoration with a replacement name and local member seeds all use this action.
 
 Names retain accents, spaces and the 80-character limit. Display spelling uses
 NFC, trimming and collapsed whitespace. Keys additionally use Unicode lowercase
 without locale selection. `John`, `john` and `John` conflict; `Sofia` and `Sofía`
 remain different. Names reject `@`, line breaks and invisible formatting controls.
+
+## Profile completion and participation
+
+`MeDto` exposes `profileComplete` from `profile_completed_at` and a private
+`suggestedDisplayName`. A new invitation stores the offered name only as a
+suggestion, allowing duplicate suggestions without reserving names. Restoring a
+claimed identity preserves its name unless a replacement is supplied; replacements
+must claim successfully and cannot clear the name. Restoring an unjoined legacy
+claim preserves its incomplete state even when an admin replaces its claimed name;
+verification and the member’s own name confirmation are still required. Unnamed public identities read
+as “Member”. Public member references never derive names from email addresses.
+
+`PATCH /api/me` accepts an optional valid nonempty account name and returns the
+usual account/settings envelope. Null and empty names are rejected. Name conflicts
+return `409 name_taken`: “That name is already taken. Try adding your last-name
+initial, like John M.” The response carries no other identity details.
+
+The authenticated viewer reads stored completion on every request, including for
+admins. Incomplete identities can sign in, read, manage their profile/avatar and
+sign out. Creating or editing comments and starting or modifying archive uploads
+returns `403 profile_required` until completion. Item/comment visibility checks
+still return their normal 404 before the completion error. Upload reads and
+whole-session cancellation keep their existing role/ownership rules.
+
+Local `pnpm seed:member <address> --display-name <name>` requires an explicit
+account name, claims it atomically with creation and base-URL initialization, and
+preserves the claimed identity on repeated calls. `-h` and `--help` explain options
+without opening a database. Test account helpers create unique completed accounts
+by default; incomplete cases are explicit, and historical migration fixtures keep
+their original pre-0019 shape.
 
 ## Legacy import
 
@@ -30,7 +60,7 @@ An active account without a linked person receives one. No ad-hoc person changes
 Active or previously joined/signed-in legacy members become profile-complete.
 Unjoined invited members remain incomplete, with their imported name also saved
 as a suggestion. Reserving legacy invitation names is a one-time compatibility
-exception; new invitations will use unclaimed suggestions in the profile workflow.
+exception; new invitations use unclaimed suggestions in the profile workflow.
 Empty catalogs need no operator mapping.
 
 Any collision or invalid effective name requires an explicit choice for every

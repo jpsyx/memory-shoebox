@@ -146,6 +146,7 @@ async function _keepsRequestedIdentitiesAndMeasuresFullVisible1Stage3(
     sessionId: "session",
     role: "viewer" as const,
     isAdmin: false,
+    profileComplete: true,
     visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
   };
   const summaries = await readItemSummariesByItemIds({
@@ -276,6 +277,7 @@ async function _keepsQueryCountFixedAsRequestedItems2Stage2(
       sessionId: "session",
       role: "viewer" as const,
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     },
     now: new Date(NOW),

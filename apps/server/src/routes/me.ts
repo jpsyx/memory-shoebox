@@ -1,5 +1,5 @@
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
-import { syncMemberPerson } from "../members/syncMemberPerson.ts";
+import { claimMemberName } from "../members/claimMemberName.ts";
 import type { FastifyInstance } from "fastify";
 import type { Updateable } from "kysely";
 import {
@@ -21,11 +21,6 @@ function _makeMemberPatchFromBody(
   body: UpdateMeRequest,
 ): Updateable<Database["members"]> {
   return {
-    // An omitted key is left alone; `null` and `""` both clear the name back
-    // to the email local-part fallback (Decision 1).
-    ...(body.displayName === undefined
-      ? {}
-      : { display_name: body.displayName === "" ? null : body.displayName }),
     // All four, or none: "turn them all off" is a client convenience that
     // sends four booleans, not an API feature (Decision 16).
     ...(body.notify === undefined
@@ -65,17 +60,20 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     const body = updateMeRequestSchema.parse(request.body);
     const patch = _makeMemberPatchFromBody(body);
 
-    if (Object.keys(patch).length > 0) {
+    if (Object.keys(patch).length > 0 || body.displayName !== undefined) {
       await runInImmediateTransaction({
         database: request.server.database,
         callback: async (transaction) => {
-          await transaction
-            .updateTable("members")
-            .set(patch)
-            .where("id", "=", viewer.memberId)
-            .execute();
+          if (Object.keys(patch).length > 0) {
+            await transaction
+              .updateTable("members")
+              .set(patch)
+              .where("id", "=", viewer.memberId)
+              .execute();
+          }
           if (body.displayName !== undefined) {
-            await syncMemberPerson({
+            await claimMemberName({
+              displayName: body.displayName,
               transaction,
               memberId: viewer.memberId,
               now: request.server.clock().toISOString(),

@@ -68,6 +68,7 @@ async function _requiresALinkedAccountTaggedOnThis1Stage1(
     sessionId: "session",
     role: "viewer",
     isAdmin: false,
+    profileComplete: true,
     visibleRuleIds: [],
   };
   const gate = () => {

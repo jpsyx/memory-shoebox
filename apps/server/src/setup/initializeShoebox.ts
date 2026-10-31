@@ -1,4 +1,4 @@
-import { syncMemberPerson } from "../members/syncMemberPerson.ts";
+import { claimMemberName } from "../members/claimMemberName.ts";
 import {
   createSetupRequestSchema,
   type CreateSetupRequest,
@@ -56,7 +56,7 @@ async function _insertInitialAdmin(
     .values({
       id: memberId,
       email: options.body.admin.email,
-      display_name: options.body.admin.displayName,
+      display_name: null,
       role: "admin",
       status: "active",
       notify_on_upload: 1,
@@ -168,7 +168,12 @@ export async function initializeShoebox(
         body,
         now: options.now,
       });
-      await syncMemberPerson({ transaction, memberId, now: options.now });
+      await claimMemberName({
+        transaction,
+        memberId,
+        displayName: body.admin.displayName,
+        now: options.now,
+      });
       const session = await createSessionForMember({
         transaction,
         memberId,
@@ -180,6 +185,7 @@ export async function initializeShoebox(
         sessionId: session.sessionId,
         role: "admin",
         isAdmin: true,
+        profileComplete: true,
         visibleRuleIds: [],
       };
       await _saveSetupSettings({ transaction, body, viewer, now: options.now });

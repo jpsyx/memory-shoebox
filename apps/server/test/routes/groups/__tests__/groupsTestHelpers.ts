@@ -299,6 +299,7 @@ export async function prepareCountedGroupFixture(): Promise<CountedGroupFixtureR
     sessionId: admin.sessionId,
     role: "admin" as const,
     isAdmin: true,
+    profileComplete: true,
     visibleRuleIds: [],
   };
   const groupId = await insertGroup(database);

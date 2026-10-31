@@ -19,6 +19,7 @@ const VIEWER_BASE = {
   sessionId: "session",
   role: "viewer",
   isAdmin: false,
+  profileComplete: true,
   visibleRuleIds: ["visibility-rule-everyone"],
 } as const;
 

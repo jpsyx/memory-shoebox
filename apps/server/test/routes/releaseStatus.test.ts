@@ -16,6 +16,7 @@ describe("GET /api/settings/version", () => {
           sessionId: "session",
           role: "admin",
           isAdmin: true,
+          profileComplete: true,
           visibleRuleIds: [],
         };
       },
@@ -43,6 +44,7 @@ describe("GET /api/settings/version", () => {
                 sessionId: "session",
                 role,
                 isAdmin: false,
+                profileComplete: true,
                 visibleRuleIds: [],
               };
         },

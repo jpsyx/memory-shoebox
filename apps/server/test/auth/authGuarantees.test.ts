@@ -136,7 +136,12 @@ describe("a group edit reaches everybody", () => {
 
     // One authenticator, as the app holds one: the cache is shared between
     // every viewer, which is the whole reason the generation is the key.
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
 
     const requestFor = (token: string): FastifyRequest => {
       return {

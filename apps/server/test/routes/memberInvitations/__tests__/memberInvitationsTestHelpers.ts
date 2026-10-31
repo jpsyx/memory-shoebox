@@ -202,7 +202,7 @@ export async function prepareFrozenInvitationFixture(): Promise<FrozenInvitation
   const member = adminMemberDtoSchema.parse(response.json());
   expect(member).toMatchObject({
     email: "ana+family@example.com",
-    displayName: "Ana",
+    displayName: "Member",
     status: "invited",
     role: "viewer",
     joinedAt: null,

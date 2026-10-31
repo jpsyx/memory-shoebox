@@ -1,3 +1,4 @@
+import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   createCommentRequestSchema,
@@ -131,6 +132,7 @@ export async function postItemComment(
     viewer,
     itemId,
   });
+  requireCompleteProfile(viewer);
   const commentId = createId();
   const anchor = await _writeCommentAndQueueItsMail({
     database: request.server.database,

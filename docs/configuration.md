@@ -244,7 +244,7 @@ The member seed remains a development alternative when a fixture needs an
 invited account:
 
 ```sh
-pnpm seed:member you@example.com --role admin
+pnpm seed:member you@example.com --display-name "Your Name" --role admin
 ```
 
 `--role` is one of `viewer`, `uploader` or `admin` and defaults to `admin`,

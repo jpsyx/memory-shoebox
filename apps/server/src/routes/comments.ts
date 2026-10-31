@@ -1,3 +1,4 @@
+import { requireCompleteProfile } from "../members/requireCompleteProfile.ts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   commentIdParamsSchema,
@@ -84,6 +85,7 @@ async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
     commentId,
   });
 
+  requireCompleteProfile(viewer);
   if (comment.authorMemberId !== viewer.memberId) {
     // An admin gets this too: Decision 8 grants admins "delete anything",
     // not edit anything. Nobody edits another person's words.

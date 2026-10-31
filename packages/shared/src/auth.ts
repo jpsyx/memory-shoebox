@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { collectionSchema } from "./collectionSchema.ts";
 import { idSchema, memberRefSchema, timestampSchema } from "./dtos.ts";
-import { LIMITS } from "./limits.ts";
+import { accountNameSchema } from "./accountNames/accountNames.ts";
 import { shellSettingsSchema } from "./settings.ts";
 
 /**
@@ -84,13 +84,14 @@ export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
  * (`conventions.md` § The frozen DTOs).
  */
 export const meDtoSchema = z.object({
-  /** `displayName` is resolved, falling back to the email local part. */
+  /** Chosen name, or the neutral label Member until completion. */
   member: memberRefSchema,
   /**
-   * The raw column: null when none has ever been set, so the form can show
-   * the fallback as a placeholder rather than as text somebody typed.
+   * The raw claimed spelling, null until the identity chooses its name.
    */
   storedDisplayName: z.string().nullable(),
+  profileComplete: z.boolean(),
+  suggestedDisplayName: z.string().nullable(),
   /** Never writable, anywhere. This is the identity, not a field on it. */
   email: z.email(),
   role: memberRoleSchema,
@@ -203,15 +204,8 @@ export type MeResponse = z.infer<typeof meResponseSchema>;
  * doing nothing.
  */
 export const updateMeRequestSchema = z.strictObject({
-  /** Trimmed. `null` or `""` clears it back to the email local part. */
-  displayName: z
-    .string()
-    .transform((value) => {
-      return value.trim();
-    })
-    .pipe(z.string().max(LIMITS.memberDisplayNameMaxLength))
-    .nullable()
-    .optional(),
+  /** A chosen, nonempty name. Omission preserves the current claim. */
+  displayName: accountNameSchema.optional(),
   /** All four, always, when present. There is no fifth field. */
   notify: notifyPreferencesSchema.optional(),
 });

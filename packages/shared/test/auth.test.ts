@@ -51,11 +51,14 @@ describe("updateMeRequestSchema", () => {
     expect(updateMeRequestSchema.parse({})).toEqual({});
   });
 
-  it("clears the display name with null", () => {
-    expect(updateMeRequestSchema.parse({ displayName: null })).toEqual({
-      displayName: null,
-    });
-  });
+  it.each([null, "", "  ", "bad@name", "line\nbreak", "hidden\u200bname"])(
+    "rejects an invalid chosen name %s",
+    (displayName) => {
+      expect(updateMeRequestSchema.safeParse({ displayName }).success).toBe(
+        false,
+      );
+    },
+  );
 
   it("trims the display name", () => {
     expect(updateMeRequestSchema.parse({ displayName: "  Rosa " })).toEqual({
@@ -93,6 +96,8 @@ describe("meDtoSchema", () => {
     const parsed = meDtoSchema.parse({
       member: { memberId: MEMBER_ID, displayName: "Abuela Rosa" },
       storedDisplayName: null,
+      profileComplete: false,
+      suggestedDisplayName: "Abuela Rosa",
       email: "abuela@example.com",
       role: "viewer",
       notify: {

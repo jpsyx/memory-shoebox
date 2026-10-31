@@ -1,29 +1,20 @@
-import { syncMemberPerson } from "../src/members/syncMemberPerson.ts";
+import { claimMemberName } from "../src/members/claimMemberName.ts";
+import {
+  accountNameSchema,
+  normalisedEmailSchema,
+} from "@memory-shoebox/shared";
 import { runInImmediateTransaction } from "../src/db/runInImmediateTransaction.ts";
 import { fileURLToPath } from "node:url";
+import { openSync } from "node:fs";
+import { createInterface } from "node:readline/promises";
+import { ReadStream, WriteStream } from "node:tty";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../src/db/client.ts";
 import { createId } from "../src/db/createId.ts";
 import { migrateToLatest } from "../src/db/migrate.ts";
 import type { Database } from "../src/db/types/db.types.ts";
 
-/**
- * Makes a member who can sign in, for local development and the end-to-end
- * run.
- *
- * **This exists because inviting does not yet.** The invitation lifecycle is
- * step 8a's, so until it lands there is no route that creates a member and
- * therefore nothing to sign in as. It is a development tool: it is not
- * reachable over HTTP, it is not imported by the server, and step 8a is where
- * it stops being needed.
- *
- * `status` is `invited` rather than `active` because that is what an invited
- * address really is, and because accepting an invitation is defined as the
- * first successful sign-in: `POST /api/auth/session` sets `joined_at` and
- * flips the status itself (Decision 2). Seeding `active` would skip the one
- * transition the first sign-in exists to make, and `isFirstSignIn` would come
- * back false on a member who has never signed in.
- */
+/** A local seeded identity, invited until its first successful sign-in. */
 export type SeededMember = {
   memberId: string;
   email: string;
@@ -49,6 +40,7 @@ export type MemberRole = (typeof MEMBER_ROLES)[number];
 export type SeedMemberOptions = {
   database: Kysely<Database>;
   email: string;
+  displayName: string;
   role: MemberRole;
   /** Written to `public.base_url` when that setting is unset. Not optional
    * and not cosmetic: see `_writeBaseUrlIfUnset` for why. */
@@ -84,48 +76,22 @@ async function _writeBaseUrlIfUnset(options: {
     .execute();
 }
 
-/**
- * Seeds one member and the one setting a sign-in code needs.
- *
- * @param options.database An open, migrated database.
- * @param options.email The address, normalised here exactly as the API
- *   normalises it, so the seeded row is the row a sign-in finds.
- * @param options.role The member's role.
- * @param options.baseUrl Written to `public.base_url` if it is unset.
- * @returns The member, and whether it already existed.
- */
-export async function seedMember(
-  options: SeedMemberOptions,
-): Promise<SeededMember> {
-  const { database, role, baseUrl } = options;
-  const email = options.email.trim().toLowerCase();
-  const now = new Date().toISOString();
-
-  await _writeBaseUrlIfUnset({ database, baseUrl, now });
-
-  const existing = await database
-    .selectFrom("members")
-    .select("id")
-    .where("email", "=", email)
-    .executeTakeFirst();
-  if (existing !== undefined) {
-    await runInImmediateTransaction({
-      database,
-      callback: async (transaction) => {
-        await syncMemberPerson({ transaction, memberId: existing.id, now });
-      },
-    });
-    return { memberId: existing.id, email, wasAlreadyThere: true };
-  }
-
-  const memberId = createId();
-  await database
+async function _insertSeededMember(
+  options: Readonly<{
+    database: Kysely<Database>;
+    memberId: string;
+    email: string;
+    role: MemberRole;
+    now: string;
+  }>,
+): Promise<void> {
+  await options.database
     .insertInto("members")
     .values({
-      id: memberId,
-      email,
+      id: options.memberId,
+      email: options.email,
       display_name: null,
-      role,
+      role: options.role,
       status: "invited",
       notify_on_upload: 1,
       notify_on_comment: 1,
@@ -135,20 +101,84 @@ export async function seedMember(
       last_signed_in_at: null,
       last_seen_at: null,
       removed_at: null,
-      created_at: now,
+      created_at: options.now,
     })
     .execute();
-
-  return { memberId, email, wasAlreadyThere: false };
 }
 
-/** The one line printed whenever the arguments do not make sense. */
-export const SEED_MEMBER_USAGE =
-  "Usage: pnpm seed:member <address> [--role viewer|uploader|admin] " +
-  "[--base-url http://localhost:38473]";
+/**
+ * Seeds one member and the one setting a sign-in code needs.
+ *
+ * @param options.database An open, migrated database.
+ * @param options.email The address, normalised here exactly as the API
+ *   normalises it, so the seeded row is the row a sign-in finds.
+ * @param options.displayName The explicit unique account name to claim.
+ * @param options.role The member's role.
+ * @param options.baseUrl Written to `public.base_url` if it is unset.
+ * @returns The member, and whether it already existed.
+ */
+export async function seedMember(
+  options: SeedMemberOptions,
+): Promise<SeededMember> {
+  const email = normalisedEmailSchema.parse(options.email);
+  const displayName = accountNameSchema.parse(options.displayName);
+  const now = new Date().toISOString();
+  return runInImmediateTransaction({
+    database: options.database,
+    callback: async (transaction) => {
+      const existing = await transaction
+        .selectFrom("members")
+        .select(["id", "display_name", "profile_completed_at"])
+        .where("email", "=", email)
+        .executeTakeFirst();
+      const memberId = existing?.id ?? createId();
+      if (!existing)
+        await _insertSeededMember({
+          database: transaction,
+          memberId,
+          email,
+          role: options.role,
+          now,
+        });
+      await claimMemberName({
+        transaction,
+        memberId,
+        displayName: existing?.profile_completed_at
+          ? (existing.display_name ?? displayName)
+          : displayName,
+        now,
+      });
+      await _writeBaseUrlIfUnset({
+        database: transaction,
+        baseUrl: options.baseUrl,
+        now,
+      });
+      return { memberId, email, wasAlreadyThere: existing !== undefined };
+    },
+  });
+}
+
+/** Full help, shared by help and invalid invocations. */
+export const SEED_MEMBER_USAGE = `Seed a local member with a claimed account name.
+Usage: pnpm seed:member <address> --display-name <name> [--role viewer|uploader|admin] [--base-url <url>]
+
+Arguments:
+  <address>            Email address used to sign in.
+Options:
+  --display-name <name> Required unique account name, 1-80 characters.
+  --role              viewer, uploader, or admin (default: admin).
+  --base-url          Public sign-in URL (default: http://localhost:38473).
+  -h, --help          Show this help without opening a database.
+Existing claimed accounts retain their name and role. Missing address/name prompts
+on a terminal; unattended invocations must supply both. Output: one member result
+line on stdout; progress and diagnostics on stderr.
+
+Examples:
+  pnpm seed:member rosa@example.com --display-name "Rosa"
+  pnpm seed:member ana@example.com --display-name "Ana M" --role viewer`;
 
 /** The flags that take a following word, as opposed to standing alone. */
-const VALUED_FLAGS = ["--role", "--base-url"] as const;
+const VALUED_FLAGS = ["--role", "--base-url", "--display-name"] as const;
 
 /** Whether a word off the command line is one of the three roles. */
 function _isMemberRole(value: string): value is MemberRole {
@@ -160,80 +190,156 @@ function _isMemberRole(value: string): value is MemberRole {
 /** Everything `seedMember` needs except the database, read from the command line. */
 export type SeedMemberArguments = Omit<SeedMemberOptions, "database">;
 
-/**
- * Reads the command line, or refuses it.
- *
- * **One walk rather than an `indexOf` per flag**, which is what makes two
- * defects structurally impossible rather than merely absent. Do not read a
- * flag's value as whatever word follows it: `--role --base-url x` then takes
- * `--base-url` as the role. Do not read the address as the first word that
- * does not start with `--`: in `--role viewer abuela@example.com` that is
- * `viewer`. Walking the list means a flag's value is consumed by its flag and
- * can never be mistaken for anything else.
- *
- * The role is checked against `MEMBER_ROLES` here, where the flag it came from
- * can still be named. Cast unchecked, `--role viwer` type-checks and dies on
- * the `members.role` constraint, which says nothing about a typed flag.
- *
- * @param argv The arguments after the script's own name.
- * @returns What to seed, or undefined when the caller should print
- *   `SEED_MEMBER_USAGE` and stop.
- */
-export function getSeedArgumentsFromArgv(
-  argv: readonly string[],
-): SeedMemberArguments | undefined {
-  let email: string | undefined = undefined;
-  let role: MemberRole = "admin";
-  let baseUrl = "http://localhost:38473";
+type PartialSeedArguments = Omit<
+  SeedMemberArguments,
+  "email" | "displayName"
+> & {
+  email?: string;
+  displayName?: string;
+};
 
+function _getPartialArgumentsFromArgv(
+  argv: readonly string[],
+): PartialSeedArguments | undefined {
+  const parsed: PartialSeedArguments = {
+    role: "admin",
+    baseUrl: "http://localhost:38473",
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index] ?? "";
-    const value = argv[index + 1];
     if (
       VALUED_FLAGS.some((flag) => {
         return flag === argument;
       })
     ) {
-      // A flag at the end of the list, or followed by another flag, was given
-      // no value at all, whatever the person meant by it.
-      if (value === undefined || value.startsWith("--")) {
-        return undefined;
-      }
-      if (argument === "--base-url") {
-        baseUrl = value;
-      } else if (_isMemberRole(value)) {
-        role = value;
-      } else {
-        return undefined;
-      }
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith("-")) return undefined;
+      if (argument === "--display-name") parsed.displayName = value;
+      else if (argument === "--base-url") parsed.baseUrl = value;
+      else if (_isMemberRole(value)) parsed.role = value;
+      else return undefined;
       index += 1;
-    } else if (argument.startsWith("--") || email !== undefined) {
-      // An unknown flag, or a second address. Either way this is not a command
-      // line anybody meant to type.
+    } else if (argument.startsWith("-") || parsed.email !== undefined)
       return undefined;
-    } else {
-      email = argument;
-    }
+    else parsed.email = argument;
   }
+  return parsed;
+}
 
-  return email === undefined ? undefined : { email, role, baseUrl };
+/** Parse explicit seed arguments, requiring a valid address and chosen name. */
+export function getSeedArgumentsFromArgv(
+  argv: readonly string[],
+): SeedMemberArguments | undefined {
+  const parsed = _getPartialArgumentsFromArgv(argv);
+  if (!parsed?.email || !normalisedEmailSchema.safeParse(parsed.email).success)
+    return undefined;
+  const name = accountNameSchema.safeParse(parsed.displayName);
+  if (!name.success) return undefined;
+  return { ...parsed, email: parsed.email, displayName: name.data };
+}
+
+/** Semantic colors are disabled for redirected streams and plain terminals. */
+const THEME = {
+  heading: "97",
+  info: "36",
+  success: "32",
+  error: "31",
+  warning: "33",
+  prompt: "97",
+} as const;
+function _color(
+  message: string,
+  kind: keyof typeof THEME,
+  stream: NodeJS.WriteStream = process.stderr,
+): string {
+  return stream.isTTY &&
+    !process.env["NO_COLOR"] &&
+    process.env["TERM"] !== "dumb"
+    ? `\u001b[${THEME[kind]}m${message}\u001b[0m`
+    : message;
+}
+function _writeDiagnostic(message: string, kind: keyof typeof THEME): void {
+  process.stderr.write(`${_color(message, kind)}\n`);
+}
+
+async function _getArgumentsFromTerminalOrArgv(
+  argv: readonly string[],
+): Promise<SeedMemberArguments | undefined> {
+  const explicit = getSeedArgumentsFromArgv(argv);
+  const parsed = _getPartialArgumentsFromArgv(argv);
+  if (explicit || !parsed || (!process.stdin.isTTY && !process.stderr.isTTY))
+    return explicit;
+  if (parsed.email !== undefined && parsed.displayName !== undefined)
+    return undefined;
+  const input = new ReadStream(openSync("/dev/tty", "r"));
+  const output = new WriteStream(openSync("/dev/tty", "w"));
+  const terminal = createInterface({ input, output, terminal: true });
+  try {
+    const email =
+      parsed.email ??
+      (await terminal.question(_color("Email address: ", "prompt", output)));
+    const displayName =
+      parsed.displayName ??
+      (await terminal.question(_color("Account name: ", "prompt", output)));
+    return getSeedArgumentsFromArgv([
+      email,
+      "--display-name",
+      displayName,
+      "--role",
+      parsed.role,
+      "--base-url",
+      parsed.baseUrl,
+    ]);
+  } catch {
+    return undefined;
+  } finally {
+    terminal.close();
+    input.destroy();
+    output.destroy();
+  }
+}
+
+async function _seedFromArguments(
+  seedArguments: SeedMemberArguments,
+): Promise<SeededMember> {
+  _writeDiagnostic("Seeding local member and account name...", "info");
+  const database = createDatabase(
+    process.env.DATABASE_PATH ?? "./data/memory-shoebox.db",
+  );
+  try {
+    await migrateToLatest(database);
+    return await seedMember({ database, ...seedArguments });
+  } finally {
+    await database.destroy();
+  }
 }
 
 /** Runs the script when it is executed rather than imported. */
 async function _main(): Promise<void> {
-  const seedArguments = getSeedArgumentsFromArgv(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  if (argv.includes("--help") || argv.includes("-h")) {
+    process.stdout.write(
+      `${_color(SEED_MEMBER_USAGE, "heading", process.stdout)}\n`,
+    );
+    return;
+  }
+  const seedArguments = await _getArgumentsFromTerminalOrArgv(argv);
   if (seedArguments === undefined) {
-    process.stderr.write(`${SEED_MEMBER_USAGE}\n`);
+    _writeDiagnostic(
+      "❌ seed:member: Provide an address and a valid account name.",
+      "error",
+    );
+    _writeDiagnostic(SEED_MEMBER_USAGE, "heading");
+    _writeDiagnostic(
+      '  ⚠️ Try pnpm seed:member rosa@example.com --display-name "Rosa".',
+      "warning",
+    );
     process.exitCode = 1;
     return;
   }
 
-  const database = createDatabase(
-    process.env.DATABASE_PATH ?? "./data/memory-shoebox.db",
-  );
-  await migrateToLatest(database);
-  const seeded = await seedMember({ database, ...seedArguments });
-  await database.destroy();
+  const seeded = await _seedFromArguments(seedArguments);
+  _writeDiagnostic("✅ Local member ready.", "success");
 
   process.stdout.write(
     seeded.wasAlreadyThere
@@ -245,7 +351,14 @@ async function _main(): Promise<void> {
 // Only run when invoked directly (`pnpm seed:member`), not when imported.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   _main().catch((error: unknown) => {
-    console.error(error);
+    _writeDiagnostic(
+      `❌ seed:member: ${error instanceof Error ? error.message : String(error)}`,
+      "error",
+    );
+    _writeDiagnostic(
+      "  ⚠️ Check the account name and database path, then retry.",
+      "warning",
+    );
     process.exit(1);
   });
 }

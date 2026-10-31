@@ -46,6 +46,7 @@ describe("member person lifecycle", () => {
   it("creates one linked person at invitation acceptance and keeps it on repeated sign-in", async () => {
     const { database, close } = await _makeApp();
     const seeded = await seedMember({
+      displayName: "Rosa",
       database,
       email: "rosa@example.com",
       role: "viewer",
@@ -86,13 +87,13 @@ describe("member person lifecycle", () => {
         .select(["member_id", "display_name"])
         .execute();
       expect(people, `sign-in ${attempt}`).toEqual([
-        { member_id: seeded.memberId, display_name: "rosa" },
+        { member_id: seeded.memberId, display_name: "Rosa" },
       ]);
     }, Promise.resolve());
     await close();
   });
 
-  it("renames the existing linked identity and tags when the member updates or clears their name", async () => {
+  it("renames the existing linked identity and tags without changing ad-hoc people", async () => {
     const { app, database, close } = await _makeApp();
     const member = await insertSignedInMember({
       database,
@@ -107,7 +108,7 @@ describe("member person lifecycle", () => {
     await insertItemPerson(database, { itemId, personId });
     await [
       ["Rosa Maria", "Rosa Maria"],
-      ["", "rosa"],
+      ["Rosa M", "Rosa M"],
     ].reduce(async (previousNameChange, [displayName, expected]) => {
       await previousNameChange;
       const response = await app.inject({
@@ -190,6 +191,7 @@ describe("member person lifecycle", () => {
       display_name: "Ana",
     });
     const options = {
+      displayName: "Seeded Member",
       database,
       email: "ana@example.com",
       role: "viewer" as const,

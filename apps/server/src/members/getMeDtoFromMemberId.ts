@@ -27,6 +27,8 @@ export async function getMeDtoFromMemberId(options: {
       "id",
       "email",
       "display_name",
+      "profile_completed_at",
+      "suggested_display_name",
       "role",
       "notify_on_upload",
       "notify_on_comment",
@@ -47,6 +49,8 @@ export async function getMeDtoFromMemberId(options: {
       }),
     },
     storedDisplayName: row.display_name,
+    profileComplete: row.profile_completed_at !== null,
+    suggestedDisplayName: row.suggested_display_name,
     email: row.email,
     role: getMemberRoleFromStoredValue(row.role),
     notify: {

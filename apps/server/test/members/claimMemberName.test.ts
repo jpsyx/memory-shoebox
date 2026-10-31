@@ -8,7 +8,7 @@ import { sql } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { runInImmediateTransaction } from "../../src/db/runInImmediateTransaction.ts";
-import { insertMember } from "../helpers/seedHelpers/memberSeedHelpers.ts";
+import { insertIncompleteMember } from "../helpers/seedHelpers/memberSeedHelpers.ts";
 import { claimMemberName } from "../../src/members/claimMemberName.ts";
 
 const directory = mkdtempSync(join(tmpdir(), "name-claims-"));
@@ -20,8 +20,8 @@ it("retains prior names for their owner and never reveals the other owner", asyn
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   try {
-    const original = await insertMember(database);
-    const other = await insertMember(database);
+    const original = await insertIncompleteMember(database);
+    const other = await insertIncompleteMember(database);
     const claim = (memberId: string, displayName: string) => {
       return runInImmediateTransaction({
         database,
@@ -62,7 +62,7 @@ it("rolls back the member, claim and linked person after a late person-write fai
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   try {
-    const memberId = await insertMember(database);
+    const memberId = await insertIncompleteMember(database);
     await sql`create trigger fail_person before insert on people begin select raise(abort, 'late failure'); end`.execute(
       database,
     );
@@ -87,7 +87,7 @@ it("rolls back the member, claim and linked person after a late person-write fai
           .where("id", "=", memberId)
           .executeTakeFirst()
       )?.display_name,
-    ).toBe("Abuela Rosa");
+    ).toBeNull();
     expect(
       await database.selectFrom("member_name_claims").selectAll().execute(),
     ).toEqual([]);
@@ -103,7 +103,10 @@ it("serializes competing claims through two independent database connections", a
   const path = join(directory, "catalog.db");
   const first = createDatabase(path);
   await migrateToLatest(first);
-  const memberIds = [await insertMember(first), await insertMember(first)];
+  const memberIds = [
+    await insertIncompleteMember(first),
+    await insertIncompleteMember(first),
+  ];
   try {
     const code = `import {createDatabase} from './src/db/client.ts'; import {runInImmediateTransaction} from './src/db/runInImmediateTransaction.ts'; import {claimMemberName} from './src/members/claimMemberName.ts'; const database=createDatabase(process.argv[1]); try {await runInImmediateTransaction({database,callback:transaction=>claimMemberName({transaction,memberId:process.argv[2],displayName:'John',now:'2026-10-31'})}); console.log('won');} catch(error){console.log(error.code);}finally{await database.destroy();}`;
     const results = await Promise.all(
@@ -141,8 +144,8 @@ it("keeps first profile completion and permanent ownership after removal", async
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   try {
-    const memberId = await insertMember(database);
-    const otherMemberId = await insertMember(database);
+    const memberId = await insertIncompleteMember(database);
+    const otherMemberId = await insertIncompleteMember(database);
     const claim = (displayName: string, now: string) => {
       return runInImmediateTransaction({
         database,

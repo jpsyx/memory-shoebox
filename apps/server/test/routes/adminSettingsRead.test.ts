@@ -21,6 +21,7 @@ const ADMIN = {
   sessionId: "session",
   role: "admin",
   isAdmin: true,
+  profileComplete: true,
   visibleRuleIds: [],
 } as const satisfies Viewer;
 
@@ -169,7 +170,11 @@ describe("GET /api/settings", () => {
       memberId,
     });
     await database.deleteFrom("items").execute();
-    await database.deleteFrom("members").where("id", "=", memberId).execute();
+    await database
+      .updateTable("settings")
+      .set({ updated_by_member_id: null })
+      .where("updated_by_member_id", "=", memberId)
+      .execute();
     expect(
       (await app.inject("/api/settings")).json().changedBy[0].updatedBy,
     ).toBeNull();

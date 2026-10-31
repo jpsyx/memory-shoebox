@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { signInCodeEmailPayloadSchema } from "@memory-shoebox/shared";
 import {
   seedMember,
@@ -38,6 +39,7 @@ export function seedMemberAtAddress(options: {
 }): Promise<{ memberId: string }> {
   return _withDatabase(async (database) => {
     const seeded = await seedMember({
+      displayName: `Test Member ${randomUUID()}`,
       database,
       email: options.email,
       role: options.role ?? "admin",

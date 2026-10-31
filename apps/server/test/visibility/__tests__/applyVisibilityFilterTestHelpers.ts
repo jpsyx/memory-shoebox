@@ -16,6 +16,7 @@ export async function makeViewerFromMemberId(options: {
     sessionId: createId(),
     role,
     isAdmin: role === "admin",
+    profileComplete: true,
     visibleRuleIds: await getVisibleRuleIdsFromMemberId({
       database: options.database,
       memberId: options.memberId,

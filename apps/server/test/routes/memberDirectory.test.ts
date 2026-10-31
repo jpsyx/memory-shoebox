@@ -17,6 +17,7 @@ const VIEWER = {
   sessionId: "00000000-0000-4000-8000-000000000002",
   role: "admin",
   isAdmin: true,
+  profileComplete: true,
   visibleRuleIds: [],
 } as const satisfies Viewer;
 
@@ -34,7 +35,7 @@ function _expectLatestMemberDirectoryFacts(
     }),
   ).toEqual({
     memberId,
-    displayName: "rosa",
+    displayName: "Member",
     email: "rosa@example.com",
     role: "admin",
     status: "active",
@@ -45,7 +46,7 @@ function _expectLatestMemberDirectoryFacts(
     createdAt: NOW,
     invitation: {
       invitationId,
-      invitedBy: { memberId, displayName: "rosa" },
+      invitedBy: { memberId, displayName: "Member" },
       createdAt: NOW,
       expiresAt: shiftDays({ instant: NOW, days: 7 }),
       sendCount: 1,
@@ -123,7 +124,9 @@ describe("member directory", () => {
           return { ...VIEWER, role, isAdmin: false };
         },
       });
-      const memberId = await insertMember(database);
+      const memberId = await insertMember(database, {
+        display_name: "Abuela Rosa",
+      });
       await insertMember(database, { status: "removed" });
       const response = await app.inject("/api/members");
       expect(response.statusCode).toBe(200);

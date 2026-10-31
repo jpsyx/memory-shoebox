@@ -24,6 +24,7 @@ function makeViewer(memberId: string): Viewer {
     sessionId: "a-session",
     role: "viewer",
     isAdmin: false,
+    profileComplete: true,
     visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
   };
 }

@@ -6,10 +6,8 @@ import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts
  * Query 8 of a timeline page: the per-request member map.
  *
  * Tens of rows, read once, so an uploader `MemberRef` is a lookup rather than
- * a join per print. The email is read and never served: it is only there
- * because a member with no display name falls back to its local part
- * (Decision 1), and `MemberRef` carries no email unless the route is
- * admin-scoped.
+ * a join per print. Unnamed identities use the neutral label Member. Public
+ * references never derive a name from an email address.
  *
  * @param database The Kysely handle.
  */

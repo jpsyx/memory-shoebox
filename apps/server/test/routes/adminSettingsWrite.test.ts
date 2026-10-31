@@ -25,6 +25,7 @@ const ADMIN = {
   sessionId: "session",
   role: "admin",
   isAdmin: true,
+  profileComplete: true,
   visibleRuleIds: [],
 } as const satisfies Viewer;
 async function _makeApp(): Promise<TestApp> {

@@ -86,7 +86,7 @@ describe("readVisibilitySummaries", () => {
       await readVisibilitySummaries({ database, ruleIds: [ruleId] })
     ).get(ruleId);
     expect(summary?.subjects).toEqual([
-      { kind: "member", id: memberId, displayName: "abuela" },
+      { kind: "member", id: memberId, displayName: "Member" },
     ]);
     expect(summary?.label).toBeNull();
 
@@ -95,7 +95,7 @@ describe("readVisibilitySummaries", () => {
 });
 
 describe("readMemberRefs", () => {
-  it("reads every member once, falling back to the email local part", async () => {
+  it("reads every member once without disclosing an email local part", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const namedId = await insertMember(database, { display_name: "Lucía" });
@@ -111,7 +111,7 @@ describe("readMemberRefs", () => {
     });
     expect(members.get(unnamedId)).toEqual({
       memberId: unnamedId,
-      displayName: "papa",
+      displayName: "Member",
     });
 
     await database.destroy();

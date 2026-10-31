@@ -167,3 +167,16 @@ because somebody fixed their own spelling costs something and buys nothing.
 - How many items a brand-new member's archive holds. The first sign-in seeds
   `item_views` for every existing item so the accent dot means "arrived since
   you joined", and the response says nothing about how many rows that was.
+
+## Claimed profiles
+
+The viewer includes `profileComplete`, read from `members.profile_completed_at`
+on each request. Both session bootstrap and `/api/me` expose that flag and the
+self-scoped `suggestedDisplayName`. Profile updates claim a valid nonempty name
+atomically with linked-person synchronization and preferences. Null/empty names
+fail validation; collisions return `409 name_taken` without owner information.
+The first successful claim records completion, preserved by renames. Incomplete
+identities can sign in, read, complete profile/avatar setup and sign out, but
+comment creation/editing and archive-upload mutations require completion with
+`403 profile_required`. Public unnamed identities use “Member”, never an email
+local part. See [member profiles](member-profiles.md).

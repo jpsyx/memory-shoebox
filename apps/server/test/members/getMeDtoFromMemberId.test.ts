@@ -17,13 +17,13 @@ describe("getDisplayNameFromMember", () => {
     ).toBe("Abuela Rosa");
   });
 
-  it("falls back to the email local part when none is stored", () => {
+  it("uses a neutral label when none is stored", () => {
     expect(
       getDisplayNameFromMember({
         storedDisplayName: undefined,
         email: "abuela.rosa@example.com",
       }),
-    ).toBe("abuela.rosa");
+    ).toBe("Member");
   });
 
   it("treats a whitespace name as none", () => {
@@ -32,7 +32,7 @@ describe("getDisplayNameFromMember", () => {
         storedDisplayName: "   ",
         email: "rosa@example.com",
       }),
-    ).toBe("rosa");
+    ).toBe("Member");
   });
 });
 
@@ -58,8 +58,10 @@ describe("getMeDtoFromMemberId", () => {
     });
 
     expect(await getMeDtoFromMemberId({ database, memberId })).toEqual({
-      member: { memberId, displayName: "rosa" },
+      member: { memberId, displayName: "Member" },
       storedDisplayName: null,
+      profileComplete: false,
+      suggestedDisplayName: null,
       email: "rosa@example.com",
       role: "viewer",
       notify: {
