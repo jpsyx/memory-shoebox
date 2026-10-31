@@ -21,6 +21,57 @@ type SaveOptions = {
   expectedAvatarId: string | null;
 };
 
+type PublicationOwner = {
+  ticket: ReturnType<typeof capturePrivateAuthority>;
+  issued: number;
+  published: number;
+};
+type Publication = { owner: PublicationOwner; sequence: number };
+const PUBLICATIONS = new WeakMap<QueryClient, PublicationOwner>();
+
+function _capturePublication(
+  client: QueryClient,
+  ticket: ReturnType<typeof capturePrivateAuthority>,
+): Publication {
+  let owner = PUBLICATIONS.get(client);
+  if (
+    !owner ||
+    owner.ticket.query !== ticket.query ||
+    owner.ticket.generation !== ticket.generation ||
+    owner.ticket.authority !== ticket.authority
+  ) {
+    owner = { ticket, issued: 0, published: 0 };
+    PUBLICATIONS.set(client, owner);
+  }
+  owner.issued += 1;
+  return { owner, sequence: owner.issued };
+}
+
+type PublicationOptions = {
+  client: QueryClient;
+  response: MeResponse;
+  ticket: ReturnType<typeof capturePrivateAuthority>;
+  publication: Publication;
+  expectedAvatarId: string | null;
+};
+function _publishOwnAvatar(options: Readonly<PublicationOptions>): void {
+  const { client, response, ticket, publication, expectedAvatarId } = options;
+  if (publication.sequence < publication.owner.published) {
+    return;
+  }
+  publication.owner.published = publication.sequence;
+  const currentId =
+    client.getQueryData<MeResponse>(["me"])?.me.member.avatar?.avatarId ?? null;
+  if (
+    currentId !== expectedAvatarId &&
+    currentId !== (response.me.member.avatar?.avatarId ?? null)
+  ) {
+    return;
+  }
+  reconcileAccountFields(client, response, "avatar", ticket);
+  publishMemberAvatar(client, response.me.member);
+}
+
 function _assertAuthority(
   client: QueryClient,
   ticket: ReturnType<typeof capturePrivateAuthority>,
@@ -36,6 +87,7 @@ export async function saveAvatar(
 ): Promise<MeResponse> {
   const { client, file, crop, expectedAvatarId } = options;
   const ticket = capturePrivateAuthority(client);
+  const publication = _capturePublication(client, ticket);
   _assertAuthority(client, ticket);
   const reservation = await apiFetch({
     path: "/me/avatar-uploads",
@@ -57,8 +109,13 @@ export async function saveAvatar(
     init: { method: "PUT", headers: { "Content-Type": file.type }, body: file },
   });
   _assertAuthority(client, ticket);
-  reconcileAccountFields(client, response, "avatar", ticket);
-  publishMemberAvatar(client, response.me.member);
+  _publishOwnAvatar({
+    client,
+    response,
+    ticket,
+    publication,
+    expectedAvatarId,
+  });
   return client.getQueryData<MeResponse>(["me"])!;
 }
 
@@ -67,6 +124,7 @@ export async function removeAvatar(
   options: Readonly<{ client: QueryClient; expectedAvatarId: string | null }>,
 ): Promise<MeResponse> {
   const ticket = capturePrivateAuthority(options.client);
+  const publication = _capturePublication(options.client, ticket);
   _assertAuthority(options.client, ticket);
   const response = await apiFetch({
     path: "/me/avatar",
@@ -77,8 +135,13 @@ export async function removeAvatar(
     }),
   });
   _assertAuthority(options.client, ticket);
-  reconcileAccountFields(options.client, response, "avatar", ticket);
-  publishMemberAvatar(options.client, response.me.member);
+  _publishOwnAvatar({
+    client: options.client,
+    response,
+    ticket,
+    publication,
+    expectedAvatarId: options.expectedAvatarId,
+  });
   return options.client.getQueryData<MeResponse>(["me"])!;
 }
 

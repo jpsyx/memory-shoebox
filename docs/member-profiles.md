@@ -270,7 +270,9 @@ Initials reflect the typed name before publication.
 Name, notification and avatar responses reconcile only the fields each write
 owns. Private continuations capture the account query identity, member/role and
 retirement generation; cache clear, account replacement and private retirement
-invalidate them. An old upload cannot continue from reservation to PUT or
+invalidate them. A per-lifetime avatar publication order also prevents late
+success responses from restoring a superseded photo, including a newer removal
+that returns the pointer to its original null value. An old upload cannot continue from reservation to PUT or
 publish after retirement. Avatar writes cancel preceding account/bootstrap reads
 and hold background account reads only for their live authority. Terminal writes
 release that hold independently of another account's pending work.

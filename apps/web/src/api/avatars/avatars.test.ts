@@ -7,7 +7,7 @@ import {
   removePrivateQueries,
   reconcileAccountFields,
 } from "@/api/me/privateQueryHelpers";
-import { saveAvatar, renewMemberAvatar } from "./avatars";
+import { saveAvatar, renewMemberAvatar, removeAvatar } from "./avatars";
 const avatar = {
   avatarId: "018f0000-0000-7000-8000-000000000010",
   url: "https://example.com/avatar",
@@ -165,3 +165,48 @@ it("keeps newer name, notification and completion fields when a held avatar resp
     notify: { onComment: false },
   });
 });
+
+it.each(["replacement", "removal"] as const)(
+  "does not restore a superseded photo after newer %s when its successful response arrives late",
+  async (newerChange) => {
+    const client = new QueryClient();
+    client.setQueryData(["me"], createMeResponse());
+    const held = Promise.withResolvers<Response>();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          avatarId: avatar.avatarId,
+          expiresAt: avatar.expiresAt,
+        }),
+      )
+      .mockReturnValueOnce(held.promise);
+    vi.stubGlobal("fetch", fetcher);
+    const saving = saveAvatar({
+      client,
+      file: new File(["pixels"], "face.png", { type: "image/png" }),
+      crop: { centerX: 0.5, centerY: 0.5, zoom: 1 },
+      expectedAvatarId: null,
+    });
+    await vi.waitFor(() => {
+      return expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+    const newer = {
+      ...avatar,
+      avatarId: "018f0000-0000-7000-8000-000000000011",
+      url: "https://example.com/newer",
+    };
+    if (newerChange === "removal") {
+      fetcher.mockResolvedValueOnce(Response.json(createMeResponse()));
+      await removeAvatar({ client, expectedAvatarId: avatar.avatarId });
+    } else {
+      client.setQueryData(["me"], createMeResponse({ avatar: newer }));
+    }
+    held.resolve(Response.json(createMeResponse({ avatar })));
+    await saving;
+    expect(
+      client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me
+        .member.avatar,
+    ).toEqual(newerChange === "removal" ? null : newer);
+  },
+);
