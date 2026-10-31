@@ -45,6 +45,7 @@ export function createMeResponse(
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
       joinedAt,
       lastSignedInAt: "2026-09-28T10:00:00.000Z",

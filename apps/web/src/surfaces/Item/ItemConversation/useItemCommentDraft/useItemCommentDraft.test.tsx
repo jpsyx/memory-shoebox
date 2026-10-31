@@ -193,6 +193,7 @@ describe("shared comment drafts", () => {
       });
       expect(getRecordedRequests()[0]?.body).toEqual({
         body: "Sent words",
+        commentTags: [],
         atSeconds: null,
       });
       await act(async () => {
@@ -282,6 +283,7 @@ describe("shared comment drafts", () => {
         body: makeComment({
           author: SIGNED_IN,
           body: "Sent words",
+          commentTags: [],
           atSeconds: 6.25,
         }),
       },

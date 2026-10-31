@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import { createSetupResponseSchema } from "@memory-shoebox/shared";
 import type { LightMyRequestResponse } from "fastify";
 import { describe, expect, it } from "vitest";
@@ -33,6 +34,7 @@ function _expectCreatedAdminResponse(
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
     },
     isFirstSignIn: true,
@@ -51,7 +53,10 @@ function _expectCreatedAdminResponse(
 }
 
 async function _expectInitialAdminCatalog(
-  options: Readonly<{ members: Array<Database["members"]>; context: TestApp }>,
+  options: Readonly<{
+    members: Array<Selectable<Database["members"]>>;
+    context: TestApp;
+  }>,
 ): Promise<void> {
   const { members, context } = options;
   expect(members).toHaveLength(1);

@@ -271,6 +271,7 @@ export function makeComment(
     body: "He has your father's chin.",
     atSeconds: null,
     parentCommentId: null,
+    commentTags: [],
     createdAt: "2026-09-14T05:00:00.000Z",
     editedAt: null,
     canEdit: false,

@@ -284,6 +284,47 @@ export const reactionSummarySchema = z.object({
 /** Every reaction on one thing, plus the viewer's own. */
 export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
 
+/** One explicit selection, with an optional retained historical occurrence. */
+export const commentTagInputSchema = z
+  .object({
+    memberId: idSchema,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    tagId: idSchema.optional(),
+  })
+  .refine(
+    (tag) => {
+      return tag.end > tag.start;
+    },
+    {
+      message: "Tag end must follow start",
+    },
+  );
+
+/** Raw UTF-16 range including @, with an exclusive end. */
+export type CommentTagInput = z.infer<typeof commentTagInputSchema>;
+
+/** A persisted occurrence with its validated label snapshot, excluding @. */
+export const commentTagSchema = z
+  .object({
+    tagId: idSchema,
+    memberId: idSchema,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    label: z.string().min(1),
+  })
+  .refine(
+    (tag) => {
+      return tag.end > tag.start;
+    },
+    {
+      message: "Tag end must follow start",
+    },
+  );
+
+/** A persisted member reference and the exact wording selected when posted. */
+export type CommentTag = z.infer<typeof commentTagSchema>;
+
 /** One comment, on an item or at a point in a video. */
 export const commentDtoSchema = z.object({
   commentId: idSchema,
@@ -291,6 +332,7 @@ export const commentDtoSchema = z.object({
   parentCommentId: idSchema.nullable().default(null),
   author: memberRefSchema,
   body: z.string(),
+  commentTags: z.array(commentTagSchema),
   /** Where in a video the comment is pinned. Null on a photograph. */
   atSeconds: z.number().nonnegative().nullable(),
   createdAt: timestampSchema,

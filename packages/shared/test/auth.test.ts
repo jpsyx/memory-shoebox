@@ -3,6 +3,7 @@ import {
   createSessionRequestSchema,
   listMySessionsResponseSchema,
   meDtoSchema,
+  notifyPreferencesSchema,
   requestSignInCodeRequestSchema,
   updateMeRequestSchema,
 } from "../src/auth.ts";
@@ -105,6 +106,7 @@ describe("meDtoSchema", () => {
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
       joinedAt: "2026-09-27T10:00:00.000Z",
       lastSignedInAt: "2026-09-27T10:00:00.000Z",
@@ -130,4 +132,21 @@ describe("listMySessionsResponseSchema", () => {
     });
     expect(parsed.sessions[0]?.isCurrent).toBe(true);
   });
+});
+
+it("requires the new preference on reads while preserving legacy PATCH omission", () => {
+  const legacy = {
+    onUpload: true,
+    onComment: false,
+    onReply: true,
+    onRemoval: false,
+  };
+  expect(notifyPreferencesSchema.safeParse(legacy).success).toBe(false);
+  expect(updateMeRequestSchema.parse({ notify: legacy }).notify).toEqual(
+    legacy,
+  );
+  expect(
+    updateMeRequestSchema.parse({ notify: { ...legacy, onCommentTag: false } })
+      .notify?.onCommentTag,
+  ).toBe(false);
 });

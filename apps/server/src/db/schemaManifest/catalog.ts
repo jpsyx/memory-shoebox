@@ -8,6 +8,14 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const CATALOG_MANIFEST = {
+  comment_tags: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    comment_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    start_offset: { isNullable: false, type: "INTEGER", defaultValue: null },
+    end_offset: { isNullable: false, type: "INTEGER", defaultValue: null },
+    label_snapshot: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
   items: {
     visual_fingerprint: { isNullable: true, type: "TEXT", defaultValue: null },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
@@ -168,6 +176,7 @@ export const CATALOG_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
+  | "comment_tags"
   | "items"
   | "item_renditions"
   | "bursts"

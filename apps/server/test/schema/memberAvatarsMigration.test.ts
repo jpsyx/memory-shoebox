@@ -36,7 +36,7 @@ it("preserves populated 0019 member, claim, and session history while adding emp
     await migrateToLatest(database);
     const upgraded = await database.selectFrom("members").selectAll().execute();
     expect(
-      upgraded.map(({ avatar_id, ...member }) => {
+      upgraded.map(({ avatar_id, notify_on_comment_tag, ...member }) => {
         return member;
       }),
     ).toEqual(members.rows);
@@ -53,7 +53,7 @@ it("preserves populated 0019 member, claim, and session history while adding emp
         await sql`select * from kysely_migration order by name`.execute(
           database,
         )
-      ).rows.slice(0, -1),
+      ).rows.slice(0, history.rows.length),
     ).toEqual(history.rows);
     expect(await database.selectFrom("sessions").selectAll().execute()).toEqual(
       sessions,

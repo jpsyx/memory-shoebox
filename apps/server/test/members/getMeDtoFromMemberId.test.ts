@@ -77,13 +77,14 @@ describe("getMeDtoFromMemberId", () => {
         onComment: false,
         onReply: true,
         onRemoval: false,
+        onCommentTag: true,
       },
       joinedAt: NOW,
       lastSignedInAt: NOW,
     });
   });
 
-  it("returns all four switches for a viewer, including onRemoval", async () => {
+  it("returns all five switches for a viewer, including onRemoval", async () => {
     // The recipient query filters on role as well as on the boolean; hiding
     // the field here would lose the member's setting the moment an admin
     // promoted them (`auth.md`, `GET /api/me`).

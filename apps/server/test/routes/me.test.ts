@@ -46,6 +46,7 @@ describe("GET /api/me", () => {
           onComment: true,
           onReply: true,
           onRemoval: true,
+          onCommentTag: true,
         },
         joinedAt: NOW,
         lastSignedInAt: NOW,
@@ -138,6 +139,7 @@ describe("PATCH /api/me", () => {
       onComment: false,
       onReply: false,
       onRemoval: false,
+      onCommentTag: true,
     });
     const row = await database
       .selectFrom("members")
@@ -260,4 +262,45 @@ describe("PATCH /api/me", () => {
     expect(response.statusCode).toBe(401);
     await close();
   });
+});
+
+it("stores tag preferences and preserves them through legacy four-switch PATCH", async () => {
+  const { app, database, close } = await createTestApp({
+    clock: () => {
+      return new Date(NOW);
+    },
+  });
+  try {
+    const { cookie } = await insertSignedInMember({ database });
+    const notify = {
+      onUpload: true,
+      onComment: false,
+      onReply: true,
+      onRemoval: false,
+    };
+    const changed = await app.inject({
+      method: "PATCH",
+      url: "/api/me",
+      headers: { cookie },
+      payload: { notify: { ...notify, onCommentTag: false } },
+    });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.json().me.notify.onCommentTag).toBe(false);
+    const legacy = await app.inject({
+      method: "PATCH",
+      url: "/api/me",
+      headers: { cookie },
+      payload: { notify },
+    });
+    expect(legacy.statusCode).toBe(200);
+    expect(legacy.json().me.notify.onCommentTag).toBe(false);
+    const read = await app.inject({
+      method: "GET",
+      url: "/api/me",
+      headers: { cookie },
+    });
+    expect(read.json().me.notify.onCommentTag).toBe(false);
+  } finally {
+    await close();
+  }
 });

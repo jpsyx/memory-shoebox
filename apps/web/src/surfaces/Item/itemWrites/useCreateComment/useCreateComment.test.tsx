@@ -36,7 +36,7 @@ describe("a comment", () => {
 
     act(() => {
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
     });
@@ -67,11 +67,11 @@ describe("a comment", () => {
     // Both presses come from one render, before `isSending` could arrive.
     act(() => {
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
     });
@@ -105,7 +105,7 @@ describe("comment ownership across navigation", () => {
     const onSent = vi.fn();
     act(() => {
       return sender.result.current.send({
-        draft: { body: "Away.", atSeconds: null },
+        draft: { commentTags: [], body: "Away.", atSeconds: null },
         onSent,
       });
     });
@@ -138,7 +138,7 @@ describe("comment ownership across navigation", () => {
     });
     act(() => {
       return first.result.current.send({
-        draft: { body: "Once.", atSeconds: null },
+        draft: { commentTags: [], body: "Once.", atSeconds: null },
         onSent: () => {},
       });
     });
@@ -152,7 +152,7 @@ describe("comment ownership across navigation", () => {
     expect(returned.result.current.isSending).toBe(true);
     act(() => {
       return returned.result.current.send({
-        draft: { body: "Twice.", atSeconds: null },
+        draft: { commentTags: [], body: "Twice.", atSeconds: null },
         onSent: () => {},
       });
     });
@@ -194,7 +194,7 @@ describe("per-item pending writes", () => {
     const onSecondSent = vi.fn();
     act(() => {
       sender.result.current.send({
-        draft: { body: "First", atSeconds: 6.25 },
+        draft: { commentTags: [], body: "First", atSeconds: 6.25 },
         onSent: onFirstSent,
       });
     });
@@ -204,6 +204,7 @@ describe("per-item pending writes", () => {
     act(() => {
       sender.result.current.send({
         draft: {
+          commentTags: [],
           body: "Second",
           atSeconds: null,
           parentCommentId: "00000000-0000-4000-8000-000000000003",
@@ -227,12 +228,13 @@ describe("per-item pending writes", () => {
     ).toEqual([
       {
         url: `/api/items/${ITEM_ID}/comments`,
-        body: { body: "First", atSeconds: 6.25 },
+        body: { commentTags: [], body: "First", atSeconds: 6.25 },
       },
       {
         url: `/api/items/${otherItemId}/comments`,
         body: {
           body: "Second",
+          commentTags: [],
           atSeconds: null,
           parentCommentId: "00000000-0000-4000-8000-000000000003",
         },

@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import type { Selectable, Kysely } from "kysely";
 import { SESSION_COOKIE_NAME } from "../../src/auth/sessionCookie.ts";
 import { makeTokenHashFromToken } from "../../src/auth/sessionToken.ts";
 import type { Database } from "../../src/db/types/db.types.ts";
@@ -28,7 +28,7 @@ export type SignedInMember = {
 export async function insertSignedInMember(options: {
   database: Kysely<Database>;
   token?: string;
-  member?: Partial<Database["members"]>;
+  member?: Partial<Selectable<Database["members"]>>;
   session?: Partial<Database["sessions"]>;
 }): Promise<SignedInMember> {
   const token = options.token ?? "a-token-somebody-is-holding";

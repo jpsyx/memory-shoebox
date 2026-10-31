@@ -6,6 +6,7 @@ import { indexColumns } from "./indexColumns.ts";
 
 /** The tables migration 'operations' creates, as `Database` names them. */
 type OperationsTable =
+  | "comment_tag_notifications"
   | "media_processing_jobs"
   | "media_processing_outputs"
   | "media_processing_discovery"
@@ -22,6 +23,20 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
   OperationsTable,
   ForeignKeyInfo[]
 > = {
+  comment_tag_notifications: [
+    {
+      column: "comment_id",
+      referencesTable: "comments",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+  ],
   media_processing_jobs: [
     {
       column: "item_id",
@@ -119,6 +134,13 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
 
 /** Every declared index on a operations table. See `EXPECTED_INDEXES`. */
 export const OPERATIONS_INDEXES: Record<OperationsTable, IndexInfo[]> = {
+  comment_tag_notifications: [
+    {
+      name: "comment_tag_notifications_member",
+      columns: indexColumns("member_id"),
+      isUnique: false,
+    },
+  ],
   media_processing_jobs: [
     {
       name: "media_processing_jobs_due",
@@ -279,6 +301,7 @@ export const OPERATIONS_UNIQUE_CONSTRAINTS: Record<
   OperationsTable,
   string[][]
 > = {
+  comment_tag_notifications: [],
   media_processing_jobs: [["item_id", "source_rendition_id", "recipe"]],
   media_processing_outputs: [["storage_key"]],
   media_processing_discovery: [],

@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import {
@@ -28,7 +29,7 @@ type InvitationRow = InvitationsTable & {
 };
 type MemberFacts = {
   avatars: ReadonlyMap<string, AvatarRef>;
-  member: MembersTable;
+  member: Selectable<MembersTable>;
   invitation: InvitationRow | undefined;
   sessions: readonly SessionsTable[];
   activeAdminCount: number;
@@ -38,7 +39,7 @@ type MemberFacts = {
 
 type AdminDirectoryRows = {
   avatars: ReadonlyMap<string, AvatarRef>;
-  members: readonly MembersTable[];
+  members: ReadonlyArray<Selectable<MembersTable>>;
   sessions: readonly SessionsTable[];
   invitations: readonly InvitationRow[];
   activeAdminCount: number;

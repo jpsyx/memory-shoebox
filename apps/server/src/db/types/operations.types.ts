@@ -179,3 +179,10 @@ export type PhotoFingerprintBackfillTable = {
   next_attempt_at: string;
   last_error: string | null;
 };
+
+/** Permanent scheduling deduplication, independent of tags and outbox rows. */
+export type CommentTagNotificationsTable = {
+  comment_id: string;
+  member_id: string;
+  scheduled_at: string;
+};

@@ -32,6 +32,11 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
   },
   members: {
+    notify_on_comment_tag: {
+      isNullable: false,
+      type: "INTEGER",
+      defaultValue: "1",
+    },
     avatar_id: { isNullable: true, type: "TEXT", defaultValue: null },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     email: { isNullable: false, type: "TEXT", defaultValue: null },

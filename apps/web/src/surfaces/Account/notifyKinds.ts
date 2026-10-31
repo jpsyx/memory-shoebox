@@ -43,6 +43,7 @@ export const NOTIFY_NONE: NotifyPreferences = {
   onComment: false,
   onReply: false,
   onRemoval: false,
+  onCommentTag: false,
 };
 
 /** Every switch on, which is what turning them back on sends. */
@@ -51,4 +52,5 @@ export const NOTIFY_ALL: NotifyPreferences = {
   onComment: true,
   onReply: true,
   onRemoval: true,
+  onCommentTag: true,
 };

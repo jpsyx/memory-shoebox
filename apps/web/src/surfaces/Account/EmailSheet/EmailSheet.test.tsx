@@ -22,6 +22,7 @@ const ALL_ON: NotifyPreferences = {
   onComment: true,
   onReply: true,
   onRemoval: true,
+  onCommentTag: true,
 };
 
 const ALL_OFF: NotifyPreferences = {
@@ -29,6 +30,7 @@ const ALL_OFF: NotifyPreferences = {
   onComment: false,
   onReply: false,
   onRemoval: false,
+  onCommentTag: false,
 };
 
 describe("the Email sheet", () => {
@@ -56,6 +58,7 @@ describe("the Email sheet", () => {
       onComment: true,
       onReply: false,
       onRemoval: true,
+      onCommentTag: true,
     });
   });
 

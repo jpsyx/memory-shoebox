@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type {
@@ -96,7 +97,7 @@ function _comparePresenceRows(
 
 function _makePresenceRowFromMember(
   options: Readonly<{
-    member: MembersTable;
+    member: Selectable<MembersTable>;
     avatars: ReadonlyMap<string, AvatarRef>;
     activeDays: ReadonlyMap<string, number>;
     liveCounts: ReadonlyMap<string, ReadonlyMap<string, number>>;
@@ -129,7 +130,7 @@ function _makePresenceRowFromMember(
 
 async function _readPresenceMembers(
   options: Readonly<PresenceOptions>,
-): Promise<MembersTable[]> {
+): Promise<Array<Selectable<MembersTable>>> {
   const { database, viewer } = options;
   if (
     !viewer.isAdmin &&

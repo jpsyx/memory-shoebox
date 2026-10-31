@@ -37,7 +37,8 @@
       "sessionDtoSchema",
       "signInCodeSchema",
       "updateMeRequestSchema",
-      "MEMBER_STATUSES"
+      "MEMBER_STATUSES",
+      "updateNotifyPreferencesSchema"
     ],
     "types": [
       "CreateSessionRequest",
@@ -98,7 +99,9 @@
       "timestampSchema",
       "visibilityRuleIdSchema",
       "visibilitySummarySchema",
-      "avatarRefSchema"
+      "avatarRefSchema",
+      "commentTagSchema",
+      "commentTagInputSchema"
     ],
     "types": [
       "BurstSummary",
@@ -114,7 +117,9 @@
       "ReactionSummary",
       "TagRef",
       "VisibilitySummary",
-      "AvatarRef"
+      "AvatarRef",
+      "CommentTag",
+      "CommentTagInput"
     ]
   },
   {
@@ -766,5 +771,10 @@
       "memberCollectionResponseSchema"
     ],
     "types": ["MemberCollectionResponse"]
+  },
+  {
+    "module": "./commentTags/commentTags.ts",
+    "values": ["makeNormalizedCommentFromDraft"],
+    "types": []
   }
 ]

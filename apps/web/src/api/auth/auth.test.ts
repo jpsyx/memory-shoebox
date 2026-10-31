@@ -78,6 +78,7 @@ describe("createSession", () => {
             onComment: true,
             onReply: true,
             onRemoval: true,
+            onCommentTag: true,
           },
           joinedAt: "2026-09-28T10:00:00.000Z",
           lastSignedInAt: "2026-09-28T10:00:00.000Z",

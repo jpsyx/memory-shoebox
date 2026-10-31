@@ -15,6 +15,7 @@ const COMMENT: CommentDto = {
   body: "He has his mother's chin.",
   atSeconds: null,
   parentCommentId: null,
+  commentTags: [],
   createdAt: "2026-09-26T09:00:00.000Z",
   editedAt: null,
   canEdit: false,

@@ -3,6 +3,20 @@ import type { CatalogTable } from "./catalog.types.ts";
 
 /** Every foreign key on a catalog table. See `EXPECTED_FOREIGN_KEYS`. */
 export const CATALOG_FOREIGN_KEYS: Record<CatalogTable, ForeignKeyInfo[]> = {
+  comment_tags: [
+    {
+      column: "comment_id",
+      referencesTable: "comments",
+      referencesColumn: "id",
+      onDelete: "CASCADE",
+    },
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+  ],
   item_burst_history: [
     {
       column: "cover_item_id",
@@ -218,6 +232,7 @@ export const CATALOG_FOREIGN_KEYS: Record<CatalogTable, ForeignKeyInfo[]> = {
  * `EXPECTED_UNIQUE_CONSTRAINTS`.
  */
 export const CATALOG_UNIQUE_CONSTRAINTS: Record<CatalogTable, string[][]> = {
+  comment_tags: [["comment_id", "start_offset"]],
   item_burst_history: [],
   items: [],
   item_renditions: [],

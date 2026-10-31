@@ -1,3 +1,5 @@
+import type { Generated } from "kysely";
+
 /** One invited address, for the life of the Shoebox. Never hard-deleted. */
 export type MembersTable = {
   avatar_id: string | null;
@@ -9,6 +11,7 @@ export type MembersTable = {
   role: string;
   status: string;
   notify_on_upload: number;
+  notify_on_comment_tag: Generated<number>;
   notify_on_comment: number;
   notify_on_reply: number;
   notify_on_removal: number;

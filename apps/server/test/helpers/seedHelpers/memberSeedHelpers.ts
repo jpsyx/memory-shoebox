@@ -1,13 +1,13 @@
+import type { Selectable, Kysely } from "kysely";
 import { sql } from "kysely";
 import { makeAccountNameKeyFromName } from "@memory-shoebox/shared";
-import type { Kysely } from "kysely";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
 import { NOW, shiftDays } from "./seedTime.ts";
 
 async function _getProfileFromFixture(options: {
   database: Kysely<Database>;
-  overrides: Partial<Database["members"]>;
+  overrides: Partial<Selectable<Database["members"]>>;
   id: string;
 }) {
   const columns = await sql<{
@@ -39,7 +39,7 @@ async function _getProfileFromFixture(options: {
  */
 export async function insertMember(
   database: Kysely<Database>,
-  overrides: Partial<Database["members"]> = {},
+  overrides: Partial<Selectable<Database["members"]>> = {},
 ): Promise<string> {
   const id = overrides.id ?? createId();
   const { hasClaims, displayName, completedAt } = await _getProfileFromFixture({
@@ -137,7 +137,7 @@ export async function insertInvitation(
 /** Insert an identity that still needs to choose its account name. */
 export async function insertIncompleteMember(
   database: Kysely<Database>,
-  overrides: Partial<Database["members"]> = {},
+  overrides: Partial<Selectable<Database["members"]>> = {},
 ): Promise<string> {
   return insertMember(database, {
     ...overrides,

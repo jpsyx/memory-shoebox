@@ -39,7 +39,7 @@ export function VideoReply({
         event.preventDefault();
         if (body.trim() !== "" && !write.isSending) {
           write.send({
-            draft: { body, parentCommentId: parent.commentId },
+            draft: { commentTags: [], body, parentCommentId: parent.commentId },
             onSent: () => {
               if (isMounted.current) {
                 onSent();

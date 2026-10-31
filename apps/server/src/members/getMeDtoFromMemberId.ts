@@ -36,6 +36,7 @@ export async function getMeDtoFromMemberId(options: {
       "role",
       "notify_on_upload",
       "notify_on_comment",
+      "notify_on_comment_tag",
       "notify_on_reply",
       "notify_on_removal",
       "joined_at",
@@ -62,6 +63,7 @@ export async function getMeDtoFromMemberId(options: {
     notify: {
       onUpload: row.notify_on_upload === 1,
       onComment: row.notify_on_comment === 1,
+      onCommentTag: row.notify_on_comment_tag === 1,
       onReply: row.notify_on_reply === 1,
       onRemoval: row.notify_on_removal === 1,
     },

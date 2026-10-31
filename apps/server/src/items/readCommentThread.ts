@@ -72,6 +72,7 @@ export async function readCommentThread(options: {
         avatar: null,
       },
       body: row.body,
+      commentTags: [],
       atSeconds: row.atSeconds,
       parentCommentId: row.parentCommentId,
       createdAt: row.createdAt,

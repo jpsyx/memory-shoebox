@@ -62,6 +62,7 @@ describe("surface 9", () => {
             onComment: true,
             onReply: true,
             onRemoval: true,
+            onCommentTag: true,
           },
         },
       ]);

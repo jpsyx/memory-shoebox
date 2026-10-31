@@ -35,6 +35,7 @@ export {
   signInCodeSchema,
   updateMeRequestSchema,
   MEMBER_STATUSES,
+  updateNotifyPreferencesSchema,
   type CreateSessionRequest,
   type CreateSessionResponse,
   type ListMySessionsResponse,
@@ -85,6 +86,8 @@ export {
   visibilityRuleIdSchema,
   visibilitySummarySchema,
   avatarRefSchema,
+  commentTagSchema,
+  commentTagInputSchema,
   type BurstSummary,
   type CommentDto,
   type ItemSummary,
@@ -99,6 +102,8 @@ export {
   type TagRef,
   type VisibilitySummary,
   type AvatarRef,
+  type CommentTag,
+  type CommentTagInput,
 } from "./dtos.ts";
 export {
   commentEmailPayloadSchema,
@@ -616,3 +621,4 @@ export {
   memberCollectionResponseSchema,
   type MemberCollectionResponse,
 } from "./memberCollections.ts";
+export { makeNormalizedCommentFromDraft } from "./commentTags/commentTags.ts";

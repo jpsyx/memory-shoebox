@@ -106,6 +106,7 @@ async function _makeCommentDtoForAuthor(options: {
       avatar: null,
     },
     body: options.body,
+    commentTags: [],
     atSeconds: options.atSeconds,
     parentCommentId: options.parentCommentId,
     createdAt: options.now,

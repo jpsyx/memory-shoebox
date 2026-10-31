@@ -104,6 +104,7 @@ const COMMENT_DTO = {
   commentId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f90def0",
   author: UPLOADED_BY,
   body: "She never did let go of that shovel.",
+  commentTags: [],
   atSeconds: null,
   createdAt: "2026-09-01T09:14:00.000Z",
   editedAt: null,

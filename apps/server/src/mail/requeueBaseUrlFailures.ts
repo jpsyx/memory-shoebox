@@ -11,7 +11,10 @@ import {
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { OutboundEmailsTable } from "../db/types/operations.types.ts";
 
-type RetainedKind = Exclude<OutboundEmailsTable["kind"], "sign_in_code">;
+type RetainedKind = Exclude<
+  OutboundEmailsTable["kind"],
+  "sign_in_code" | "comment_tag"
+>;
 const PAYLOAD_SCHEMAS = {
   invitation: invitationEmailPayloadSchema,
   upload_session: uploadSessionEmailPayloadSchema,
@@ -157,7 +160,11 @@ function _hasValidRetainedCommonLinks(
 function _makeRepairedPayloadFromRow(
   options: Readonly<{ row: OutboundEmailsTable; baseUrl: string }>,
 ): string | undefined {
-  if (options.row.kind === "sign_in_code") {
+  // Tag payload delivery and repair are added with the notification behavior.
+  if (
+    options.row.kind === "sign_in_code" ||
+    options.row.kind === "comment_tag"
+  ) {
     return undefined;
   }
   try {

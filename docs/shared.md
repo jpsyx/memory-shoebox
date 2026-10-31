@@ -351,3 +351,26 @@ the member, and timeline cursor fingerprints distinguish different members.
 status or counts. Retained removed accounts keep their identity; unknown UUIDs
 return null and an empty filtered archive. The contract is exported through the
 allowlist generator and remains erasable TypeScript.
+
+## Comment occurrence ranges and preference compatibility
+
+`CommentTagInput` identifies a selected member and a UTF-16 range including `@`
+with an exclusive end. An optional `tagId` retains that exact historical
+occurrence during an edit. `CommentTag` adds the server's occurrence ID and the
+validated label snapshot without `@`. `CommentDto.commentTags` is always an array.
+The tag schemas live above the comment DTO in `dtos.ts`; the normalization helper
+imports them, and `dtos.ts` never imports the helper.
+
+`makeNormalizedCommentFromDraft` validates raw bounds, integer offsets, ordering,
+non-overlap, unique retained IDs, surrogate boundaries, and trimmed whitespace
+before returning the trimmed body and shifted ranges. Both comment request
+schemas use this joint normalization and keep the 4,000 UTF-16 unit limit.
+Creates default omitted occurrences to `[]`; updates preserve omission so the
+server can distinguish legacy edits from explicit removal. Plain `@name` text
+never creates a reference. See [comment tagging](comment-tagging.md).
+
+`NotifyPreferences.onCommentTag` is required in responses. The update-specific
+preference schema requires the original four booleans and allows only the new
+field to be omitted. An older four-switch PATCH preserves the stored tag
+preference; it does not reset it to the default. The persisted preference defaults
+on for existing and newly created members.

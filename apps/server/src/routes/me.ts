@@ -21,7 +21,7 @@ function _makeMemberPatchFromBody(
   body: UpdateMeRequest,
 ): Updateable<Database["members"]> {
   return {
-    // All four, or none: "turn them all off" is a client convenience that
+    // Original four, or none: "turn them all off" is a client convenience that
     // sends four booleans, not an API feature (Decision 16).
     ...(body.notify === undefined
       ? {}
@@ -30,6 +30,9 @@ function _makeMemberPatchFromBody(
           notify_on_comment: body.notify.onComment ? 1 : 0,
           notify_on_reply: body.notify.onReply ? 1 : 0,
           notify_on_removal: body.notify.onRemoval ? 1 : 0,
+          ...(body.notify.onCommentTag === undefined
+            ? {}
+            : { notify_on_comment_tag: body.notify.onCommentTag ? 1 : 0 }),
         }),
   };
 }

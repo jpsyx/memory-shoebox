@@ -73,7 +73,11 @@ function _submitDraft({
   }
   const submittedField = fieldRef.current;
   write.send({
-    draft: { body: submitted.body, atSeconds: submitted.atSeconds ?? null },
+    draft: {
+      commentTags: [],
+      body: submitted.body,
+      atSeconds: submitted.atSeconds ?? null,
+    },
     onSent: () => {
       if (memory.read(itemId).revision === submitted.revision) {
         memory.remove(itemId);

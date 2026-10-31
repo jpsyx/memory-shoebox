@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { InvitationEmailPayload } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { MembersTable } from "../db/types/identityAndAccess.types.ts";
@@ -17,8 +18,8 @@ type EnqueueInvitationEmailOptions = {
   now: string;
 };
 type InvitationFacts = {
-  inviter: MembersTable;
-  invitee: MembersTable;
+  inviter: Selectable<MembersTable>;
+  invitee: Selectable<MembersTable>;
   baseUrl: string | undefined;
   memberCount: number;
   visibleItemCount: number;
@@ -26,7 +27,7 @@ type InvitationFacts = {
 
 async function _readMember(
   options: Readonly<{ database: DatabaseExecutor; memberId: string }>,
-): Promise<MembersTable> {
+): Promise<Selectable<MembersTable>> {
   return options.database
     .selectFrom("members")
     .selectAll()
@@ -35,7 +36,10 @@ async function _readMember(
 }
 
 async function _readItemCount(
-  options: Readonly<{ database: DatabaseExecutor; invitee: MembersTable }>,
+  options: Readonly<{
+    database: DatabaseExecutor;
+    invitee: Selectable<MembersTable>;
+  }>,
 ): Promise<number> {
   const visibleRuleIds = await getVisibleRuleIdsFromMemberId({
     database: options.database,

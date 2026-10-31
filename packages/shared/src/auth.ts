@@ -56,11 +56,10 @@ export const MEMBER_STATUSES = ["invited", "active", "removed"] as const;
 export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 
 /**
- * The four switches on My account. Four boolean columns on `members`, not
+ * The five switches on My account. Boolean columns on `members`, not
  * settings rows (Decision 16).
  *
- * All four, always: requiring them whenever `notify` is present is what keeps
- * a partial write from looking like the "turn them all off" the button sends.
+ * Reads always include all five. PATCH preserves legacy four-switch writes.
  */
 export const notifyPreferencesSchema = z.object({
   /** Somebody puts photographs up. One email per batch. */
@@ -71,10 +70,17 @@ export const notifyPreferencesSchema = z.object({
   onReply: z.boolean(),
   /** Stored for every role; only admins and uploaders are ever sent one. */
   onRemoval: z.boolean(),
+  /** Somebody selects this member in a comment. */
+  onCommentTag: z.boolean(),
 });
 
-/** The four switches on My account. */
+/** The five switches on My account. */
 export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
+
+/** The original four switches remain required; legacy PATCH omits only tags. */
+export const updateNotifyPreferencesSchema = notifyPreferencesSchema.extend({
+  onCommentTag: z.boolean().optional(),
+});
 
 /**
  * The signed-in member's own account.
@@ -206,8 +212,8 @@ export type MeResponse = z.infer<typeof meResponseSchema>;
 export const updateMeRequestSchema = z.strictObject({
   /** A chosen, nonempty name. Omission preserves the current claim. */
   displayName: accountNameSchema.optional(),
-  /** All four, always, when present. There is no fifth field. */
-  notify: notifyPreferencesSchema.optional(),
+  /** Legacy clients can omit only onCommentTag; its stored value survives. */
+  notify: updateNotifyPreferencesSchema.optional(),
 });
 
 /** Body of `PATCH /api/me`. */
