@@ -17,8 +17,11 @@ export function PersonPill({
   return (
     <Pill
       withRemoveButton
-      className={classes.pill}
-      classNames={{ label: classes.pillLabel }}
+      className={classes.personPill}
+      classNames={{
+        label: classes.personPillLabel,
+        remove: classes.personPillRemove,
+      }}
       removeButtonProps={{
         "aria-label": `Untag ${label}`,
         "aria-hidden": false,

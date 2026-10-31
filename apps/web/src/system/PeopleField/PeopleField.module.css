@@ -13,12 +13,29 @@
   overflow-wrap: anywhere;
 }
 
-.pill {
-  font-size: var(--micro);
+.personPill {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: auto;
   min-height: 2.25rem;
+  overflow: visible;
+  white-space: normal;
+  font-size: var(--micro);
 }
 
-.pillLabel {
+.personPillLabel {
+  flex: 1 1 auto;
+  min-width: 0;
   height: auto;
-  line-height: inherit;
+  padding-block: var(--sp-1);
+  overflow: visible;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-overflow: clip;
+  line-height: 1.4;
+}
+
+.personPillRemove {
+  flex: 0 0 auto;
+  align-self: center;
 }
