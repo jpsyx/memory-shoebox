@@ -259,13 +259,17 @@ boundary. Replacing, cancelling or unmounting a selection revokes its object URL
 Failed saves keep the current photo, selected file and crop for retry. A stale
 version offers Use latest photo or Save this photo instead; replacement rereads
 the pointer and reserves against exactly that version, so a further change still
-conflicts rather than being silently overwritten.
+conflicts rather than being silently overwritten. The fresh read and replacement
+retain the original private write authority and publication order, and carry
+provenance for the known stale cached pointer.
 
 Profile completion stages an optional crop locally. Continue claims the name
 first and then saves the confirmed photo. A name conflict preserves the crop;
 a photo failure preserves the successful name and offers Try again or Continue
 without a photo. The mounted editor owns the draft throughout that handoff.
-Initials reflect the typed name before publication.
+Initials reflect the typed name before publication. If the crop is cancelled
+after the name succeeds, retry continues to that saved destination instead of
+waiting for a discarded photo draft.
 
 Name, notification and avatar responses reconcile only the fields each write
 owns. Private continuations capture the account query identity, member/role and

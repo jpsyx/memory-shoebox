@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { removePrivateQueries } from "@/api/me/privateQueryHelpers";
+import * as avatarsApi from "@/api/avatars/avatars";
 import { createMeResponse } from "@/testing/createMeResponse";
 import * as helpers from "./avatarCropHelpers/avatarCropHelpers";
 import { AvatarEditor } from "./AvatarEditor";
@@ -142,6 +144,11 @@ it("keeps a failed removal and retries from a confirmation initially focused on 
 });
 it("preserves a stale crop and fetches the latest expected version for an explicit replacement", async () => {
   const newer = { ...avatar, avatarId: "018f0000-0000-7000-8000-000000000011" };
+  const saved = {
+    ...avatar,
+    avatarId: "018f0000-0000-7000-8000-000000000012",
+    url: "https://example.com/saved",
+  };
   const fetcher = vi
     .fn()
     .mockResolvedValueOnce(
@@ -152,11 +159,11 @@ it("preserves a stale crop and fetches the latest expected version for an explic
     )
     .mockResolvedValueOnce(Response.json({ avatar: newer }))
     .mockResolvedValueOnce(
-      Response.json({ avatarId: avatar.avatarId, expiresAt: avatar.expiresAt }),
+      Response.json({ avatarId: saved.avatarId, expiresAt: saved.expiresAt }),
     )
-    .mockResolvedValueOnce(Response.json(createMeResponse({ avatar })));
+    .mockResolvedValueOnce(Response.json(createMeResponse({ avatar: saved })));
   vi.stubGlobal("fetch", fetcher);
-  _render();
+  const rendered = _render();
   await _choose();
   await userEvent.click(screen.getByRole("button", { name: "Save photo" }));
   await screen.findByText("Your photo changed in another window.");
@@ -170,6 +177,11 @@ it("preserves a stale crop and fetches the latest expected version for an explic
   expect(JSON.parse(fetcher.mock.calls[2]![1].body).expectedAvatarId).toBe(
     newer.avatarId,
   );
+  expect(
+    rendered.client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])
+      ?.me.member.avatar,
+  ).toEqual(saved);
+  expect(rendered.onSaved.mock.calls[0]?.[0].me.member.avatar).toEqual(saved);
 });
 it("revokes preview URLs on replacement, cancel and unmount", async () => {
   const rendered = _render();
@@ -244,3 +256,65 @@ it("uses the latest photo explicitly without uploading the preserved draft", asy
   ).toEqual(newer);
   expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first");
 });
+
+it.each(["replacement", "retirement"] as const)(
+  "retires overwrite between the latest read and continuation after account %s",
+  async (change) => {
+    const newer = {
+      ...avatar,
+      avatarId: "018f0000-0000-7000-8000-000000000011",
+    };
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json(
+          { error: "avatar_changed", message: "Changed" },
+          { status: 409 },
+        ),
+      )
+      .mockResolvedValueOnce(Response.json({ avatar: newer }))
+      .mockResolvedValue(
+        Response.json(
+          { error: "unexpected_write", message: "No write expected" },
+          { status: 500 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetcher);
+    const rendered = _render();
+    const readLatest = avatarsApi.getLatestAvatarFromMember;
+    vi.spyOn(avatarsApi, "getLatestAvatarFromMember").mockImplementation(
+      (options) => {
+        return readLatest(options).then((latest) => {
+          queueMicrotask(() => {
+            if (change === "replacement") {
+              rendered.client.setQueryData(
+                ["me"],
+                createMeResponse({
+                  memberId: "018f0000-0000-7000-8000-000000000002",
+                }),
+              );
+            } else {
+              removePrivateQueries(rendered.client);
+            }
+          });
+          return latest;
+        });
+      },
+    );
+    await _choose();
+    await userEvent.click(screen.getByRole("button", { name: "Save photo" }));
+    await screen.findByRole("button", { name: "Save this photo instead" });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save this photo instead" }),
+    );
+    await vi.waitFor(() => {
+      return expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(fetcher.mock.calls.slice(2)).toHaveLength(0);
+    expect(rendered.onSaved).not.toHaveBeenCalled();
+  },
+);

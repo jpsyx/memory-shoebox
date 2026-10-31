@@ -292,3 +292,56 @@ it("retains a staged crop and name draft independently after a name conflict", a
   expect(onContinue).not.toHaveBeenCalled();
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
+it("continues the saved destination when retry follows a failed photo and cancelled crop", async () => {
+  vi.spyOn(avatarHelpers, "getDimensionsFromAvatarUrl").mockResolvedValue({
+    width: 101,
+    height: 57,
+  });
+  vi.stubGlobal(
+    "URL",
+    class extends URL {
+      static createObjectURL = vi.fn(() => {
+        return "blob:staged";
+      });
+      static revokeObjectURL = vi.fn();
+    },
+  );
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json(createMeResponse({ displayName: "John M" })),
+    )
+    .mockResolvedValueOnce(
+      Response.json(
+        { error: "avatar_changed", message: "Changed" },
+        { status: 409 },
+      ),
+    );
+  vi.stubGlobal("fetch", fetcher);
+  const { onContinue, client } = _render();
+  await userEvent.type(screen.getByLabelText("Your name"), "John M");
+  await userEvent.upload(
+    screen.getByLabelText("Choose photo file"),
+    new File(["pixels"], "face.png", { type: "image/png" }),
+  );
+  await screen.findByRole("slider", { name: "Photo zoom" });
+  await userEvent.click(screen.getByRole("button", { name: "Save photo" }));
+  await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByText("Your photo changed in another window.");
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await vi.waitFor(() => {
+    return expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+  await vi.waitFor(() => {
+    return expect(onContinue).toHaveBeenCalledWith(
+      "/items/photo?comment=thread",
+    );
+  });
+  expect(
+    client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me
+      .profileComplete,
+  ).toBe(true);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+});

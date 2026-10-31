@@ -19,6 +19,10 @@ type SaveOptions = {
   file: File;
   crop: AvatarCrop;
   expectedAvatarId: string | null;
+  write?: {
+    context: AvatarWriteContext;
+    freshExpectedAvatarId?: string | null;
+  };
 };
 
 type PublicationOwner = {
@@ -28,6 +32,28 @@ type PublicationOwner = {
 };
 type Publication = { owner: PublicationOwner; sequence: number };
 const PUBLICATIONS = new WeakMap<QueryClient, PublicationOwner>();
+
+/** One original authority/publication lifetime, retained across version reads. */
+export type AvatarWriteContext = {
+  authority: ReturnType<typeof capturePrivateAuthority>;
+  publication: Publication;
+  cachedAvatarId: string | null;
+};
+
+/** Captures an own-avatar write without adopting a later account lifetime. */
+export function captureAvatarWrite(
+  client: QueryClient,
+  authority = capturePrivateAuthority(client),
+): AvatarWriteContext {
+  _assertAuthority(client, authority);
+  return {
+    authority,
+    publication: _capturePublication(client, authority),
+    cachedAvatarId:
+      client.getQueryData<MeResponse>(["me"])?.me.member.avatar?.avatarId ??
+      null,
+  };
+}
 
 function _capturePublication(
   client: QueryClient,
@@ -53,6 +79,7 @@ type PublicationOptions = {
   ticket: ReturnType<typeof capturePrivateAuthority>;
   publication: Publication;
   expectedAvatarId: string | null;
+  previousAvatarId?: string | null;
 };
 function _publishOwnAvatar(options: Readonly<PublicationOptions>): void {
   const { client, response, ticket, publication, expectedAvatarId } = options;
@@ -64,7 +91,8 @@ function _publishOwnAvatar(options: Readonly<PublicationOptions>): void {
     client.getQueryData<MeResponse>(["me"])?.me.member.avatar?.avatarId ?? null;
   if (
     currentId !== expectedAvatarId &&
-    currentId !== (response.me.member.avatar?.avatarId ?? null)
+    currentId !== (response.me.member.avatar?.avatarId ?? null) &&
+    currentId !== options.previousAvatarId
   ) {
     return;
   }
@@ -86,8 +114,8 @@ export async function saveAvatar(
   options: Readonly<SaveOptions>,
 ): Promise<MeResponse> {
   const { client, file, crop, expectedAvatarId } = options;
-  const ticket = capturePrivateAuthority(client);
-  const publication = _capturePublication(client, ticket);
+  const context = options.write?.context ?? captureAvatarWrite(client);
+  const { authority: ticket, publication } = context;
   _assertAuthority(client, ticket);
   const reservation = await apiFetch({
     path: "/me/avatar-uploads",
@@ -115,16 +143,24 @@ export async function saveAvatar(
     ticket,
     publication,
     expectedAvatarId,
+    previousAvatarId:
+      options.write?.freshExpectedAvatarId === expectedAvatarId
+        ? context.cachedAvatarId
+        : undefined,
   });
   return client.getQueryData<MeResponse>(["me"])!;
 }
 
 /** Removes only the current own-account photo using its expected version. */
 export async function removeAvatar(
-  options: Readonly<{ client: QueryClient; expectedAvatarId: string | null }>,
+  options: Readonly<{
+    client: QueryClient;
+    expectedAvatarId: string | null;
+    writeContext?: AvatarWriteContext;
+  }>,
 ): Promise<MeResponse> {
-  const ticket = capturePrivateAuthority(options.client);
-  const publication = _capturePublication(options.client, ticket);
+  const { authority: ticket, publication } =
+    options.writeContext ?? captureAvatarWrite(options.client);
   _assertAuthority(options.client, ticket);
   const response = await apiFetch({
     path: "/me/avatar",
@@ -143,6 +179,34 @@ export async function removeAvatar(
     expectedAvatarId: options.expectedAvatarId,
   });
   return options.client.getQueryData<MeResponse>(["me"])!;
+}
+
+/** Publishes a refreshed pointer only within its original write lifetime. */
+export function publishLatestAvatarFromWrite(
+  options: Readonly<{
+    client: QueryClient;
+    member: MemberRef;
+    writeContext: AvatarWriteContext;
+  }>,
+): MeResponse {
+  const { client, member, writeContext } = options;
+  _assertAuthority(client, writeContext.authority);
+  const current = client.getQueryData<MeResponse>(["me"])!;
+  const response = {
+    ...current,
+    me: {
+      ...current.me,
+      member: { ...current.me.member, avatar: member.avatar },
+    },
+  };
+  _publishOwnAvatar({
+    client,
+    response,
+    ticket: writeContext.authority,
+    publication: writeContext.publication,
+    expectedAvatarId: writeContext.cachedAvatarId,
+  });
+  return client.getQueryData<MeResponse>(["me"])!;
 }
 
 /** Updates matching cached member references without replacing other fields. */
@@ -199,9 +263,14 @@ function _getDataWithAvatar(
 
 /** Reads the latest private pointer without publishing an old renewal. */
 export async function getLatestAvatarFromMember(
-  options: Readonly<{ client: QueryClient; member: MemberRef }>,
+  options: Readonly<{
+    client: QueryClient;
+    member: MemberRef;
+    authority?: ReturnType<typeof capturePrivateAuthority>;
+  }>,
 ): Promise<MemberRef["avatar"]> {
-  const ticket = capturePrivateAuthority(options.client);
+  const ticket = options.authority ?? capturePrivateAuthority(options.client);
+  _assertAuthority(options.client, ticket);
   const response = await apiFetch({
     path: `/members/${encodeURIComponent(options.member.memberId)}/avatar`,
     schema: readMemberAvatarResponseSchema,

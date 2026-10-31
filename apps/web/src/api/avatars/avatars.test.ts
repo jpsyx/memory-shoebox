@@ -7,7 +7,12 @@ import {
   removePrivateQueries,
   reconcileAccountFields,
 } from "@/api/me/privateQueryHelpers";
-import { saveAvatar, renewMemberAvatar, removeAvatar } from "./avatars";
+import {
+  saveAvatar,
+  renewMemberAvatar,
+  removeAvatar,
+  captureAvatarWrite,
+} from "./avatars";
 const avatar = {
   avatarId: "018f0000-0000-7000-8000-000000000010",
   url: "https://example.com/avatar",
@@ -210,3 +215,41 @@ it.each(["replacement", "removal"] as const)(
     ).toEqual(newerChange === "removal" ? null : newer);
   },
 );
+
+it("keeps a newer removal when an explicit fresh-version replacement returns late", async () => {
+  const client = new QueryClient();
+  client.setQueryData(["me"], createMeResponse());
+  const writeContext = captureAvatarWrite(client);
+  const latest = {
+    ...avatar,
+    avatarId: "018f0000-0000-7000-8000-000000000011",
+  };
+  const saved = { ...avatar, avatarId: "018f0000-0000-7000-8000-000000000012" };
+  const held = Promise.withResolvers<Response>();
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json({ avatarId: saved.avatarId, expiresAt: saved.expiresAt }),
+    )
+    .mockReturnValueOnce(held.promise)
+    .mockResolvedValueOnce(Response.json(createMeResponse()));
+  vi.stubGlobal("fetch", fetcher);
+  const saving = saveAvatar({
+    client,
+    file: new File(["pixels"], "face.png", { type: "image/png" }),
+    crop: { centerX: 0.5, centerY: 0.5, zoom: 1 },
+    expectedAvatarId: latest.avatarId,
+    write: { context: writeContext, freshExpectedAvatarId: latest.avatarId },
+  });
+  await vi.waitFor(() => {
+    return expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+  client.setQueryData(["me"], createMeResponse({ avatar: saved }));
+  await removeAvatar({ client, expectedAvatarId: saved.avatarId });
+  held.resolve(Response.json(createMeResponse({ avatar: saved })));
+  await saving;
+  expect(
+    client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me.member
+      .avatar,
+  ).toBeNull();
+});

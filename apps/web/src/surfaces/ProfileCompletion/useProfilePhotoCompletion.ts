@@ -38,24 +38,25 @@ export function useProfilePhotoCompletion(
     setHasPhotoFailed(false);
     stagedSave.current();
   };
+  const continueWithout = () => {
+    if (destination.current) {
+      options.onContinue(destination.current);
+    }
+  };
   return {
     isNameSaved,
     hasPhotoFailed,
     onContinue,
     completion: { onStagedChange, onFailure },
-    onSaved: () => {
-      if (destination.current) {
-        options.onContinue(destination.current);
-      }
-    },
+    onSaved: continueWithout,
     retry: () => {
-      setHasPhotoFailed(false);
-      stagedSave.current?.();
-    },
-    continueWithout: () => {
-      if (destination.current) {
-        options.onContinue(destination.current);
+      if (stagedSave.current) {
+        setHasPhotoFailed(false);
+        stagedSave.current();
+      } else {
+        continueWithout();
       }
     },
+    continueWithout,
   };
 }

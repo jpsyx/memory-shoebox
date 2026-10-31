@@ -6,7 +6,9 @@ import {
 } from "@tanstack/react-query";
 import type { MeDto, MeResponse } from "@memory-shoebox/shared";
 import {
-  publishMemberAvatar,
+  captureAvatarWrite,
+  type AvatarWriteContext,
+  publishLatestAvatarFromWrite,
   getLatestAvatarFromMember,
   removeAvatar,
   saveAvatar,
@@ -119,40 +121,62 @@ function _getFailureAction(
 async function _performOperation(
   options: Readonly<MutationOptions & { operation: AvatarOperation }>,
 ): Promise<MeResponse> {
-  const { client, authority, me, operation } = options;
+  const { client, authority, operation } = options;
   if (!isPrivateAuthorityCurrent(client, authority)) {
     throw new Error("Account changed.");
   }
+  const writeContext = captureAvatarWrite(client, authority);
   if (operation.kind === "remove") {
     return removeAvatar({
       client,
       expectedAvatarId: operation.expectedAvatarId,
+      writeContext,
     });
   }
   if (operation.kind === "latest" || operation.kind === "overwrite") {
-    const avatar = await getLatestAvatarFromMember({
-      client,
-      member: me.member,
-    });
-    if (operation.kind === "latest") {
-      publishMemberAvatar(
-        client,
-        { ...me.member, avatar },
-        me.member.avatar?.avatarId ?? null,
-      );
-      return client.getQueryData<MeResponse>(["me"])!;
-    }
-    return saveAvatar({
-      client,
-      file: operation.selection.file,
-      crop: operation.crop,
-      expectedAvatarId: avatar?.avatarId ?? null,
-    });
+    return _performLatestOperation({ ...options, operation, writeContext });
   }
   return saveAvatar({
     client,
     file: operation.selection.file,
     crop: operation.crop,
     expectedAvatarId: operation.selection.expectedAvatarId,
+    write: { context: writeContext },
+  });
+}
+
+async function _performLatestOperation(
+  options: Readonly<
+    MutationOptions & {
+      operation: Exclude<AvatarOperation, { kind: "remove" }>;
+      writeContext: AvatarWriteContext;
+    }
+  >,
+): Promise<MeResponse> {
+  const { client, authority, me, operation, writeContext } = options;
+  const avatar = await getLatestAvatarFromMember({
+    client,
+    member: me.member,
+    authority,
+  });
+  if (!isPrivateAuthorityCurrent(client, authority)) {
+    throw new Error("Account changed.");
+  }
+  if (operation.kind === "latest") {
+    return publishLatestAvatarFromWrite({
+      client,
+      member: { ...me.member, avatar },
+      writeContext,
+    });
+  }
+  return saveAvatar({
+    client,
+    file: operation.selection.file,
+    crop: operation.crop,
+    expectedAvatarId: avatar?.avatarId ?? null,
+    write: {
+      context: writeContext,
+      freshExpectedAvatarId: avatar?.avatarId ?? null,
+    },
   });
 }
