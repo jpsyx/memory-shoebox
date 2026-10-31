@@ -385,3 +385,23 @@ fake loopback bucket and injected no-mail services. Compilation mode and runtime
 email policy are separate. The ordinary E2E runner checks the exact owned catalog
 path and fake endpoint before opening resources, and retains real background
 job, outbox and shutdown behavior.
+
+### Timeline tick selection
+
+Selection stores explicit accessible item IDs and complete burst membership under
+the active filters. Full-burst commands add matching photos atomically, including
+paginated tails; a final union larger than 500 is rejected without changing ticks.
+Loaded membership does not force expansion. Both ordinary and virtualized fans
+can collapse while selecting, without removing their selected photos.
+
+The first Shift-click adds its endpoint and anchors a range. Further Shift-clicks
+union inclusive ranges from that anchor, preserving prior selections. A plain
+click toggles only that item and discards the anchor. Ranges follow retained
+logical timeline order, including collapsed bursts, independently of mounted rows.
+Async reads execute in order and cannot publish after cancellation or filter
+changes. Expanded individual endpoints stop at the exact photo.
+
+A plain tick ends only the current Shift range gesture. Independently requested
+full-burst selection and burst opening continue and merge against the latest
+selection. Cancelling a range releases its queue wait even if the underlying
+membership request has not settled.

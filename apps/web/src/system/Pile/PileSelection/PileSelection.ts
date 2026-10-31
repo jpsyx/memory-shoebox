@@ -1,3 +1,4 @@
+import type { SelectionTarget } from "@/surfaces/Timeline/TimelineBulkEditor/useTimelineSelection.types";
 import { createContext } from "react";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
 
@@ -6,6 +7,15 @@ export type PileSelection = {
   selectedItemIds: ReadonlySet<string>;
   framesByBurstId: ReadonlyMap<string, readonly BurstFrameRef[]>;
   isBusy: boolean;
+  openedBurstIds?: ReadonlySet<string>;
+  onCollapseBurst?: (burstId: string) => void;
+  /** Optional for non-timeline selection consumers. */
+  onSelect?: (
+    target: SelectionTarget,
+    modifiers: { shiftKey: boolean },
+  ) => void;
+  onSelectBurst?: (burstId: string) => void;
+  onDeselectBurst?: (burstId: string) => void;
   onToggle: (itemId: string) => void;
   /** Loads frames matching the active filters independently of browsing caches. */
   onOpenBurst: (burstId: string) => void;

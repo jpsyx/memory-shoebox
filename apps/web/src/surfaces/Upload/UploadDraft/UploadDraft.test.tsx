@@ -82,7 +82,7 @@ describe("upload draft composition", () => {
       </MantineProvider>,
     );
     expect(screen.getByText("264", { exact: true })).toBeVisible();
-    expect(screen.getByText("0.3 MB", { exact: true })).toBeVisible();
+    expect(screen.getByText("256.8 KB", { exact: true })).toBeVisible();
   });
 
   it("splits four photos and one video across complete picks independently of edit ticks", () => {
@@ -187,7 +187,7 @@ describe("upload draft composition", () => {
     ]);
     expect(screen.queryByText(/^Photos?$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Videos?$/)).not.toBeInTheDocument();
-    expect(screen.getByText("0 MB", { exact: true })).toBeVisible();
+    expect(screen.getByText("0 B", { exact: true })).toBeVisible();
   });
 
   it("saved draft edits use the complete manifest denominator before commit", async () => {
@@ -258,4 +258,14 @@ describe("upload draft composition", () => {
       }),
     ).toEqual([]);
   });
+});
+
+it.each([
+  [1536, "1.5 KB"],
+  [1.5 * 1024 ** 3, "1.5 GB"],
+] as const)("abbreviates draft size %s", (bytes, label) => {
+  const file = makeUploadFileFromPosition(1);
+  file.declaredBytes = bytes;
+  _renderOverview([file]);
+  expect(screen.getByText(label)).toBeInTheDocument();
 });

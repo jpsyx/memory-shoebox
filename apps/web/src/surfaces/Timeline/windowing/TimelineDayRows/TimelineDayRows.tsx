@@ -77,6 +77,7 @@ export function TimelineDayRows({
     return (
       <div
         key={first.burstId}
+        data-timeline-fan={first.burstId}
         className={classes.timelineDayRowsFanGroup}
         style={{ top: start - firstStart, height: end - start }}
       >

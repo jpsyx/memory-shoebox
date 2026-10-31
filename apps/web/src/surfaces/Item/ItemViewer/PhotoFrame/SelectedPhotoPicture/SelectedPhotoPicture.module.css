@@ -6,4 +6,14 @@
 
 .selectedPhotoPictureReady {
   display: block;
+  animation: photoPixelsReady 100ms ease-out;
+}
+
+@keyframes photoPixelsReady {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

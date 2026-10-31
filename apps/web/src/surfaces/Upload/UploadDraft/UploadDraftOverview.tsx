@@ -1,3 +1,4 @@
+import { uploadSizeLabel } from "../uploadSizeLabel/uploadSizeLabel";
 import { Sheet } from "@/system/Chrome/Sheet";
 import classes from "@/system/system.module.css";
 import { Prose } from "@/system/typography/Prose";
@@ -53,10 +54,7 @@ export function UploadDraftOverview({ snapshot }: Readonly<Props>): ReactNode {
               label={videoCount === 1 ? "Video" : "Videos"}
             />
           ) : null}
-          <Stat
-            figure={`${(eligibleBytes / 1024 / 1024).toLocaleString("en-GB", { maximumFractionDigits: 1 })} MB`}
-            label="To upload"
-          />
+          <Stat figure={uploadSizeLabel(eligibleBytes)} label="To upload" />
         </div>
         <Prose>Tick files to add tags, people or a milestone to them.</Prose>
       </Stack>

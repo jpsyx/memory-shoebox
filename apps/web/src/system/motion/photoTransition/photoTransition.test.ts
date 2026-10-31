@@ -61,7 +61,7 @@ describe("a print travelling to its own destination", () => {
     expect(document.querySelectorAll("[data-photo-flight]")).toHaveLength(1);
     expect(animate).toHaveBeenCalledOnce();
   });
-  it("retains one inert print and hides preview and selected frames before flight", () => {
+  it("retains one inert print and hides preview and selected frames before flight", async () => {
     const source = _makePhoto("pile");
     stagePhotoTransition(source, "photo-a");
     const layer = document.querySelector<HTMLElement>("[data-photo-flight]")!;
@@ -81,6 +81,7 @@ describe("a print travelling to its own destination", () => {
     expect(document.querySelector("[data-photo-flight]")).toBe(layer);
     expect(layer.dataset.photoFlightPhase).toBe("moving");
     detachSelected();
+    await Promise.resolve();
     expect(source.dataset.photoArriving).toBeUndefined();
     expect(selected.dataset.photoArriving).toBeUndefined();
     expect(layer.isConnected).toBe(false);

@@ -808,3 +808,17 @@ exits. The short-lived flock helper has a two-second acquisition deadline. A
 late successful exit after that deadline cannot enable processing. This protocol
 assumes the configured subtree is dedicated to cooperating media runtimes;
 operator changes to its directories require stopping those runtimes first.
+
+### Dwelled thumbnail intent
+
+A 100ms continuous hover or focus warms the exact responsive image candidate,
+including when preview metadata is already cached. Leaving before dwell expires
+cancels it. Pointer/touch down can expedite intent. Tick mode suppresses viewing
+speculation, and opening a burst never downloads all its display images.
+
+The member owns one current intent, which uses the existing scheduler, native
+Image loader and operation/byte caps. Completed pointer dwell bypasses the separate
+250ms neighbor dwell. Pending intent retires on route/member/environment changes;
+already-started native transfers retain reservations until settlement. Timeline
+navigation promotes warmed ownership before routing and releases failed or
+unadopted destinations through the existing navigation coordinator.

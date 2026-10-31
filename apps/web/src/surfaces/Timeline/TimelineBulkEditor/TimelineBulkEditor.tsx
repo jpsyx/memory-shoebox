@@ -21,6 +21,7 @@ import { getMilestoneSelectionFromTimeline } from "./getMilestoneSelectionFromTi
 
 type Props = {
   days: readonly TimelineDay[];
+  openBurstIds?: readonly string[];
   filterSelection: TimelineSelection;
   children: ReactNode;
   onChanged: () => void;
@@ -95,6 +96,7 @@ function useEditorControls(
     selection: SelectionState;
     onChanged: () => void;
     days: readonly TimelineDay[];
+    openBurstIds?: readonly string[];
   }>,
 ): EditorControls {
   const [choice, setChoice] = useState<TimelineBulkChoice>();
@@ -122,6 +124,9 @@ function useEditorControls(
     onStart: () => {
       setNotice(undefined);
       options.selection.start();
+      options.openBurstIds?.forEach((burstId) => {
+        options.selection.onOpenBurst(burstId);
+      });
     },
     onOpen: (kind) => {
       setChoice(_getBulkChoiceFromSelection(kind, options));
@@ -144,7 +149,7 @@ function _renderControls(
       <p className={classes.help} role="status">
         {editor.notice ??
           (selection.isSelecting
-            ? `Tap photos to tick them, or open a stack to choose its photos. Up to ${BULK_EDIT_MAX_ITEMS} at once.`
+            ? `Tap photos to tick them. Shift-click twice to select a range, then keep Shift-clicking to extend it. Up to ${BULK_EDIT_MAX_ITEMS} at once. Only photos matching your filters are included.`
             : "")}
       </p>
       {selection.problem ? <p role="alert">{selection.problem}</p> : null}
@@ -159,9 +164,14 @@ function _getPileSelectionFromState(
   return selection.isSelecting
     ? {
         selectedItemIds: selection.selectedItemIds,
+        openedBurstIds: selection.openedBurstIds,
+        onCollapseBurst: selection.onCollapseBurst,
         framesByBurstId: selection.framesByBurstId,
         isBusy,
         onToggle: selection.onToggle,
+        onSelect: selection.onSelect,
+        onSelectBurst: selection.onSelectBurst,
+        onDeselectBurst: selection.onDeselectBurst,
         onOpenBurst: selection.onOpenBurst,
       }
     : undefined;
@@ -173,10 +183,14 @@ export function TimelineBulkEditor(props: Readonly<Props>): ReactNode {
   const editor = useEditorControls({
     selection,
     days: props.days,
+    openBurstIds: props.openBurstIds,
     onChanged: props.onChanged,
   });
   const isBusy = selection.isLoading || editor.choice !== undefined;
-  const context = _getPileSelectionFromState(selection, isBusy);
+  const context = _getPileSelectionFromState(
+    selection,
+    editor.choice !== undefined,
+  );
   return (
     <PileSelectionContext value={context}>
       {!selection.isSelecting ? (

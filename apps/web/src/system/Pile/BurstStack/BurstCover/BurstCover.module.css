@@ -22,3 +22,24 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.burstSelection {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  z-index: 4;
+  padding: 12px;
+  opacity: 0;
+  transition: opacity 120ms var(--ease);
+}
+
+:global([data-photo-surface]):is(:hover, :focus-within) .burstSelection,
+.burstSelection[data-selected] {
+  opacity: 1;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .burstSelection {
+    opacity: 1;
+  }
+}

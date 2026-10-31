@@ -120,15 +120,22 @@ export function preparePhotoArrival(
   const current = journey!;
   target.dataset.photoArriving = "true";
   current.targets.add(target);
+  if (current.destination && !current.targets.has(current.destination)) {
+    current.destination = target;
+  }
   return () => {
     if (journey !== current) {
       return;
     }
+    delete target.dataset.photoArriving;
+    current.targets.delete(target);
     if (current.destination === target) {
-      clearPhotoTransition();
-    } else {
-      delete target.dataset.photoArriving;
-      current.targets.delete(target);
+      // A preview can be replaced by the authorized view in the same commit.
+      void Promise.resolve().then(() => {
+        if (journey === current && current.destination === target) {
+          clearPhotoTransition();
+        }
+      });
     }
   };
 }
@@ -154,11 +161,13 @@ function _finishPhotoArrival(current: PhotoJourney): void {
     target?.isConnected &&
     document.activeElement === document.body
   ) {
-    target.focus({ preventScroll: true });
+    (target.querySelector<HTMLButtonElement>("button") ?? target).focus({
+      preventScroll: true,
+    });
   }
 }
 
-/** Move the one retained print only after the matching final pixels commit. */
+/** Move retained thumbnail pixels as soon as destination layout is usable. */
 export function arrivePhotoTransition(
   target: HTMLElement,
   itemId: string,

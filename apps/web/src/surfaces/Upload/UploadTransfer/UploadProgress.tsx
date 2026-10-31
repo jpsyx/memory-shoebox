@@ -1,3 +1,4 @@
+import { uploadSizeLabel } from "../uploadSizeLabel/uploadSizeLabel";
 import classes from "@/system/system.module.css";
 import { Prose } from "@/system/typography/Prose";
 import { Progress } from "@mantine/core";
@@ -12,8 +13,8 @@ export function UploadProgress({ detail }: Readonly<Props>): ReactNode {
       <div className={classes.uploadFigureRow}>
         <span className={classes.uploadFigure}>{progress.doneCount}</span>
         <span className={classes.fileMeta}>
-          of {detail.fileCount}, {progress.doneBytes.toLocaleString("en-GB")} of{" "}
-          {detail.totalBytes.toLocaleString("en-GB")} bytes confirmed up
+          of {detail.fileCount}, {uploadSizeLabel(progress.doneBytes)} of{" "}
+          {uploadSizeLabel(detail.totalBytes)} confirmed up
         </span>
       </div>
       <Progress

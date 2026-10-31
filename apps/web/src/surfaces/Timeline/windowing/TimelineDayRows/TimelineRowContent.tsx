@@ -26,7 +26,24 @@ export function TimelineRowContent({
     return (
       <BurstFanHeader
         label={<>{row.items[0]?.burst?.visibleFrameCount} photos</>}
-        isDisabled={selection?.framesByBurstId.has(row.burstId!)}
+        selectionAction={
+          selection?.onSelectBurst
+            ? {
+                isFullySelected:
+                  (selection.framesByBurstId.get(row.burstId!) ?? []).length >
+                    0 &&
+                  (selection.framesByBurstId.get(row.burstId!) ?? []).every(
+                    (frame) => {
+                      return selection.selectedItemIds.has(frame.itemId);
+                    },
+                  ),
+                isDisabled: selection.isBusy,
+                onSelect: () => {
+                  return selection.onSelectBurst?.(row.burstId!);
+                },
+              }
+            : undefined
+        }
         onCollapse={() => {
           return onCollapseBurst?.(row.burstId!);
         }}

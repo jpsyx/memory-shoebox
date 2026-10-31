@@ -149,6 +149,7 @@ export function useSelectedPhoto(
   usePhotoArrival(itemId, decoded.sourceKey, {
     reference: frame,
     isReady: decoded.isReady && options.presentation !== "preview",
+    isLayoutReady: viewport !== undefined && media.thumb !== null,
   });
   return {
     frame,

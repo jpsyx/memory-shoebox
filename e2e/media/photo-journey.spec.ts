@@ -23,12 +23,16 @@ test.use({ catalogSize: 20, responsivePhotos: true });
       HTMLImageElement.prototype.decode = async function () {
         if (this.closest('[data-photo-surface="viewer"]')) {
           await new Promise((done) => {
-            return setTimeout(done, 300);
+            return setTimeout(done, 2000);
           });
         }
         return decode.call(this);
       };
-      const frames: Array<{ visible: boolean; phase: string | undefined }> = [];
+      const frames: Array<{
+        visible: boolean;
+        phase: string | undefined;
+        ready: boolean;
+      }> = [];
       Object.assign(window, { photoJourneyFrames: frames });
       const sample = () => {
         const viewer = document.querySelector<HTMLElement>(
@@ -41,6 +45,7 @@ test.use({ catalogSize: 20, responsivePhotos: true });
           frames.push({
             visible: getComputedStyle(viewer).opacity !== "0",
             phase: flight?.dataset.photoFlightPhase,
+            ready: viewer.dataset.photoReady === "true",
           });
         }
         if (frames.length < 90) {
@@ -62,10 +67,19 @@ test.use({ catalogSize: 20, responsivePhotos: true });
     const frames = await page.evaluate(() => {
       return (
         window as unknown as {
-          photoJourneyFrames: Array<{ visible: boolean; phase?: string }>;
+          photoJourneyFrames: Array<{
+            visible: boolean;
+            phase?: string;
+            ready: boolean;
+          }>;
         }
       ).photoJourneyFrames;
     });
+    expect(
+      frames.findIndex((frame) => {
+        return frame.phase === "moving";
+      }),
+    ).toBeLessThanOrEqual(2);
     const firstVisible = frames.findIndex((frame) => {
       return frame.visible;
     });
@@ -77,7 +91,7 @@ test.use({ catalogSize: 20, responsivePhotos: true });
     ).toBe(true);
     expect(
       frames.some((frame) => {
-        return frame.phase === "holding";
+        return frame.phase === "moving" && !frame.ready;
       }),
     ).toBe(true);
     expect(

@@ -166,7 +166,7 @@ test("an aborted native image settles only after its unavoidable transfer", asyn
       expect(detailReads).toEqual([`/api/items/${start}`]);
       const offset = catalog.getTransfers().length;
       await page
-        .getByRole("button", { name: "Next photo or video", exact: true })
+        .getByRole("button", { name: "Previous photo or video", exact: true })
         .click();
       await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
       await expectCurrentPhotoDecoded(page);
@@ -192,10 +192,10 @@ test("an aborted native image settles only after its unavoidable transfer", asyn
         `/api/items/${start}`,
         `/api/items/${target}`,
       ]);
-      await page.keyboard.press("ArrowLeft");
+      await page.keyboard.press("ArrowRight");
       await expect(page).toHaveURL(new RegExp(`/items/${start}$`));
       await expectCurrentPhotoDecoded(page);
-      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowLeft");
       await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
       await expectCurrentPhotoDecoded(page);
       expect(
@@ -226,7 +226,7 @@ test("an aborted native image settles only after its unavoidable transfer", asyn
         })
         .toBe(1);
       const offset = catalog.getTransfers().length;
-      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowLeft");
       await expect(page).toHaveURL(new RegExp(`/items/${target}$`));
       await expectCurrentPhotoDecoded(page);
       const image = page.locator('[data-photo-surface="viewer"] picture img');

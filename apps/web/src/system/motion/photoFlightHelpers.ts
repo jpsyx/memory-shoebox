@@ -6,6 +6,7 @@ export function updatePhotoFlightFromElement(
   layer: HTMLDivElement,
   target: HTMLElement,
   geometry: Readonly<PaperGeometry>,
+  keepPixels = false,
 ): void {
   const frameStyle = getComputedStyle(target);
   Object.assign(layer.style, {
@@ -18,6 +19,15 @@ export function updatePhotoFlightFromElement(
     boxShadow: frameStyle.boxShadow,
     transform: `translate(-50%, -50%) rotate(${geometry.angle}deg)`,
   });
+  if (keepPixels) {
+    const image = layer.querySelector("img");
+    const targetImage = target.querySelector("img");
+    if (image && targetImage) {
+      image.style.backgroundColor =
+        getComputedStyle(targetImage).backgroundColor;
+    }
+    return;
+  }
   const targetImage = target.querySelector("img")!;
   const image = document.createElement("img");
   image.src = targetImage.currentSrc || targetImage.src;

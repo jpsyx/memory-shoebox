@@ -35,7 +35,7 @@ function _capture(root: HTMLDivElement | null, state: BurstState): void {
   }
   state.layout = getPileLayoutFromElement(root);
   const photo = root.querySelector<HTMLElement>('[data-photo-surface="pile"]');
-  if (photo) {
+  if (photo && !state.wasFanned) {
     state.origin = getBurstOriginFromElement(photo);
   }
 }
@@ -46,7 +46,13 @@ function _collapse(options: {
   onCollapsed: () => void;
 }): void {
   const { root, state, onCollapsed } = options;
-  if (!root || state.isClosing) {
+  if (!root) {
+    return;
+  }
+  if (state.isClosing) {
+    _cancel(state);
+    root.inert = false;
+    onCollapsed();
     return;
   }
   _capture(root, state);
@@ -56,7 +62,7 @@ function _collapse(options: {
   const photo = root.querySelector<HTMLElement>('[data-photo-surface="pile"]');
   state.animations = animateBurstPhotos(
     root,
-    getBurstOriginFromElement(photo ?? root),
+    state.origin ?? getBurstOriginFromElement(photo ?? root),
     true,
     startingFrames,
   );
@@ -65,7 +71,7 @@ function _collapse(options: {
     return;
   }
   state.isClosing = true;
-  root.inert = true;
+  // Keep controls usable so another collapse can safely finish this exit.
   const generation = state.generation;
   void Promise.allSettled(
     state.animations.map((animation) => {

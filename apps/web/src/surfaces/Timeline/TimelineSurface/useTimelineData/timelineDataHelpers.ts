@@ -1,3 +1,5 @@
+import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
+import { getSelectedSourceFromPreview } from "@/media/getSelectedSourceFromPreview";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 
 import {
@@ -57,6 +59,7 @@ export function makeRouteSearchFromTimelineSearch(
  */
 export function makeTimelineHandlersFromOptions(
   options: Readonly<{
+    resources?: MediaLoadingResources;
     navigate: ReturnType<typeof useNavigate>;
     search: TimelineSearch;
   }>,
@@ -107,6 +110,14 @@ export function makeTimelineHandlersFromOptions(
     // A print is a button that navigates, so intent preloading never sees it,
     // and the item route has no loader: a hover is not an open.
     onOpenItem: (itemId) => {
+      const resources = options.resources;
+      const release = resources?.navigation.prepare({
+        itemId,
+        source: getSelectedSourceFromPreview({
+          preview: resources.previews.read(itemId),
+          viewport: resources.navigation.viewport,
+        }),
+      });
       void navigate({
         to: "/items/$itemId",
         params: { itemId },
@@ -115,7 +126,15 @@ export function makeTimelineHandlersFromOptions(
             getViewFromSearch(search),
           ),
         },
-      });
+      })
+        .catch(() => {
+          return release?.();
+        })
+        .finally(() => {
+          if (release) {
+            resources?.navigation.complete(release);
+          }
+        });
     },
   };
 }

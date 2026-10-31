@@ -1,4 +1,4 @@
-import { useMediaIntent } from "@/media/useMediaIntent";
+import { useMediaIntent } from "@/media/useMediaIntent/useMediaIntent";
 import { stagePhotoTransition } from "@/system/motion/photoTransition/photoTransition";
 import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
 import { useContext, type MouseEventHandler } from "react";
@@ -23,8 +23,8 @@ export function usePrintInteraction({
     durationMs: number | undefined;
   }
 >): Interaction {
-  const intent = useMediaIntent(itemId ?? "");
   const selection = useContext(PileSelectionContext);
+  const intent = useMediaIntent(itemId ?? "", selection === undefined);
   const isSelectable = selection !== undefined && itemId !== undefined;
   const isSelected = isSelectable
     ? selection.selectedItemIds.has(itemId)
@@ -35,14 +35,26 @@ export function usePrintInteraction({
     isSelected,
     isDisabled: isSelectable && selection.isBusy,
     onClick: isSelectable
-      ? () => {
-          selection.onToggle(itemId);
+      ? (event) => {
+          if (selection.onSelect) {
+            selection.onSelect(
+              { kind: "item", itemId },
+              { shiftKey: event.shiftKey },
+            );
+          } else {
+            selection.onToggle(itemId);
+          }
         }
       : (event) => {
           if (itemId && onClick && durationMs === undefined) {
-            stagePhotoTransition(event.currentTarget, itemId);
+            stagePhotoTransition(
+              event.currentTarget.closest<HTMLElement>(
+                "[data-photo-surface]",
+              ) ?? event.currentTarget,
+              itemId,
+            );
           }
-          onClick?.();
+          onClick?.(event);
         },
   };
 }

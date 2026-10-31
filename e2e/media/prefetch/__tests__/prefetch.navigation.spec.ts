@@ -32,8 +32,8 @@ type SelectionTransition = {
     async ({ page, catalog, browserName }, testInfo) => {
       await observeNativePhotoDecodes(page);
       const pendingRequests = observePendingMediaRequests(page);
-      const firstId = catalog.itemIds[1010]!;
-      const secondId = catalog.itemIds[1011]!;
+      const firstId = catalog.itemIds[mode === "forward" ? 1035 : 1010]!;
+      const secondId = catalog.itemIds[1009]!;
       await page.goto("/api/media-evidence/session");
       const apiRequests: Array<{
         method: string;
@@ -56,7 +56,7 @@ type SelectionTransition = {
       for (let index = 0; index < 30; index += 1) {
         const target =
           mode === "forward"
-            ? catalog.itemIds[1011 + index]!
+            ? catalog.itemIds[1034 - index]!
             : index % 2 === 0
               ? secondId
               : firstId;

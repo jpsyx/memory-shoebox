@@ -28,7 +28,8 @@ function _getFanLines({
 }): FanLine[] {
   return frames.reduce<FanLine[]>((lines, frame, frameOffset) => {
     const presentation = frame.thumb ?? frame;
-    const width = 112 * (presentation.width / presentation.height) + 8 - 25.6;
+    const width =
+      Math.max(80, 112 * (presentation.width / presentation.height) + 8) - 25.6;
     const currentLine = lines.at(-1);
     if (
       currentLine === undefined ||

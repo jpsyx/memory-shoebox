@@ -51,8 +51,8 @@ export function animateBurstPhotos(
           ? [startingFrames?.get(photo) ?? resting, gathered]
           : [gathered, resting],
         {
-          duration: reduced ? 120 : isClosing ? 220 : 560,
-          delay: reduced || isClosing ? 0 : Math.min(index, 7) * 22,
+          duration: reduced ? 120 : isClosing ? 200 : 300,
+          delay: reduced || isClosing ? 0 : Math.min(index, 5) * 12,
           easing: PAPER_EASE,
           fill: "both",
         },

@@ -108,6 +108,8 @@ export const APP_CONFIG = {
     /** App-owned speculative work, independent of browser cache retention. */
     prefetch: {
       dwellMs: 250,
+      /** Continuous pointer intent before warming a display image. */
+      intentDwellMs: 100,
       maxOperations: 2,
       maxEncodedBytes: 8 * 1024 ** 2,
       maxDecodedBytes: 32 * 1024 ** 2,

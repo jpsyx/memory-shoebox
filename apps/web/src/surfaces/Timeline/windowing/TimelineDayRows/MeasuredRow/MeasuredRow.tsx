@@ -1,6 +1,4 @@
-import { useContext, type ReactNode } from "react";
-
-import { PileSelectionContext } from "@/system/Pile/PileSelection/PileSelection";
+import { type ReactNode } from "react";
 
 import classes from "./MeasuredRow.module.css";
 import { clsx } from "clsx";
@@ -24,7 +22,6 @@ export function MeasuredRow({
   top,
   measure,
 }: Readonly<Props>): ReactNode {
-  const selection = useContext(PileSelectionContext);
   return (
     <div
       data-index={index}
@@ -47,11 +44,7 @@ export function MeasuredRow({
         minHeight: row.reservedHeight,
       }}
       onKeyDown={(event) => {
-        if (
-          event.key === "Escape" &&
-          row.burstId &&
-          !selection?.framesByBurstId.has(row.burstId)
-        ) {
+        if (event.key === "Escape" && row.burstId) {
           onCollapseBurst?.(row.burstId);
         }
       }}

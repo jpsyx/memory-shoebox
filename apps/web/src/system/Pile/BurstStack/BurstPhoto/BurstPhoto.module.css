@@ -1,30 +1,30 @@
-.burstPhoto {
-  position: relative;
-  flex: none;
-  margin-right: -1.6rem;
-}
-
-.burstPhoto > button[data-item-id] {
-  margin-right: 0;
-}
-
-.burstPhoto:hover,
-.burstPhoto:focus-within {
-  z-index: 20;
-}
-
 .burstPhotoOptions[data-variant="default"] {
   position: absolute;
-  inset-inline-start: 4px;
-  inset-block-end: 4px;
-  z-index: 21;
-  min-width: 3rem;
-  min-height: 3rem;
-  background-color: var(--print);
+  /* Keep the target inside the exposed paper, clear of the next print. */
+  inset-inline-end: 1.6rem;
+  inset-block-end: 0;
+  z-index: 3;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: transparent;
   color: var(--on-print);
+}
+
+.burstPhotoOptionsFace {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--rule-strong);
+  background: var(--print);
+  pointer-events: none;
 }
 
 .burstPhotoOptions[data-variant="default"]:hover {
-  background-color: var(--print-sunk);
-  color: var(--on-print);
+  background: transparent;
+}
+
+.burstPhotoOptions:hover .burstPhotoOptionsFace {
+  background: var(--print-sunk);
 }

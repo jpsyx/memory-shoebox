@@ -1,7 +1,13 @@
 import { useBurstMotion } from "@/system/motion/useBurstMotion";
 import { PileSelectionContext } from "../PileSelection/PileSelection";
 import { clsx } from "clsx";
-import { useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  useContext,
+  useEffect,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import type { BurstFrameRef, ItemSummary } from "@memory-shoebox/shared";
 import classes from "./BurstStack.module.css";
 import { BurstCover } from "./BurstCover/BurstCover";
@@ -39,10 +45,9 @@ type Props = {
 
 type StackControls = {
   isFanned: boolean;
-  isPinned: boolean;
   isSelecting: boolean;
   shownFrames: readonly BurstFrameRef[] | undefined;
-  onOpen: () => void;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
   onCollapse: () => void;
 };
 
@@ -60,13 +65,28 @@ function useStackControls(props: Readonly<Props>): StackControls {
   return {
     shownFrames,
     isSelecting: selection !== undefined,
-    isPinned: selectedFrames !== undefined,
-    isFanned:
-      (isOpen || selectedFrames !== undefined) && shownFrames !== undefined,
+    isFanned: isOpen && shownFrames !== undefined,
     onCollapse: () => {
+      if (props.burstId) {
+        selection?.onCollapseBurst?.(props.burstId);
+      }
       setIsOpen(false);
     },
-    onOpen: () => {
+    onOpen: (event) => {
+      if (
+        selection !== undefined &&
+        props.burstId !== undefined &&
+        selection.onSelect
+      ) {
+        selection.onSelect(
+          { kind: "burst", burstId: props.burstId },
+          { shiftKey: event.shiftKey },
+        );
+        if (event.shiftKey) {
+          return;
+        }
+      }
+      setIsOpen(true);
       if (selection !== undefined) {
         if (!selection.isBusy && props.burstId !== undefined) {
           selection.onOpenBurst(props.burstId);
@@ -114,9 +134,7 @@ export function BurstStack({
   const animatedControls = {
     ...controls,
     onCollapse: () => {
-      if (!controls.isPinned) {
-        motion.collapse(controls.onCollapse);
-      }
+      motion.collapse(controls.onCollapse);
     },
   };
   return (
@@ -140,13 +158,14 @@ export function BurstStack({
           frames={controls.shownFrames ?? []}
           span={props.span}
           seed={props.seed}
-          isPinned={controls.isPinned}
+          burstId={props.burstId}
           onCollapse={animatedControls.onCollapse}
           onOpenFrame={props.onOpenFrame}
           onRemoveFrame={controls.isSelecting ? undefined : props.onRemoveFrame}
         />
       ) : (
         <BurstCover
+          burstId={props.burstId}
           cover={props.cover}
           seed={props.seed}
           frameCount={props.frameCount}

@@ -219,7 +219,7 @@ export function useTimelineData(
     days,
   });
   const { onSelectionChange, onClearFilters, onRestart, onOpenItem } =
-    makeTimelineHandlersFromOptions({ navigate, search });
+    makeTimelineHandlersFromOptions({ navigate, search, resources });
   return {
     ...makeTimelineDataFromQuery({
       search,

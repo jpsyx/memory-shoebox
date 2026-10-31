@@ -63,7 +63,10 @@ export type MediaPrefetchScheduler = {
   schedule: ({
     candidates,
     environment,
+    dwellMs,
   }: Readonly<{
+    /** Already-dwelled pointer intent may bypass neighbor dwell. */
+    dwellMs?: number;
     candidates: readonly PrefetchCandidate[];
     environment: Readonly<PrefetchEnvironment>;
   }>) => void;

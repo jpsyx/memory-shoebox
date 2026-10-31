@@ -1,3 +1,4 @@
+import { UploadProgress } from "./UploadProgress";
 import { makePreviewHarnessFromOptions } from "@/upload/createUploadPreviewQueue/__tests__/makePreviewHarnessFromOptions";
 import { makeUploadControllerHarness } from "@/upload/createUploadSessionController/__tests__/uploadControllerTestHelpers/uploadControllerTestHelpers";
 import {
@@ -139,4 +140,30 @@ it("places batch resume before the missing rows when 21 of 47 originals arrived"
     1,
   );
   previews.queue.destroy();
+});
+
+it("shows compact upload sizes while retaining exact byte progress", () => {
+  const detail = makeUploadSurfaceDetail({ totalBytes: 18 * 1024 ** 2 });
+  detail.progress.doneBytes = Math.round(4.2 * 1024 ** 2);
+  render(
+    <MantineProvider>
+      <UploadProgress detail={detail} />
+    </MantineProvider>,
+  );
+  expect(screen.getByText(/4.2 MB of 18 MB confirmed up/)).toBeInTheDocument();
+  expect(
+    Number(screen.getByRole("progressbar").getAttribute("aria-valuenow")),
+  ).toBeCloseTo((100 * detail.progress.doneBytes) / detail.totalBytes, 6);
+});
+
+it("shows zero bytes safely for an empty upload", () => {
+  const detail = makeUploadSurfaceDetail({ totalBytes: 0 });
+  detail.progress.doneBytes = 0;
+  render(
+    <MantineProvider>
+      <UploadProgress detail={detail} />
+    </MantineProvider>,
+  );
+  expect(screen.getByText(/0 B of 0 B confirmed up/)).toBeInTheDocument();
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
 });

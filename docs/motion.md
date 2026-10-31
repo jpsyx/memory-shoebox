@@ -8,16 +8,17 @@ change permissions, save settings or create upload progress. See the
 ## Photo journey
 
 A decoded timeline print becomes one temporary, inert, `aria-hidden` frame at
-click time. It keeps the source photograph visible while navigation and decoding
-finish. Both a matching route preview and the selected viewer hide their real
+click time. It keeps the source photograph visible while navigation establishes the destination layout. Both a matching route preview and the selected viewer hide their real
 frames in a layout effect before paint. They retain their layout boxes and
 accessible content. There is never an intentional full-size reveal before the
 flight.
 
-The matching selected image must decode and commit before arrival measures the
-final frame on the next animation frame. The retained print then travels for
-420ms; the in-app return uses 300ms. The same temporary frame survives loading
-and flight, and the real destination becomes visible once on completion.
+The first matching preview or selected viewer with usable geometry starts arrival
+on the next animation frame, independently of the display image download or decode.
+The retained thumbnail travels for 420ms; the in-app return uses 300ms. At landing,
+the real destination shows its thumbnail until selected pixels decode, then upgrades
+in place with a 100ms opacity transition. Preview replacement transfers the active
+journey without restarting it. A slow display download cannot postpone enlargement.
 
 The temporary frame copies the source and destination paper, padding, shadow,
 image backdrop and current image URL. Its fixed, layout-contained box changes
@@ -47,16 +48,20 @@ reproduction and the first-paint, interruption and browser checks for this hando
 ## Burst choreography
 
 Opening a fan captures the cover's position and the neighboring pile layout.
-Up to 16 prints unfold with a stagger capped at 154ms. The independent CSS
+Up to 16 prints unfold with a stagger capped at 60ms over 300ms opening motion. The independent CSS
 translate, rotate and scale animation properties preserve each photograph's
 existing seeded transform. Neighboring pile children settle into their new
-positions in 460ms. Opening animations release their effects when finished.
+positions in 300ms. Opening animations release their effects when finished.
 
-Collapse retains the fan for a 220ms gathering transition, temporarily makes
-its controls inert, then restores the cover and its keyboard focus. A generation
+Collapse retains the fan for a 200ms gathering transition, keeps its controls usable, then restores the cover and its keyboard focus. A generation
 counter prevents cancelled exit callbacks from mutating a newer state.
-Selection-pinned fans cannot collapse. Without animation support, collapse
+Selection membership and expansion are independent: selected fans can collapse. Without animation support, collapse
 still works immediately. Reduced motion uses a 120ms opacity transition.
+
+Virtualized timeline fans retain the clicked cover origin while replacing it with
+measured rows. Their complete paper roots use the same bounded unfold/gather
+helpers. Menus, checkboxes, captions and selection marks share the root transform;
+the main photo button and interactive overlays are siblings, never nested buttons.
 
 ## Arrangement preview
 
@@ -94,3 +99,7 @@ The photo-handoff regression additionally checks the first painted frame through
 completion in Chromium and WebKit at desktop and mobile widths. Targeted tests
 cover bounded loading, preview replacement, interruption and stale cleanup. See
 the linked photo transition review for the measured evidence and limitations.
+
+Very narrow burst portraits reserve at least 80px of paper width so the 48px menu
+target stays within the exposed paper. Images remain contained and uncropped;
+virtualized fan packing uses the same minimum.

@@ -1,4 +1,4 @@
-import { useMediaIntent } from "@/media/useMediaIntent";
+import { useMediaIntent } from "@/media/useMediaIntent/useMediaIntent";
 import { useMediaLink } from "@/media/useMediaLink";
 import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { useReSigning } from "@/surfaces/Timeline/useReSigning/useReSigning";

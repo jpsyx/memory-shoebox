@@ -27,6 +27,7 @@ export function Print({
   itemId,
   mediaItemId = itemId,
   children,
+  overlays,
 }: Readonly<Props>): ReactNode {
   const { media, thumbnail, reference } = usePrintMedia({
     media: initialMedia,
@@ -41,10 +42,8 @@ export function Print({
   });
   return (
     <PolaroidContainer
-      component="button"
       size="thumbnail"
       {...interaction.intent}
-      type="button"
       ref={reference}
       data-photo-surface="pile"
       data-print-selection={interaction.isSelectable ? "timeline" : undefined}
@@ -54,20 +53,26 @@ export function Print({
         interaction.isSelected === true && classes.printSelected,
       )}
       style={{ ...scatterStyle(seed), viewTransitionName: transitionName }}
-      disabled={interaction.isDisabled}
-      onClick={interaction.onClick}
-      aria-pressed={interaction.isSelected}
       data-item-id={itemId}
     >
-      <PrintMedia media={media} thumbnail={thumbnail} />
-      <PrintOverlays
-        durationMs={media.durationMs ?? undefined}
-        restrictedLabel={restrictedLabel}
-        unseen={unseen}
-        isSelected={interaction.isSelected}
-        labelCount={labelCount}
-      />
-      {children}
+      <button
+        type="button"
+        className={classes.printTarget}
+        disabled={interaction.isDisabled}
+        onClick={interaction.onClick}
+        aria-pressed={interaction.isSelected}
+      >
+        <PrintMedia media={media} thumbnail={thumbnail} />
+        <PrintOverlays
+          durationMs={media.durationMs ?? undefined}
+          restrictedLabel={restrictedLabel}
+          unseen={unseen}
+          isSelected={interaction.isSelected}
+          labelCount={labelCount}
+        />
+        {children}
+      </button>
+      {overlays}
     </PolaroidContainer>
   );
 }

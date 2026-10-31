@@ -1,10 +1,12 @@
 import type { MediaRef } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 /** Media, selection and non-interactive overlays accepted by a pile print. */
 export type Props = {
   /** Non-interactive overlays that move with the photograph. */
   children?: ReactNode;
+  /** Interactive controls share the animated paper without nesting buttons. */
+  overlays?: ReactNode;
   /**
    * What a print draws: a pile print's whole `MediaRef`, or a fanned frame's
    * preview, catalog layout and alt text carried by a `BurstFrameRef`.
@@ -21,7 +23,7 @@ export type Props = {
   /** The words on the lock chip, when the item is not visible to everyone. */
   restrictedLabel?: string;
   selected?: boolean;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
   eager?: boolean;
   /** How many tags, people or milestones have just been put on this one. */
   labelCount?: number;

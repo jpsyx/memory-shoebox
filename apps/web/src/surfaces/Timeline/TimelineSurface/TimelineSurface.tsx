@@ -42,6 +42,7 @@ export function TimelineSurface({
         <TimelineBulkEditor
           key={JSON.stringify(search)}
           days={data.days}
+          openBurstIds={[...data.expanded.keys()]}
           filterSelection={data.selection}
           onChanged={data.onClearBursts}
         >

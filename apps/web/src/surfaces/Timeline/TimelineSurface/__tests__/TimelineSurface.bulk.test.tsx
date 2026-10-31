@@ -192,6 +192,12 @@ describe("timeline bulk editing", () => {
       screen.getByRole("button", { name: "Tick loaded photos" }),
     );
     expect(
+      screen.queryByRole("button", { name: "Frame 2" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: /A cartoon baby, 27 September 2026/ }),
+    );
+    expect(
       await screen.findByRole("button", { name: "Frame 2" }),
     ).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Frame 2" }));

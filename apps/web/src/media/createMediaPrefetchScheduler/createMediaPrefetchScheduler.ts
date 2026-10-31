@@ -181,7 +181,9 @@ function _schedule({
   state,
   candidates,
   environment,
+  dwellMs = APP_CONFIG.media.prefetch.dwellMs,
 }: {
+  dwellMs?: number;
   state: SchedulerState;
   candidates: readonly PrefetchCandidate[];
   environment: Readonly<PrefetchEnvironment>;
@@ -194,7 +196,7 @@ function _schedule({
     state.environment.selectionKey !== environment.selectionKey;
   if (isNewSelection) {
     _clear(state);
-    state.readyAt = state.clock() + APP_CONFIG.media.prefetch.dwellMs;
+    state.readyAt = state.clock() + dwellMs;
   }
   state.environment = { ...environment };
   state.candidates = getAllowedPrefetchCandidatesFromEnvironment({
@@ -352,8 +354,8 @@ export function createMediaPrefetchScheduler(
     disposed: false,
   };
   return {
-    schedule: ({ candidates, environment }) => {
-      _schedule({ state, candidates, environment });
+    schedule: ({ candidates, environment, dwellMs }) => {
+      _schedule({ state, candidates, environment, dwellMs });
     },
     promote: (id) => {
       return _promote({ state, destination: id });

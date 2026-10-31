@@ -29,10 +29,12 @@ function _renderMenu({
         <ActionIcon
           className={classes.burstPhotoOptions}
           variant="default"
-          size="lg"
+          size={48}
           aria-label={`Photo ${frame.position} options`}
         >
-          <IconDots {...ICON_PROPS} />
+          <span className={classes.burstPhotoOptionsFace}>
+            <IconDots size={18} stroke={1.7} />
+          </span>
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
@@ -56,7 +58,7 @@ export function BurstPhoto({
   onOpen,
   onRemove,
 }: Readonly<Props>): ReactNode {
-  const print = (
+  return (
     <Print
       media={frame}
       itemId={frame.itemId}
@@ -64,15 +66,11 @@ export function BurstPhoto({
       onClick={() => {
         return onOpen?.(frame.itemId);
       }}
+      overlays={
+        frame.canRemoveFromBurst === true && onRemove !== undefined
+          ? _renderMenu({ frame, onRemove })
+          : undefined
+      }
     />
-  );
-  if (frame.canRemoveFromBurst !== true || onRemove === undefined) {
-    return print;
-  }
-  return (
-    <div className={classes.burstPhoto}>
-      {print}
-      {_renderMenu({ frame, onRemove })}
-    </div>
   );
 }

@@ -1,14 +1,15 @@
 import { BurstFanHeader } from "@/system/Pile/BurstFanHeader/BurstFanHeader";
 import type { BurstFrameRef } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import { BurstPhoto } from "../BurstPhoto/BurstPhoto";
+import { PileSelectionContext } from "../../PileSelection/PileSelection";
 import classes from "./BurstFan.module.css";
 
 type Props = {
   frames: readonly BurstFrameRef[];
   span: string;
   seed: number;
-  isPinned: boolean;
+  burstId?: string;
   onCollapse: () => void;
   onOpenFrame?: (itemId: string) => void;
   onRemoveFrame?: (itemId: string) => void;
@@ -19,16 +20,32 @@ export function BurstFan({
   frames,
   span,
   seed,
-  isPinned,
+  burstId,
   onCollapse,
   onOpenFrame,
   onRemoveFrame,
 }: Readonly<Props>): ReactNode {
+  const selection = useContext(PileSelectionContext);
+  const isFullySelected =
+    frames.length > 0 &&
+    frames.every((frame) => {
+      return selection?.selectedItemIds.has(frame.itemId);
+    });
   return (
     <div className={classes.burstFan} data-burst-fan>
       <BurstFanHeader
         label={span}
-        isDisabled={isPinned}
+        selectionAction={
+          selection?.onSelectBurst && burstId
+            ? {
+                isFullySelected,
+                isDisabled: selection.isBusy,
+                onSelect: () => {
+                  return selection.onSelectBurst?.(burstId);
+                },
+              }
+            : undefined
+        }
         onCollapse={onCollapse}
       />
       {frames.map((frame, index) => {

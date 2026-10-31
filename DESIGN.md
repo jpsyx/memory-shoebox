@@ -846,3 +846,13 @@ the pile's own footprint drawn as `ghost` frames, which are 5px borders of
   a gesture the user has to discover.
 - **Don't** add handwriting faces, tape, pushpin, or paper-texture ornament.
   The fridge door is the structure, not a skin.
+
+### Thumbnail overlay composition
+
+The paper root owns hover lift, rotation, scale and elevation. Its main photo
+button and interactive overlays are siblings inside that root, so captions,
+checkboxes and menu anchors move together without nested controls. Burst options
+use a 28px painted square with an 18px dots icon inside a transparent 48px target.
+In tick mode the cover's top-right Mantine checkbox selects the full filtered
+burst; the fan header places the same additive command beside an enabled Collapse
+button. Checkbox discoverability includes keyboard focus and coarse pointers.

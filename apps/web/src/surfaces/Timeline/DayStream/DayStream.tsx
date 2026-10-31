@@ -53,16 +53,16 @@ function useStreamRows({
 }): StreamRows {
   const layout = useTimelineLayout(element);
   const selection = useContext(PileSelectionContext);
-  const selectedFrames = selection?.framesByBurstId;
+  const openedBurstIds = selection?.openedBurstIds;
   const expanded = useMemo(() => {
-    return selectedFrames === undefined
+    return openedBurstIds === undefined
       ? new Map(props.expanded)
       : new Map(
-          [...selectedFrames.keys()].map((id) => {
+          [...openedBurstIds].map((id) => {
             return [id, { height: 0 }] as const;
           }),
         );
-  }, [props.expanded, selectedFrames]);
+  }, [props.expanded, openedBurstIds]);
   const frames = selection?.framesByBurstId ?? props.framesByBurstId;
   const mappedRows = useMemo(() => {
     return getTimelineRowsFromDays({
@@ -146,6 +146,9 @@ function _collapseBurst({
     return candidate.burstId === burstId;
   });
   focus.onBlur();
+  if (stream.selection?.onCollapseBurst) {
+    stream.selection.onCollapseBurst(burstId);
+  }
   props.onCollapseBurst?.(burstId);
   if (!row) {
     return;

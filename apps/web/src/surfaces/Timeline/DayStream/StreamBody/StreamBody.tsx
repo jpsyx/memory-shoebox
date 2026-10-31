@@ -1,3 +1,4 @@
+import { useTimelineBurstMotion } from "../../windowing/useTimelineBurstMotion/useTimelineBurstMotion";
 import classes from "./StreamBody.module.css";
 
 import { Button } from "@mantine/core";
@@ -22,9 +23,11 @@ export function StreamBody({
   onCollapseBurst,
 }: Readonly<Props>): ReactNode {
   const { focus, position } = stream;
+  const motion = useTimelineBurstMotion(element);
   return (
     <div
       ref={element}
+      onClickCapture={motion.capture}
       className={classes.streamBody}
       onFocusCapture={(event) => {
         focus.onFocus(
@@ -54,7 +57,11 @@ export function StreamBody({
       <StreamDays
         props={props}
         stream={stream}
-        onCollapseBurst={onCollapseBurst}
+        onCollapseBurst={(id) => {
+          return motion.collapse(id, () => {
+            return onCollapseBurst?.(id);
+          });
+        }}
       />
       <div ref={sentinelRef} aria-hidden="true" />
     </div>

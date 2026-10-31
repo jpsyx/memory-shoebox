@@ -1,3 +1,4 @@
+import { createMediaIntent } from "../createMediaIntent/createMediaIntent";
 import {
   fetchMediaNeighbors,
   fetchMediaPreviews,
@@ -32,6 +33,7 @@ import type {
 /** One member's media-only state and owned asynchronous operations. */
 export type MediaLoadingResources = {
   memberId: string;
+  intent: ReturnType<typeof createMediaIntent>;
   /** Private compact positions are retired with member media authority. */
   timeline: ReturnType<typeof createTimelineMemory>;
   /** One committed surface's shared initial-viewport thumbnail budget. */
@@ -65,6 +67,7 @@ export type MediaLoadingResources = {
 };
 
 type ResourceState = {
+  intent?: ReturnType<typeof createMediaIntent>;
   previews: MediaPreviewStore;
   lifetime: MediaLoadingLifetime;
   requests: Set<AbortController>;
@@ -180,6 +183,7 @@ function _clearWork({
   state: ResourceState;
   scheduler: Readonly<MediaPrefetchScheduler>;
 }): void {
+  state.intent?.clear();
   scheduler.clear();
   state.requests.forEach((controller) => {
     controller.abort();
@@ -299,7 +303,18 @@ export function createMediaLoadingResources(
     thumbnails,
     timeline,
   };
+  const intent = createMediaIntent({
+    memberId: options.memberId,
+    previews: state.previews,
+    scheduler,
+    navigation,
+    readPreviews: ({ request, priority = "speculative" }) => {
+      return _readPreviews({ state, request, priority });
+    },
+  });
+  state.intent = intent;
   return {
+    intent,
     timeline,
     thumbnails,
     leases,

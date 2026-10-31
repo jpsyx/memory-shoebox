@@ -72,11 +72,6 @@ describe("selecting frames within timeline filters", () => {
       screen.queryByRole("button", { name: "Outside filter" }),
     ).not.toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", {
-        name: /^A cartoon baby, 27 September 2026/,
-      }),
-    );
-    await userEvent.click(
       await screen.findByRole("button", { name: "Matching frame" }),
     );
     expect(

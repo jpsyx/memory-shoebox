@@ -1937,3 +1937,11 @@ also import their own CSS modules. Parent modules retain layout rules; explicit
 data attributes preserve hover, portal, and nested-control selectors across
 component boundaries. The selected photo and registered video retain their
 existing decode and element lifetimes through these presentational boundaries.
+
+### Upload size labels
+
+Batch confirmed progress and draft totals abbreviate byte values as B, KB, MB or
+GB, using the existing 1024-based upload convention. Labels use at most one
+decimal, suppress trailing zeroes and promote a rounded 1024 to the next unit.
+Confirmed and total values select units independently, for example `850 MB of
+1.5 GB confirmed up`. Progress ratios and completion still use exact byte counts.

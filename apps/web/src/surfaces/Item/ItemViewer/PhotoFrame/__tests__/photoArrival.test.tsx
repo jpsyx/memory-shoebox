@@ -23,7 +23,7 @@ it.each([
   { hasViewport: true, isPreview: false },
   { hasViewport: true, isPreview: true },
 ])(
-  "waits for committed selected decode: $hasViewport viewport, $isPreview preview",
+  "starts with layout before selected decode: $hasViewport viewport, $isPreview preview",
   async ({ hasViewport, isPreview }) => {
     const animate = vi.fn(() => {
       return {
@@ -101,7 +101,7 @@ it.each([
     };
     fireEvent.load(view.container.querySelector("img")!);
     act(flushFrames);
-    expect(animate).not.toHaveBeenCalled();
+    expect(animate).toHaveBeenCalledOnce();
     const selected = view.container.querySelector("picture img")!;
     fireEvent.load(selected);
     await act(async () => {
@@ -109,7 +109,7 @@ it.each([
     });
     act(flushFrames);
     if (isPreview) {
-      expect(animate).not.toHaveBeenCalled();
+      expect(animate).toHaveBeenCalledOnce();
       view.rerender(
         <MediaLoadingContext value={resources}>
           <PhotoFrame media={makeItemDetail().media} itemId="photo-a" />
@@ -121,7 +121,7 @@ it.each([
     expect(document.querySelector("[data-photo-flight]")).toBe(retained);
     expect(document.querySelector("[data-photo-flight] img")).toHaveAttribute(
       "src",
-      selected.getAttribute("src"),
+      source.querySelector("img")!.getAttribute("src") ?? "",
     );
     view.unmount();
     resources.dispose();

@@ -1,6 +1,7 @@
 import { Print } from "@/system/Pile/Print/Print";
 import type { ItemSummary } from "@memory-shoebox/shared";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
+import { BurstSelectionCheckbox } from "./BurstSelectionCheckbox";
 import classes from "./BurstCover.module.css";
 
 type Props = {
@@ -8,7 +9,8 @@ type Props = {
   seed: number;
   frameCount: number;
   hasUnseenFrames?: boolean;
-  onOpen: () => void;
+  burstId?: string;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 /**
@@ -20,6 +22,7 @@ export function BurstCover({
   frameCount,
   hasUnseenFrames,
   onOpen,
+  burstId,
 }: Readonly<Props>): ReactNode {
   return (
     <Print
@@ -29,6 +32,9 @@ export function BurstCover({
       mediaItemId={cover.itemId}
       unseen={hasUnseenFrames}
       onClick={onOpen}
+      overlays={
+        burstId ? <BurstSelectionCheckbox burstId={burstId} /> : undefined
+      }
     >
       <span className={classes.burstCoverCount}>
         {frameCount} <small>photos</small>

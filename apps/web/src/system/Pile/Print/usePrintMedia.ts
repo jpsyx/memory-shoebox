@@ -7,18 +7,18 @@ import type { Props } from "./Print.types";
 type MediaState = {
   media: Props["media"];
   thumbnail: ReturnType<typeof useVisibleThumbnail>;
-  reference: RefCallback<HTMLButtonElement>;
+  reference: RefCallback<HTMLDivElement>;
 };
 
 /**
- * Keeps renewal, thumbnail visibility and arrival attached to the print button.
+ * Keeps renewal, thumbnail visibility and arrival attached to the paper root.
  */
 export function usePrintMedia({
   media: initialMedia,
   itemId,
   mediaItemId = itemId,
 }: Readonly<Pick<Props, "media" | "itemId" | "mediaItemId">>): MediaState {
-  const photoRef = usePhotoArrival<HTMLButtonElement>(
+  const photoRef = usePhotoArrival<HTMLDivElement>(
     itemId,
     initialMedia.thumb?.url ?? "",
   );

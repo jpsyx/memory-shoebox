@@ -284,8 +284,9 @@ it("gathers from the current animated pose when interrupted", async () => {
     const photo = screen.getByRole("button", {
       name: makeBurstFrameFromPosition(1).altText,
     });
-    photo.style.translate = "-12px 24px";
-    photo.style.opacity = "0.6";
+    const paper = photo.closest<HTMLElement>("[data-photo-surface]")!;
+    paper.style.translate = "-12px 24px";
+    paper.style.opacity = "0.6";
     await userEvent.click(screen.getByRole("button", { name: "Collapse" }));
     expect(animate.mock.lastCall).toEqual(
       expect.arrayContaining([
@@ -297,4 +298,64 @@ it("gathers from the current animated pose when interrupted", async () => {
   } finally {
     delete (Element.prototype as Partial<Element>).animate;
   }
+});
+
+it("keeps the options anchor inside the transformed paper without nesting buttons", () => {
+  _render(
+    <BurstStack
+      cover={makeItem()}
+      frames={[{ ...makeBurstFrameFromPosition(1), canRemoveFromBurst: true }]}
+      frameCount={1}
+      span="1 photo"
+      seed={0}
+      startOpen
+      onRemoveFrame={vi.fn()}
+    />,
+  );
+  const options = screen.getByRole("button", { name: "Photo 1 options" });
+  const paper = options.closest('[data-photo-surface="pile"]');
+  expect(paper).not.toBeNull();
+  expect(paper?.tagName).toBe("DIV");
+  expect(options.parentElement?.closest("button")).toBeNull();
+  expect(paper?.querySelector("img")).not.toBeNull();
+});
+
+it("selects a collapsed burst with a separate checkbox and can collapse selected fans", async () => {
+  const onSelectBurst = vi.fn();
+  const frame = makeBurstFrameFromPosition(1);
+  _render(
+    <PileSelectionContext
+      value={{
+        selectedItemIds: new Set(),
+        framesByBurstId: new Map([["burst", [frame]]]),
+        isBusy: false,
+        onToggle: vi.fn(),
+        onOpenBurst: vi.fn(),
+        onSelectBurst,
+      }}
+    >
+      <BurstStack
+        cover={makeItem()}
+        frameCount={1}
+        span="1 photo"
+        seed={0}
+        burstId="burst"
+      />
+    </PileSelectionContext>,
+  );
+  const checkbox = screen.getByRole("checkbox", { name: "Select full burst" });
+  await userEvent.click(checkbox);
+  expect(onSelectBurst).toHaveBeenCalledWith("burst");
+  expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: /1 photos/ }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Select full burst" }),
+  );
+  const collapse = screen.getByRole("button", { name: "Collapse" });
+  expect(collapse).toBeEnabled();
+  await userEvent.click(collapse);
+  expect(screen.queryByRole("button", { name: "Collapse" })).toBeNull();
+  expect(
+    screen.getByRole("checkbox", { name: "Select full burst" }),
+  ).toBeInTheDocument();
 });

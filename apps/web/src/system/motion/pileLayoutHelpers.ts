@@ -43,7 +43,7 @@ export function animatePileLayout(layout: PileLayout): void {
         { translate: `${horizontal}px ${vertical}px` },
         { translate: "0px 0px" },
       ],
-      { duration: 460, easing: PAPER_EASE },
+      { duration: 300, easing: PAPER_EASE },
     );
     animations.set(element, animation);
     void animation.finished.catch(() => {});

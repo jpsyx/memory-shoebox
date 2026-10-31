@@ -35,7 +35,7 @@ export function animatePhotoFlight({
     ..._getPoseFromLayer(layer),
     transform: `translate(calc(-50% + ${source.centerX - destination.centerX}px), calc(-50% + ${source.centerY - destination.centerY}px)) rotate(${source.angle}deg)`,
   };
-  updatePhotoFlightFromElement(layer, target, destination);
+  updatePhotoFlightFromElement(layer, target, destination, true);
   layer.dataset.photoFlightPhase = "moving";
   const animation = layer.animate([departure, _getPoseFromLayer(layer)], {
     duration: target.dataset.photoSurface === "viewer" ? 420 : 300,
