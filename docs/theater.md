@@ -152,3 +152,9 @@ matching burst frame. Extra tags, people, dates and attachment filters remain
 intersections. Hidden and out-of-selection current items return no position or
 neighbors. Preview batches continue to authorize explicit item IDs independently
 of archive selection; they grant no access and have no seen/open side effects.
+
+The web archive carries `member` into item history state with the effective jump
+boundary. Neighbor reads, preview windows and theater position requests keep
+that complete selection through navigation. Archive page keys and visit memory
+also separate different member collections for the same reader. Direct collection
+URLs do not invent a comment return target.

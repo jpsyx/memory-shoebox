@@ -87,3 +87,11 @@ describe("occasion route search", () => {
     }
   });
 });
+
+it("preserves a collection UUID while rejecting malformed member addresses", () => {
+  const member = "018f0000-0000-7000-8000-000000000021";
+  expect(_parse({ member })).toMatchObject({ member });
+  expect(() => {
+    _parse({ member: "not-a-member-id" });
+  }).toThrow();
+});

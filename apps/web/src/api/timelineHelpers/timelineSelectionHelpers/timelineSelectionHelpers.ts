@@ -28,6 +28,7 @@ export type TimelineView = {
 export type TimelineSearch = {
   tag?: readonly string[];
   person?: readonly string[];
+  member?: string;
   from?: string;
   until?: string;
   at?: string;
@@ -44,6 +45,7 @@ export function getViewFromSearch(
       // is its own to keep: the route's search object is not ours to lend.
       tags: [...(search.tag ?? [])],
       people: [...(search.person ?? [])],
+      ...(search.member === undefined ? {} : { member: search.member }),
       from: search.from,
       until: search.until,
     },
@@ -56,6 +58,7 @@ export function isSelectionActive(
   selection: Readonly<TimelineSelection>,
 ): boolean {
   return (
+    selection.member !== undefined ||
     selection.tags.length > 0 ||
     selection.people.length > 0 ||
     selection.from !== undefined ||
@@ -74,6 +77,9 @@ export function makeQueryFromSelection(
   selection.people.forEach((person) => {
     query.append("people", person);
   });
+  if (selection.member !== undefined) {
+    query.set("member", selection.member);
+  }
   if (selection.from !== undefined) {
     query.set("from", selection.from);
   }
@@ -118,6 +124,7 @@ export function makeSearchFromSelection(
   selection: Readonly<TimelineSelection>,
 ): TimelineSearch {
   return {
+    ...(selection.member === undefined ? {} : { member: selection.member }),
     ...(selection.tags.length > 0 ? { tag: selection.tags } : {}),
     ...(selection.people.length > 0 ? { person: selection.people } : {}),
     ...(selection.from === undefined ? {} : { from: selection.from }),

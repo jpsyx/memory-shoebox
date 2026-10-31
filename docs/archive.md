@@ -688,3 +688,27 @@ membership from a name. A removed linked identity remains in the archive and is
 shown with `(not a member)`, just like an ad-hoc person. Names stored in the
 catalog stay raw; suffixes belong only to presentation. Pending filter chips use
 `Loading person...` until the identity is available, keeping raw IDs out of the UI.
+
+## Member collections in the web archive
+
+`/?member=<UUID>` opens the existing pile with one combined selection: media
+uploaded by that member OR photo-tagged through their linked person, intersected
+with reader visibility and any extra filters. The `person` filter keeps its
+photo-tag-only meaning. Collection links start clean; opening Find preserves the
+current archive selection. Removing the member chip keeps later tag, person and
+date filters. A no-results collection can clear only its extra filters.
+
+The identity header uses the narrow member-collection read, showing the current
+name and 56px avatar without email, role, account status or hidden totals. It
+refetches on entry so renamed members appear under their current name. Unknown
+identities use a generic heading; unknown, retained former members and members
+with no visible media share “No photos or videos to show.” A failed identity
+read offers retry without losing selection. Header space is reserved while
+loading, and the collection filter strip does not flash a zero total.
+
+The complete member selection participates in page and rail URLs, cursor-bound
+query keys, timeline visit memory and filter facets. Bulk burst reads, item
+navigation, media previews and theater positions use that same selection.
+Private identity requests consume cancellation and verify the current reader's
+private lifetime before returning. Direct/shared URLs offer Back to the timeline;
+comment return journeys are supplied separately by the same-tab journey owner.

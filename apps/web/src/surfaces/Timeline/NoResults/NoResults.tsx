@@ -1,9 +1,10 @@
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
-import type {
-  TimelineSelection,
-  TimelineSelectionUpdate,
+import {
+  isSelectionActive,
+  type TimelineSelection,
+  type TimelineSelectionUpdate,
 } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { Explanation } from "@/surfaces/Timeline/NoResults/Explanation";
 import { WaysOut } from "@/surfaces/Timeline/NoResults/WaysOut";
@@ -17,6 +18,16 @@ type Props = {
   /** Clearing the lot, which keeps the jump the same way the strip does. */
   onClear: () => void;
 };
+
+/** Whether the empty state belongs to the collection alone. */
+function _isCollectionWithoutExtraFilters(
+  selection: Readonly<TimelineSelection>,
+): boolean {
+  return (
+    selection.member !== undefined &&
+    !isSelectionActive({ ...selection, member: undefined })
+  );
+}
 
 /**
  * Surface 6's `none` state.
@@ -40,6 +51,10 @@ export function NoResults({
   });
   const hasDates =
     selection.from !== undefined || selection.until !== undefined;
+
+  if (_isCollectionWithoutExtraFilters(selection)) {
+    return <Lede>No photos or videos to show.</Lede>;
+  }
 
   return (
     <Stack gap="md">

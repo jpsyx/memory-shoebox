@@ -30,7 +30,10 @@ export function SelectionStrip({
   onClear,
 }: Readonly<Props>): ReactNode {
   return (
-    <FilterStrip count={selectedItemCount} onClear={onClear}>
+    <FilterStrip
+      count={selection.member ? undefined : selectedItemCount}
+      onClear={onClear}
+    >
       <FilterChips selection={selection} facets={facets} onChange={onChange} />
     </FilterStrip>
   );
