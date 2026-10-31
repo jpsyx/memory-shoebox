@@ -5,6 +5,10 @@ remaining behavior is recommended. No product implementation in this change.
 
 **Date:** 2026-10-31. **Baseline:** `790de6af` on `main`.
 
+The [UI/UX shape](2026-10-31-comment-tagging-ux-shape.md) expands this scope into
+screen layouts, copy, keyboard/touch behavior, and recovery states for every
+affected surface. Use it as the detailed interaction companion.
+
 ## 1. Outcome and confirmed decisions
 
 A family member writes `@Jorge check this out!`, chooses Jorge from a typeahead,
@@ -131,10 +135,11 @@ is available. Never invent a surname. An invitation's supplied name can prefill
 the field; the final save decides availability.
 
 My account permits renaming and adding, replacing, or removing an avatar. Avatar
-upload is optional and must not block completing a valid name. Show a square
-crop preview with the circular display mask, then Save photo or Cancel. V1 uses
-a centered crop and permits choosing another file; a crop/retouch editor is
-outside this scope. Upload failure keeps the previous avatar.
+upload is optional and must not block completing a valid name. The UI/UX shape
+proposes a circular crop preview with position and zoom controls, then Save photo
+or Cancel. Start from a centered fit; provide visible keyboard-operable controls
+alongside optional dragging. Retouching and filters remain outside scope.
+Upload failure keeps the previous avatar.
 
 ### Photo-tag identities
 
@@ -163,7 +168,7 @@ controls in account names so a handle cannot resemble several tags.
 Use a single canonical key for comparison: NFC, trim, collapse whitespace, and
 Unicode lowercase without environment-dependent locale selection. This follows
 the existing `makeNormalisedNameFromName` normalization pattern. Thus
-`John`, `john`, and `John` conflict. Accents stay meaningful, as they do in
+`John`, `john`, and `" John "` conflict. Accents stay meaningful, as they do in
 the current archive; do not silently introduce accent folding.
 
 Enforce uniqueness in SQLite, not just with a browser availability check.
@@ -258,8 +263,12 @@ appears and counts once. Comment tagging alone never adds an item to that
 member's collection, and neither tagging mechanism grants access.
 
 Opening the tag starts this collection with unrelated prior filters cleared.
-Back returns to the originating conversation and preserves its draft/scroll
-through the existing item lifecycle. The empty state says **“No photos or videos
+Back returns to the originating conversation and restores its draft/scroll.
+This requires new signed-in-tab journey state: the existing item-visit draft
+provider does not survive route departure. The UI/UX shape specifies retention
+of main, reply, and edit drafts for this round trip, with retirement on account
+change or access loss and no recovery promise after reload/tab close.
+The empty state says **“No photos or videos
 to show.”** It does not reveal hidden totals. Retained removed-member identities
 still provide a historical collection to authorized readers; unknown IDs show
 an empty selection without disclosing account details.
@@ -326,7 +335,8 @@ Use a dedicated, bounded avatar upload path rather than creating an archive
 item. Proposed v1 input: JPEG, PNG, or WebP, at most 10 MiB and 50 megapixels,
 one still image. Reject SVG, animation, corrupt data, and mismatched formats;
 explain unsupported formats such as HEIC with guidance to choose a JPEG/PNG.
-Decode the bytes, apply orientation, center-crop, and create a 256-by-256 WebP.
+Decode the bytes, apply orientation and the member's validated crop selection,
+and create a 256-by-256 WebP.
 Do not retain the original or its metadata. Sharp is already installed; its
 [resize](https://sharp.pixelplumbing.com/api-resize/) and
 [output](https://sharp.pixelplumbing.com/api-output/) APIs support the intended
@@ -432,6 +442,6 @@ before committing all composers to it.
 
 All user questions asked during scoping are settled. Remaining recommendations
 to review in this draft are: historical-name reservation, explicit collision
-mapping at rollout, supported avatar formats/center crop, one comment-tag email
+mapping at rollout, supported avatar formats/adjustable crop, one comment-tag email
 per recipient per comment lifetime, and including videos in the member archive.
 These are proposed defaults, not additional user-confirmed requirements.
