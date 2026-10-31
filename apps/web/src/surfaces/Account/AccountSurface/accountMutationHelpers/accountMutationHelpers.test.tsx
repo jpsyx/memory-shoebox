@@ -97,6 +97,7 @@ it.each(["name", "notify"] as const)(
 it("does not publish an old name save into a different current account", async () => {
   const original = createMeResponse({ displayName: "Original" });
   const other = createMeResponse({
+    avatar: null,
     memberId: "018f0000-0000-7000-8000-000000000001",
     displayName: "Other",
   });

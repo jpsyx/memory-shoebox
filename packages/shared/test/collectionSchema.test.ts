@@ -10,6 +10,7 @@ const membersResponseSchema = collectionSchema({
 
 /** A member reference, which every fixture below carries. */
 const memberRef = {
+  avatar: null,
   memberId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f901234",
   displayName: "Abuela Rosa",
 };
@@ -68,7 +69,9 @@ describe("collectionSchema", () => {
   it("validates the items through the schema it was given", () => {
     expect(
       membersResponseSchema.safeParse({
-        members: [{ memberId: "not-a-uuid", displayName: "Abuela Rosa" }],
+        members: [
+          { avatar: null, memberId: "not-a-uuid", displayName: "Abuela Rosa" },
+        ],
         nextCursor: null,
       }).success,
     ).toBe(false);

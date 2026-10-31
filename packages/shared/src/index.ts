@@ -9,6 +9,16 @@ export {
   type AccountName,
 } from "./accountNames/accountNames.ts";
 export {
+  avatarCropSchema,
+  reserveAvatarRequestSchema,
+  reserveAvatarResponseSchema,
+  removeAvatarRequestSchema,
+  readMemberAvatarResponseSchema,
+  type AvatarCrop,
+  type ReserveAvatarRequest,
+  type ReserveAvatarResponse,
+} from "./avatars.ts";
+export {
   createSessionRequestSchema,
   createSessionResponseSchema,
   listMySessionsResponseSchema,
@@ -73,6 +83,7 @@ export {
   timestampSchema,
   visibilityRuleIdSchema,
   visibilitySummarySchema,
+  avatarRefSchema,
   type BurstSummary,
   type CommentDto,
   type ItemSummary,
@@ -86,6 +97,7 @@ export {
   type ReactionSummary,
   type TagRef,
   type VisibilitySummary,
+  type AvatarRef,
 } from "./dtos.ts";
 export {
   commentEmailPayloadSchema,

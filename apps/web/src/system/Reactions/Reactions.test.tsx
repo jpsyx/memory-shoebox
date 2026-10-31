@@ -14,20 +14,20 @@ const SUMMARY: ReactionSummary = {
       kind: "love",
       count: 2,
       members: [
-        { memberId: "a", displayName: "Abuela Rosa" },
-        { memberId: "b", displayName: "Mamá" },
+        { avatar: null, memberId: "a", displayName: "Abuela Rosa" },
+        { avatar: null, memberId: "b", displayName: "Mamá" },
       ],
     },
     {
       kind: "like",
       count: 1,
-      members: [{ memberId: "c", displayName: "Tía" }],
+      members: [{ avatar: null, memberId: "c", displayName: "Tía" }],
     },
   ],
   myKind: null,
 };
 
-const VIEWER = { memberId: "me", displayName: "Papá" };
+const VIEWER = { avatar: null, memberId: "me", displayName: "Papá" };
 
 /** The theme, around whatever is rendered or rerendered. */
 function _Providers({
@@ -102,12 +102,15 @@ describe("Reactions", () => {
         {
           kind: "love",
           count: 2,
-          members: [{ memberId: "a", displayName: "Abuela Rosa" }, VIEWER],
+          members: [
+            { avatar: null, memberId: "a", displayName: "Abuela Rosa" },
+            VIEWER,
+          ],
         },
         {
           kind: "like",
           count: 1,
-          members: [{ memberId: "c", displayName: "Tía" }],
+          members: [{ avatar: null, memberId: "c", displayName: "Tía" }],
         },
       ],
       myKind: "love",

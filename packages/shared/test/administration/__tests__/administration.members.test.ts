@@ -122,7 +122,11 @@ describe("administration member contracts", () => {
       listMemberSuggestionsResponseSchema.parse({
         suggestions: [
           {
-            person: { personId: GROUP_ID, displayName: "Rosa" },
+            person: {
+              isMember: false,
+              personId: GROUP_ID,
+              displayName: "Rosa",
+            },
             itemCount: 41,
           },
         ],

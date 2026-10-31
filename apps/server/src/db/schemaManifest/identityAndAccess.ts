@@ -8,6 +8,23 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const IDENTITY_AND_ACCESS_MANIFEST = {
+  member_avatar_uploads: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    storage_key: { isNullable: false, type: "TEXT", defaultValue: null },
+    expected_avatar_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    crop_json: { isNullable: false, type: "TEXT", defaultValue: null },
+    content_type: { isNullable: false, type: "TEXT", defaultValue: null },
+    declared_byte_size: {
+      isNullable: false,
+      type: "INTEGER",
+      defaultValue: null,
+    },
+    output_byte_size: { isNullable: true, type: "INTEGER", defaultValue: null },
+    state: { isNullable: false, type: "TEXT", defaultValue: null },
+    expires_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
   member_name_claims: {
     name_key: { isNullable: false, type: "TEXT", defaultValue: null },
     member_id: { isNullable: false, type: "TEXT", defaultValue: null },
@@ -15,6 +32,7 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
   },
   members: {
+    avatar_id: { isNullable: true, type: "TEXT", defaultValue: null },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     email: { isNullable: false, type: "TEXT", defaultValue: null },
     display_name: { isNullable: true, type: "TEXT", defaultValue: null },
@@ -114,6 +132,7 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
   SchemaManifestShape,
   | "member_name_claims"
   | "members"
+  | "member_avatar_uploads"
   | "sign_in_codes"
   | "sessions"
   | "invitations"

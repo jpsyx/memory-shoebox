@@ -59,6 +59,7 @@ const VIDEO: MediaRef = {
 
 /** A member reference, reused by the item and comment fixtures. */
 const UPLOADED_BY = {
+  avatar: null,
   memberId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f901234",
   displayName: "Abuela Rosa",
 } satisfies dtos.MemberRef;

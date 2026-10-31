@@ -1,3 +1,4 @@
+import { memberAvatarRoutes } from "../routes/memberAvatars.ts";
 import {
   makeReleaseStatusReaderFromDependencies,
   type ReleaseStatusReader,
@@ -249,6 +250,7 @@ async function _registerApiRoutes(
       await authRoutes(api);
       await registerSetupRoutes(api);
       await meRoutes(api);
+      await memberAvatarRoutes(api);
       await bootstrapRoutes(api);
       await timelineRoutes(api);
       await mediaPreviewRoutes(api);

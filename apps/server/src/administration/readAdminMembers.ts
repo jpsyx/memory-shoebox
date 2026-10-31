@@ -1,4 +1,7 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import {
+  type AvatarRef,
   adminMemberDtoSchema,
   type AdminMemberDto,
   type ListMembersResponse,
@@ -13,6 +16,7 @@ import type {
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 
 type ReadAdminMembersOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   currentSessionId: string;
   statuses: readonly MemberStatus[];
@@ -23,6 +27,7 @@ type InvitationRow = InvitationsTable & {
   inviterEmail: string;
 };
 type MemberFacts = {
+  avatars: ReadonlyMap<string, AvatarRef>;
   member: MembersTable;
   invitation: InvitationRow | undefined;
   sessions: readonly SessionsTable[];
@@ -32,6 +37,7 @@ type MemberFacts = {
 };
 
 type AdminDirectoryRows = {
+  avatars: ReadonlyMap<string, AvatarRef>;
   members: readonly MembersTable[];
   sessions: readonly SessionsTable[];
   invitations: readonly InvitationRow[];
@@ -41,7 +47,11 @@ type AdminDirectoryRows = {
 };
 
 function _makeInvitationDtoFromRow(
-  options: Readonly<{ invitation: InvitationRow | undefined; now: string }>,
+  options: Readonly<{
+    invitation: InvitationRow | undefined;
+    now: string;
+    avatars: ReadonlyMap<string, AvatarRef>;
+  }>,
 ): AdminMemberDto["invitation"] {
   const { invitation, now } = options;
   if (invitation === undefined) {
@@ -51,6 +61,7 @@ function _makeInvitationDtoFromRow(
     invitationId: invitation.id,
     invitedBy: {
       memberId: invitation.invited_by_member_id,
+      avatar: options.avatars.get(invitation.invited_by_member_id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: invitation.inviterName ?? undefined,
         email: invitation.inviterEmail,
@@ -75,6 +86,7 @@ function _makeAdminMemberFromFacts(
   const { member, invitation } = options;
   return adminMemberDtoSchema.parse({
     memberId: member.id,
+    avatar: options.avatars.get(member.id) ?? null,
     displayName: getDisplayNameFromMember({
       storedDisplayName: member.display_name ?? undefined,
       email: member.email,
@@ -91,7 +103,11 @@ function _makeAdminMemberFromFacts(
       member.role === "admin" &&
       member.status === "active" &&
       options.activeAdminCount === 1,
-    invitation: _makeInvitationDtoFromRow({ invitation, now: options.now }),
+    invitation: _makeInvitationDtoFromRow({
+      invitation,
+      now: options.now,
+      avatars: options.avatars,
+    }),
     sessions: options.sessions.map((session) => {
       return {
         sessionId: session.id,
@@ -173,6 +189,7 @@ function _makeAdminDirectoryFromRows(
     members: options.members.map((member) => {
       return _makeAdminMemberFromFacts({
         member,
+        avatars: options.avatars,
         invitation: invitationsByMember.get(member.id),
         sessions: sessionsByMember.get(member.id) ?? [],
         activeAdminCount,
@@ -208,7 +225,14 @@ export async function readAdminMembers(
     }),
     now: options.now,
   });
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: members.map((member) => {
+      return member.id;
+    }),
+  });
   return _makeAdminDirectoryFromRows({
+    avatars,
     members: selectedMembers,
     sessions,
     invitations,

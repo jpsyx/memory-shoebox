@@ -1,3 +1,4 @@
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type {
   ReconcileMilestoneRequest,
   ReconcileMilestoneResponse,
@@ -14,6 +15,7 @@ import { readMilestoneDetail } from "../milestoneReadHelpers.ts";
 import { readReconciliationItems } from "./readReconciliationItems.ts";
 import { readRaisedMilestoneMismatches } from "./readRaisedMilestoneMismatches.ts";
 type ReconciliationOptions = {
+  b2: B2Client;
   transaction: DatabaseExecutor;
   viewer: Viewer;
   milestoneId: string;

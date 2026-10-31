@@ -18,6 +18,7 @@ export function makeUploadSessionDetail(
     sessionId: overrides.sessionId ?? "018f0000-0000-7000-8000-00000000c001",
     state: overrides.state ?? "draft",
     uploadedBy: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-000000000001",
       displayName: "Abuela",
     },

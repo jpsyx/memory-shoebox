@@ -49,6 +49,8 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       // bump's job, not this route's.
       me: await getMeDtoFromMemberId({
         database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
         memberId: viewer.memberId,
       }),
       settings: await readShellSettings(request.server.database),
@@ -89,6 +91,8 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     return {
       me: await getMeDtoFromMemberId({
         database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
         memberId: viewer.memberId,
       }),
       settings: await readShellSettings(request.server.database),

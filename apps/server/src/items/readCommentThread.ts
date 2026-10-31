@@ -69,6 +69,7 @@ export async function readCommentThread(options: {
       author: options.members.get(row.authorMemberId) ?? {
         memberId: row.authorMemberId,
         displayName: "",
+        avatar: null,
       },
       body: row.body,
       atSeconds: row.atSeconds,

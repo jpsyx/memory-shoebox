@@ -43,7 +43,7 @@ async function _expectSettingProvenanceAndStorage(
     {
       key: "shoebox.name",
       updatedAt: NOW,
-      updatedBy: { memberId, displayName: "Rosa" },
+      updatedBy: { avatar: null, memberId, displayName: "Rosa" },
     },
   ]);
   expect(response.payload).not.toContain("visibility.generation");

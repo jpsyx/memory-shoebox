@@ -95,6 +95,8 @@ export async function registerReadMilestoneRoutes(
     const viewer = requireViewer(request);
     const { milestoneId } = milestoneIdParamsSchema.parse(request.params);
     return readMilestoneDetail({
+      b2: request.server.b2,
+      now: request.server.clock().toISOString(),
       database: request.server.database,
       viewer,
       milestoneId,

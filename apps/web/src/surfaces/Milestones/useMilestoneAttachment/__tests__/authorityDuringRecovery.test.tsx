@@ -104,6 +104,7 @@ const item = makeItemSummaryFromOverrides() satisfies ItemSummary;
 const options: MilestoneAttachmentOptions = {
   detail,
   viewer: {
+    avatar: null,
     memberId: "member-one",
     displayName: "Mamá",
     role: "uploader",

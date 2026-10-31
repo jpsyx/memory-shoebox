@@ -24,6 +24,7 @@ export async function registerSetupRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request, reply) => {
       const outcome = await initializeShoebox({
+        b2: request.server.b2,
         database: request.server.database,
         body: createSetupRequestSchema.parse(request.body),
         userAgent: request.headers["user-agent"],

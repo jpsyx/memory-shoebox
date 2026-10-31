@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../../../test/helpers/createFakeB2Client/createFakeB2Client.ts";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../db/client.ts";
 import { migrateToLatest } from "../../db/migrate.ts";
@@ -179,6 +180,7 @@ async function _rearmsOtherSpansAndReportsFullVisible1Stage4(
 ): Promise<RearmsOtherSpansAndReportsFullVisible1State4> {
   const { itemId, milestoneId, viewer, database, otherId } = state;
   const result = await reconcileMilestone({
+    b2: createFakeB2Client(),
     transaction: database,
     viewer,
     milestoneId,
@@ -282,12 +284,14 @@ async function _usesConstantQueryCountsForOneVersus2Stage3(
     now: NOW,
   };
   const small = await reconcileMilestone({
+    b2: createFakeB2Client(),
     ...context,
     body: { mode: "move", moves: moves.slice(0, 1) },
   });
   const smallCount = counter.getQueryCount();
   counter.reset();
   const large = await reconcileMilestone({
+    b2: createFakeB2Client(),
     ...context,
     body: { mode: "move", moves: moves.slice(1) },
   });

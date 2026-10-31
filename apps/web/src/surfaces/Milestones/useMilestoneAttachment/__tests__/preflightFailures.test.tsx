@@ -14,6 +14,7 @@ import type { MilestoneAttachment } from "../useMilestoneAttachment.types";
 const detail: MilestoneDetail = makeMilestoneDetailFromOverrides();
 const item: ItemSummary = makeItemSummaryFromOverrides();
 const VIEWER: Viewer = {
+  avatar: null,
   memberId: "member-one",
   displayName: "Mamá",
   role: "uploader",

@@ -18,6 +18,7 @@ export async function registerSettingsRoutes(
       .strictObject({ preview: z.enum(["true", "false"]).optional() })
       .parse(request.query);
     return updateAdminSettings({
+      b2: request.server.b2,
       database: request.server.database,
       viewer,
       body: request.body as Parameters<typeof updateAdminSettings>[0]["body"],
@@ -35,6 +36,10 @@ export async function registerSettingsRoutes(
     if (!requireViewer(request).isAdmin) {
       throw ApiError.forbidden("settings_forbidden");
     }
-    return readAdminSettings(request.server.database);
+    return readAdminSettings({
+      database: request.server.database,
+      b2: request.server.b2,
+      now: request.server.clock().toISOString(),
+    });
   });
 }

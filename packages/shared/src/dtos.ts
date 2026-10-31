@@ -117,8 +117,20 @@ export type MediaReadPurpose =
 /** Everything needed to draw one print without a second request. */
 export type MediaRef = z.infer<typeof mediaRefSchema>;
 
+/** One immutable private avatar and its freshly signed validity interval. */
+export const avatarRefSchema = z.object({
+  avatarId: idSchema,
+  url: signedUrlSchema,
+  issuedAt: timestampSchema,
+  expiresAt: timestampSchema,
+});
+
+/** A member-selected image, independent of archive renditions. */
+export type AvatarRef = z.infer<typeof avatarRefSchema>;
+
 /** An account. No email unless the route is admin-scoped. */
 export const memberRefSchema = z.object({
+  avatar: avatarRefSchema.nullable(),
   memberId: idSchema,
   displayName: z.string(),
 });

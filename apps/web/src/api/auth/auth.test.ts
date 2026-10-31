@@ -64,10 +64,13 @@ describe("createSession", () => {
       {
         me: {
           member: {
+            avatar: null,
             memberId: "018f0000-0000-7000-8000-000000000000",
             displayName: "Abuela",
           },
           storedDisplayName: null,
+          profileComplete: false,
+          suggestedDisplayName: null,
           email: "abuela@example.com",
           role: "viewer",
           notify: {

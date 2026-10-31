@@ -102,7 +102,11 @@ async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
     database: request.server.database,
     itemId: comment.itemId,
     viewer,
-    members: await readMemberRefs(request.server.database),
+    members: await readMemberRefs({
+      database: request.server.database,
+      b2: request.server.b2,
+      now: request.server.clock().toISOString(),
+    }),
   });
   const updated = thread.find((entry) => {
     return entry.commentId === commentId;
@@ -258,7 +262,11 @@ async function _putCommentReaction(
         database: request.server.database,
         commentIds: [comment.commentId],
       }),
-      members: await readMemberRefs(request.server.database),
+      members: await readMemberRefs({
+        database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
+      }),
       viewerMemberId: viewer.memberId,
     }).get(comment.commentId) ?? makeEmptyReactionSummary()
   );

@@ -17,9 +17,18 @@ import {
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 const MEMBERS = new Map<string, MemberRef>([
-  ["member-rosa", { memberId: "member-rosa", displayName: "Abuela Rosa" }],
-  ["member-papa", { memberId: "member-papa", displayName: "Papá" }],
-  ["member-mama", { memberId: "member-mama", displayName: "Mamá" }],
+  [
+    "member-rosa",
+    { memberId: "member-rosa", avatar: null, displayName: "Abuela Rosa" },
+  ],
+  [
+    "member-papa",
+    { memberId: "member-papa", avatar: null, displayName: "Papá" },
+  ],
+  [
+    "member-mama",
+    { memberId: "member-mama", avatar: null, displayName: "Mamá" },
+  ],
 ]);
 
 describe("makeReactionSummariesFromRows", () => {

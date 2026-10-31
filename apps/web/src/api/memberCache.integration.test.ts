@@ -12,6 +12,7 @@ it("keeps full administrative member cache separate from stripped picker data", 
     nextCursor: null,
     members: [
       {
+        avatar: null,
         memberId: "018f0000-0000-7000-8000-000000000002",
         displayName: "Rosa",
         email: "private@example.com",
@@ -32,7 +33,11 @@ it("keeps full administrative member cache separate from stripped picker data", 
     shape: "directory" as const,
     nextCursor: null,
     members: [
-      { memberId: administrative.members[0]!.memberId, displayName: "Rosa" },
+      {
+        avatar: null,
+        memberId: administrative.members[0]!.memberId,
+        displayName: "Rosa",
+      },
     ],
   };
   client.setQueryData(adminMembersQueryOptions.queryKey, administrative);

@@ -119,6 +119,8 @@ export type B2Client = {
   getMediaLease: (request: MediaLeaseRequest) => Promise<SignedMediaLease>;
   listObjects: (options?: { prefix?: string }) => AsyncGenerator<B2Object>;
   presignGet: (options: {
+    /** Explicit signing clock, aligned to whole seconds by the signer. */
+    now?: Date;
     key: string;
     expiresInSeconds?: number;
     /**

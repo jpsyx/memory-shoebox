@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
@@ -57,8 +58,15 @@ describe("getMeDtoFromMemberId", () => {
       last_signed_in_at: NOW,
     });
 
-    expect(await getMeDtoFromMemberId({ database, memberId })).toEqual({
-      member: { memberId, displayName: "Member" },
+    expect(
+      await getMeDtoFromMemberId({
+        database,
+        memberId,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
+    ).toEqual({
+      member: { avatar: null, memberId, displayName: "Member" },
       storedDisplayName: null,
       profileComplete: false,
       suggestedDisplayName: null,
@@ -84,7 +92,12 @@ describe("getMeDtoFromMemberId", () => {
       role: "viewer",
       notify_on_removal: 1,
     });
-    const me = await getMeDtoFromMemberId({ database, memberId });
+    const me = await getMeDtoFromMemberId({
+      database,
+      memberId,
+      b2: createFakeB2Client(),
+      now: NOW,
+    });
     expect(me.notify.onRemoval).toBe(true);
   });
 });

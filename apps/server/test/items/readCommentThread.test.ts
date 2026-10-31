@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
@@ -45,7 +46,11 @@ describe("readCommentThread", () => {
         profileComplete: true,
         visibleRuleIds: [],
       },
-      members: await readMemberRefs(database),
+      members: await readMemberRefs({
+        database: database,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
     });
 
     expect(
@@ -76,7 +81,11 @@ describe("readCommentThread", () => {
         profileComplete: true,
         visibleRuleIds: [],
       },
-      members: await readMemberRefs(database),
+      members: await readMemberRefs({
+        database: database,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
     });
 
     // Decision 8 grants an admin "delete anything", never edit anything:
@@ -104,7 +113,11 @@ describe("readCommentThread", () => {
         profileComplete: true,
         visibleRuleIds: [],
       },
-      members: await readMemberRefs(database),
+      members: await readMemberRefs({
+        database: database,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
     });
 
     expect(forAuthor[0]?.canDelete).toBe(true);
@@ -148,7 +161,11 @@ describe("readCommentThread", () => {
         profileComplete: true,
         visibleRuleIds: [],
       },
-      members: await readMemberRefs(database),
+      members: await readMemberRefs({
+        database: database,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
     });
 
     expect(comment?.atSeconds).toBe(12.5);
@@ -175,7 +192,11 @@ describe("readCommentThread's query plan", () => {
       itemId: smallItemId,
       authorMemberId: smallMemberId,
     });
-    const smallMembers = await readMemberRefs(small.database);
+    const smallMembers = await readMemberRefs({
+      database: small.database,
+      b2: createFakeB2Client(),
+      now: NOW,
+    });
 
     small.reset();
     await readCommentThread({
@@ -209,7 +230,11 @@ describe("readCommentThread's query plan", () => {
         });
       }),
     );
-    const largeMembers = await readMemberRefs(large.database);
+    const largeMembers = await readMemberRefs({
+      database: large.database,
+      b2: createFakeB2Client(),
+      now: NOW,
+    });
 
     large.reset();
     await readCommentThread({

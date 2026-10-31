@@ -31,7 +31,13 @@ export async function getItemVideoReactions(
     .orderBy("id", "desc")
     .limit(50)
     .execute();
-  return makeVideoReactionsFromRows({ database, viewer, rows });
+  return makeVideoReactionsFromRows({
+    b2: request.server.b2,
+    now: request.server.clock().toISOString(),
+    database,
+    viewer,
+    rows,
+  });
 }
 
 /** `PUT /items/:itemId/video-reactions/:reactionId`: save or retry one event. */
@@ -61,7 +67,13 @@ export async function putItemVideoReaction(
           created_at: request.server.clock().toISOString(),
         },
       });
-      return makeVideoReactionsFromRows({ database, viewer, rows: [event] });
+      return makeVideoReactionsFromRows({
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
+        database,
+        viewer,
+        rows: [event],
+      });
     },
   });
   const event = rows[0];

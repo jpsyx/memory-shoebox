@@ -72,7 +72,8 @@ describe("the query plan", () => {
     // the band count that only the large page has a band for. Neither number
     // grows with the page: that is the property, not the number itself.
     expect(largeQueries).toBeLessThanOrEqual(smallQueries + 1);
-    expect(smallQueries).toBeLessThanOrEqual(14);
+    // One additional batched read hydrates current member avatars.
+    expect(smallQueries).toBeLessThanOrEqual(15);
 
     await smallApp.close();
     await largeApp.close();

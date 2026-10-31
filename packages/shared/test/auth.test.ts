@@ -94,7 +94,7 @@ describe("updateMeRequestSchema", () => {
 describe("meDtoSchema", () => {
   it("carries the caller's own address and the raw stored name", () => {
     const parsed = meDtoSchema.parse({
-      member: { memberId: MEMBER_ID, displayName: "Abuela Rosa" },
+      member: { avatar: null, memberId: MEMBER_ID, displayName: "Abuela Rosa" },
       storedDisplayName: null,
       profileComplete: false,
       suggestedDisplayName: "Abuela Rosa",

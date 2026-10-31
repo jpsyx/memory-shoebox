@@ -7,11 +7,11 @@ import { Talk } from "@/system/Talk/Talk";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-const VIEWER: MemberRef = { memberId: "m0", displayName: "Papá" };
+const VIEWER: MemberRef = { avatar: null, memberId: "m0", displayName: "Papá" };
 
 const COMMENT: CommentDto = {
   commentId: "c1",
-  author: { memberId: "m1", displayName: "Abuela Rosa" },
+  author: { avatar: null, memberId: "m1", displayName: "Abuela Rosa" },
   body: "He has his mother's chin.",
   atSeconds: null,
   parentCommentId: null,

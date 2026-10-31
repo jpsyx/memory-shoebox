@@ -75,6 +75,7 @@ const ITEM_DETAIL = {
   },
   isUnseen: false,
   uploadedBy: {
+    avatar: null,
     memberId: "0199a0d4-0000-7000-8000-000000000002",
     displayName: "Papá",
   },

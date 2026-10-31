@@ -37,7 +37,11 @@ const CASES: ObservationCase[] = [
     body: {
       viewers: [
         {
-          member: { memberId: OBSERVATION_MEMBER_ID, displayName: "Tomás" },
+          member: {
+            avatar: null,
+            memberId: OBSERVATION_MEMBER_ID,
+            displayName: "Tomás",
+          },
           hasOpened: true,
           firstSeenAt: null,
           firstOpenedAt: "2026-09-14T04:41:00.000Z",

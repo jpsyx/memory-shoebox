@@ -1,3 +1,5 @@
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Kysely } from "kysely";
 import type { MeDto } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
@@ -20,6 +22,8 @@ import { getMemberRoleFromStoredValue } from "./getMemberRoleFromStoredValue.ts"
 export async function getMeDtoFromMemberId(options: {
   database: Kysely<Database>;
   memberId: string;
+  b2: B2Client;
+  now: string;
 }): Promise<MeDto> {
   const row = await options.database
     .selectFrom("members")
@@ -40,9 +44,11 @@ export async function getMeDtoFromMemberId(options: {
     .where("id", "=", options.memberId)
     .executeTakeFirstOrThrow();
 
+  const avatars = await readMemberAvatars({ ...options, memberIds: [row.id] });
   return {
     member: {
       memberId: row.id,
+      avatar: avatars.get(row.id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: row.display_name ?? undefined,
         email: row.email,

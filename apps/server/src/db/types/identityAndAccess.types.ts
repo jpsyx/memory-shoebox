@@ -1,5 +1,6 @@
 /** One invited address, for the life of the Shoebox. Never hard-deleted. */
 export type MembersTable = {
+  avatar_id: string | null;
   id: string;
   email: string;
   display_name: string | null;
@@ -123,5 +124,20 @@ export type MemberNameClaimsTable = {
   name_key: string;
   member_id: string;
   display_name: string;
+  created_at: string;
+};
+
+/** One immutable avatar upload and its publication lifecycle. */
+export type MemberAvatarUploadsTable = {
+  id: string;
+  member_id: string;
+  storage_key: string;
+  expected_avatar_id: string | null;
+  crop_json: string;
+  content_type: string;
+  declared_byte_size: number;
+  output_byte_size: number | null;
+  state: "reserved" | "uploading" | "published" | "retired";
+  expires_at: string;
   created_at: string;
 };

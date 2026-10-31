@@ -1,3 +1,4 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { claimMemberName } from "../members/claimMemberName.ts";
 import { syncMemberPerson } from "../members/syncMemberPerson.ts";
 import { accountNameSchema } from "@memory-shoebox/shared";
@@ -15,6 +16,7 @@ import { enqueueInvitationEmail } from "../mail/enqueueInvitationEmail.ts";
 import { readAdminMembers } from "./readAdminMembers.ts";
 
 type InviteMemberOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   body: InviteMemberRequest;
@@ -38,6 +40,7 @@ type RecordInvitationOptions = {
   expiresAt: string;
 };
 type ReadInvitedMemberOptions = {
+  b2: B2Client;
   transaction: DatabaseExecutor;
   memberId: string;
   sessionId: string;
@@ -219,6 +222,7 @@ async function _readInvitedMember(
 ): Promise<AdminMemberDto> {
   const { transaction, memberId } = options;
   const directory = await readAdminMembers({
+    b2: options.b2,
     database: transaction,
     currentSessionId: options.sessionId,
     statuses: ["invited"],
@@ -262,6 +266,7 @@ export async function inviteMember(
         expiresAt,
       });
       const member = await _readInvitedMember({
+        b2: options.b2,
         transaction,
         memberId,
         sessionId: options.viewer.sessionId,

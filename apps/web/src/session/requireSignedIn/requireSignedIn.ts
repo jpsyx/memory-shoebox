@@ -1,5 +1,9 @@
+import type {
+  MemberRef,
+  MeResponse,
+  ShellSettings,
+} from "@memory-shoebox/shared";
 import { redirect } from "@tanstack/react-router";
-import type { MeResponse, ShellSettings } from "@memory-shoebox/shared";
 import type { MemberRole } from "@/system/memberRole";
 
 /**
@@ -16,12 +20,12 @@ import type { MemberRole } from "@/system/memberRole";
  * and a mutation anywhere along that path would be a bug rather than a
  * legitimate use.
  */
-export type Viewer = Readonly<{
-  memberId: string;
-  displayName: string;
-  role: MemberRole;
-  isAdmin: boolean;
-}>;
+export type Viewer = Readonly<
+  MemberRef & {
+    role: MemberRole;
+    isAdmin: boolean;
+  }
+>;
 
 /**
  * What a signed-in route context holds: who is looking, and the three
@@ -47,6 +51,7 @@ export function makeViewerFromMeResponse(me: MeResponse): Viewer {
   return {
     memberId: me.me.member.memberId,
     displayName: me.me.member.displayName,
+    avatar: me.me.member.avatar,
     role: me.me.role,
     isAdmin: me.me.role === "admin",
   };

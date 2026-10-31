@@ -13,8 +13,8 @@ import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
 const MEMBERS: readonly PeopleFieldMember[] = [
-  { memberId: "m1", displayName: "Papá", role: "admin" },
-  { memberId: "m2", displayName: "Abuela Rosa", role: "viewer" },
+  { avatar: null, memberId: "m1", displayName: "Papá", role: "admin" },
+  { avatar: null, memberId: "m2", displayName: "Abuela Rosa", role: "viewer" },
 ];
 
 const GROUPS: readonly PeopleFieldGroup[] = [
@@ -114,7 +114,7 @@ describe("PeopleField", () => {
         mode="members-and-groups"
         value={[]}
         onChange={() => {}}
-        members={[{ memberId: "m3", displayName: "Tía Marisol" }]}
+        members={[{ avatar: null, memberId: "m3", displayName: "Tía Marisol" }]}
         groups={[{ groupId: "g2", name: "Cousins" }]}
         defaultDropdownOpened
       />,

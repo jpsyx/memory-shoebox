@@ -5,6 +5,17 @@
     "types": ["AccountName"]
   },
   {
+    "module": "./avatars.ts",
+    "values": [
+      "avatarCropSchema",
+      "reserveAvatarRequestSchema",
+      "reserveAvatarResponseSchema",
+      "removeAvatarRequestSchema",
+      "readMemberAvatarResponseSchema"
+    ],
+    "types": ["AvatarCrop", "ReserveAvatarRequest", "ReserveAvatarResponse"]
+  },
+  {
     "module": "./auth.ts",
     "values": [
       "createSessionRequestSchema",
@@ -81,7 +92,8 @@
       "tagRefSchema",
       "timestampSchema",
       "visibilityRuleIdSchema",
-      "visibilitySummarySchema"
+      "visibilitySummarySchema",
+      "avatarRefSchema"
     ],
     "types": [
       "BurstSummary",
@@ -96,7 +108,8 @@
       "ReactionKind",
       "ReactionSummary",
       "TagRef",
-      "VisibilitySummary"
+      "VisibilitySummary",
+      "AvatarRef"
     ]
   },
   {

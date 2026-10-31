@@ -3,6 +3,7 @@ import { meQueryOptions, revokeMySession, updateMe } from "@/api/me/me";
 import { createMeResponse } from "@/testing/createMeResponse";
 
 const ME_BODY = createMeResponse({
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000000",
   displayName: "Abuela",
   storedDisplayName: null,

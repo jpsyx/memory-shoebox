@@ -1007,8 +1007,10 @@ adds a capability without rewriting the shipped schema:
 | `0016_media_navigation_indexes`  | Ordered bounded media-neighbor capture and burst probes                                                       |
 | `0017_media_processing`          | Durable processing jobs, output ownership and discovery progress; expanded rendition purposes                 |
 | `0018_timeline_uploader_capture` | Uploader and capture-date index for viewer-owned timeline windows                                             |
+| `0019_member_name_claims`        | Permanent account-name claims, profile completion and invitation suggestions                                  |
+| `0020_member_avatars`            | Durable avatar uploads and nullable current-member pointer                                                    |
 
-Thirty-nine tables in total. Column-level detail belongs in
+Forty-one tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 
@@ -1336,3 +1338,21 @@ progress. The response is always `Cache-Control: no-store`. Existing account and
 setup endpoints keep their contracts, including first-admin creation and
 completion recovery. The web root uses this response as current navigation
 authority, independently of previously cached identity.
+
+## Member avatars
+
+Migration `0020_member_avatars` adds durable immutable avatar upload ownership,
+indexed by owner and state/deadline, and the nullable current member pointer.
+`avatars/` provides own-avatar reservation, fenced publication/removal, and batched
+private reads. `routes/memberAvatars.ts` registers the JSON reservation, removal,
+and authenticated member renewal routes. Binary image processing/upload is a
+separate slice. No storage transfer runs in an avatar SQL transaction.
+
+`readMemberRefs` and `getMeDtoFromMemberId` require database, B2 and the explicit
+request clock so member references carry the current nullable avatar everywhere.
+Other directory/provenance readers batch through `readMemberAvatars`. Avatar
+`presignGet` calls use a one-hour TTL and an explicit signing date; the low-level
+signer aligns that date to seconds, making reference issuance/expiry match the
+signature exactly. Existing download callers retain their default seven-day TTL.
+See [member profiles](member-profiles.md#private-avatars) for conflict, rollback,
+retained-account, and storage key contracts.

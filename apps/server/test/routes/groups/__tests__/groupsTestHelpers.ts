@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../../../helpers/createFakeB2Client/createFakeB2Client.ts";
 import type { AdminGroupDto } from "@memory-shoebox/shared";
 import type { FastifyInstance, LightMyRequestResponse } from "fastify";
 import { expect } from "vitest";
@@ -318,7 +319,12 @@ export async function prepareCountedGroupFixture(): Promise<CountedGroupFixtureR
   );
   const counted = makeQueryCountingDatabaseFromDatabase(database);
   counted.reset();
-  const initial = await readGroups({ database: counted.database, viewer });
+  const initial = await readGroups({
+    b2: createFakeB2Client(),
+    now: NOW,
+    database: counted.database,
+    viewer,
+  });
   expect(initial).toMatchObject({
     shape: "admin",
     groups: [{ usedByOnlyRules: 2, usedByExceptRules: 1 }],

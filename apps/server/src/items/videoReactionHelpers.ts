@@ -1,3 +1,4 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { VideoReaction } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { VideoReactionsTable } from "../db/types/moderation.types.ts";
@@ -27,15 +28,22 @@ export async function makeVideoReactionsFromRows(
     database: DatabaseExecutor;
     viewer: Viewer;
     rows: readonly VideoReactionsTable[];
+    b2: B2Client;
+    now: string;
   }>,
 ): Promise<VideoReaction[]> {
-  const members = await readMemberRefs(options.database);
+  const members = await readMemberRefs({
+    database: options.database,
+    b2: options.b2,
+    now: options.now,
+  });
   return options.rows.map((row) => {
     return {
       reactionId: row.id,
       author: members.get(row.member_id) ?? {
         memberId: row.member_id,
         displayName: "",
+        avatar: null,
       },
       emoji: row.emoji,
       atSeconds: row.at_seconds,

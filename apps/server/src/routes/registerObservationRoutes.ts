@@ -19,6 +19,7 @@ export async function registerObservationRoutes(
     const viewer = requireViewer(request);
     const query = presenceRequestSchema.parse(request.query);
     return readPresence({
+      b2: request.server.b2,
       database: request.server.database,
       viewer,
       memberId: query.memberId,
@@ -29,6 +30,8 @@ export async function registerObservationRoutes(
     const viewer = requireViewer(request);
     const params = itemViewersRequestSchema.parse(request.params);
     return readItemViewers({
+      b2: request.server.b2,
+      now: request.server.clock().toISOString(),
       database: request.server.database,
       viewer,
       itemId: params.itemId,

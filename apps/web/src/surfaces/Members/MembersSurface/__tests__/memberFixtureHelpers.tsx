@@ -24,6 +24,7 @@ export function makeMemberFromOverrides(
   overrides: Readonly<Partial<AdminMemberDto>> = {},
 ): AdminMemberDto {
   return {
+    avatar: null,
     memberId: ADMIN_ACCOUNT.me.member.memberId,
     displayName: "Papá",
     email: "papa@example.com",
@@ -42,6 +43,7 @@ export function makeMemberFromOverrides(
 }
 /** An invited admin who must never count as an active admin. */
 export const INVITED: AdminMemberDto = makeMemberFromOverrides({
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000002",
   displayName: "Tomás",
   email: "tomas@example.com",
@@ -107,6 +109,7 @@ export function renderMembers({
 
 /** Another active admin for authority-changing confirmations. */
 export const SECOND_ADMIN: AdminMemberDto = makeMemberFromOverrides({
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000004",
   displayName: "Mamá",
   email: "mama@example.com",

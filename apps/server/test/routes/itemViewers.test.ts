@@ -330,7 +330,7 @@ describe("item viewers", () => {
       url: `/api/items/${itemId}/viewers`,
     });
     expect(firstResponse.statusCode).toBe(200);
-    expect(counted.getQueryCount()).toBe(4);
+    expect(counted.getQueryCount()).toBe(5);
     await Promise.all(
       Array.from({ length: 25 }, () => {
         return insertMember(testApp.database);
@@ -342,6 +342,6 @@ describe("item viewers", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().viewers).toHaveLength(26);
-    expect(counted.getQueryCount()).toBe(4);
+    expect(counted.getQueryCount()).toBe(5);
   });
 });

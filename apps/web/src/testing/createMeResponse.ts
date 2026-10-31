@@ -14,6 +14,7 @@ import type { MeResponse } from "@memory-shoebox/shared";
 export function createMeResponse(
   overrides: Readonly<{
     memberId?: string;
+    avatar?: MeResponse["me"]["member"]["avatar"];
     displayName?: string;
     storedDisplayName?: string | null;
     email?: string;
@@ -22,6 +23,7 @@ export function createMeResponse(
   }> = {},
 ): MeResponse {
   const {
+    avatar = null,
     memberId = "018f0000-0000-7000-8000-000000000000",
     displayName = "Papá",
     storedDisplayName = displayName,
@@ -32,7 +34,7 @@ export function createMeResponse(
 
   return {
     me: {
-      member: { memberId, displayName },
+      member: { avatar, memberId, displayName },
       storedDisplayName,
       profileComplete: storedDisplayName !== null,
       suggestedDisplayName: null,

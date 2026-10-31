@@ -28,9 +28,8 @@ describe("every relationship", () => {
     }
   });
 
-  it("is absent from the five tables that reference nothing", async () => {
+  it("is absent from the tables that reference nothing", async () => {
     const standalone = [
-      "members",
       "groups",
       "visibility_rules",
       "email_suppressions",

@@ -1,3 +1,5 @@
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { MemberRef } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
@@ -12,9 +14,9 @@ import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts
  * @param database The Kysely handle.
  */
 export async function readMemberRefs(
-  database: DatabaseExecutor,
+  options: Readonly<{ database: DatabaseExecutor; b2: B2Client; now: string }>,
 ): Promise<Map<string, MemberRef>> {
-  const rows = await database
+  const rows = await options.database
     .selectFrom("members")
     .select([
       "members.id as id",
@@ -23,12 +25,19 @@ export async function readMemberRefs(
     ])
     .execute();
 
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: rows.map((row) => {
+      return row.id;
+    }),
+  });
   return new Map(
     rows.map((row) => {
       return [
         row.id,
         {
           memberId: row.id,
+          avatar: avatars.get(row.id) ?? null,
           displayName: getDisplayNameFromMember({
             storedDisplayName: row.displayName ?? undefined,
             email: row.email,

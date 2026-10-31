@@ -84,6 +84,7 @@ function _makeItemSummaryFromRow(options: {
     uploadedBy: parts.members.get(row.uploadedBy) ?? {
       memberId: row.uploadedBy,
       displayName: "",
+      avatar: null,
     },
     visibility: parts.visibilities.get(row.visibilityRuleId) ?? {
       visibilityRuleId: row.visibilityRuleId,

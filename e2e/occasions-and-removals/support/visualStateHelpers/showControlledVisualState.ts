@@ -80,6 +80,7 @@ function _makeVisualActorAndItem({
       },
     },
     uploadedBy: {
+      avatar: null,
       memberId:
         state === "uploader"
           ? member.memberId

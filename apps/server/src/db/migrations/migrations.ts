@@ -1,3 +1,4 @@
+import * as migration0020MemberAvatars from "./0020_member_avatars.ts";
 import * as migration0019MemberNameClaims from "./0019_member_name_claims.ts";
 import * as migration0018TimelineUploaderCapture from "./0018_timeline_uploader_capture.ts";
 import * as migration0017MediaProcessing from "./0017_media_processing.ts";
@@ -50,5 +51,6 @@ export const migrations: Record<string, Migration> = {
   "0017_media_processing": migration0017MediaProcessing,
   "0018_timeline_uploader_capture": migration0018TimelineUploaderCapture,
   "0019_member_name_claims": migration0019MemberNameClaims,
+  "0020_member_avatars": migration0020MemberAvatars,
 };
 import * as migration0015VisualDuplicates from "./0015_visual_duplicates.ts";

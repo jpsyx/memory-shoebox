@@ -42,12 +42,14 @@ export const TAG_HOSPITAL_ID = "018f0000-0000-7000-8000-00000000e201";
  * The member who put the item up. Not the viewer `createMeResponse` signs in.
  */
 export const UPLOADER: MemberRef = {
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-00000000c001",
   displayName: "Mamá",
 };
 
 /** The viewer `createMeResponse` signs in by default. */
 export const SIGNED_IN: MemberRef = {
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000000",
   displayName: "Papá",
 };
@@ -262,6 +264,7 @@ export function makeComment(
   return {
     commentId: "018f0000-0000-7000-8000-00000000d101",
     author: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-00000000c002",
       displayName: "Abuela Rosa",
     },

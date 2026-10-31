@@ -15,7 +15,13 @@ export async function postBulkEditItems(
   await runInImmediateTransaction({
     database: request.server.database,
     callback: (transaction) => {
-      return bulkEditItems({ transaction, viewer, body, now });
+      return bulkEditItems({
+        b2: request.server.b2,
+        transaction,
+        viewer,
+        body,
+        now,
+      });
     },
   });
   return reply.code(204).send();

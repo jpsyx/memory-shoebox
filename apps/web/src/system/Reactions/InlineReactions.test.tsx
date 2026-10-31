@@ -14,7 +14,7 @@ import { Reactions } from "./Reactions";
 import { theme } from "@/theme/theme";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 
-const VIEWER = { memberId: "me", displayName: "Pablo" };
+const VIEWER = { avatar: null, memberId: "me", displayName: "Pablo" };
 const EMPTY: ReactionSummary = { kinds: [], myKind: null };
 function _render(onReact = vi.fn<(kind: ReactionKind | null) => void>()) {
   const result = render(

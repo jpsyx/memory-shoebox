@@ -181,3 +181,38 @@ and its matching application release. The restore procedure preserves the failed
 catalog and both sidecars, then restores through the verified backup tool. A failed
 stage or migration can be retried after fixing the cause; a changed identity
 snapshot requires a new audit. Backups are retained even when later staging fails.
+
+## Private avatars
+
+Every active member can reserve and remove their own chosen avatar, including a
+viewer whose account name is still incomplete. This permission is independent of
+archive upload and comment participation. `POST /api/me/avatar-uploads` accepts an
+expected current avatar ID (nullable), JPEG/PNG/WebP content type, a positive byte
+size up to 10 MiB, and orientation-relative crop center coordinates in [0, 1]
+with zoom in [1, 8]. It returns an immutable avatar ID and a ten-minute deadline.
+The binary upload and processing handler is a separate implementation slice.
+
+Migration 0020 adds `member_avatar_uploads` and the nullable `members.avatar_id`
+pointer. Reservation keys are `avatars/<memberId>/<avatarId>.webp`; B2 adds its
+configured environment prefix. The reservation stores the expected pointer as a
+snapshot, without a foreign key to older images. A processed `uploading` row can
+publish only while its reservation is live and its expected pointer still matches.
+Immediate transactions publish or remove the image and queue superseded keys in
+`pending_object_deletions` together. Cleanup enqueue failure rolls the entire
+mutation back. Stale versions return `409 avatar_changed`, and another owner's
+upload ID is indistinguishable from a missing ID (404). Replaying a publication
+already current succeeds without another storage write.
+
+`DELETE /api/me/avatar` requires the expected current ID and returns the canonical
+account response. `GET /api/members/:memberId/avatar` requires a session and returns
+`{ avatar: null }` for unknown members or members without an image. Removed account
+identities retain their historical image. Account access removal never queues that
+image for deletion.
+
+Every member reference, including the account response, carries required nullable
+`avatar` metadata: immutable avatar ID, private signed URL, issuance, and expiry.
+Central readers batch current ownership metadata and use a one-hour `presignGet`
+signature at the explicit whole-second signing clock. The reported interval is the
+one the signer uses. SQL never stores signed URLs. Directory, group, observation,
+milestone creator, and settings provenance responses use the same batched reader.
+Avatars have no archive item, rendition purpose, photo tag, upload count, or email.

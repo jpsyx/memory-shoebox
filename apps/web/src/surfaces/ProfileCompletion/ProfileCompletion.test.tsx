@@ -140,6 +140,7 @@ it("does not publish a held completion into a different account", async () => {
   await userEvent.type(screen.getByLabelText("Your name"), "John");
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   const other = createMeResponse({
+    avatar: null,
     memberId: "018f0000-0000-7000-8000-000000000001",
     displayName: "Another",
   });

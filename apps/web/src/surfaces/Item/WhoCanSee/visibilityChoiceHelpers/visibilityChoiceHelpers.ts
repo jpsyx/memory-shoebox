@@ -79,7 +79,11 @@ export function makePickerOptionsFromSources(
       return subject.kind === "member";
     })
     .map((subject) => {
-      return { memberId: subject.id, displayName: subject.displayName };
+      return {
+        memberId: subject.id,
+        displayName: subject.displayName,
+        avatar: subject.id === viewer.memberId ? viewer.avatar : null,
+      };
     });
   const namedGroups = visibility.subjects
     .filter((subject) => {
@@ -90,11 +94,7 @@ export function makePickerOptionsFromSources(
     });
   return {
     members: _uniqueBy<PeopleFieldMember>({
-      items: [
-        ...(options.members?.members ?? []),
-        ...namedMembers,
-        { memberId: viewer.memberId, displayName: viewer.displayName },
-      ],
+      items: [...(options.members?.members ?? []), ...namedMembers, viewer],
       idOf: (member) => {
         return member.memberId;
       },

@@ -141,6 +141,7 @@ export function makeItemDetailFromParts(
     uploadedBy: parts.members.get(item.uploadedBy) ?? {
       memberId: item.uploadedBy,
       displayName: "",
+      avatar: null,
     },
     visibility: parts.visibilities.get(item.visibilityRuleId) ?? {
       visibilityRuleId: item.visibilityRuleId,

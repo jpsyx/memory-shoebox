@@ -394,6 +394,6 @@ describe("presence", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().presence).toHaveLength(26);
     expect(counted.getQueryCount()).toBe(smallCount);
-    expect(smallCount).toBe(4);
+    expect(smallCount).toBe(5);
   });
 });

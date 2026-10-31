@@ -60,7 +60,7 @@ function _item(overrides: Partial<ItemSummary> = {}): ItemSummary {
     capturedOn: "2026-09-14",
     media: _media(),
     isUnseen: false,
-    uploadedBy: { memberId: "m1", displayName: "Papá" },
+    uploadedBy: { avatar: null, memberId: "m1", displayName: "Papá" },
     visibility: {
       visibilityRuleId: "visibility-rule-everyone",
       mode: "everyone",

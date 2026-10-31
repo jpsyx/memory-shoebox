@@ -35,7 +35,7 @@ describe("GET /api/me", () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       me: {
-        member: { memberId, displayName: "Member" },
+        member: { avatar: null, memberId, displayName: "Member" },
         storedDisplayName: null,
         profileComplete: false,
         suggestedDisplayName: null,

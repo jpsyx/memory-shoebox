@@ -16,7 +16,12 @@ export async function bootstrapRoutes(app: FastifyInstance): Promise<void> {
       return { setup, account: null, progress: null };
     }
     const account = {
-      me: await getMeDtoFromMemberId({ database, memberId: viewer.memberId }),
+      me: await getMeDtoFromMemberId({
+        database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
+        memberId: viewer.memberId,
+      }),
       settings: await readShellSettings(database),
     };
     const progress =

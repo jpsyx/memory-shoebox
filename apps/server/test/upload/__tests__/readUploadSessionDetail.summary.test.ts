@@ -53,7 +53,11 @@ describe("readUploadSessionDetail: the batch itself", () => {
     expect(detail).toMatchObject({
       sessionId: context.sessionId,
       state: "draft",
-      uploadedBy: { memberId: context.memberId, displayName: "Papá" },
+      uploadedBy: {
+        avatar: null,
+        memberId: context.memberId,
+        displayName: "Papá",
+      },
       visibility: { visibilityRuleId: "visibility-rule-everyone" },
       clientTimezone: "Europe/Madrid",
       fileCount: 0,

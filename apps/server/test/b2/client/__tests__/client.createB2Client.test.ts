@@ -4,6 +4,18 @@ import { describe, expect, it } from "vitest";
 import { APP_CONFIG } from "../../../../../../app.config.ts";
 
 describe("createB2Client", () => {
+  it("honors the explicit second-aligned avatar signing clock and one-hour expiry", async () => {
+    const url = new URL(
+      await createClient().presignGet({
+        key: "avatars/member/avatar.webp",
+        now: new Date("2026-09-27T10:00:00.999Z"),
+        expiresInSeconds: 3600,
+      }),
+    );
+    expect(url.searchParams.get("X-Amz-Date")).toBe("20260927T100000Z");
+    expect(url.searchParams.get("X-Amz-Expires")).toBe("3600");
+    expect(url.pathname).toContain("/test/avatars/member/avatar.webp");
+  });
   it("signs a GET for one object", async () => {
     const url = await createClient().presignGet({ key: "media/one.jpg" });
 

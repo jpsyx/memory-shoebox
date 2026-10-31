@@ -325,3 +325,13 @@ subject schema discriminates on `kind`: all other kinds keep UUID-or-null IDs.
 The exact-match activity subject filter accepts UUIDs and the same bounded
 historical strings, because it does not carry a subject-kind parameter. Actor,
 entry and item/member path IDs retain the standard UUID validator.
+
+## Avatar contracts
+
+`dtos.ts` defines `AvatarRef` before `MemberRef`, avoiding a runtime schema cycle
+with `avatars.ts`. Every `MemberRef` now requires `avatar: AvatarRef | null`;
+`MeDto.member` uses the same shape. Avatar references use the shared UUID, signed
+HTTP(S) URL, and precise UTC timestamp validators, independently of archive
+rendition identities. `avatars.ts` exports the bounded `AvatarCrop` and reservation
+request/response schemas and inferred types, plus removal and renewal envelopes.
+See [member profiles](member-profiles.md#private-avatars) for lifecycle semantics.

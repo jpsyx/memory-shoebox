@@ -81,7 +81,10 @@ async function _readDrawnItemLookups(options: {
         database: options.pageOptions.database,
         ruleIds,
       }),
-      readMemberRefs(options.pageOptions.database),
+      readMemberRefs({
+        ...options.pageOptions,
+        now: options.pageOptions.now.toISOString(),
+      }),
       readInstanceSettings({
         database: options.pageOptions.database,
         keys: ["shoebox.timezone"],
@@ -132,6 +135,7 @@ function _makeItemSummaryFromEntry(options: {
     uploadedBy: options.lookups.members.get(item.uploadedBy) ?? {
       memberId: item.uploadedBy,
       displayName: "",
+      avatar: null,
     },
     visibility: options.lookups.visibilities.get(item.visibilityRuleId) ?? {
       visibilityRuleId: item.visibilityRuleId,

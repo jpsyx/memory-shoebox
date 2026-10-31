@@ -56,7 +56,7 @@ export const FILE = {
 export const DRAFT_DETAIL = {
   sessionId: SESSION_ID,
   state: "draft",
-  uploadedBy: { memberId: MEMBER_ID, displayName: "Papá" },
+  uploadedBy: { avatar: null, memberId: MEMBER_ID, displayName: "Papá" },
   visibility: {
     visibilityRuleId: "visibility-rule-everyone",
     mode: "everyone",

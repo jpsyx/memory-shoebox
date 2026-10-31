@@ -124,8 +124,29 @@ export function makeReadOperationsFromContext(
       });
     },
     getMediaLease: delivery.getLease,
-    presignGet: async ({ key, downloadFilename }) => {
+    presignGet: async ({
+      key,
+      downloadFilename,
+      now,
+      expiresInSeconds = 604800,
+    }) => {
       context.record({ operation: "presignGet", options: LOCAL });
+      if (now !== undefined) {
+        const signedUrl = new URL(
+          `https://b2.test/get/${encodeURIComponent(key)}`,
+        );
+        signedUrl.searchParams.set(
+          "issuedAt",
+          new Date(Math.floor(now.getTime() / 1000) * 1000).toISOString(),
+        );
+        signedUrl.searchParams.set(
+          "expiresInSeconds",
+          String(expiresInSeconds),
+        );
+        if (downloadFilename !== undefined)
+          signedUrl.searchParams.set("filename", downloadFilename);
+        return signedUrl.href;
+      }
       const url = `https://b2.test/get/${encodeURIComponent(key)}`;
       return downloadFilename === undefined
         ? url

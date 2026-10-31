@@ -31,6 +31,7 @@ const context: {
 } = vi.hoisted(() => {
   return {
     viewer: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-000000000000",
       displayName: "Papá",
       role: "admin",

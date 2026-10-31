@@ -37,6 +37,7 @@ export function makeItemSummaryFromOverrides(
     },
     isUnseen: false,
     uploadedBy: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-00000000c001",
       displayName: "Mamá",
     },
@@ -85,6 +86,7 @@ export function makeRemovalRequestFromOverrides(
     state: "open",
     itemId: item.itemId,
     requestedBy: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-00000000c002",
       displayName: "Papá",
     },
