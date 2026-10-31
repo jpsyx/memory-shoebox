@@ -1,13 +1,13 @@
 # Comment tagging and member identity: UI/UX shape
 
-**Status:** Complete proposed interaction brief for review. No product UI or
-prototype code has been implemented. **Date:** 2026-10-31.
+**Status:** Approved by Pablo on 2026-10-31, including adjustable avatar cropping.
+No product UI or prototype code has been implemented. **Date:** 2026-10-31.
 
 This is the detailed Impeccable `shape` companion to the
-[feature scope](2026-10-31-comment-tagging-design.md). It owns proposed layout,
+[feature scope](2026-10-31-comment-tagging-design.md). It owns approved layout,
 copy, interaction, responsive behavior, and recovery states. The scope owns
 identity, permissions, storage, and notification policy. Confirmed user decisions
-remain binding; details below are recommendations until reviewed.
+remain binding; the interaction decisions below are approved for later implementation.
 
 ## 1. Design direction and surface map
 
@@ -130,9 +130,9 @@ deletion or photo-archive deletion.
 
 ## 4. C: adjust your photo
 
-**Proposed default:** allow position and zoom adjustment. This improves the
-center-crop-only recommendation in the first scope draft. The crop question was
-offered during shaping; until explicitly confirmed this remains a recommendation.
+**Approved default:** allow position and zoom adjustment. This replaces the
+center-crop-only recommendation in the first scope draft and was confirmed with
+approval of this brief on 2026-10-31.
 
 Use one focused dialog because this is a temporary image-editing task. On phones,
 make it a full-height sheet with a reachable footer; on desktop, use a compact
@@ -521,8 +521,8 @@ running implementation. No new UI screenshot or interactive prototype is claimed
 
 ## 12. Decisions and handoff
 
-Confirmed requirements from the scope are unchanged. This shape makes the
-following additional proposals concrete:
+Confirmed requirements from the scope are unchanged. Approval of this shape
+also confirms these interaction decisions:
 
 - Position/zoom avatar crop with visible keyboard-operable alternatives to drag.
 - One compact profile-completion form, with a photo optional and independent.
@@ -531,6 +531,6 @@ following additional proposals concrete:
 - Same-tab comment/collection round-trip restoration, including unfinished replies/edits.
 - Explicit photo-tag wording and persistent `(not a member)` suffixes on every affected identity surface.
 
-Review these proposals together with the surface/state rules above. Impeccable
-shape ends with this brief and a confirmation/correction round; production UI,
-interactive prototypes, and implementation plans are separate subsequent work.
+Pablo approved this brief and its surface/state rules on 2026-10-31. This
+completes the Impeccable shape confirmation step. Production UI, interactive
+prototypes, and implementation plans are separate subsequent work.

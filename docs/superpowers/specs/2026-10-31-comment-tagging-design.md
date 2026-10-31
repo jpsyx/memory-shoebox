@@ -1,7 +1,7 @@
 # Comment tagging, account names, and avatars
 
-**Status:** Draft scope for review. Product decisions explicitly confirmed below;
-remaining behavior is recommended. No product implementation in this change.
+**Status:** Approved by Pablo on 2026-10-31 together with the UI/UX shape,
+including the recommended defaults. No product implementation in this change.
 
 **Date:** 2026-10-31. **Baseline:** `790de6af` on `main`.
 
@@ -416,10 +416,10 @@ During implementation update `docs/auth.md`, `docs/administration.md`,
 `docs/archive.md`, `docs/mail.md`, `docs/emails.md`, `docs/video-conversations.md`,
 `docs/theater.md`, and the relevant shared/storage documentation. Add focused
 profile/comment-tagging docs, and revise the old member/non-member design rule
-in `DESIGN.md`. This draft does not rewrite shipped documentation to describe
+in `DESIGN.md`. This scope does not rewrite shipped documentation to describe
 unimplemented behavior.
 
-## 10. Acceptance and remaining review
+## 10. Acceptance and approval
 
 Use red/green TDD for behavior. Required acceptance scenarios:
 
@@ -440,8 +440,9 @@ Fix the batch of findings and confirm once, following Impeccable's bounded QA.
 The mirrored textarea technique is a specific feasibility risk: test it early
 before committing all composers to it.
 
-All user questions asked during scoping are settled. Remaining recommendations
-to review in this draft are: historical-name reservation, explicit collision
-mapping at rollout, supported avatar formats/adjustable crop, one comment-tag email
-per recipient per comment lifetime, and including videos in the member archive.
-These are proposed defaults, not additional user-confirmed requirements.
+All user questions asked during scoping are settled. Pablo approved this scope
+and its UI/UX companion on 2026-10-31, including historical-name reservation,
+explicit collision mapping at rollout, supported avatar formats and adjustable
+cropping, one comment-tag email per recipient per comment lifetime, and including
+videos in the member archive. Implementation planning and product code remain
+subsequent work; approval does not freeze the proposed API boundaries above.
