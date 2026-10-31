@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   insertItem,
   insertPerson,
+  insertMember,
   NOW,
 } from "../../../helpers/seedHelpers/seedHelpers.ts";
 
@@ -204,4 +205,49 @@ describe("ingestUploadFile", () => {
     ).toEqual([]);
     await database.destroy();
   });
+});
+
+it("keeps an explicit typed same-name person separate from a selected member and reuses it across the batch", async () => {
+  const { database, seedFile, ingest, planEdit, readEdit } =
+    await createUploadTestContext();
+  const memberId = await insertMember(database, { display_name: "Jorge" });
+  const memberPerson = await insertPerson(database, {
+    displayName: "Jorge",
+    member_id: memberId,
+  });
+  const first = await seedFile({ position: 1 });
+  const second = await seedFile({ position: 2 });
+  await planEdit({
+    files: [first],
+    edit: { kind: "person", person_id: memberPerson, label_snapshot: null },
+  });
+  const typed = await planEdit({
+    files: [first, second],
+    edit: { kind: "person", label_snapshot: "Jorge" },
+  });
+  await ingest({ file: first });
+  await ingest({ file: second });
+  const created = await database
+    .selectFrom("people")
+    .selectAll()
+    .where("member_id", "is", null)
+    .execute();
+  expect(created).toHaveLength(1);
+  expect(created[0]?.display_name).toBe("Jorge");
+  expect((await readEdit(typed)).person_id).toBe(created[0]?.id);
+  const links = await database
+    .selectFrom("item_people")
+    .select("person_id")
+    .execute();
+  expect(
+    links.filter((link) => {
+      return link.person_id === memberPerson;
+    }),
+  ).toHaveLength(1);
+  expect(
+    links.filter((link) => {
+      return link.person_id === created[0]?.id;
+    }),
+  ).toHaveLength(2);
+  await database.destroy();
 });

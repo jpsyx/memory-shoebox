@@ -40,7 +40,7 @@ describe("surface 9", () => {
         getBodiesFromRecordedRequests({ method: "PATCH", path: "/api/me" }),
       ).toEqual([{ displayName: "Abuela" }]);
     });
-    expect(await screen.findByText("Saved.")).toBeVisible();
+    expect(await screen.findByText("Name saved.")).toBeVisible();
   });
 
   it("saves a switch with one PATCH carrying all four booleans", async () => {
@@ -142,7 +142,7 @@ describe("surface 9", () => {
     // a settled name save can produce, and the switches are live again,
     // which only a settled switch save can produce. Asserting before both
     // have landed would pass on the losing answer on its way past.
-    expect(await screen.findByText("Saved.")).toBeVisible();
+    expect(await screen.findByText("Name saved.")).toBeVisible();
     await waitFor(() => {
       expect(
         screen.getByLabelText("Somebody puts photographs up"),

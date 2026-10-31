@@ -1,3 +1,4 @@
+import { profileNameFailure } from "@/surfaces/ProfileCompletion/profileNameCopy";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
 /**
@@ -16,22 +17,19 @@ function _minutes(retryAfterSeconds: number): string {
 /**
  * Turns a refusal on My account into the sentence somebody reads.
  *
- * Everything that is not one of the three named cases collapses into one
- * generic sentence, deliberately: this sheet has exactly one thing anybody
- * can retry (press the switch or the button again), so a name-saving field
- * error, an unrecognised code and a dropped call all read the same to the
- * member, "that did not save, try again", rather than the interface inventing
- * a distinction it cannot back up with a different action to take.
+ * Name conflicts and invalid names use the same field guidance as profile
+ * completion. Device and rate-limit failures retain their specific remedies;
+ * other failures use the retry sentence.
  */
 export function accountFailure(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    if (error.code === "name_taken")
+      return "That name is already taken. Try adding your last-name initial, like John M.";
     if (
       error.code === "invalid_request" &&
       error.details?.fieldErrors?.displayName !== undefined
     ) {
-      // `conventions.md` § String lengths: 80, "enough for Abuela Rosa, short
-      // enough that a comment chip cannot be used as a billboard".
-      return "That is longer than the space we have. Eighty characters at most.";
+      return profileNameFailure(error);
     }
     if (error.code === "session_not_found") {
       return "That device had already gone.";

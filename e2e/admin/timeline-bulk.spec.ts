@@ -53,7 +53,7 @@ async function _tickPhotos(page: Page): Promise<void> {
 
     await _tickPhotos(page);
     await page
-      .getByRole("button", { name: "Tag somebody", exact: true })
+      .getByRole("button", { name: "Photo-tag someone", exact: true })
       .click();
     await page
       .getByRole("combobox", { name: "Who is in them", exact: true })

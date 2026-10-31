@@ -1,3 +1,4 @@
+import { getAuthorityFromAccount } from "@/api/me/privateQueryHelpers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type {
@@ -83,7 +84,20 @@ export function useSaveMe(): AccountSave<UpdateMeRequest> & {
   const mutation = useMutation({
     scope: ACCOUNT_MUTATION_SCOPE,
     mutationFn: updateMe,
-    onSuccess: (updated) => {
+    onMutate: () => {
+      return {
+        authority: getAuthorityFromAccount(
+          queryClient.getQueryData(meQueryOptions.queryKey) ?? undefined,
+        ),
+      };
+    },
+    onSuccess: (updated, _body, context) => {
+      const current = queryClient.getQueryData(meQueryOptions.queryKey);
+      if (
+        current === null ||
+        (current && getAuthorityFromAccount(current) !== context?.authority)
+      )
+        return;
       queryClient.setQueryData(meQueryOptions.queryKey, updated);
     },
   });

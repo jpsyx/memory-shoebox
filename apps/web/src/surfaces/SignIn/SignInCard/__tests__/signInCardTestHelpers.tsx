@@ -40,6 +40,7 @@ export const ME = createMeResponse({
 /** The `201` from `POST /api/auth/session`, as `auth.test.ts` spells it. */
 export const CREATED_SESSION = {
   ...ME,
+  me: { ...ME.me, storedDisplayName: "Abuela", profileComplete: true },
   session: {
     sessionId: "018f0000-0000-7000-8000-000000000001",
     deviceLabel: "iPhone, Safari",

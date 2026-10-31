@@ -1,10 +1,13 @@
-import { Pill } from "@mantine/core";
+import type { PersonChoice, PeopleFieldPerson } from "./PeopleField";
+import { PersonPill } from "./PersonPill";
 import type { ReactNode } from "react";
-import classes from "./PeopleField.module.css";
 
 type Props = {
   value: readonly string[];
   disabled: boolean;
+  selectedPersonIds?: ReadonlyArray<string | undefined>;
+  selectedPeople?: readonly PersonChoice[];
+  people?: readonly PeopleFieldPerson[];
   onRemovePerson?: (index: number) => void;
   onChange: (names: readonly string[]) => void;
 };
@@ -12,23 +15,22 @@ type Props = {
 /** Removing a pill only untags the person, never deletes their identity. */
 export function PersonPills({
   value,
+  selectedPersonIds,
+  selectedPeople,
+  people,
   disabled,
   onChange,
   onRemovePerson,
 }: Readonly<Props>): ReactNode {
   return value.map((name, index) => {
+    const person = selectedPeople?.[index] ??
+      people?.find((candidate) => {
+        return candidate.personId === selectedPersonIds?.[index];
+      }) ?? { displayName: name, isMember: false };
     return (
-      <Pill
+      <PersonPill
         key={`${name}-${index}`}
-        withRemoveButton
-        className={classes.pill}
-        classNames={{ label: classes.pillLabel }}
-        removeButtonProps={{
-          "aria-label": `Untag ${name}`,
-          "aria-hidden": false,
-          tabIndex: 0,
-          disabled,
-        }}
+        person={person}
         disabled={disabled}
         onRemove={() => {
           if (onRemovePerson) {
@@ -41,9 +43,7 @@ export function PersonPills({
             }),
           );
         }}
-      >
-        {name}
-      </Pill>
+      />
     );
   });
 }

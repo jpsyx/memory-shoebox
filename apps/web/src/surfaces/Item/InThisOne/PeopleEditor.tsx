@@ -19,7 +19,7 @@ export function PeopleEditor({ detail, onDone }: Readonly<Props>): ReactNode {
       <PeopleField
         {...editor.inputProps}
         label="Who is in it"
-        description="Start typing. Click a name or press Enter to tag them."
+        description="Choose a member or add someone who isn't a member."
         placeholder="Mateo, Abuela Rosa"
         mode="anyone"
         autoFocus

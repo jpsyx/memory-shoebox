@@ -27,9 +27,10 @@ function _makePerson(
   personId: string,
   displayName: string,
   itemCount: number,
+  isMember = false,
 ): DirectoryPerson {
   return {
-    person: { personId, displayName },
+    person: { personId, displayName, isMember },
     itemCount,
     firstCapturedOn: "2026-09-01",
     lastCapturedOn: "2026-09-02",
@@ -46,7 +47,9 @@ async function _openPeople(people: readonly DirectoryPerson[]): Promise<void> {
   });
   renderTimeline();
   await tickBothTimelinePhotos();
-  await userEvent.click(screen.getByRole("button", { name: "Tag somebody" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Photo-tag someone" }),
+  );
   await waitFor(() => {
     expect(screen.queryByText("Loading people…")).not.toBeInTheDocument();
   });
@@ -88,7 +91,7 @@ describe("timeline bulk labels and occasions", () => {
     );
     await userEvent.click(
       screen.getByRole("option", {
-        name: `Alex, 8 photographs (${SECOND_PERSON_ID})`,
+        name: "Alex (not a member), 8 photographs",
       }),
     );
     await userEvent.click(screen.getByRole("button", { name: "Tag all 2" }));
@@ -137,7 +140,7 @@ describe("timeline bulk labels and occasions", () => {
       submit: "Tag all 2",
     },
     {
-      action: "Tag somebody",
+      action: "Photo-tag someone",
       path: "/api/people",
       input: "Who is in them",
       submit: "Tag all 2",
@@ -187,5 +190,28 @@ describe("timeline bulk labels and occasions", () => {
       screen.getByRole("button", { name: "Retry milestones" }),
     ).toBeEnabled();
     expect(recordedRequests()).not.toContain(BULK_PATH);
+  });
+});
+
+it("bulk-tags a selected member and an explicit same-name ad-hoc identity separately", async () => {
+  await _openPeople([_makePerson(FIRST_PERSON_ID, "Jorge", 1, true)]);
+  const input = screen.getByRole("combobox", { name: "Who is in them" });
+  await userEvent.type(input, "Jorge");
+  await userEvent.click(await screen.findByRole("option", { name: "Jorge" }));
+  await userEvent.type(input, "Jorge");
+  await userEvent.click(
+    await screen.findByRole("option", { name: "Add “Jorge” (not a member)" }),
+  );
+  expect(screen.getByRole("button", { name: "Untag Jorge" })).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Untag Jorge (not a member)" }),
+  ).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Tag all 2" }));
+  await waitFor(() => {
+    expect(getRecordedBodyFromRequest(BULK_PATH)).toEqual({
+      action: "people",
+      itemIds: BULK_ITEM_IDS,
+      people: [{ personId: FIRST_PERSON_ID }, { displayName: "Jorge" }],
+    });
   });
 });

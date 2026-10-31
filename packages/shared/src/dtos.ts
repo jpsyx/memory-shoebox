@@ -128,12 +128,14 @@ export type MemberRef = z.infer<typeof memberRefSchema>;
 
 /**
  * Someone tagged in a photograph. Never carries `memberId`: a tagged person is
- * not an account, and the people directory is not the member list
+ * not an account. `isMember` describes an active linked account for labels,
+ * never an access grant, and the people directory is not the member list
  * (`data-models.md` § `people`, `item_people`).
  */
 export const personRefSchema = z.object({
   personId: idSchema,
   displayName: z.string(),
+  isMember: z.boolean(),
 });
 
 /** Someone tagged in a photograph. A tagged person is not an account. */

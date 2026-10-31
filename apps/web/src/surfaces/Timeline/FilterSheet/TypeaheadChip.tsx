@@ -3,7 +3,7 @@ import { Chip } from "@/system/Chip/Chip";
 import classes from "@/system/system.module.css";
 
 type Props = {
-  name: string;
+  name: ReactNode;
   itemCount: number;
   active: boolean;
   onToggle: () => void;

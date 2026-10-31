@@ -8,10 +8,12 @@ const COMBINING_ACUTE = String.fromCodePoint(0x0301);
 const MATEO = {
   personId: PERSON_MATEO_ID,
   displayName: "Mateo",
+  isMember: false,
 };
 const SOFIA = {
   personId: PERSON_SOFIA_ID,
   displayName: "Sofía",
+  isMember: false,
 };
 
 describe("makePeopleInputsFromNames", () => {

@@ -36,7 +36,11 @@ const FACETS = {
   ],
   people: [
     {
-      person: { personId: PERSON_ELENA_ID, displayName: "Elena" },
+      person: {
+        personId: PERSON_ELENA_ID,
+        displayName: "Elena",
+        isMember: false,
+      },
       isSelected: false,
       narrowedCount: 23,
       ownCount: null,
@@ -123,7 +127,11 @@ describe("the filter sheet", () => {
           ],
           people: [
             {
-              person: { personId: PERSON_ELENA_ID, displayName: "Elena" },
+              person: {
+                personId: PERSON_ELENA_ID,
+                displayName: "Elena",
+                isMember: false,
+              },
               isSelected: true,
               narrowedCount: null,
               ownCount: 23,

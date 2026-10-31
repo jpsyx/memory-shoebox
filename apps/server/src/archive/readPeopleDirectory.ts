@@ -42,6 +42,7 @@ type ReadPeopleDirectoryShape = {
 type DirectoryRow = {
   personId: string;
   displayName: string;
+  memberStatus: string | null;
   preferredFaceItemId: string | null;
   itemCount: number;
   firstCapturedOn: string | null;
@@ -70,6 +71,7 @@ async function _readDirectoryRows(options: {
 }): Promise<DirectoryRow[]> {
   const rows = await options.database
     .selectFrom("people")
+    .leftJoin("members", "members.id", "people.member_id")
     .leftJoin("item_people", "item_people.person_id", "people.id")
     .leftJoin("items", (join) => {
       return join.onRef("items.id", "=", "item_people.item_id").on(
@@ -83,6 +85,7 @@ async function _readDirectoryRows(options: {
       return [
         "people.id as personId",
         "people.display_name as displayName",
+        "members.status as memberStatus",
         "people.preferred_face_item_id as preferredFaceItemId",
         eb.fn.count<number>("items.id").as("itemCount"),
         eb.fn
@@ -276,7 +279,11 @@ function _makeDirectoryResponse(
   return {
     people: options.narrowedRows.map((row): DirectoryPerson => {
       return {
-        person: { personId: row.personId, displayName: row.displayName },
+        person: {
+          personId: row.personId,
+          displayName: row.displayName,
+          isMember: row.memberStatus === "active",
+        },
         itemCount: row.itemCount,
         firstCapturedOn: row.firstCapturedOn,
         lastCapturedOn: row.lastCapturedOn,

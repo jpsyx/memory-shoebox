@@ -20,6 +20,7 @@ export async function readEditRows(
     .selectFrom("upload_batch_edits")
     .leftJoin("tags", "tags.id", "upload_batch_edits.tag_id")
     .leftJoin("people", "people.id", "upload_batch_edits.person_id")
+    .leftJoin("members", "members.id", "people.member_id")
     .leftJoin("milestones", "milestones.id", "upload_batch_edits.milestone_id")
     .select(EDIT_ROW_COLUMNS)
     .where("upload_batch_edits.upload_session_id", "=", options.sessionId);
@@ -103,7 +104,11 @@ export function makeEditDtoFromRow(
   const person =
     row.personId === null || row.personName === null
       ? null
-      : { personId: row.personId, displayName: row.personName };
+      : {
+          personId: row.personId,
+          displayName: row.personName,
+          isMember: row.memberStatus === "active",
+        };
   const milestone = _makeMilestoneFromEditRow(row);
   return {
     editId: row.editId,

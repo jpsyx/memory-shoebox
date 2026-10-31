@@ -1,3 +1,4 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
 import { Stack } from "@mantine/core";
 import type { ReactNode } from "react";
 import type { PersonFacet } from "@memory-shoebox/shared";
@@ -18,7 +19,7 @@ type Props = {
 function _personFacetToChip(facet: Readonly<PersonFacet>): FacetChipData {
   return {
     id: facet.person.personId,
-    name: facet.person.displayName,
+    name: <PersonIdentityLabel person={facet.person} />,
     isSelected: facet.isSelected,
     // Null on the wire, because JSON has no `undefined`, and absent here.
     narrowedCount: facet.narrowedCount ?? undefined,

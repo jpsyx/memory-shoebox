@@ -1,3 +1,4 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
 import type { ReactNode } from "react";
 import type { DirectoryPerson, TagCount } from "@memory-shoebox/shared";
 import type { TimelineSelection } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
@@ -39,7 +40,7 @@ export function TypeaheadRow({
         return (
           <TypeaheadChip
             key={entry.person.personId}
-            name={entry.person.displayName}
+            name={<PersonIdentityLabel person={entry.person} />}
             itemCount={entry.itemCount}
             active={selection.people.includes(entry.person.personId)}
             onToggle={() => {

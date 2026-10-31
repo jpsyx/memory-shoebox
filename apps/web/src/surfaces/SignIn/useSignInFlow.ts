@@ -200,7 +200,9 @@ function useRedeemCode(
       queryClient.setQueryData(meQueryOptions.queryKey, account);
       setFirstSignIn(created.isFirstSignIn);
       void navigate({
-        href: makeSafeHrefFromRedirect(search.redirect),
+        href: created.me.profileComplete
+          ? makeSafeHrefFromRedirect(search.redirect)
+          : `/complete-profile?redirect=${encodeURIComponent(makeSafeHrefFromRedirect(search.redirect))}`,
         replace: true,
       });
     },

@@ -44,6 +44,7 @@ export function YouSheet({
       <SheetHead title="You" />
       <Stack gap="md">
         <NameField
+          key={me.member.memberId}
           me={me}
           onSave={onSave}
           isSaving={isSaving}

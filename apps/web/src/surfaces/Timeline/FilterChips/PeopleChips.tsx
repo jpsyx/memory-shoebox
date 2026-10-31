@@ -1,3 +1,5 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
+import { personLabel } from "@/system/personLabel/personLabel";
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
@@ -12,19 +14,6 @@ type Props = {
   onChange: (update: TimelineSelectionUpdate) => void;
 };
 
-/** A person's name, falling back to their id while the facets are in flight. */
-function _getPersonNameFromFacets(options: {
-  facets: FilterFacetsResponse | undefined;
-  personId: string;
-}): string {
-  const { facets, personId } = options;
-  return (
-    facets?.people.find((facet) => {
-      return facet.person.personId === personId;
-    })?.person.displayName ?? personId
-  );
-}
-
 /** One chip per person in the selection, each removing only itself. */
 export function PeopleChips({
   selection,
@@ -32,7 +21,10 @@ export function PeopleChips({
   onChange,
 }: Readonly<Props>): ReactNode {
   return selection.people.map((personId) => {
-    const name = _getPersonNameFromFacets({ facets, personId });
+    const person = facets?.people.find((facet) => {
+      return facet.person.personId === personId;
+    })?.person;
+    const name = person ? personLabel(person) : "Loading person...";
     return (
       <Chip
         key={personId}
@@ -49,7 +41,7 @@ export function PeopleChips({
           });
         }}
       >
-        {name}
+        {person ? <PersonIdentityLabel person={person} /> : name}
       </Chip>
     );
   });

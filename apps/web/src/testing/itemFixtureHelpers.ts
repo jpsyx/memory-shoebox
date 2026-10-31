@@ -147,7 +147,9 @@ export function makeItemDetail(
     burstPosition: null,
     burstFrames: [],
     tags: [{ tagId: TAG_HOSPITAL_ID, name: "hospital" }],
-    people: [{ personId: PERSON_MATEO_ID, displayName: "Mateo" }],
+    people: [
+      { personId: PERSON_MATEO_ID, displayName: "Mateo", isMember: false },
+    ],
     milestones: [],
     comments: [],
     reactions: { kinds: [], myKind: null },

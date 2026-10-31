@@ -49,6 +49,36 @@ without opening a database. Test account helpers create unique completed account
 by default; incomplete cases are explicit, and historical migration fixtures keep
 their original pre-0019 shape.
 
+The web app routes incomplete signed-in accounts to `/complete-profile` before
+opening the application shell. Its centered form uses the invitation suggestion,
+never an email-derived placeholder. Continue validates the name and claims it via
+`PATCH /api/me`; conflicts and failed requests preserve the editable draft and
+focus the name field. Safe local destinations retain the full path, query and
+fragment through sign-in and completion, including a comment deep link. External
+and protocol-relative destinations fall back to `/`. Expired sessions discard the
+draft and return to sign-in with an explanation and the original destination.
+
+My account uses the same name validation and conflict wording. An empty claimed
+name cannot be saved. Name and notification saves retain their independent
+reconciliation; a held name response cannot overwrite a different account's
+current cache. Pending edits remain in the input after a failed save. The optional
+profile-photo row is a separate capability and is not simulated by this form.
+
+## Photo-tag identity labels
+
+Every `PersonRef` carries a required `isMember`, derived from its `member_id` link
+and the linked member's active status. This is presentation metadata, not an
+account ID or a permission grant. Ad-hoc people and retained identities linked to
+inactive members display `Name (not a member)` in photo-tag options, selected
+chips, the directory, and filters. The suffix is regular-weight secondary text
+and part of the accessible label. Raw names remain unchanged in rename fields,
+lookups and persisted requests.
+
+A same-name account never suppresses the distinct ad-hoc create option. Explicit
+person choices retain their IDs through item edits and upload/bulk forms; typed
+ad-hoc names never bind an account by name. Upload ingestion continues to create
+one null-member person per typed batch name and reuses that person across files.
+
 ## Legacy import
 
 Migration `0019_member_name_claims` freezes its normalization and import helpers

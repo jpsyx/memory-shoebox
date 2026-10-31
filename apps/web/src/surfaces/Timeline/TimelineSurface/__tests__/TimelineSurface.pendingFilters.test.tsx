@@ -51,7 +51,7 @@ async function _holdNavigation(
         ],
         people: [
           {
-            person: { personId: ELENA, displayName: "Elena" },
+            person: { personId: ELENA, displayName: "Elena", isMember: false },
             isSelected: false,
             narrowedCount: 3,
             ownCount: null,

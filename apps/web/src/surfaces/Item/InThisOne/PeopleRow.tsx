@@ -1,3 +1,4 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
 import type { ReactNode } from "react";
 import type { ItemDetail } from "@memory-shoebox/shared";
 import { Chip } from "@/system/Chip/Chip";
@@ -27,13 +28,13 @@ export function PeopleRow({ detail }: Readonly<Props>): ReactNode {
             to="/"
             search={{ person: person.personId }}
           >
-            {person.displayName}
+            <PersonIdentityLabel person={person} />
           </ChipLink>
         );
       })}
       {detail.capabilities.canEditPeople ? (
         <Chip ref={editor.openerRef} onClick={editor.open}>
-          + Tag somebody
+          + Photo-tag someone
         </Chip>
       ) : null}
     </ChipRow>

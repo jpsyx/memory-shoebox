@@ -40,9 +40,11 @@ const INVITATION = {
 function _makeRouterFromResponse({
   initial,
   track = true,
+  initialHref = "/people?tag=family",
 }: {
   initial: BootstrapResponse;
   track?: boolean;
+  initialHref?: string;
 }): BootstrapRouterFixture {
   let failDestination = false;
   const client = new QueryClient();
@@ -56,7 +58,15 @@ function _makeRouterFromResponse({
   });
   const router = createRouter({
     routeTree: root.addChildren(
-      ["/", "/people", "/setup", "/setup/invite", "/sign-in"].map((path) => {
+      [
+        "/",
+        "/people",
+        "/setup",
+        "/setup/invite",
+        "/sign-in",
+        "/complete-profile",
+        "/items/$itemId",
+      ].map((path) => {
         return createRoute({
           getParentRoute: () => {
             return root;
@@ -71,7 +81,7 @@ function _makeRouterFromResponse({
       }),
     ),
     context: { queryClient: client },
-    history: createMemoryHistory({ initialEntries: ["/people?tag=family"] }),
+    history: createMemoryHistory({ initialEntries: [initialHref] }),
   });
   if (track) {
     installBootstrapRedirectTracking({ router, client });
@@ -281,5 +291,40 @@ it("a preload between redirect legs neither reads nor consumes the receipt", asy
   expect(router.state.location.pathname).toBe("/setup");
   expect(fetcher).toHaveBeenCalledTimes(1);
   stop();
+  client.clear();
+});
+
+it.each([
+  "/items/photo?comment=thread",
+  "/sign-in?redirect=%2Fitems%2Fphoto%3Fcomment%3Dthread",
+])(
+  "preserves the original deep link on profile completion from %s",
+  async (initialHref) => {
+    const { router, client } = _makeRouterFromResponse({
+      initial: {
+        ...ANONYMOUS,
+        account: createMeResponse({ storedDisplayName: null }),
+      },
+      initialHref,
+    });
+    await router.load();
+    expect(router.state.location.pathname).toBe("/complete-profile");
+    expect(router.state.location.search).toEqual({
+      redirect: "/items/photo?comment=thread",
+    });
+    client.clear();
+  },
+);
+it("preserves the original destination when completion loses its session", async () => {
+  const { router, client } = _makeRouterFromResponse({
+    initial: ANONYMOUS,
+    initialHref:
+      "/complete-profile?redirect=%2Fitems%2Fphoto%3Fcomment%3Dthread",
+  });
+  await router.load();
+  expect(router.state.location.pathname).toBe("/sign-in");
+  expect(router.state.location.search).toEqual({
+    redirect: "/items/photo?comment=thread",
+  });
   client.clear();
 });

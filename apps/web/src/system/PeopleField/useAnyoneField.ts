@@ -6,6 +6,7 @@ type FieldOptions = {
   value: readonly string[];
   onChange: (names: readonly string[]) => void;
   isManaging?: boolean;
+  selectedPeople?: ReadonlyArray<import("./PeopleField").PersonChoice>;
   onRemovePerson?: (index: number) => void;
   defaultSearchValue?: string;
   defaultDropdownOpened?: boolean;
@@ -38,8 +39,11 @@ export function useAnyoneField(
     const trimmed = name.trim();
     if (
       trimmed &&
-      !options.value.some((chosen) => {
-        return makeNameKeyFromName(chosen) === makeNameKeyFromName(trimmed);
+      !options.value.some((chosen, index) => {
+        return (
+          !options.selectedPeople?.[index]?.isMember &&
+          makeNameKeyFromName(chosen) === makeNameKeyFromName(trimmed)
+        );
       })
     ) {
       options.onChange([...options.value, trimmed]);

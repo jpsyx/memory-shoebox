@@ -7,11 +7,11 @@ test("typing then leaving the field or drawer never creates a person", async ({
 }) => {
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("accidental z");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   await field.fill("accidental outside");
   await page
     .getByRole("dialog", { name: "Photo details" })
@@ -37,7 +37,7 @@ test("typing then leaving the field or drawer never creates a person", async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
     await page.getByRole("button", { name: "More photo details" }).click();
-    await page.getByRole("button", { name: "+ Tag somebody" }).click();
+    await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
     const field = page.getByRole("combobox", { name: "Who is in it" });
     await field.fill("accidental z");
     await field.press("Enter");
@@ -90,7 +90,7 @@ test("offers Pablo for either p or P and never shows member management actions",
   expect(response.ok()).toBe(true);
   await page.reload();
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("p");
   await expect(page.getByRole("option", { name: /Pablo/ })).toBeVisible();
@@ -140,7 +140,7 @@ test("keeps an ad-hoc person and a member with the same name distinct", async ({
   ).toBe(true);
   await page.reload();
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   await page.getByRole("combobox", { name: "Who is in it" }).fill("Pablo");
   await expect(page.getByRole("option", { name: /Pablo/ })).toHaveCount(2);
   await page
@@ -171,7 +171,7 @@ test("keyboard activation opens rename without submitting the search text", asyn
 }) => {
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("Zora keyboard");
   await field.press("Enter");

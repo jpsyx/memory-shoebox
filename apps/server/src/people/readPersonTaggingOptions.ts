@@ -13,6 +13,7 @@ type PersonTaggingQuery = {
 async function _readPersonTaggingRows(options: Readonly<PersonTaggingQuery>) {
   return options.database
     .selectFrom("people")
+    .leftJoin("members", "members.id", "people.member_id")
     .leftJoin("item_people", "item_people.person_id", "people.id")
     .leftJoin("items", (join) => {
       return join.onRef("items.id", "=", "item_people.item_id").on(
@@ -26,6 +27,7 @@ async function _readPersonTaggingRows(options: Readonly<PersonTaggingQuery>) {
       return [
         "people.id as personId",
         "people.display_name as displayName",
+        "members.status as memberStatus",
         "people.member_id as memberId",
         "people.created_by as createdBy",
         eb.fn.count<number>("items.id").as("itemCount"),
@@ -59,7 +61,11 @@ export async function readPersonTaggingOptions(
   return {
     people: rows.map((row) => {
       return {
-        person: { personId: row.personId, displayName: row.displayName },
+        person: {
+          personId: row.personId,
+          displayName: row.displayName,
+          isMember: row.memberStatus === "active",
+        },
         itemCount: Number(row.itemCount),
         canRename:
           row.memberId === null &&

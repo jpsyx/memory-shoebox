@@ -22,8 +22,13 @@ const GROUPS: readonly PeopleFieldGroup[] = [
 ];
 
 const PEOPLE: readonly PeopleFieldPerson[] = [
-  { personId: "p1", displayName: "Mateo", itemCount: 412 },
-  { personId: "p2", displayName: "Bisabuela Elena", itemCount: 0 },
+  { personId: "p1", displayName: "Mateo", itemCount: 412, isMember: false },
+  {
+    personId: "p2",
+    displayName: "Bisabuela Elena",
+    itemCount: 0,
+    isMember: false,
+  },
 ];
 
 function _render(node: ReactNode) {
@@ -131,7 +136,12 @@ describe("PeopleField", () => {
         members={[]}
         people={[
           ...PEOPLE,
-          { personId: "p3", displayName: "Mateo", itemCount: 2 },
+          {
+            personId: "p3",
+            displayName: "Mateo",
+            itemCount: 2,
+            isMember: false,
+          },
         ]}
         defaultDropdownOpened
       />,
@@ -198,7 +208,12 @@ describe("PeopleField", () => {
         members={[]}
         people={[
           ...PEOPLE,
-          { personId: "p3", displayName: `${searched} Ruiz`, itemCount: 3 },
+          {
+            personId: "p3",
+            displayName: `${searched} Ruiz`,
+            itemCount: 3,
+            isMember: false,
+          },
         ]}
         defaultSearchValue={searched}
         defaultDropdownOpened
@@ -262,4 +277,65 @@ it("cannot submit suggestions while person management is pending", async () => {
   _render(<AcceptanceProbe isManaging />);
   await userEvent.click(await screen.findByRole("option", { name: /Mateo/ }));
   expect(screen.getByLabelText("Tagged names")).toBeEmptyDOMElement();
+});
+
+it("shows accessible membership labels in options and selected pills immediately", async () => {
+  _render(
+    <PeopleField
+      label="Who"
+      mode="anyone"
+      members={[]}
+      value={["Jorge", "Baby"]}
+      selectedPersonIds={["member", undefined]}
+      people={[
+        {
+          personId: "member",
+          displayName: "Jorge",
+          isMember: true,
+          itemCount: 0,
+        },
+        {
+          personId: "adhoc",
+          displayName: "Jorge",
+          isMember: false,
+          itemCount: 1,
+        },
+      ]}
+      onChange={() => {}}
+      defaultDropdownOpened
+    />,
+  );
+  expect(
+    await screen.findByRole("option", { name: "Jorge (not a member)" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Untag Baby (not a member)" }),
+  ).toBeVisible();
+});
+it("offers a distinct ad-hoc create row even when an account has the same name", async () => {
+  const onChange = vi.fn();
+  _render(
+    <PeopleField
+      label="Who"
+      mode="anyone"
+      members={[]}
+      value={[]}
+      selectedPersonIds={[]}
+      people={[
+        {
+          personId: "member",
+          displayName: "Jorge",
+          isMember: true,
+          itemCount: 0,
+        },
+      ]}
+      onChange={onChange}
+      defaultSearchValue="Jorge"
+      defaultDropdownOpened
+    />,
+  );
+  await userEvent.click(
+    await screen.findByRole("option", { name: "Add “Jorge” (not a member)" }),
+  );
+  expect(onChange).toHaveBeenCalledWith(["Jorge"]);
 });

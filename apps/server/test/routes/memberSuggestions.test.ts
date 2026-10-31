@@ -29,7 +29,11 @@ async function _expectRankedMemberSuggestions(
   expect(response.json()).toEqual({
     suggestions: [6, 5, 4, 3, 2].map((index) => {
       return {
-        person: { personId: people[index], displayName: `Rosa ${index}` },
+        person: {
+          personId: people[index],
+          displayName: `Rosa ${index}`,
+          isMember: false,
+        },
         itemCount: index,
       };
     }),
@@ -93,7 +97,11 @@ describe("invitation name suggestions", () => {
     ).toEqual({
       suggestions: [
         {
-          person: { personId, displayName: "  SOFI\u0301A  Rosa " },
+          person: {
+            personId,
+            displayName: "  SOFI\u0301A  Rosa ",
+            isMember: false,
+          },
           itemCount: 0,
         },
       ],

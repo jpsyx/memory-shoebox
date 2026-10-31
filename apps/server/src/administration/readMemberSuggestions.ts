@@ -11,8 +11,13 @@ async function _readSuggestionCounts(
   const { database, matchedIds } = options;
   const rows = await database
     .selectFrom("people")
+    .leftJoin("members", "members.id", "people.member_id")
     .leftJoin("item_people", "item_people.person_id", "people.id")
-    .select(["people.id as personId", "people.display_name as displayName"])
+    .select([
+      "people.id as personId",
+      "people.display_name as displayName",
+      "members.status as memberStatus",
+    ])
     .select((eb) => {
       return eb.fn.count<number>("item_people.item_id").as("itemCount");
     })
@@ -23,12 +28,18 @@ async function _readSuggestionCounts(
     .limit(5)
     .execute();
   return {
-    suggestions: rows.map(({ personId, displayName, itemCount }) => {
-      return {
-        person: { personId, displayName },
-        itemCount,
-      };
-    }),
+    suggestions: rows.map(
+      ({ personId, displayName, itemCount, memberStatus }) => {
+        return {
+          person: {
+            personId,
+            displayName,
+            isMember: memberStatus === "active",
+          },
+          itemCount,
+        };
+      },
+    ),
     nextCursor: null,
   };
 }

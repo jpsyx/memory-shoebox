@@ -1,3 +1,4 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
 import { useVisibleThumbnail } from "@/media/useVisibleThumbnail/useVisibleThumbnail";
 import { MediaPlaceholder } from "@/system/MediaPlaceholder/MediaPlaceholder";
 import classes from "./PersonCard.module.css";
@@ -12,12 +13,6 @@ type Props = {
 
 /**
  * One person in the directory.
- *
- * **A member and a non-member are drawn identically**, on purpose. A
- * grandmother worth tracking in the archive need not hold an account, and
- * marking who has a login turns a directory of the family into a list of
- * users. `DirectoryPerson` carries no `memberId` precisely so this card
- * cannot say.
  *
  * It is a link rather than a button because it goes somewhere: pressing a
  * name filters the pile to the photographs they are in. There is no page for
@@ -51,7 +46,9 @@ export function PersonCard({ entry }: Readonly<Props>): ReactNode {
           <img src={thumbnail.source?.url} alt="" loading={thumbnail.loading} />
         </span>
       )}
-      <span className={classes.personCardName}>{entry.person.displayName}</span>
+      <span className={classes.personCardName}>
+        <PersonIdentityLabel person={entry.person} />
+      </span>
       <span className={classes.personCardCount}>
         {entry.itemCount === 0
           ? "Nothing yet"

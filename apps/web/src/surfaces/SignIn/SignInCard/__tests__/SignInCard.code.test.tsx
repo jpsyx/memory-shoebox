@@ -113,3 +113,32 @@ describe("surface 1", () => {
     );
   });
 });
+
+it("takes an incomplete account to completion with the complete comment destination", async () => {
+  respondWith({
+    "/api/auth/session": {
+      body: {
+        ...CREATED_SESSION,
+        me: {
+          ...CREATED_SESSION.me,
+          storedDisplayName: null,
+          profileComplete: false,
+          suggestedDisplayName: "Abuela",
+        },
+      },
+      status: 201,
+    },
+  });
+  const router = renderAt(`${SENT}&redirect=%2Fitems%2Fabc%3Fcomment%3Dthread`);
+  await userEvent.type(await screen.findByLabelText(/six digits/i), "410233");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Open the photos" }),
+  );
+  await waitFor(() => {
+    expect(router.state.location.pathname).toBe("/complete-profile");
+  });
+  expect(router.state.location.search).toEqual({
+    redirect: "/items/abc?comment=thread",
+  });
+  expect(await screen.findByLabelText("Your name")).toHaveValue("Abuela");
+});

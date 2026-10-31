@@ -10,6 +10,7 @@ export const EDIT_ROW_COLUMNS = [
   "tags.name as tagName",
   "people.id as personId",
   "people.display_name as personName",
+  "members.status as memberStatus",
   "milestones.id as milestoneId",
   "milestones.name as milestoneName",
   "milestones.starts_on as milestoneStartsOn",

@@ -218,7 +218,7 @@ describe("PUT /api/items/:itemId/people", () => {
     });
 
     expect(response.json().people).toEqual([
-      { personId, displayName: "Marisol" },
+      { personId, displayName: "Marisol", isMember: true },
     ]);
     await close();
   });

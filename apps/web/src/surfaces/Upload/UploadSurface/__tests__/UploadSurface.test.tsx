@@ -375,7 +375,7 @@ describe("the upload surface", () => {
       }),
     );
     const personTrigger = screen.getByRole("button", {
-      name: "Tag somebody",
+      name: "Photo-tag someone",
     });
     personTrigger.focus();
     fireEvent.click(personTrigger);

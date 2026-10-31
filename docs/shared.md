@@ -43,8 +43,11 @@ The contract modules are:
   beside `LIMITS` and holds the upload slice's request caps (manifest entries
   per call, edit targets, the session detail's page size, `pendingFiles`), so
   they read together.
-- `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
-  members, tags, milestones, and the rest.
+- `dtos.ts`: the shared DTOs handed back for items, members, tags, milestones,
+  and the rest. `PersonRef` carries raw `displayName`, `personId` and required
+  `isMember`, derived from the linked member's active status. The flag drives
+  visible `(not a member)` labels without exposing account IDs or granting
+  access. Names and persisted photo-tag requests never contain that suffix.
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
   with its Zod schema, default, and scope, plus
   `getSettingValueFromStoredValue` for reading one against whatever the
@@ -147,10 +150,11 @@ Administration request bodies exclude path fields, which have separate params
 schemas. `UpdateSettingsRequest` carries the optional preview query beside its
 partial body; `DeleteGroupRequest` contains the confirmation query only.
 
-## The one change to a frozen DTO
+## Changes to the original DTOs
 
-The twelve DTOs in `dtos.ts` were frozen by step 1, and the item slice changed
-exactly one of them: **`VisibilitySummary` gained `visibilityRuleId`**
+The original DTOs in `dtos.ts` have gained narrowly scoped contract fields.
+Photo-tag identity references now require `PersonRef.isMember` for active linked
+account labels. The item slice also changed **`VisibilitySummary` gained `visibilityRuleId`**
 (`tech-specs/apis/items.md` § Additions requested 2). The edit control has to
 pre-fill from the current rule and detect a no-op save, and a selection has to
 know whether its items already share one rule before it offers to change them.

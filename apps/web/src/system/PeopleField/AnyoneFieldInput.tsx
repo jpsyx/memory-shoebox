@@ -16,6 +16,9 @@ type Props = Pick<
   | "onChange"
   | "isManaging"
   | "onRemovePerson"
+  | "selectedPersonIds"
+  | "selectedPeople"
+  | "people"
 > & { field: AnyoneFieldController };
 const INPUT_CLASSES = {
   root: classes.inputWrapperRoot,
@@ -38,6 +41,9 @@ export function AnyoneFieldInput({
   value,
   onChange,
   onRemovePerson,
+  selectedPersonIds,
+  selectedPeople,
+  people,
   isManaging = false,
   autoFocus,
   "data-autofocus": modalAutoFocus,
@@ -61,6 +67,9 @@ export function AnyoneFieldInput({
         <Pill.Group className={classes.tagsPillsList}>
           <PersonPills
             value={value}
+            selectedPersonIds={selectedPersonIds}
+            selectedPeople={selectedPeople}
+            people={people}
             onChange={onChange}
             onRemovePerson={onRemovePerson}
             disabled={isManaging}

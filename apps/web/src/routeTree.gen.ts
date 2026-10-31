@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from "./routes/__root";
 import { Route as AppRouteImport } from "./routes/_app";
+import { Route as CompleteProfileRouteImport } from "./routes/complete-profile";
 import { Route as JoinRouteImport } from "./routes/join";
 import { Route as SetupRouteImport } from "./routes/setup";
 import { Route as SignInRouteImport } from "./routes/sign-in";
@@ -30,6 +31,11 @@ import { Route as AppItemsItemIdRemovalRouteImport } from "./routes/_app/items.$
 
 const AppRoute = AppRouteImport.update({
   id: "/_app",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CompleteProfileRoute = CompleteProfileRouteImport.update({
+  id: "/complete-profile",
+  path: "/complete-profile",
   getParentRoute: () => rootRouteImport,
 } as any);
 const JoinRoute = JoinRouteImport.update({
@@ -120,6 +126,7 @@ const AppItemsItemIdRemovalRoute = AppItemsItemIdRemovalRouteImport.update({
 
 export interface FileRoutesByFullPath {
   "/": typeof AppIndexRoute;
+  "/complete-profile": typeof CompleteProfileRoute;
   "/join": typeof JoinRoute;
   "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
   "/items/$itemId/removal": typeof AppItemsItemIdRemovalRoute;
 }
 export interface FileRoutesByTo {
+  "/complete-profile": typeof CompleteProfileRoute;
   "/join": typeof JoinRoute;
   "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
@@ -159,6 +167,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_app": typeof AppRouteWithChildren;
+  "/complete-profile": typeof CompleteProfileRoute;
   "/join": typeof JoinRoute;
   "/setup": typeof SetupRoute;
   "/sign-in": typeof SignInRoute;
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
+    | "/complete-profile"
     | "/join"
     | "/setup"
     | "/sign-in"
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | "/items/$itemId/removal";
   fileRoutesByTo: FileRoutesByTo;
   to:
+    | "/complete-profile"
     | "/join"
     | "/setup"
     | "/sign-in"
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
   id:
     | "__root__"
     | "/_app"
+    | "/complete-profile"
     | "/join"
     | "/setup"
     | "/sign-in"
@@ -240,6 +252,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren;
+  CompleteProfileRoute: typeof CompleteProfileRoute;
   JoinRoute: typeof JoinRoute;
   SetupRoute: typeof SetupRoute;
   SignInRoute: typeof SignInRoute;
@@ -252,6 +265,13 @@ declare module "@tanstack/react-router" {
       path: "";
       fullPath: "/";
       preLoaderRoute: typeof AppRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/complete-profile": {
+      id: "/complete-profile";
+      path: "/complete-profile";
+      fullPath: "/complete-profile";
+      preLoaderRoute: typeof CompleteProfileRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/join": {
@@ -414,6 +434,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  CompleteProfileRoute: CompleteProfileRoute,
   JoinRoute: JoinRoute,
   SetupRoute: SetupRoute,
   SignInRoute: SignInRoute,

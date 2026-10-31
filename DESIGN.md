@@ -690,6 +690,14 @@ added**, and that is a question about consequences rather than convenience:
   worth tracking never has to hold a login, and inviting her later joins the
   two without losing the history.
 
+Photo-tag identities linked to active members show their raw name. Ad-hoc people
+and identities whose linked member is no longer active always show the visible
+suffix `(not a member)`, in regular-weight quiet text beside the name. The full
+label is accessible. The suffix is never stored in a name or placed in a rename
+field. A same-name member and ad-hoc person remain distinct choices; an active
+member never prevents a new ad-hoc identity from being created. While an identity
+loads, show neutral placeholder text rather than a person or account ID.
+
 The same field, in its inventing mode, is how a tag is put on anything.
 
 ### Cards / Containers

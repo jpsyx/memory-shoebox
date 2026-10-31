@@ -25,6 +25,7 @@ type PeopleEditorState = {
     | "value"
     | "onChange"
     | "selectedPersonIds"
+    | "selectedPeople"
     | "onSelectPerson"
     | "onRemovePerson"
     | "onRenamePerson"
@@ -55,6 +56,7 @@ function _getChoicePropsFromField(field: ReturnType<typeof usePersonChoices>) {
     value: field.choices.map((choice) => {
       return choice.displayName;
     }),
+    selectedPeople: field.choices,
     selectedPersonIds: field.choices.map((choice) => {
       return choice.personId;
     }),

@@ -46,7 +46,7 @@ export function UploadSelectionBar({
         }}
       />
       <UploadSelectionAction
-        label="Tag somebody"
+        label="Photo-tag someone"
         icon=<IconUser {...ICON_PROPS_SMALL} />
         isDisabled={snapshot.isBusy}
         onClick={() => {

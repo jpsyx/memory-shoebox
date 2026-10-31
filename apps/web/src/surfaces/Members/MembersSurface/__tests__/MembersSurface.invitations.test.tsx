@@ -18,6 +18,7 @@ function _renderDelayedSuggestions(): () => void {
               person: {
                 personId: INVITED.memberId,
                 displayName: "Abuelo Tomás",
+                isMember: false,
               },
               itemCount: 41,
             },
@@ -30,7 +31,11 @@ function _renderDelayedSuggestions(): () => void {
         body: {
           suggestions: [
             {
-              person: { personId: INVITED.memberId, displayName: "Mamá" },
+              person: {
+                personId: INVITED.memberId,
+                displayName: "Mamá",
+                isMember: false,
+              },
               itemCount: 2,
             },
           ],

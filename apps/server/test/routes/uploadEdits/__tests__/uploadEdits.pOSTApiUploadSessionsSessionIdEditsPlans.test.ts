@@ -103,7 +103,7 @@ describe("POST /api/upload-sessions/:sessionId/edits", () => {
     });
     expect(personEdit.json<UploadBatchEditDto>()).toMatchObject({
       label: "Mateo",
-      person: { personId, displayName: "Mateo" },
+      person: { personId, displayName: "Mateo", isMember: false },
     });
     expect(milestoneEdit.json<UploadBatchEditDto>()).toMatchObject({
       kind: "milestone",

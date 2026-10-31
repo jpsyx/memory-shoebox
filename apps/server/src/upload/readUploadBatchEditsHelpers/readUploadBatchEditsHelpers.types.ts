@@ -28,6 +28,7 @@ export type EditRow = {
   tagName: string | null;
   personId: string | null;
   personName: string | null;
+  memberStatus: string | null;
   milestoneId: string | null;
   milestoneName: string | null;
   milestoneStartsOn: string | null;

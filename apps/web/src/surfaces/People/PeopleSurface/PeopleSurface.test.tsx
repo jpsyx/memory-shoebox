@@ -17,7 +17,11 @@ const PERSON_SOFIA_ID = "018f0000-0000-7000-8000-0000000f0003";
 const DIRECTORY = {
   people: [
     {
-      person: { personId: PERSON_MATEO_ID, displayName: "Mateo" },
+      person: {
+        personId: PERSON_MATEO_ID,
+        displayName: "Mateo",
+        isMember: false,
+      },
       itemCount: 412,
       firstCapturedOn: "2026-01-01",
       lastCapturedOn: "2026-09-27",
@@ -34,7 +38,11 @@ const DIRECTORY = {
       },
     },
     {
-      person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
+      person: {
+        personId: PERSON_SOFIA_ID,
+        displayName: "Sofía",
+        isMember: false,
+      },
       itemCount: 0,
       firstCapturedOn: null,
       lastCapturedOn: null,
@@ -89,9 +97,9 @@ describe("the people directory", () => {
     });
   });
 
-  it("says nothing about who holds an account", async () => {
+  it("labels ad-hoc people without changing their names", async () => {
     renderPeople();
     await screen.findByText("Mateo");
-    expect(screen.queryByText(/member/i)).toBeNull();
+    expect(screen.getAllByText("(not a member)")).toHaveLength(2);
   });
 });

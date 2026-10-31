@@ -66,19 +66,19 @@ describe("item person actions", () => {
       response.json(),
     );
     expect(people).toContainEqual({
-      person: { personId, displayName: "Ana" },
+      person: { personId, displayName: "Ana", isMember: false },
       itemCount: 1,
       canRename: true,
       canDelete: false,
     });
     expect(people).toContainEqual({
-      person: { personId: linkedId, displayName: "Rosa" },
+      person: { personId: linkedId, displayName: "Rosa", isMember: true },
       itemCount: 0,
       canRename: false,
       canDelete: false,
     });
     expect(people).toContainEqual({
-      person: { personId: unusedId, displayName: "Unused" },
+      person: { personId: unusedId, displayName: "Unused", isMember: false },
       itemCount: 0,
       canRename: false,
       canDelete: true,
@@ -358,4 +358,62 @@ describe("item person actions", () => {
       await close();
     },
   );
+});
+
+it("derives membership from an active account link across all photo identity readers", async () => {
+  const { app, database, close, cookie, itemId } = await _makeFixture();
+  try {
+    const activeMember = await insertMember(database, {
+      display_name: "Jorge",
+    });
+    const removedMember = await insertMember(database, {
+      display_name: "Former Jorge",
+      status: "removed",
+    });
+    const active = await insertPerson(database, {
+      displayName: "Jorge",
+      member_id: activeMember,
+    });
+    const removed = await insertPerson(database, {
+      displayName: "Jorge",
+      member_id: removedMember,
+    });
+    const adhoc = await insertPerson(database, { displayName: "Jorge" });
+    for (const personId of [active, removed, adhoc])
+      await insertItemPerson(database, { itemId, personId });
+    for (const url of [
+      "/api/people",
+      `/api/items/${itemId}/people/options`,
+      `/api/items/${itemId}`,
+      "/api/filters/facets",
+    ]) {
+      const response = await app.inject({
+        method: "GET",
+        url,
+        headers: { cookie },
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json();
+      const people = body.people.map((entry: { person?: unknown }) => {
+        return entry.person ?? entry;
+      });
+      expect(people).toContainEqual({
+        personId: active,
+        displayName: "Jorge",
+        isMember: true,
+      });
+      expect(people).toContainEqual({
+        personId: removed,
+        displayName: "Jorge",
+        isMember: false,
+      });
+      expect(people).toContainEqual({
+        personId: adhoc,
+        displayName: "Jorge",
+        isMember: false,
+      });
+    }
+  } finally {
+    await close();
+  }
 });

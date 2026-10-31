@@ -1,3 +1,4 @@
+import { usePersonSelections } from "@/system/PeopleField/usePersonSelections";
 import { useState } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import type {
@@ -17,9 +18,10 @@ type Options = TimelineBulkFormProps & { kind: "tag" | "person" };
 type LabelValues = {
   names: string[];
   personIds: Record<string, string>;
+  onRemovePerson: (index: number) => void;
   onNamesChange: (values: readonly string[]) => void;
   onPersonChoice: (
-    choice: Readonly<{ name: string; personId: string }>,
+    choice: Readonly<{ name: string; personId: string; index?: number }>,
   ) => void;
 };
 type LabelForm = {
@@ -38,16 +40,19 @@ function _getPeopleFromNames(
     choices: Readonly<Record<string, string>>;
   }>,
 ): PersonInput[] {
-  return options.names.map((name) => {
+  return options.names.map((name, index) => {
+    const personId = options.choices[String(index)];
+    if (personId) return { personId };
     const matches = options.entries.filter((entry) => {
       return (
+        !entry.person.isMember &&
         makeNameKeyFromName(entry.person.displayName) ===
-        makeNameKeyFromName(name)
+          makeNameKeyFromName(name)
       );
     });
     const chosen =
       matches.find((entry) => {
-        return entry.person.personId === options.choices[name];
+        return entry.person.personId === options.choices[String(index)];
       }) ?? (matches.length === 1 ? matches[0] : undefined);
     if (matches.length > 1 && !chosen) {
       throw new Error(`Choose which ${name} to tag before saving.`);
@@ -56,23 +61,6 @@ function _getPeopleFromNames(
       ? { personId: chosen.person.personId }
       : { displayName: name };
   });
-}
-
-function useLabelValues(): LabelValues {
-  const [names, setNames] = useState<string[]>([]);
-  const [personIds, setPersonIds] = useState<Record<string, string>>({});
-  return {
-    names,
-    personIds,
-    onNamesChange: (values) => {
-      setNames([...values]);
-    },
-    onPersonChoice: ({ name, personId }) => {
-      setPersonIds((choices) => {
-        return { ...choices, [name]: personId };
-      });
-    },
-  };
 }
 
 function useLabelDirectories(
@@ -123,7 +111,7 @@ function _submitLabels(
 
 /** Maintains additive labels and the explicit choice for duplicate person names. */
 export function useTimelineLabelForm(props: Readonly<Options>): LabelForm {
-  const form = useLabelValues();
+  const form = usePersonSelections();
   const directories = useLabelDirectories(props.kind);
   const [problem, setProblem] = useState<string>();
   return {

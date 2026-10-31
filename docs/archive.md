@@ -627,3 +627,13 @@ so bulk work does not add phantom opens. The toolbar inherits upload's ink and
 square controls, wraps into two columns on phones, and measures the header so
 its sticky position still works with wrapped navigation or zoom. Timeline tick
 marks sit away from visibility labels, unseen dots and video runtimes.
+
+## Photo-tag membership labels
+
+Person references from item reads, tagging options, the people directory, facets,
+member suggestions and upload batch edits include `isMember`. Readers derive it
+from a left join to the linked member and require active status. They never infer
+membership from a name. A removed linked identity remains in the archive and is
+shown with `(not a member)`, just like an ad-hoc person. Names stored in the
+catalog stay raw; suffixes belong only to presentation. Pending filter chips use
+`Loading person...` until the identity is available, keeping raw IDs out of the UI.

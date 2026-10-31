@@ -34,7 +34,7 @@ describe("focus in and out of the editors", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     expect(
       screen.getByRole("combobox", { name: "Who is in it" }),
@@ -42,7 +42,7 @@ describe("focus in and out of the editors", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(
-      screen.getByRole("button", { name: "+ Tag somebody" }),
+      screen.getByRole("button", { name: "+ Photo-tag someone" }),
     ).toHaveFocus();
   });
 
@@ -70,6 +70,7 @@ describe("the caps, and a change that changes nothing", () => {
           return {
             personId: _idFromIndex(index),
             displayName: `Cousin ${index + 1}`,
+            isMember: false,
           };
         }),
       }),
@@ -78,7 +79,7 @@ describe("the caps, and a change that changes nothing", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     expect(
       screen.getByText("Thirty people is as many as one photograph can carry."),
@@ -148,7 +149,7 @@ describe("the caps, and a change that changes nothing", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     const field = screen.getByRole("combobox", { name: "Who is in it" });
     await userEvent.type(field, "mateo{enter}");

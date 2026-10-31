@@ -93,3 +93,51 @@ it.each(["name", "notify"] as const)(
     client.clear();
   },
 );
+
+it("does not publish an old name save into a different current account", async () => {
+  const original = createMeResponse({ displayName: "Original" });
+  const other = createMeResponse({
+    memberId: "018f0000-0000-7000-8000-000000000001",
+    displayName: "Other",
+  });
+  const client = new QueryClient();
+  client.setQueryData(["me"], original);
+  const pending = Promise.withResolvers<Response>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => {
+      return pending.promise;
+    }),
+  );
+  const hook = renderHook(
+    () => {
+      return useSaveMe();
+    },
+    {
+      wrapper: ({ children }) => {
+        return (
+          <AccountMutationFixture client={client}>
+            {children}
+          </AccountMutationFixture>
+        );
+      },
+    },
+  );
+  act(() => {
+    return hook.result.current.save({ displayName: "Saved original" });
+  });
+  await vi.waitFor(() => {
+    return expect(fetch).toHaveBeenCalled();
+  });
+  client.setQueryData(["me"], other);
+  await act(async () => {
+    pending.resolve(
+      Response.json(createMeResponse({ displayName: "Saved original" })),
+    );
+    await pending.promise;
+  });
+  await vi.waitFor(() => {
+    return expect(hook.result.current.isSaving).toBe(false);
+  });
+  expect(client.getQueryData(["me"])).toEqual(other);
+});

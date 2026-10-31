@@ -210,7 +210,7 @@ describe("tagFacetSchema", () => {
 
 describe("personFacetSchema", () => {
   it("refuses a chip carrying exactly one count, but the wrong one", () => {
-    const person = { personId: TAG_ID, displayName: "Elena" };
+    const person = { personId: TAG_ID, displayName: "Elena", isMember: false };
 
     expect(
       personFacetSchema.safeParse({

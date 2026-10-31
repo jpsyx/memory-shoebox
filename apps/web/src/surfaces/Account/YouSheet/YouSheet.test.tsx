@@ -97,7 +97,7 @@ describe("the You sheet", () => {
     expect(onSave).toHaveBeenCalledWith({ displayName: "Abuela Rosa" });
   });
 
-  it("clears the name back to the fallback when emptied", async () => {
+  it("rejects clearing a claimed name", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
     const { me } = createMeResponse({
@@ -121,7 +121,11 @@ describe("the You sheet", () => {
     await user.clear(field);
     await user.click(screen.getByRole("button", { name: "Save your name" }));
 
-    expect(onSave).toHaveBeenCalledWith({ displayName: null });
+    expect(onSave).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Enter the name your family knows you by."),
+    ).toBeVisible();
+    expect(field).toHaveFocus();
   });
 
   it("shows the address as unchangeable, and says why", () => {
@@ -188,10 +192,10 @@ describe("the You sheet", () => {
       ),
     );
 
-    expect(screen.getByText("Saved.")).toBeVisible();
+    expect(screen.getByText("Name saved.")).toBeVisible();
 
     await user.type(screen.getByLabelText("Your name"), "!");
-    expect(screen.queryByText("Saved.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Name saved.")).not.toBeInTheDocument();
   });
 
   it("renders the error sentence under the field when one is given", () => {
@@ -211,4 +215,30 @@ describe("the You sheet", () => {
 
     expect(screen.getByText("That did not save. Try again.")).toBeVisible();
   });
+});
+
+it("focuses a conflicting name and retains pending edits across failed saves", async () => {
+  const { me } = createMeResponse({ storedDisplayName: "John" });
+  const props = {
+    me,
+    onSave: vi.fn(),
+    isSaving: false,
+    savedAt: undefined,
+    error: undefined as string | undefined,
+  };
+  const view = render(_inTheme(<YouSheet {...props} />));
+  const input = screen.getByLabelText("Your name");
+  await userEvent.clear(input);
+  await userEvent.type(input, "John M");
+  await userEvent.click(screen.getByRole("button", { name: "Save your name" }));
+  view.rerender(
+    _inTheme(
+      <YouSheet
+        {...props}
+        error="That name is already taken. Try adding your last-name initial, like John M."
+      />,
+    ),
+  );
+  expect(input).toHaveValue("John M");
+  expect(input).toHaveFocus();
 });
