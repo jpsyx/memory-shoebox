@@ -12,7 +12,12 @@ import {
 describe("member people migration", () => {
   it("backfills active members without stealing ad-hoc names or replacing linked identities", async () => {
     const database = createDatabase(":memory:");
-    const sources = await getMigrationSourcesFromFiles();
+    // Bound this historical migration test so later identity upgrades cannot change its fixtures.
+    const sources = Object.fromEntries(
+      Object.entries(await getMigrationSourcesFromFiles()).filter(([name]) => {
+        return name < "0019";
+      }),
+    );
     await migrateToLatest(database, {
       sources: Object.fromEntries(
         Object.entries(sources).filter(([name]) => {
@@ -37,7 +42,7 @@ describe("member people migration", () => {
     });
     const itemId = await insertItem(database, { uploadedBy: activeId });
     await insertItemPerson(database, { itemId, personId: linkedId });
-    await migrateToLatest(database);
+    await migrateToLatest(database, { sources });
     const people = await database.selectFrom("people").selectAll().execute();
     expect(
       people.filter((person) => {
@@ -67,7 +72,7 @@ describe("member people migration", () => {
     expect(
       await database.selectFrom("item_people").select("person_id").execute(),
     ).toEqual([{ person_id: linkedId }]);
-    expect(await migrateToLatest(database)).toEqual([]);
+    expect(await migrateToLatest(database, { sources })).toEqual([]);
     await database.destroy();
   });
 });

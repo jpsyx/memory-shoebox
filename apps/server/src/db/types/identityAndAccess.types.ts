@@ -3,6 +3,8 @@ export type MembersTable = {
   id: string;
   email: string;
   display_name: string | null;
+  profile_completed_at: string | null;
+  suggested_display_name: string | null;
   role: string;
   status: string;
   notify_on_upload: number;
@@ -114,4 +116,12 @@ export type VisibilityRuleSubjectsTable = {
   subject_type: string;
   member_id: string | null;
   group_id: string | null;
+};
+
+/** A name remains reserved to its original member after rename or removal. */
+export type MemberNameClaimsTable = {
+  name_key: string;
+  member_id: string;
+  display_name: string;
+  created_at: string;
 };

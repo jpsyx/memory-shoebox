@@ -31,7 +31,12 @@ async function _openHistoricalCatalog(): Promise<HistoricalCatalog> {
     await database.destroy();
     rmSync(directory, { recursive: true, force: true });
   });
-  const sources = await getMigrationSourcesFromFiles();
+  // Bound this historical migration test so later identity upgrades cannot change its fixtures.
+  const sources = Object.fromEntries(
+    Object.entries(await getMigrationSourcesFromFiles()).filter(([name]) => {
+      return name < "0019";
+    }),
+  );
   const historical = Object.fromEntries(
     Object.entries(sources).filter(([name]) => {
       return name < "0017";
@@ -56,7 +61,8 @@ async function _openHistoricalCatalog(): Promise<HistoricalCatalog> {
 }
 
 it("preserves catalog through purpose expansion", async () => {
-  const { database, itemId, renditionId } = await _openHistoricalCatalog();
+  const { database, sources, itemId, renditionId } =
+    await _openHistoricalCatalog();
   const snapshot = async () => {
     return Promise.all(
       ["items", "item_renditions", "comments", "rendition_children"].map(
@@ -74,7 +80,7 @@ it("preserves catalog through purpose expansion", async () => {
       database,
     )
   ).rows;
-  await migrateToLatest(database);
+  await migrateToLatest(database, { sources });
   const originalRowsAfter = await snapshot();
   const foreignKeyViolations = (
     await sql`pragma foreign_key_check`.execute(database)
@@ -120,7 +126,7 @@ it("backs up the populated catalog before rebuilding and keeps existing checksum
     )
   ).rows;
   const existingBackups = readdirSync(join(directory, "backups"));
-  const results = await migrateToLatest(database);
+  const results = await migrateToLatest(database, { sources });
   expect(
     results.map((result) => {
       return result.migrationName;
@@ -177,7 +183,7 @@ it("backs up the populated catalog before rebuilding and keeps existing checksum
       )
     ).rows,
   ).toEqual(history);
-  expect(await migrateToLatest(database)).toEqual([]);
+  expect(await migrateToLatest(database, { sources })).toEqual([]);
   await expect(
     migrateToLatest(database, {
       sources: {
@@ -234,15 +240,15 @@ it("rolls the rendition rebuild, queue, cursor and history back together", async
     insertRendition(database, { itemId, purpose: "display_small" }),
   ).rejects.toThrow(/check/i);
   expect(
-    (await migrateToLatest(database)).map((result) => {
+    (await migrateToLatest(database, { sources })).map((result) => {
       return result.migrationName;
     }),
   ).toContain("0017_media_processing");
 });
 
 it("keeps a single discovery cursor across deletion and database reopen", async () => {
-  const { database, path, itemId } = await _openHistoricalCatalog();
-  await migrateToLatest(database);
+  const { database, sources, path, itemId } = await _openHistoricalCatalog();
+  await migrateToLatest(database, { sources });
   expect(
     (await sql`select * from media_processing_discovery`.execute(database))
       .rows,

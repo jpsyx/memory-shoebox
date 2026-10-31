@@ -22,6 +22,7 @@ import type {
   GroupsTable,
   InvitationsTable,
   MembersTable,
+  MemberNameClaimsTable,
   SessionsTable,
   SignInCodesTable,
   VisibilityRuleSubjectsTable,
@@ -62,6 +63,7 @@ export type Database = {
   media_processing_outputs: MediaProcessingOutputsTable;
   media_processing_discovery: MediaProcessingDiscoveryTable;
   members: MembersTable;
+  member_name_claims: MemberNameClaimsTable;
   sign_in_codes: SignInCodesTable;
   sessions: SessionsTable;
   invitations: InvitationsTable;

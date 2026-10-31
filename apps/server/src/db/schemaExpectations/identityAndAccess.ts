@@ -6,6 +6,7 @@ import { indexColumns } from "./indexColumns.ts";
 
 /** The tables migration 'identity and access' creates, as `Database` names them. */
 type IdentityAndAccessTable =
+  | "member_name_claims"
   | "members"
   | "sign_in_codes"
   | "sessions"
@@ -20,8 +21,15 @@ export const IDENTITY_AND_ACCESS_FOREIGN_KEYS: Record<
   IdentityAndAccessTable,
   ForeignKeyInfo[]
 > = {
-  // References nothing: every authorship key in the product points *at* this
-  // table instead.
+  member_name_claims: [
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+  ],
+  // References nothing: every authorship key in the product points *at* this table.
   members: [],
   sign_in_codes: [
     // CASCADE: a live code outliving its member is an authentication bypass.
@@ -107,6 +115,13 @@ export const IDENTITY_AND_ACCESS_INDEXES: Record<
   IdentityAndAccessTable,
   IndexInfo[]
 > = {
+  member_name_claims: [
+    {
+      name: "member_name_claims_member",
+      columns: indexColumns("member_id"),
+      isUnique: false,
+    },
+  ],
   members: [],
   sign_in_codes: [
     // `(email, created_at DESC)` serves both the rate-limit clock and the
@@ -199,6 +214,7 @@ export const IDENTITY_AND_ACCESS_UNIQUE_CONSTRAINTS: Record<
   IdentityAndAccessTable,
   string[][]
 > = {
+  member_name_claims: [],
   // Global, and the identity itself: My account states the address can never
   // be changed. A removed member keeps their address claimed, which is what
   // makes re-inviting them reuse the row rather than insert a second.

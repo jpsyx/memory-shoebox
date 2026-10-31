@@ -8,10 +8,26 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const IDENTITY_AND_ACCESS_MANIFEST = {
+  member_name_claims: {
+    name_key: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    display_name: { isNullable: false, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
   members: {
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     email: { isNullable: false, type: "TEXT", defaultValue: null },
     display_name: { isNullable: true, type: "TEXT", defaultValue: null },
+    profile_completed_at: {
+      isNullable: true,
+      type: "TEXT",
+      defaultValue: null,
+    },
+    suggested_display_name: {
+      isNullable: true,
+      type: "TEXT",
+      defaultValue: null,
+    },
     role: { isNullable: false, type: "TEXT", defaultValue: "'viewer'" },
     status: { isNullable: false, type: "TEXT", defaultValue: "'invited'" },
     notify_on_upload: { isNullable: false, type: "INTEGER", defaultValue: "1" },
@@ -96,6 +112,7 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
+  | "member_name_claims"
   | "members"
   | "sign_in_codes"
   | "sessions"

@@ -186,3 +186,14 @@ without foreign keys, preserving their meaning through replacement or deletion.
 This migration creates catalog structures only. It does not enqueue an archive
 scan, download media, launch a worker or alter originals. Queue semantics and the
 remaining runtime integration are described in [media loading](media-loading.md).
+
+## Permanent member-name claims
+
+Migration `0019_member_name_claims` adds permanent name ownership and nullable
+profile-completion/suggested-name fields. Unique legacy effective names survive,
+including retained removed accounts. Colliding or invalid names require an
+explicit offline mapping; the migration never picks a winner or numbers names.
+The read-only audit, verified staging backup, durable staging table, bounded
+identity fingerprint, import atomicity and rollback/recovery workflow are covered
+in [member names and catalog rollout](member-profiles.md). Run this staging before
+starting the release that contains 0019, with all application processes stopped.
