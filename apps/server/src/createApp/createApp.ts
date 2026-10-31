@@ -45,6 +45,7 @@ import { registerMilestoneRoutes } from "../routes/registerMilestoneRoutes/regis
 import { registerRemovalRoutes } from "../routes/removals/registerRemovalRoutes.ts";
 import { bootstrapRoutes } from "../routes/bootstrapRoutes.ts";
 import { meRoutes } from "../routes/me.ts";
+import { memberCollectionsRoutes } from "../routes/memberCollections.ts";
 import { peopleRoutes } from "../routes/people.ts";
 import { publicSettingsRoutes } from "../routes/publicSettings.ts";
 import { tagsRoutes } from "../routes/tags.ts";
@@ -266,6 +267,7 @@ async function _registerApiRoutes(
 
       await filtersRoutes(api);
       await peopleRoutes(api);
+      await memberCollectionsRoutes(api);
       await itemsRoutes(api);
       await burstsRoutes(api);
       await commentsRoutes(api);

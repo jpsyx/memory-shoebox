@@ -758,5 +758,13 @@
     "module": "./mediaPosition.ts",
     "values": ["mediaPositionRequestSchema", "mediaPositionResponseSchema"],
     "types": ["MediaPositionRequest", "MediaPositionResponse"]
+  },
+  {
+    "module": "./memberCollections.ts",
+    "values": [
+      "memberCollectionParamsSchema",
+      "memberCollectionResponseSchema"
+    ],
+    "types": ["MemberCollectionResponse"]
   }
 ]

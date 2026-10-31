@@ -142,3 +142,13 @@ suites live in `ItemTheater/__tests__/`. Draft provider/hook companions live in
 test-only harness in `TheaterCommentDock/__tests__/`. Viewer chrome/entry and
 video-conversation wrapper styles are owned by their local component stylesheets;
 theater shell and dock selectors carry their component prefixes.
+
+## Member-filtered navigation
+
+The shared media navigation selection accepts optional UUID `member`. Position
+and neighbor reads pass it through the archive's central predicate, so each
+visible upload-or-photo-tag match counts once, including videos and every
+matching burst frame. Extra tags, people, dates and attachment filters remain
+intersections. Hidden and out-of-selection current items return no position or
+neighbors. Preview batches continue to authorize explicit item IDs independently
+of archive selection; they grant no access and have no seen/open side effects.

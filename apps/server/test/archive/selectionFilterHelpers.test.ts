@@ -1,3 +1,4 @@
+import { makeMemberCollectionFixture } from "../helpers/memberCollectionFixture.ts";
 import type { Kysely } from "kysely";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
@@ -325,4 +326,28 @@ describe("makeSelectionExpressionFromFilter", () => {
       }),
     ).toEqual([looseId]);
   });
+});
+
+// Reuse the route fixture to prove the predicate never duplicates overlap.
+it("selects the exact visible member union once", async () => {
+  const fixture = await makeMemberCollectionFixture();
+  const rows = await fixture.database
+    .selectFrom("items")
+    .select("items.id")
+    .where(
+      makeSelectionExpressionFromFilter({
+        viewer: makeViewer(fixture.reader.memberId),
+        filter: makeTimelineFilterFromQuery({ member: fixture.memberId }),
+      }),
+    )
+    .orderBy("items.seq", "asc")
+    .execute();
+  const visibleItemIds = rows.map((row) => {
+    return row.id;
+  });
+  expect(visibleItemIds).toEqual(fixture.expectedIds);
+  expect(new Set(visibleItemIds).size).toBe(4);
+  expect(
+    hasContentFilter(makeTimelineFilterFromQuery({ member: fixture.memberId })),
+  ).toBe(true);
 });

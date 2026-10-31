@@ -611,3 +611,8 @@ export {
   type MediaPositionRequest,
   type MediaPositionResponse,
 } from "./mediaPosition.ts";
+export {
+  memberCollectionParamsSchema,
+  memberCollectionResponseSchema,
+  type MemberCollectionResponse,
+} from "./memberCollections.ts";

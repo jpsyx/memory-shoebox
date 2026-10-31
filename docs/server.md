@@ -82,30 +82,31 @@ by resource, one module per group.
 
 The registered route modules include:
 
-| Module                         | Covers                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| `health.ts`                    | `GET /api/health`, for Fly.io's health check                               |
-| `auth.ts`                      | Sign-in codes and sessions, all four anonymous                             |
-| `bootstrap.ts`                 | Current navigation account and setup in one no-store response              |
-| `me.ts`                        | The signed-in member's own account and their devices                       |
-| `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                         |
-| `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                |
-| `registerObservationRoutes.ts` | `GET /api/presence`, item viewers and the admin activity feed              |
-| `registerMailHealthRoutes.ts`  | `GET /api/mail/health`: actionable configuration and delivery health       |
-| `timeline.ts`                  | `GET /api/timeline` and `GET /api/timeline/rail`                           |
-| `filters.ts`                   | `GET /api/filters/facets`                                                  |
-| `milestones/`                  | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
-| `removals/`                    | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
-| `tags.ts`                      | `GET /api/tags`                                                            |
-| `people.ts`                    | `GET /api/people`                                                          |
-| `items/`                       | One item: the permalink, the download, every edit, the                     |
-|                                | delete, comments on it, reactions, and the seen latch                      |
-| `comments.ts`                  | A comment by its own id: edit, delete, and its pair of                     |
-|                                | reaction routes                                                            |
-| `bursts.ts`                    | `GET /api/bursts/:burstId/frames`                                          |
-| `visibilityRules.ts`           | `POST /api/visibility-rules/resolve`                                       |
-| `uploadSessions/`              | The upload session's twelve routes, from opening a                         |
-|                                | draft to committing it                                                     |
+| Module                         | Covers                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `health.ts`                    | `GET /api/health`, for Fly.io's health check                                |
+| `auth.ts`                      | Sign-in codes and sessions, all four anonymous                              |
+| `bootstrap.ts`                 | Current navigation account and setup in one no-store response               |
+| `me.ts`                        | The signed-in member's own account and their devices                        |
+| `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                          |
+| `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                 |
+| `registerObservationRoutes.ts` | `GET /api/presence`, item viewers and the admin activity feed               |
+| `registerMailHealthRoutes.ts`  | `GET /api/mail/health`: actionable configuration and delivery health        |
+| `timeline.ts`                  | `GET /api/timeline` and `GET /api/timeline/rail`                            |
+| `filters.ts`                   | `GET /api/filters/facets`                                                   |
+| `milestones/`                  | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)     |
+| `removals/`                    | Removal queues, item asks, and settlements: see [removals.md](removals.md)  |
+| `tags.ts`                      | `GET /api/tags`                                                             |
+| `people.ts`                    | `GET /api/people`                                                           |
+| `memberCollections.ts`         | `GET /api/member-collections/:memberId`: authenticated public identity only |
+| `items/`                       | One item: the permalink, the download, every edit, the                      |
+|                                | delete, comments on it, reactions, and the seen latch                       |
+| `comments.ts`                  | A comment by its own id: edit, delete, and its pair of                      |
+|                                | reaction routes                                                             |
+| `bursts.ts`                    | `GET /api/bursts/:burstId/frames`                                           |
+| `visibilityRules.ts`           | `POST /api/visibility-rules/resolve`                                        |
+| `uploadSessions/`              | The upload session's twelve routes, from opening a                          |
+|                                | draft to committing it                                                      |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and

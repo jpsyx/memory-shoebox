@@ -43,3 +43,16 @@ describe("media position contract", () => {
     });
   });
 });
+
+it("retains a UUID member in the exact media selection", () => {
+  const selection = { tags: [], people: [], member: itemId };
+  expect(
+    mediaPositionRequestSchema.parse({ itemId, selection }).selection,
+  ).toEqual(selection);
+  expect(
+    mediaPositionRequestSchema.safeParse({
+      itemId,
+      selection: { ...selection, member: "bad" },
+    }).success,
+  ).toBe(false);
+});

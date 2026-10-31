@@ -55,3 +55,21 @@ describe("safe media request contracts", () => {
     ).toBe(false);
   });
 });
+
+it("carries an optional UUID member through media neighbor selection", () => {
+  const selection = { tags: [], people: [], member: ITEM_ID };
+  expect(
+    shared.mediaNeighborsRequestSchema.parse({
+      itemId: ITEM_ID,
+      selection,
+      direction: "next",
+    }).selection,
+  ).toEqual(selection);
+  expect(
+    shared.mediaNeighborsRequestSchema.safeParse({
+      itemId: ITEM_ID,
+      selection: { ...selection, member: "bad" },
+      direction: "next",
+    }).success,
+  ).toBe(false);
+});

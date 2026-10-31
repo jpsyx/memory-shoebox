@@ -335,3 +335,19 @@ HTTP(S) URL, and precise UTC timestamp validators, independently of archive
 rendition identities. `avatars.ts` exports the bounded `AvatarCrop` and reservation
 request/response schemas and inferred types, plus removal and renewal envelopes.
 See [member profiles](member-profiles.md#private-avatars) for lifecycle semantics.
+
+## Member collection selection and identity
+
+Archive queries accept optional UUID `member`, and `TimelineSelection` carries
+the same field through media position/neighbors and attachment picking. It means
+visible uploads OR exact linked photo tags, intersected with every other filter.
+`people` retains its photo-tag-only semantics. Selection normalization preserves
+the member, and timeline cursor fingerprints distinguish different members.
+
+`memberCollections.ts` publishes `memberCollectionParamsSchema`,
+`memberCollectionResponseSchema` and `MemberCollectionResponse` for authenticated
+`GET /api/member-collections/:memberId`. The response is exactly a nullable
+`MemberRef`: ID, public display name and avatar, without account email, role,
+status or counts. Retained removed accounts keep their identity; unknown UUIDs
+return null and an empty filtered archive. The contract is exported through the
+allowlist generator and remains erasable TypeScript.

@@ -24,6 +24,8 @@ export type TimelineFilter = {
   tagIds: readonly string[];
   /** Same reasoning as `tagIds`: shared across the request, never copied. */
   personIds: readonly string[];
+  /** Retained account identity, never an authorization grant. */
+  memberId?: string;
   from: string | undefined;
   until: string | undefined;
   attachedToMilestoneId: string | undefined;
@@ -41,6 +43,7 @@ export type TimelineFilter = {
 export function makeTimelineFilterFromQuery(query: {
   tags?: readonly string[];
   people?: readonly string[];
+  member?: string;
   from?: string;
   until?: string;
   attachedToMilestoneId?: string;
@@ -49,6 +52,7 @@ export function makeTimelineFilterFromQuery(query: {
   return {
     tagIds: [...new Set(query.tags ?? [])].sort(),
     personIds: [...new Set(query.people ?? [])].sort(),
+    memberId: query.member,
     from: query.from,
     until: query.until,
     attachedToMilestoneId: query.attachedToMilestoneId,
@@ -67,7 +71,7 @@ export function makeTimelineFilterFromQuery(query: {
  *
  * A date range alone is a window on the same timeline, so milestone-only days
  * survive it and surface 2's `milestone-empty` state keeps working under a
- * date window. A tag, a person or a milestone attachment is a content
+ * date window. A tag, person, member or milestone attachment is a content
  * predicate, and a day with zero matching items is not a result: adding one
  * would put an empty day in the middle of a result list whose strip says 88
  * (`timeline.md` Ruling 1).
@@ -76,6 +80,7 @@ export function hasContentFilter(filter: Readonly<TimelineFilter>): boolean {
   return (
     filter.tagIds.length > 0 ||
     filter.personIds.length > 0 ||
+    filter.memberId !== undefined ||
     filter.attachedToMilestoneId !== undefined
   );
 }
@@ -87,6 +92,32 @@ export function hasAnyFilter(filter: Readonly<TimelineFilter>): boolean {
     filter.from !== undefined ||
     filter.until !== undefined
   );
+}
+
+/** An account narrows visible rows by uploads or exact linked photo identity. */
+function _makeMemberConditions(
+  options: Readonly<{
+    eb: ExpressionBuilder<Database, "items">;
+    memberId: string | undefined;
+  }>,
+): Array<Expression<SqlBool>> {
+  const { eb, memberId } = options;
+  if (memberId === undefined) {
+    return [];
+  }
+  return [
+    eb.or([
+      eb("items.uploaded_by", "=", memberId),
+      eb.exists(
+        eb
+          .selectFrom("item_people")
+          .innerJoin("people", "people.id", "item_people.person_id")
+          .select("item_people.id")
+          .whereRef("item_people.item_id", "=", "items.id")
+          .where("people.member_id", "=", memberId),
+      ),
+    ]),
+  ];
 }
 
 /**
@@ -120,6 +151,7 @@ export function makeSelectionExpressionFromFilter(options: {
 
   return eb.and([
     visibilityExpression({ eb, viewer }),
+    ..._makeMemberConditions({ eb, memberId: filter.memberId }),
     ..._makeDateConditions({ eb, filter }),
     ..._makeTagConditions({ eb, tagIds: filter.tagIds }),
     ..._makePersonConditions({ eb, personIds: filter.personIds }),
