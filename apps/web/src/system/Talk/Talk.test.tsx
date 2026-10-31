@@ -31,7 +31,7 @@ describe("the comments panel", () => {
         cssVariablesResolver={cssVariablesResolver}
       >
         <Talk heading="What people said">
-          <CommentRow comment={COMMENT} viewer={VIEWER} />
+          <CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />
         </Talk>
       </MantineProvider>,
     );

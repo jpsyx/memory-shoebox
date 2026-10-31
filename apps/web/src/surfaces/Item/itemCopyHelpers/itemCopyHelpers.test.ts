@@ -104,7 +104,7 @@ describe("the failure sentences", () => {
 
   it("tells somebody their words are still there when a comment fails", () => {
     expect(commentSendFailure(new Error("dropped"))).toBe(
-      "It did not send. It is still here, so try again.",
+      "Couldn't post your comment. Your draft is still here.",
     );
     expect(
       commentSendFailure(

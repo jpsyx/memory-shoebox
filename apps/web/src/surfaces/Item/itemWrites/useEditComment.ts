@@ -1,5 +1,11 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateComment } from "@/api/comments/comments";
+import {
+  updateComment,
+  getCommentTagFailuresFromError,
+  type CommentTagFailure,
+} from "@/api/comments/comments";
 import { itemWriteFailure } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { makeItemDetailFromSavedComment } from "@/surfaces/Item/itemWrites/itemCacheHelpers/itemCacheHelpers";
 import {
@@ -12,9 +18,10 @@ import { useUpdateCachedItem } from "@/surfaces/Item/itemWrites/useUpdateCachedI
 export function useEditComment(
   options: Readonly<{ itemId: string; commentId: string }>,
 ): {
-  save: (options: Readonly<{ body: string; onSaved: () => void }>) => void;
+  save: (options: Readonly<CommentDraft & { onSaved: () => void }>) => void;
   isSaving: boolean;
   error: string | undefined;
+  tagFailure: CommentTagFailure[];
 } {
   const { itemId, commentId } = options;
   const queryClient = useQueryClient();
@@ -22,8 +29,8 @@ export function useEditComment(
   const mutation = useMutation({
     mutationKey: ["items", itemId, "comment", commentId, "edit"],
     scope: makeWriteScopeFromItemId(itemId),
-    mutationFn: (body: string) => {
-      return updateComment({ commentId, body: { body } });
+    mutationFn: (body: CommentDraft) => {
+      return updateComment({ commentId, body });
     },
     onSuccess: (comment) => {
       updateCachedItem((detail) => {
@@ -35,11 +42,22 @@ export function useEditComment(
     },
   });
   return {
-    save: ({ body, onSaved }) => {
-      mutation.mutate(body, { onSuccess: onSaved });
+    save: ({ body, commentTags, onSaved }) => {
+      mutation.mutate({ body, commentTags }, { onSuccess: onSaved });
     },
     isSaving: mutation.isPending,
+    tagFailure: getCommentTagFailuresFromError(
+      mutation.error,
+      mutation.variables,
+    ),
     error:
-      mutation.error === null ? undefined : itemWriteFailure(mutation.error),
+      mutation.error === null
+        ? undefined
+        : mutation.error instanceof ApiRequestError &&
+            ["rate_limited", "forbidden", "not_found", "unauthorized"].includes(
+              mutation.error.code,
+            )
+          ? itemWriteFailure(mutation.error)
+          : "Couldn't save your changes.",
   };
 }

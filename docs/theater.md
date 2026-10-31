@@ -158,3 +158,18 @@ boundary. Neighbor reads, preview windows and theater position requests keep
 that complete selection through navigation. Archive page keys and visit memory
 also separate different member collections for the same reader. Direct collection
 URLs do not invent a comment return target.
+
+## Member tag input in full screen
+
+The shared conversation textarea presents member selection through a Mantine
+Combobox. Its listbox portals through the dock's existing stable target, so it
+stays inside the fullscreen host and outside the clipped scrolling panel. An
+open listbox holds the dock through pointer departure; Escape closes that list
+before the dock or viewer can consume it. A closed picker is unmounted so a
+hidden listbox cannot keep the dock pinned.
+
+Main-composer memory now includes explicit member ranges with its words and
+moment. Local undo/redo survives ordinary provider rerenders by comparing the
+actual controlled body/range values. Reply/edit forms keep their current mounted
+lifetime and only clear/close a matching successful submission. This change does
+not add session journey persistence or a separate conversation write pipeline.

@@ -4,7 +4,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { CreateCommentRequest } from "@memory-shoebox/shared";
-import { createComment } from "@/api/comments/comments";
+import {
+  createComment,
+  getCommentTagFailuresFromError,
+  type CommentTagFailure,
+} from "@/api/comments/comments";
 import { commentSendFailure } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { makeItemDetailFromSavedComment } from "@/surfaces/Item/itemWrites/itemCacheHelpers/itemCacheHelpers";
 import {
@@ -20,6 +24,7 @@ export type CommentSend = {
   send: (options: Readonly<CommentSubmission>) => void;
   isSending: boolean;
   error: string | undefined;
+  tagFailure: CommentTagFailure[];
 };
 
 /**
@@ -59,6 +64,10 @@ export function useCreateComment(itemId: string): CommentSend {
       mutation.mutate({ draft, onSent });
     },
     isSending: numPendingSends > 0,
+    tagFailure: getCommentTagFailuresFromError(
+      mutation.error,
+      mutation.variables?.draft,
+    ),
     error:
       mutation.error === null ? undefined : commentSendFailure(mutation.error),
   };

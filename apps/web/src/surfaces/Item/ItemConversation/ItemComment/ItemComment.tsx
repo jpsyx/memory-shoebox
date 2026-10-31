@@ -1,3 +1,4 @@
+import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import { useState, type ReactNode } from "react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import { agoLabel, clockLabel } from "@/system/labelHelpers/labelHelpers";
@@ -38,11 +39,13 @@ export function ItemComment({
       <div className={classes.itemCommentContent}>
         {editing.isEditorShown ? (
           <CommentEditor
+            itemId={itemId}
+            tagFailure={write.tagFailure}
             comment={comment}
             isSaving={write.isSaving}
             onCancel={editing.closeEditor}
-            onSave={(body) => {
-              write.save({ body, onSaved: editing.closeEditor });
+            onSave={(draft, onSaved) => {
+              write.save({ ...draft, onSaved });
             }}
           />
         ) : (
@@ -66,7 +69,10 @@ export function ItemComment({
               <span>{agoLabel({ timestamp: comment.createdAt })}</span>
             </div>
             <p className={classes.itemCommentBody}>
-              {comment.body}
+              <CommentTagText
+                body={comment.body}
+                commentTags={comment.commentTags}
+              />
               {comment.editedAt === null ? null : (
                 <span className={classes.itemCommentEdited}> (edited)</span>
               )}

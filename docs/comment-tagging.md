@@ -91,7 +91,9 @@ comment and reaction queries; historical labels do not change on account rename.
 
 Contracts, migration, candidate lookup, persisted reads, transactional writes,
 notification scheduling/delivery and the account preference are connected.
-The composer and comment arrival UI are connected in subsequent tasks.
+The shared range-aware composer and posted-tag renderer are connected across
+main comments, replies, edits, Talk rows and video moment previews. Comment
+arrival and collection-return journeys are connected in subsequent tasks.
 
 ## Email preference and delivery
 
@@ -113,3 +115,53 @@ cancelled when their recipient is removed, and deleting a parent cancels mail
 for its replies too. A final gate after rendering and sender freezing checks
 current eligibility, preference, comment, tag and item access on every attempt.
 See [mail.md](mail.md) for delivery/recovery and [emails.md](emails.md) for copy.
+
+## Writing and correcting tags
+
+`CommentTagInputField` owns the native textarea, its noninteractive mirror, the
+Mantine Combobox and local undo history. Every composer passes a controlled
+`CommentDraft` containing `body` and `commentTags`; existing conversation hooks
+retain write, authorization and video-moment ownership. Plain typing, copying or
+pasting never creates a member reference. Selecting a result inserts `@Name `.
+The picker uses item/query-specific cache entries and never displays a preceding
+query's results while the current lookup is pending.
+
+At the start, after whitespace, or after opening punctuation, `@` opens the
+eligible directory. Multiword names remain searchable. The initially highlighted
+result requires an explicit click, tap or Enter. Arrows navigate. Tab dismisses
+without choosing; Escape dismisses only the picker. Cmd/Ctrl+Enter chooses an
+open result before a later shortcut can submit. Composition cannot select or
+submit. Failed lookup offers Retry and ordinary text remains usable.
+
+The mirror copies the textarea's computed typography, padding, dimensions and
+scroll offsets. An ink wash and metric-preserving text stroke distinguish
+selected ranges without introducing clickable content into editing. Native
+selection, caret and accessibility remain on the textarea. Edits shift unaffected
+ranges and remove references whose interiors are changed. Undo/redo snapshots
+words, references and both selection endpoints together; native history events
+and keyboard shortcuts share that history.
+
+Near 4,000 UTF-16 units the field shows a counter. Over-limit input is retained,
+including a long member selection, with the number of characters to remove;
+posting/saving is blocked until it fits. Pending writes leave editing available.
+Main, reply and edit success callbacks only clear/close the matching submitted
+revision, preserving any newer words and selected members.
+
+Structured tag failures identify submitted occurrences. A still-current refused
+tag offers Keep as plain text or Choose another member. A refreshed account name
+offers Use updated name without rewriting surrounding words. A failure cannot
+attach to a replacement selection at the same index, even for the same member.
+Shifted/replaced occurrences conservatively discard obsolete correction actions;
+the ordinary retry validates the current payload. Historical edit occurrences
+retain their server `tagId` until edited inside or explicitly replaced.
+
+`CommentTagText` slices stored ranges into React text and native collection links
+using the saved label snapshot and `/?member=<memberId>`. Typed lookalikes remain
+plain text. This same renderer serves comments, Talk rows and moment previews.
+Posting success makes no claim about email delivery.
+
+The early isolated Chromium prototype verified matching mirror/input wrapping,
+scroll metrics and unchanged glyph rectangles at desktop, phone width and 200%
+CSS scale, plus reference-aware undo and CDP engine composition. Physical mobile
+keyboards, OS IMEs and integrated cross-browser/fullscreen acceptance remain
+separate verification work; DOM tests do not claim those results.

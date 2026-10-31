@@ -78,7 +78,7 @@ export function itemWriteFailure(error: unknown): string {
 export function commentSendFailure(error: unknown): string {
   return error instanceof ApiRequestError && error.code === "rate_limited"
     ? `It did not send: a lot has been said from here just now. Wait ${_wait(error)} and send it again. It is still here.`
-    : "It did not send. It is still here, so try again.";
+    : "Couldn't post your comment. Your draft is still here.";
 }
 
 /** A reaction that did not land, which the control has already put back. */

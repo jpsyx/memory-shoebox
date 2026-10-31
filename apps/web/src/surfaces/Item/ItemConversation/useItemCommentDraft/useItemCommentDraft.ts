@@ -1,4 +1,6 @@
-import { useLayoutEffect, useRef, type RefObject } from "react";
+import { getFailedCommentTagsFromDraft } from "@/api/comments/comments";
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
+import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import { isFocusLostOrWithin } from "@/system/focusHelpers";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import {
@@ -9,6 +11,8 @@ import { useItemCommentDraftMemory } from "../ItemCommentDraftProvider/ItemComme
 
 type ItemCommentDraft = CommentSend & {
   body: string;
+  draft: CommentDraft;
+  setDraft: (value: CommentDraft) => void;
   setBody: (body: string) => void;
   atSeconds: number | undefined;
   start: () => void;
@@ -68,13 +72,21 @@ function _submitDraft({
   owner,
 }: Readonly<SubmissionOptions>): void {
   const submitted = memory.read(itemId);
-  if (submitted.body.trim() === "" || write.isSending) {
+  if (
+    submitted.body.trim() === "" ||
+    submitted.body.length > 4000 ||
+    write.isSending ||
+    getFailedCommentTagsFromDraft({
+      draft: submitted,
+      failures: write.tagFailure,
+    }).length > 0
+  ) {
     return;
   }
   const submittedField = fieldRef.current;
   write.send({
     draft: {
-      commentTags: [],
+      commentTags: submitted.commentTags,
       body: submitted.body,
       atSeconds: submitted.atSeconds ?? null,
     },
@@ -102,6 +114,9 @@ export function useItemCommentDraft(
   const { itemId, transport } = options;
   const memory = useItemCommentDraftMemory();
   const draft = memory.read(itemId);
+  const value = useMemo(() => {
+    return { body: draft.body, commentTags: draft.commentTags };
+  }, [draft.body, draft.commentTags]);
   const write = useCreateComment(itemId);
   const owner = useRef<string | undefined>(itemId);
   useLayoutEffect(() => {
@@ -112,10 +127,14 @@ export function useItemCommentDraft(
   }, [itemId]);
   return {
     ...write,
+    draft: value,
+    setDraft: (updatedDraft) => {
+      return memory.update(itemId, updatedDraft);
+    },
     body: draft.body,
     atSeconds: draft.atSeconds,
     setBody: (body) => {
-      return memory.update(itemId, { body });
+      return memory.update(itemId, { body, commentTags: [] });
     },
     start: () => {
       if (memory.read(itemId).hasStarted || transport === undefined) {

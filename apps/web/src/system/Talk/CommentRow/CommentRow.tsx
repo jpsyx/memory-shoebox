@@ -1,3 +1,5 @@
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
+import type { CommentTagFailure } from "@/api/comments/comments";
 import type { ReactNode } from "react";
 import type {
   CommentDto,
@@ -13,10 +15,12 @@ type Props = {
   /** Who is looking, so a reaction answers before the server hears about it. */
   viewer: MemberRef;
   comment: CommentDto;
+  itemId: string;
+  tagFailure?: CommentTagFailure[];
   onSeek?: (seconds: number) => void;
   /** Saves an edit. Call `onSaved` once the server has the new words. */
   onSaveEdit?: (
-    options: Readonly<{ body: string; onSaved: () => void }>,
+    options: Readonly<CommentDraft & { onSaved: () => void }>,
   ) => void;
   isSaving?: boolean;
   onDelete?: () => void;
@@ -35,6 +39,8 @@ type Props = {
  */
 export function CommentRow({
   comment,
+  itemId,
+  tagFailure,
   viewer,
   onSeek,
   onSaveEdit,
@@ -48,10 +54,12 @@ export function CommentRow({
     <>
       <CommentEditor
         comment={comment}
+        itemId={itemId}
+        tagFailure={tagFailure}
         isSaving={isSaving}
         onCancel={editing.closeEditor}
-        onSave={(body) => {
-          onSaveEdit?.({ body, onSaved: editing.closeEditor });
+        onSave={(draft, onSaved) => {
+          onSaveEdit?.({ ...draft, onSaved });
         }}
       />
       {error === undefined ? null : <Prose role="alert">{error}</Prose>}

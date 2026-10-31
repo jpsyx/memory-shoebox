@@ -361,3 +361,14 @@ and refused fullscreen, focus containment and responsive control reachability.
 Existing conversation tests now enter the shared host, including expired playback
 URL retry. See [theater](theater.md) for ownership, title/counter, drafts and short
 viewport behavior and [verification](theater-verification.md) for exact evidence.
+
+## Explicit comment member tags
+
+Main comments, one-level replies and edits share `CommentTagInputField` and its
+controlled body/range draft. Selection, plain paste, IME, undo/redo and recoverable
+stale/unavailable member errors therefore behave the same in each form. Write
+hooks still own pending-write exclusion and cache updates; a late successful
+reply or edit leaves newer input open. The existing moment capture and fixed
+reply/edit timestamps are unchanged. Timeline grouping carries stored tag ranges
+into `VideoMomentPreview`, which uses the same native-link renderer as the thread.
+See [comment tagging](comment-tagging.md) for range and correction semantics.

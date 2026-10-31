@@ -7,7 +7,7 @@ import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTranspor
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { useItemCommentDraft } from "../useItemCommentDraft/useItemCommentDraft";
-import { submitCommentOnShortcut } from "../submitCommentOnShortcut";
+import { CommentTagInputField } from "@/system/CommentTagInputField/CommentTagInputField";
 import classes from "./ItemComposer.module.css";
 
 type Props = {
@@ -42,21 +42,20 @@ export function ItemComposer({
     >
       <div className={classes.itemComposerInput}>
         <MemberAvatar member={viewer} size={30} />
-        <textarea
-          ref={fieldRef}
-          rows={2}
-          aria-label="Write a comment"
+        <CommentTagInputField
+          itemId={itemId}
+          fieldRef={fieldRef}
+          value={draft.draft}
+          onChange={draft.setDraft}
+          onSubmit={draft.submit}
+          onFocus={draft.start}
+          isSending={draft.isSending}
+          tagFailure={draft.tagFailure}
           placeholder={
             transport === undefined
               ? "Say something about this photo…"
               : "Say something about this moment…"
           }
-          value={draft.body}
-          onFocus={draft.start}
-          onKeyDown={submitCommentOnShortcut}
-          onChange={(event) => {
-            draft.setBody(event.currentTarget.value);
-          }}
         />
       </div>
       <div className={classes.itemComposerActions}>

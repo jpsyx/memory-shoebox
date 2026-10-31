@@ -1,3 +1,4 @@
+import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import type { ReactNode, RefObject } from "react";
 import type {
   CommentDto,
@@ -47,7 +48,7 @@ export function CommentView({
       </span>
       <CommentWhen comment={comment} onSeek={onSeek} />
       <p className={classes.commentBody}>
-        {comment.body}
+        <CommentTagText body={comment.body} commentTags={comment.commentTags} />
         {comment.editedAt === null ? null : (
           <>
             {" "}

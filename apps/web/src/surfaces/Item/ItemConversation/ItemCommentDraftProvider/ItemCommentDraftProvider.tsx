@@ -1,3 +1,4 @@
+import type { CommentTagInput } from "@memory-shoebox/shared";
 import {
   createContext,
   useCallback,
@@ -10,6 +11,7 @@ import {
 /** Main-composer values retained for one item-viewer visit. */
 export type ItemCommentDraftValue = {
   body: string;
+  commentTags: CommentTagInput[];
   atSeconds: number | undefined;
   hasStarted: boolean;
   revision: number;
@@ -24,6 +26,7 @@ type DraftMemory = {
 type Props = { children: ReactNode };
 const EMPTY_DRAFT: ItemCommentDraftValue = {
   body: "",
+  commentTags: [],
   atSeconds: undefined,
   hasStarted: false,
   revision: 0,

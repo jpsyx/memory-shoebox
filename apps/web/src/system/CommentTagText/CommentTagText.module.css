@@ -1,0 +1,11 @@
+.commentTagLink {
+  color: inherit;
+  background: color-mix(in oklab, var(--on-print) 8%, transparent);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}
+.commentTagLink:hover {
+  background: color-mix(in oklab, var(--on-print) 14%, transparent);
+}

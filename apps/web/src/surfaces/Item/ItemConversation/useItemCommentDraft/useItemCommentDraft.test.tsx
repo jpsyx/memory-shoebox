@@ -331,3 +331,32 @@ describe("shared comment drafts", () => {
     expect(view.readDraft().body).toBe("New member words");
   });
 });
+
+it("posts selected ranges and retains a newer tagged draft after a late success", async () => {
+  const pending = preparePost();
+  const view = renderDraft(false);
+  const selected = {
+    body: "Hi @Jorge",
+    commentTags: [{ memberId: SIGNED_IN.memberId, start: 3, end: 9 }],
+  };
+  act(() => {
+    return view.readDraft().setDraft(selected);
+  });
+  act(() => {
+    return view.readDraft().submit();
+  });
+  await waitFor(() => {
+    return expect(getRecordedRequests()).toHaveLength(1);
+  });
+  expect(getRecordedRequests()[0]?.body).toMatchObject(selected);
+  const newer = {
+    body: "😀 Hi @Jorge",
+    commentTags: [{ memberId: SIGNED_IN.memberId, start: 6, end: 12 }],
+  };
+  act(() => {
+    return view.readDraft().setDraft(newer);
+  });
+  pending.letGo();
+  await waitForWritesToSettle(view.queryClient);
+  expect(view.readDraft().draft).toEqual(newer);
+});

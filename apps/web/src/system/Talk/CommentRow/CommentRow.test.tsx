@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -34,7 +35,9 @@ function _Providers({
 }: Readonly<{ children: ReactNode }>): ReactNode {
   return (
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      {children}
+      <QueryClientProvider client={new QueryClient()}>
+        {children}
+      </QueryClientProvider>
     </MantineProvider>
   );
 }
@@ -50,6 +53,7 @@ function _renderSavingRow(): Mock<(body: string) => void> {
     const [isSaving, setIsSaving] = useState(false);
     return (
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         isSaving={isSaving}
@@ -75,7 +79,7 @@ function _getGridItemFromPart(part: Element): Element | undefined {
 
 describe("one comment", () => {
   it("offers no edit or delete to somebody the server said cannot", () => {
-    _render(<CommentRow comment={COMMENT} viewer={VIEWER} />);
+    _render(<CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />);
 
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -83,7 +87,11 @@ describe("one comment", () => {
 
   it("splits the two, because the contract does", () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     expect(screen.getByRole("button", { name: "Edit" })).toBeVisible();
@@ -95,6 +103,7 @@ describe("one comment", () => {
       vi.fn<NonNullable<ComponentProps<typeof CommentRow>["onSaveEdit"]>>();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         onSaveEdit={onSaveEdit}
@@ -111,6 +120,7 @@ describe("one comment", () => {
 
     expect(onSaveEdit).toHaveBeenCalledWith({
       body: "His father's chin, then.",
+      commentTags: [],
       onSaved: expect.any(Function),
     });
     expect(
@@ -128,7 +138,11 @@ describe("one comment", () => {
 
   it("puts the cursor in the editor when Edit is pressed", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -140,7 +154,11 @@ describe("one comment", () => {
 
   it("gives focus back to Edit when the editor is left", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -153,7 +171,11 @@ describe("one comment", () => {
 
   it("gives the editor's field, Save and note the classes that span the comment's columns", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -179,6 +201,7 @@ describe("one comment", () => {
   it("puts Edit and Delete in one grid item with the class that spans the comment's columns", () => {
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true, canDelete: true }}
         viewer={VIEWER}
       />,
@@ -199,6 +222,7 @@ describe("one comment", () => {
     const onSaveEdit = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         onSaveEdit={onSaveEdit}
@@ -242,6 +266,7 @@ describe("one comment", () => {
     const onDelete = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canDelete: true }}
         viewer={VIEWER}
         onDelete={onDelete}
@@ -260,6 +285,7 @@ describe("one comment", () => {
     const onDelete = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canDelete: true }}
         viewer={VIEWER}
         onDelete={onDelete}
@@ -277,6 +303,7 @@ describe("one comment", () => {
   it("titles an admin's delete of somebody else's comment 'Delete this comment?'", async () => {
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: false, canDelete: true }}
         viewer={VIEWER}
       />,
@@ -291,11 +318,12 @@ describe("one comment", () => {
 
   it("draws the server's words rather than a local copy", () => {
     const { rerender } = _render(
-      <CommentRow comment={COMMENT} viewer={VIEWER} />,
+      <CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />,
     );
 
     rerender(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, body: "Edited elsewhere." }}
         viewer={VIEWER}
       />,
@@ -308,6 +336,7 @@ describe("one comment", () => {
 it("uses the author's chosen decorative photo in the existing comment position", () => {
   _render(
     <CommentRow
+      itemId="photo"
       comment={{
         ...COMMENT,
         author: {

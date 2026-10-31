@@ -1,4 +1,16 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import type { CommentDto } from "@memory-shoebox/shared";
+import {
+  getFailedCommentTagsFromDraft,
+  type CommentTagFailure,
+} from "@/api/comments/comments";
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 /** Whether a comment's editor is open, and how focus gets back to Edit. */
 export type CommentEditing = {
@@ -48,4 +60,69 @@ export function useCommentEditing(canEdit: boolean): CommentEditing {
       setIsEditing(false);
     },
   };
+}
+
+type EditorOptions = {
+  comment: CommentDto;
+  isSaving: boolean;
+  tagFailure?: CommentTagFailure[];
+  onSave: (draft: CommentDraft, onSaved: () => void) => void;
+  onCancel: () => void;
+};
+type EditorDraft = {
+  draft: CommentDraft;
+  setDraft: (draft: CommentDraft) => void;
+  fieldRef: RefObject<HTMLTextAreaElement | null>;
+  save: () => void;
+  canSave: boolean;
+};
+/** Keeps edit text and references local, closing only the submitted revision. */
+export function useCommentEditorDraft(
+  options: Readonly<EditorOptions>,
+): EditorDraft {
+  const { comment } = options;
+  const [draft, setDraft] = useState<CommentDraft>({
+    body: comment.body,
+    commentTags: comment.commentTags,
+  });
+  const currentDraft = useRef(draft);
+  currentDraft.current = draft;
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
+  const isMounted = useRef(false);
+  useLayoutEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  const canSave = _canSaveCommentDraft(draft, options);
+  const save = () => {
+    if (options.isSaving || !canSave) {
+      return;
+    }
+    const submitted = draft;
+    options.onSave(draft, () => {
+      if (isMounted.current && currentDraft.current === submitted) {
+        options.onCancel();
+      }
+    });
+  };
+  return { draft, setDraft, fieldRef, save, canSave };
+}
+
+function _canSaveCommentDraft(
+  draft: Readonly<CommentDraft>,
+  options: Readonly<EditorOptions>,
+): boolean {
+  const { comment } = options;
+  const isUnchanged =
+    draft.body.trim() === comment.body.trim() &&
+    JSON.stringify(draft.commentTags) === JSON.stringify(comment.commentTags);
+  return (
+    !isUnchanged &&
+    draft.body.trim() !== "" &&
+    draft.body.length <= 4000 &&
+    getFailedCommentTagsFromDraft({ draft, failures: options.tagFailure ?? [] })
+      .length === 0
+  );
 }
