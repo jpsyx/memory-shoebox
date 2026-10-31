@@ -3,8 +3,9 @@
 The V1 browser acceptance suite exercises the shipped SPA and Fastify routes
 against disposable local catalogs. The starting product HEAD was
 `0490090c68341bfeb60b0a215bf63122b58dcddb`. The V1 commit adds the executable
-harness and one demonstrated correction: restoring switch focus after a pending
-preference save, unless the member moved focus to another control.
+harness, preference-switch focus recovery, and the review corrections below.
+The initial acceptance commit was `9df26c924300fda8196127f0187b5071c26e364e`;
+its pre-correction captures remain preserved.
 
 ## Reproduction and safety
 
@@ -78,7 +79,8 @@ closed picker, and the native caret at the insertion end before dependent
 typing. Focused plain/repeated and reply/edit cases passed.
 
 These harness corrections did not require product changes. The focus correction
-above was the only product change in V1.
+above was the only product change in the initial V1 commit. Review round 1
+subsequently corrected the approved composer instruction and phone typography.
 
 ## Visual inspection
 
@@ -143,3 +145,56 @@ record; its exact hash is recorded in the worker report after committing.
 | `pnpm exec tsc --noEmit`                                                                                                                                                 | PASS, root harness types. The build also checks web types.                                                      |
 | Focused `pnpm exec oxlint` / `pnpm exec oxfmt --check` on all added/changed source and docs                                                                              | PASS.                                                                                                           |
 | `git diff --check` and staged diff inspection                                                                                                                            | PASS.                                                                                                           |
+
+## Review round 1: composer instruction, typography and identity proof
+
+R1 corrected the missing approved **Type @ to tag a member.** instruction in
+the shared writing/reply/edit field. It occupies a separate line and stays at
+least 15px. Phone-width and coarse-pointer layouts use at least 16px native
+input and mirror text; desktop remains 15px. Native and mirror font size and
+line height now use declarative CSS. The mirror retains its existing computed
+padding, whitespace and scroll synchronization, but no longer caches stale
+inline font-size/line-height after viewport changes.
+
+Before correction, the shared unit test failed on the missing instruction and
+the real Chromium phone case measured 15px input with no hint. The first
+bounded capture also exposed a stale 15px mirror beside 16px native text after
+coarse-pointer landscape/rendition changes. An initial-state browser regression
+confirmed the mirror mismatch before the declarative correction. These REDs are
+retained in `r1-unit-red.log`, `r1-browser-red.log`, `r1-mirror-red.log` and
+`visual-r1-before-mirror/capture-evidence-before-mirror.json`.
+
+R2 strengthens all main/reply/edit collection-return submissions and the newer
+pending-departure draft: each must send the expected body and exact member ID
+with offsets, then expose that member link and href in the article identified
+by that response's comment ID. Preexisting Jorge links cannot satisfy these
+assertions. They passed without a product-reference correction.
+
+The final revision passed 60/60 browser cases (1.4 minutes, exit 0), including
+the strengthened identity and font/line-height assertions. The focused twelve
+return/pending cases, ten shared-input unit tests, build, root harness types,
+focused lint and formatting also passed. An earlier matrix was intentionally
+interrupted after the mirror finding and is retained as
+`r1-interrupted-matrix.log`; it is not a successful result. The final browser
+command used `env -u NO_COLOR pnpm exec playwright test -c playwright.comment-tagging.config.ts`
+to remove inherited color-configuration noise. The build's existing dependency
+module-directive warning remains tooling noise, not a pristine-output claim.
+
+One affected capture batch and its necessary confirmation are preserved. Final
+`visual-r1/` contains 16 composer captures and four contact sheets: all four
+renditions at 1440 desktop, 390 and 320 phone, and 844 x 390 coarse-pointer
+landscape. Every capture contains 4,000 characters and a selected identity.
+Final recorded native/mirror sizes are 15px/15px with 23.25px line height on
+desktop, and 16px/16px with 24.8px line height on the three phone layouts. Help
+is 15px, below the field; horizontal document overflow is zero in all 16.
+The contact sheets and representative full images were inspected. The hint is
+visible and separate from the counter/send controls. No extra detector sweep
+or native probe was performed. These measurements do not establish physical
+iOS autozoom behavior, and the earlier native limits remain unchanged.
+
+The authoritative new evidence directories are
+`/Users/juanpablosarmiento/src/worktrees/jpsyx/docs/comment-tagging/.playwright-mcp/comment-tagging/visual-r1/`
+and its sibling `visual-r1-before-mirror/`. Both are copied, with SHA-256
+manifests, under
+`~/Downloads/memory-shoebox_comment-tags/comment-tagging/v1-browser/`.
+The original `visual/` directory remains explicitly pre-R1 evidence.

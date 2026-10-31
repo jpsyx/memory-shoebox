@@ -301,3 +301,8 @@ it("dismisses a no-result shortcut without sending and ordinary Enter inserts a 
   expect(field).toHaveValue("@x\n");
   expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 });
+
+it("shows the member tagging instruction below the shared input", () => {
+  setup();
+  expect(screen.getByText("Type @ to tag a member.")).toBeVisible();
+});

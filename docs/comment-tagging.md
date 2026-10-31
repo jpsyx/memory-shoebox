@@ -210,3 +210,8 @@ response's `sessionId` identifies the authenticated device; member-global
 `lastSignedInAt` is deliberately not a lifetime marker. Another device's sign-in
 does not erase this tab. State exists only in memory for the signed-in tab: no
 URL/localStorage text, cross-account singleton or reload/tab-close promise.
+
+The shared writing, reply and edit field displays “Type @ to tag a member.” on
+its own line below the input. Phone-width and coarse-pointer layouts use at
+least 16px native input text, with matching mirror metrics; the helper stays
+at least 15px. Desktop input sizing remains unchanged.

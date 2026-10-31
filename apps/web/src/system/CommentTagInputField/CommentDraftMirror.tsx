@@ -66,10 +66,8 @@ function _syncMirrorMetrics(
   const style = getComputedStyle(field);
   [
     "fontFamily",
-    "fontSize",
     "fontWeight",
     "fontStyle",
-    "lineHeight",
     "letterSpacing",
     "wordSpacing",
     "textIndent",

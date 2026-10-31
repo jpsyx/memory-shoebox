@@ -1,3 +1,4 @@
+import type { Page, Locator, Response } from "@playwright/test";
 import {
   test,
   expect,
@@ -59,6 +60,7 @@ import {
             ? "What you wrote"
             : "Write a comment",
     });
+    await _expectComposerInstruction(page, field);
     await field.fill("Remember this ");
     await selectTag(page, field);
     await link.first().click();
@@ -80,15 +82,13 @@ import {
         return video.paused;
       }),
     ).toBe(true);
-    expect((await submitComment(page, field)).ok()).toBe(true);
-    await expect(
-      page
-        .getByRole("link", {
-          name: "Jorge, view photos and videos",
-          exact: true,
-        })
-        .first(),
-    ).toBeVisible();
+    await _expectSavedSelectedTag(
+      page,
+      await submitComment(page, field),
+      catalog.members.Jorge.memberId,
+      "Remember this @Jorge ",
+      14,
+    );
   });
 });
 
@@ -204,7 +204,13 @@ test("pending post acknowledges only its submitted draft through collection depa
     page.getByRole("article").filter({ hasText: "Submitted words" }),
   ).toBeVisible();
   await page.unroute(`**/api/items/${catalog.itemId}/comments`);
-  expect((await submitComment(page, field)).ok()).toBe(true);
+  await _expectSavedSelectedTag(
+    page,
+    await submitComment(page, field),
+    catalog.members.Jorge.memberId,
+    "Newer words @Jorge ",
+    12,
+  );
 });
 
 test("access refusal after collection departure retires private draft and quoted content", async ({
@@ -328,3 +334,105 @@ test("member changes during a held next page cannot retain the preceding collect
     }),
   ).toHaveCount(0);
 });
+
+async function _expectSavedSelectedTag(
+  page: Page,
+  response: Response,
+  memberId: string,
+  body: string,
+  start: number,
+): Promise<void> {
+  expect(response.ok()).toBe(true);
+  expect(response.request().postDataJSON()).toMatchObject({
+    body,
+    commentTags: [{ memberId, start, end: start + 6 }],
+  });
+  const result = await response.json();
+  const article = page.locator(`[data-comment-id="${result.commentId}"]`);
+  await expect(article).toContainText(body.trim());
+  await expect(
+    article.getByRole("link", {
+      name: "Jorge, view photos and videos",
+      exact: true,
+    }),
+  ).toHaveAttribute("href", `/?member=${memberId}`);
+}
+
+async function _expectComposerInstruction(
+  page: Page,
+  field: Locator,
+): Promise<void> {
+  await _expectComposerMetrics(field);
+  await field.fill("Typography sample");
+  const originalViewport = page.viewportSize()!;
+  const viewports =
+    originalViewport.width < 800
+      ? [
+          { width: 390, height: 844 },
+          { width: 844, height: 390 },
+        ]
+      : [originalViewport];
+  await viewports.reduce(async (previous, viewport) => {
+    await previous;
+    await page.setViewportSize(viewport);
+    await _expectComposerMetrics(field);
+  }, Promise.resolve());
+  const rendition = await page.locator("html").getAttribute("data-rendition");
+  await page.evaluate(() => {
+    document.documentElement.dataset.rendition = "slate";
+  });
+  await _expectComposerMetrics(field);
+  await page.evaluate((value) => {
+    if (value) {
+      document.documentElement.dataset.rendition = value;
+    } else {
+      delete document.documentElement.dataset.rendition;
+    }
+  }, rendition);
+  await page.setViewportSize(originalViewport);
+}
+
+async function _expectComposerMetrics(field: Locator): Promise<void> {
+  const hint = field
+    .locator("..")
+    .locator("..")
+    .getByText("Type @ to tag a member.", { exact: true });
+  const metrics = await field.evaluate((element) => {
+    return {
+      font: parseFloat(getComputedStyle(element).fontSize),
+      lineHeight: getComputedStyle(element).lineHeight,
+      phone: matchMedia("(max-width: 800px), (pointer: coarse)").matches,
+    };
+  });
+  if (metrics.phone) {
+    expect.soft(metrics.font).toBeGreaterThanOrEqual(16);
+  }
+  await expect
+    .poll(async () => {
+      return field.evaluate((element) => {
+        const style = getComputedStyle(element.previousElementSibling!);
+        return {
+          font: parseFloat(style.fontSize),
+          lineHeight: style.lineHeight,
+        };
+      });
+    })
+    .toEqual({ font: metrics.font, lineHeight: metrics.lineHeight });
+  await expect.soft(hint).toBeVisible();
+  await _expectHintBelowInput(hint);
+}
+
+async function _expectHintBelowInput(hint: Locator): Promise<void> {
+  if (await hint.count()) {
+    const help = await hint.evaluate((element) => {
+      const input = element.parentElement!.querySelector("textarea")!;
+      return {
+        font: parseFloat(getComputedStyle(element).fontSize),
+        top: element.getBoundingClientRect().top,
+        fieldBottom: input.getBoundingClientRect().bottom,
+      };
+    });
+    expect(help.font).toBeGreaterThanOrEqual(15);
+    expect(help.top).toBeGreaterThanOrEqual(help.fieldBottom);
+  }
+}

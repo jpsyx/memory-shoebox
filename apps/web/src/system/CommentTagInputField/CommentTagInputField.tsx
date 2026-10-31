@@ -33,6 +33,7 @@ export function CommentTagInputField(props: Readonly<Props>): ReactNode {
           />
         ) : null}
       </Combobox>
+      <p className={classes.help}>Type @ to tag a member.</p>
       <CommentTagCorrections
         itemId={props.itemId}
         value={props.value}
