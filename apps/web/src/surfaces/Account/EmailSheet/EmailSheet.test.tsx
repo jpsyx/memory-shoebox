@@ -82,12 +82,13 @@ describe("the Email sheet", () => {
     expect(onSave).toHaveBeenCalledWith(ALL_OFF);
   });
 
-  it("offers to turn them back on only once they are all off", () => {
+  it("offers to turn them back on only once they are all off", async () => {
+    const onSave = vi.fn();
     const { rerender } = render(
       _inTheme(
         <EmailSheet
           notify={{ ...ALL_OFF, onUpload: true }}
-          onSave={vi.fn()}
+          onSave={onSave}
           isSaving={false}
           error={undefined}
         />,
@@ -102,7 +103,7 @@ describe("the Email sheet", () => {
       _inTheme(
         <EmailSheet
           notify={ALL_OFF}
-          onSave={vi.fn()}
+          onSave={onSave}
           isSaving={false}
           error={undefined}
         />,
@@ -115,6 +116,10 @@ describe("the Email sheet", () => {
     expect(
       screen.getByRole("button", { name: "Turn them all off" }),
     ).toBeDisabled();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Turn them back on" }));
+    expect(onSave).toHaveBeenCalledWith(ALL_ON);
   });
 
   it("says that sign-in codes are not on the list", () => {
@@ -220,4 +225,88 @@ describe("the Email sheet", () => {
     expect(onSave).toHaveBeenNthCalledWith(1, { ...ALL_ON, onUpload: false });
     expect(onSave).toHaveBeenNthCalledWith(2, { ...ALL_ON, onComment: false });
   });
+});
+
+it("offers the independent tag switch, explains the off state, and focuses its email link target once", async () => {
+  const user = userEvent.setup();
+  const onSave = vi.fn();
+  const { rerender } = render(
+    _inTheme(
+      <EmailSheet
+        notify={ALL_ON}
+        onSave={onSave}
+        isSaving={false}
+        error={undefined}
+        focusCommentTag
+      />,
+    ),
+  );
+  const toggle = screen.getByLabelText("Somebody tags you in a comment");
+  expect(screen.getAllByRole("switch")).toHaveLength(5);
+  expect(toggle).toHaveFocus();
+  await user.click(toggle);
+  expect(onSave).toHaveBeenCalledWith({ ...ALL_ON, onCommentTag: false });
+  rerender(
+    _inTheme(
+      <EmailSheet
+        notify={{ ...ALL_ON, onCommentTag: false }}
+        onSave={onSave}
+        isSaving={false}
+        error={undefined}
+        focusCommentTag
+      />,
+    ),
+  );
+  expect(
+    screen.getByText(
+      /You may still receive emails about your uploads or conversations/,
+    ),
+  ).toBeVisible();
+  await user.click(screen.getByLabelText("Somebody puts photographs up"));
+  rerender(
+    _inTheme(
+      <EmailSheet
+        notify={ALL_ON}
+        onSave={onSave}
+        isSaving={false}
+        error={undefined}
+        focusCommentTag
+      />,
+    ),
+  );
+  expect(screen.getByLabelText("Somebody puts photographs up")).toHaveFocus();
+});
+
+it("keeps focus and restores the saved tag value with a nearby failure", async () => {
+  const user = userEvent.setup();
+  const { rerender } = render(
+    _inTheme(
+      <EmailSheet
+        notify={ALL_ON}
+        onSave={vi.fn()}
+        isSaving={false}
+        error={undefined}
+      />,
+    ),
+  );
+  const toggle = screen.getByLabelText("Somebody tags you in a comment");
+  await user.click(toggle);
+  rerender(
+    _inTheme(
+      <EmailSheet
+        notify={ALL_ON}
+        onSave={vi.fn()}
+        isSaving={false}
+        error="Failed"
+      />,
+    ),
+  );
+  expect(toggle).toBeChecked();
+  expect(toggle).toHaveFocus();
+  expect(toggle.closest("[data-notify-kind]")).toContainElement(
+    screen.getByRole("alert"),
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Couldn't change that email preference. Try again.",
+  );
 });

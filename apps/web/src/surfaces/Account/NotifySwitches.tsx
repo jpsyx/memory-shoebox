@@ -4,15 +4,17 @@ import type { NotifyPreferences } from "@memory-shoebox/shared";
 import { NotifyRow } from "@/surfaces/Account/NotifyRow";
 import { NOTIFY_KINDS } from "@/surfaces/Account/notifyKinds";
 
-/** Props for the four switches: the server's answer, and where a flip goes. */
+/** Props for the five switches: the server's answer, and where a flip goes. */
 type Props = {
   notify: NotifyPreferences;
   isSaving: boolean;
+  focusCommentTag?: boolean;
+  tagError?: string;
   onSave: (notify: NotifyPreferences) => void;
 };
 
 /**
- * The four switches, stacked, each write sending the whole `notify` with one
+ * The five switches, stacked, each write sending the whole `notify` with one
  * key changed. Lifted out of `EmailSheet` alongside `NotifyRow`, so the sheet
  * itself reads as its sections rather than as the loop that fills one of them.
  */
@@ -20,6 +22,8 @@ export function NotifySwitches({
   notify,
   isSaving,
   onSave,
+  focusCommentTag,
+  tagError,
 }: Readonly<Props>): ReactNode {
   return (
     <Stack gap="sm">
@@ -27,6 +31,8 @@ export function NotifySwitches({
         return (
           <NotifyRow
             key={kind.key}
+            shouldFocus={kind.key === "onCommentTag" && focusCommentTag}
+            error={kind.key === "onCommentTag" ? tagError : undefined}
             kind={kind}
             checked={notify[kind.key]}
             disabled={isSaving}

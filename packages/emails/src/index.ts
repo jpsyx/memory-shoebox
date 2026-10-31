@@ -1,3 +1,7 @@
+export {
+  CommentTagEmail,
+  commentTagEmail,
+} from "./templates/CommentTagEmail.tsx";
 export { CommentEmail, commentEmail } from "./templates/CommentEmail.tsx";
 export {
   SignInCodeEmail,

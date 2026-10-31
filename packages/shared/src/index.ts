@@ -122,6 +122,7 @@ export {
   invitationEmailPayloadSchema,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
+  commentTagEmailPayloadSchema,
   type RemovalRequestEmailPayload,
   type RemovalReminderEmailPayload,
   type RemovalResolvedDeletedEmailPayload,
@@ -138,6 +139,7 @@ export {
   type OutboundEmailTriggerKind,
   type SignInCodeEmailPayload,
   type UploadSessionEmailPayload,
+  type CommentTagEmailPayload,
 } from "./email/email.ts";
 export {
   apiErrorDetailsSchema,

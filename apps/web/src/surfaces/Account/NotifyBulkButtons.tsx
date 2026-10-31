@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * "Turn them all off" and, once every switch already is, "Turn them back
- * on" in its place. Lifted out of `EmailSheet` so the sheet reads as four
+ * on" in its place. Lifted out of `EmailSheet` so the sheet reads as five
  * switches and one bulk row, rather than the row's own conditional showing
  * through.
  */

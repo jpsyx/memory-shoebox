@@ -1,6 +1,6 @@
 import { Stack } from "@mantine/core";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useRouteContext } from "@tanstack/react-router";
+import { useRouteContext, useSearch } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { meQueryOptions } from "@/api/me/me";
 import { AccountDevices } from "@/surfaces/Account/AccountSurface/AccountDevices";
@@ -44,6 +44,7 @@ import { Lede } from "@/system/typography/Lede";
  * them, which is why the prototype uses the narrow page too.
  */
 export function AccountSurface(): ReactNode {
+  const { email } = useSearch({ from: "/_app/account" });
   const { viewer, settings } = useRouteContext({ from: "/_app" });
   const { data: account } = useSuspenseQuery(meQueryOptions);
   const savingName = useSaveMe();
@@ -71,6 +72,7 @@ export function AccountSurface(): ReactNode {
             error={savingName.error}
           />
           <EmailSheet
+            focusCommentTag={email === "comment-tag"}
             notify={account.me.notify}
             onSave={savingNotify.save}
             isSaving={savingNotify.isSaving}

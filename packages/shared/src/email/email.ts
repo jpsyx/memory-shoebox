@@ -154,6 +154,21 @@ export const commentEmailPayloadSchema = emailCommonSchema.extend({
 /** `comment`'s payload. */
 export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
 
+/** Frozen words and item identity for an explicit comment tag. */
+export const commentTagEmailPayloadSchema = emailCommonSchema.extend({
+  authorDisplayName: z.string(),
+  body: z.string(),
+  atSeconds: z.number().nonnegative().nullable(),
+  itemKind: z.enum(["photo", "video"]),
+  itemCapturedOn: calendarDateSchema,
+  itemUrl: signedUrlSchema,
+}) satisfies z.ZodType;
+
+/** The explicit tag message's immutable payload. */
+export type CommentTagEmailPayload = z.infer<
+  typeof commentTagEmailPayloadSchema
+>;
+
 /**
  * Reports every way an `upload_session` payload's figures can disagree with
  * each other.

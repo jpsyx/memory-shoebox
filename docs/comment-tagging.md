@@ -82,14 +82,34 @@ Omitted tags on an already-tagged comment return
 `409 comment_tags_reload_required` on `details.fieldErrors.commentTags`.
 Explicit `[]` removes all references.
 
-The body, ranges, and existing ordinary comment mail commit or roll back
+The body, ranges, tag scheduling ledger, and queued mail commit or roll back
 together. Author-only edits, fixed moments and one-level reply rules remain
 unchanged. Thread reads batch occurrences in one query alongside the existing
 comment and reaction queries; historical labels do not change on account rename.
 
 ## Implementation boundary
 
-Contracts, migration, candidate lookup, persisted reads and transactional writes
-are connected. Tag-specific notification scheduling/delivery and the composer
-and preference UI are connected in subsequent tasks. The current email repair
-helper excludes the new kind until its payload and template are introduced.
+Contracts, migration, candidate lookup, persisted reads, transactional writes,
+notification scheduling/delivery and the account preference are connected.
+The composer and comment arrival UI are connected in subsequent tasks.
+
+## Email preference and delivery
+
+The fifth account switch, immediately after comments on uploads, reads
+“Somebody tags you in a comment” and “An email when someone uses @ to get your
+attention.” It defaults on, saves independently and participates in all-off and
+all-on. A failed save restores the cached saved value and presents a nearby
+retry message. When off it explains that other enabled upload/conversation
+settings can still send ordinary mail. `/account?email=comment-tag` focuses
+this switch after sign-in or required profile completion; arbitrary search
+values cannot select other targets or trigger preference writes.
+
+At comment creation, enabled tag mail wins over the existing generic policy
+for that recipient. On edits only newly tagged recipients without a lifetime
+scheduling record can receive a tag message. Duplicate mentions and self-tags
+never multiply messages. The ledger survives removal/re-addition and outbox
+scrubbing, including failed-configuration scheduling. Queued tag messages are
+cancelled when their recipient is removed, and deleting a parent cancels mail
+for its replies too. A final gate after rendering and sender freezing checks
+current eligibility, preference, comment, tag and item access on every attempt.
+See [mail.md](mail.md) for delivery/recovery and [emails.md](emails.md) for copy.

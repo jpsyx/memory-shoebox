@@ -18,7 +18,7 @@ import {
   requireViewer,
   type Viewer,
 } from "../../http/requestContextHelpers.ts";
-import { enqueueCommentEmails } from "../../items/enqueueCommentEmails.ts";
+import { reconcileCommentTagEmails } from "../../items/reconcileCommentTagEmails.ts";
 import {
   getCommentAnchorFromRequest,
   type CommentAnchor,
@@ -66,7 +66,10 @@ async function _insertCommentAndQueueMail(
     commentId: options.commentId,
     tags: commentTags,
   });
-  await enqueueCommentEmails({
+  await reconcileCommentTagEmails({
+    previousTags: [],
+    tags: commentTags,
+    isCreate: true,
     transaction,
     viewer: options.viewer,
     item: options.item,

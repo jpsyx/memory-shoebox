@@ -29,6 +29,7 @@ packages/emails/
     └── templates/
         ├── InvitationEmail.tsx  an invitation with address-prefilled entry
         ├── SignInCodeEmail.tsx  the sign-in code
+        ├── CommentTagEmail.tsx  an explicit tag, with its precise comment link
         ├── CommentEmail.tsx     a comment, to its uploader or a prior commenter
         ├── UploadSessionEmail/  a finished batch, to whoever can see some of it
         ├── RemovalRequestEmail.tsx  the ask, to uploader and admins
@@ -340,3 +341,18 @@ reference retirement. Browser color-scheme preferences are not evidence of
 actual email-client dark-mode transforms, and no message was sent for this
 acceptance. Unsuppressible messages retain their truthful footer without a
 turn-off link. See step 9 verification for the native code/invitation checks.
+
+## Comment-tag copy
+
+`CommentTagEmail` freezes the author name, full readable comment with line
+breaks, photo/video kind, capture date, and optional video moment. It says
+“Ana tagged you in a comment.”, uses “from” for the capture date, and offers
+“View comment” at `/items/<itemId>?comment=<commentId>`. The explicit reason
+explains the tag without implying who else received mail. Capture dates are
+calendar dates and are formatted without shifting them across time zones.
+
+The existing shell supplies the masthead, quotation style and source footer.
+“Change comment-tag emails” opens `/account?email=comment-tag`; visiting it
+never changes a preference. HTML and plain text include the same information,
+with escaped names/body and no image, hidden preheader or attachment. The
+snapshot can differ from edits made after scheduling.

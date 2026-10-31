@@ -231,6 +231,10 @@ describe("transactional comment tags", () => {
         .selectFrom("comment_tags")
         .selectAll()
         .execute();
+      const storedEmails = await database
+        .selectFrom("outbound_emails")
+        .selectAll()
+        .execute();
       await sql`create trigger fail_tag_write after insert on comment_tags begin select raise(abort, 'tag insertion failure'); end`.execute(
         database,
       );
@@ -259,7 +263,7 @@ describe("transactional comment tags", () => {
       ).toEqual(storedTags);
       expect(
         await database.selectFrom("outbound_emails").selectAll().execute(),
-      ).toEqual([]);
+      ).toEqual(storedEmails);
     } finally {
       await fixture.close();
     }

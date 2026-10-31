@@ -150,14 +150,16 @@ export function respondWith(
  *
  * @returns The router, so a case can assert where it ended up.
  */
-export function renderAccount(): Router<typeof routeTree> {
+export function renderAccount(
+  initialHref = "/account",
+): Router<typeof routeTree> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const router = createRouter({
     routeTree,
     context: { queryClient },
-    history: createMemoryHistory({ initialEntries: ["/account"] }),
+    history: createMemoryHistory({ initialEntries: [initialHref] }),
   });
   installBootstrapRedirectTracking({
     router,

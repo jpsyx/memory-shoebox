@@ -1,3 +1,4 @@
+import { reconcileCommentTagEmails } from "../items/reconcileCommentTagEmails.ts";
 import { validateCommentTags } from "../commentTags/validateCommentTags.ts";
 import {
   readCommentTags,
@@ -40,6 +41,7 @@ type VisibleComment = {
   authorMemberId: string;
   body: string;
   createdAt: string;
+  atSeconds: number | null;
 };
 
 /**
@@ -63,6 +65,7 @@ async function _getVisibleCommentOr404(options: {
       "comments.author_member_id as authorMemberId",
       "comments.body as body",
       "comments.created_at as createdAt",
+      "comments.at_seconds as atSeconds",
     ])
     .where("comments.id", "=", options.commentId)
     .executeTakeFirst();
@@ -148,6 +151,16 @@ async function _writeCommentEdit(
         commentId: options.commentId,
         tags,
       });
+      await reconcileCommentTagEmails({
+        ...options,
+        transaction,
+        item: comment.item,
+        body: options.body.body,
+        atSeconds: comment.atSeconds,
+        previousTags: existingTags,
+        tags,
+        isCreate: false,
+      });
     },
   });
 }
@@ -222,6 +235,36 @@ async function _logCommentDeletion(options: {
   });
 }
 
+/** Cancels the whole one-level thread before its rows disappear by cascade. */
+async function _cancelCommentThreadEmails(
+  transaction: DatabaseExecutor,
+  commentId: string,
+): Promise<void> {
+  const deletedComments = await transaction
+    .selectFrom("comments")
+    .select("id")
+    .where((expression) => {
+      return expression.or([
+        expression("id", "=", commentId),
+        expression("parent_comment_id", "=", commentId),
+      ]);
+    })
+    .execute();
+  await transaction
+    .updateTable("outbound_emails")
+    .set({ state: "cancelled" })
+    .where("trigger_kind", "=", "comment")
+    .where(
+      "trigger_id",
+      "in",
+      deletedComments.map((comment) => {
+        return comment.id;
+      }),
+    )
+    .where("state", "=", "queued")
+    .execute();
+}
+
 /** The moderation log entry and email cancellation a delete costs. */
 async function _cascadeCommentDelete(options: {
   database: DatabaseExecutor;
@@ -242,17 +285,7 @@ async function _cascadeCommentDelete(options: {
         });
       }
 
-      // So a message does not arrive quoting something that no longer
-      // exists at a link that no longer shows it. A row already `sending`
-      // or `sent` is left alone: it cannot be recalled, and cancelling it
-      // would make the delivered-or-not boundary a race.
-      await transaction
-        .updateTable("outbound_emails")
-        .set({ state: "cancelled" })
-        .where("trigger_kind", "=", "comment")
-        .where("trigger_id", "=", options.comment.commentId)
-        .where("state", "=", "queued")
-        .execute();
+      await _cancelCommentThreadEmails(transaction, options.comment.commentId);
 
       // `comment_reactions` go with it by CASCADE, which is the delete
       // dialog's own copy and the cascade a polymorphic reactions table

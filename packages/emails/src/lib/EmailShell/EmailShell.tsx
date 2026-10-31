@@ -22,6 +22,7 @@ type Props = {
    * that cannot be turned off is a lie.
    */
   preferencesUrl: string | null;
+  preferencesLabel?: string;
   children: ReactNode;
 };
 
@@ -36,6 +37,7 @@ export function EmailShell({
   shoeboxName,
   preferencesUrl,
   children,
+  preferencesLabel = "Turn these emails off",
 }: Readonly<Props>): React.JSX.Element {
   return (
     <Html>
@@ -54,7 +56,7 @@ export function EmailShell({
               {preferencesUrl === null ? null : (
                 <>
                   <Link href={preferencesUrl} style={styles.footerLink}>
-                    Turn these emails off
+                    {preferencesLabel}
                   </Link>
                   {" · "}
                 </>

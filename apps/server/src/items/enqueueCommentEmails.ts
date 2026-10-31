@@ -302,6 +302,7 @@ async function _enqueueCommentEmailForRecipient(options: {
  * @param options.now The instant the comment was written.
  */
 export async function enqueueCommentEmails(options: {
+  excludedMemberIds?: readonly string[];
   transaction: DatabaseExecutor;
   viewer: Viewer;
   item: VisibleItem;
@@ -339,7 +340,9 @@ export async function enqueueCommentEmails(options: {
 
   await Promise.all(
     _makeRecipientsFromCandidates({
-      candidates,
+      candidates: candidates.filter((candidate) => {
+        return !options.excludedMemberIds?.includes(candidate.memberId);
+      }),
       item: options.item,
     }).map((recipient) => {
       return _enqueueCommentEmailForRecipient({

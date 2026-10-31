@@ -4,6 +4,13 @@ import { AccountSurface } from "@/surfaces/Account/AccountSurface/AccountSurface
 export const Route = createFileRoute("/_app/account")({
   // The surface draws its own top bar, with a back link where the Shoebox
   // name would be, and `_app.tsx` stands aside for exactly that.
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { email?: "comment-tag" } => {
+    return {
+      email: search.email === "comment-tag" ? "comment-tag" : undefined,
+    };
+  },
   staticData: { hasOwnBar: true },
   component: AccountSurface,
 });

@@ -8,7 +8,7 @@ export type NotifyKind = Readonly<{
 }>;
 
 /**
- * The four switches, each carrying the sentence that says what it stops.
+ * The five switches, each carrying the sentence that says what it stops.
  *
  * One switch was easier to build and worse to live with: the member who wants
  * the daily upload mail but not the comment threads had exactly one move, and
@@ -24,6 +24,11 @@ export const NOTIFY_KINDS: readonly NotifyKind[] = [
     key: "onComment",
     label: "Somebody writes on something of yours",
     note: "Only things you uploaded.",
+  },
+  {
+    key: "onCommentTag",
+    label: "Somebody tags you in a comment",
+    note: "An email when someone uses @ to get your attention.",
   },
   {
     key: "onReply",
