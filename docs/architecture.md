@@ -405,8 +405,10 @@ clock is read after storage completes, so an expired request cannot publish even
 before the next sweep. Archive transfers and downloads retain their direct path.
 
 These limits and tiny-fixture tests alone are not a deployment memory-safety
-result. V2 measured maximum accepted 50 MP decodes and concurrent 10 MiB requests
-in the explicit local serving envelope recorded below. The actual deployed
+result. V2 measured maximum accepted 50 MP decodes, serial 10 MiB uploads, and
+natural-size concurrency in its full matrix. A separate focused probe verified
+two overlapping exact-10-MiB requests in the same explicit local serving
+envelope recorded below. The actual deployed
 target still needs its own configuration/headroom check before shipping. See
 [member profiles](member-profiles.md#private-avatars) for recovery.
 

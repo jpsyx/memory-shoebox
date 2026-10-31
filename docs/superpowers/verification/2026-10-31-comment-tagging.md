@@ -284,8 +284,10 @@ incorrect reuse of `OutputInfo.premultiplied` as raw-input metadata.
 The complete 16 MP intermediate matrix (`resource4.log`, `resource-results4.json`) completed
 34 cases: 32 valid uploads returned 200, corrupt and animated inputs returned 400.
 Every image had centered, off-center fractional zoom, zoom 8 and exact-10-MiB
-cases. Concurrent maximum-body requests returned 503 `avatar_busy`; sampled
-native work never exceeded one active decoder.
+cases. Concurrency used natural-size fixtures (642,263-7,575,149 bytes), whose
+competitors returned 503 `avatar_busy`; the exact-10-MiB cases were serial. Sampled
+native work never exceeded one active decoder. The separate maximum-body probe
+below closes the concurrency gap identified in review.
 
 | Input                        | Dimensions   | Maximum request ms | Sampled container MiB | Sampled API RSS MiB |
 | ---------------------------- | ------------ | -----------------: | --------------------: | ------------------: |
@@ -333,7 +335,8 @@ The final cap leaves measured resident headroom as well as cgroup headroom.
 retain this comparison. The final selected implementation then repeated the **complete 34-case matrix**
 (`resource-final.log`, `resource-results-final.json`) and the shared native-lane
 probe. All 32 valid requests returned 200; corruption/animation returned 400;
-concurrent requests returned 503. Kernel peak was **428,945,408 bytes (409.1 MiB)**,
+natural-size concurrent requests returned 503; exact-10-MiB cases were serial.
+Kernel peak was **428,945,408 bytes (409.1 MiB)**,
 sampled API RSS **486,043,648 bytes (463.5 MiB)**. Sampled rollup maxima were RSS
 473,336 KiB, PSS 473,332 KiB, private clean 64,556 KiB, private dirty 409,032 KiB
 and shared clean 4 KiB. OOM/kill counters remained zero and shutdown exited 0.
@@ -343,6 +346,32 @@ observations under the recorded CPU quota, not latency guarantees. The native
 background probe returned 503 in 7.1 ms and then 200 after work settled; active
 decoders never exceeded one. JPEG/PNG behavior and source limits are unchanged.
 Actual target configuration remains a deployment gate.
+
+### Review follow-up: exact-10-MiB concurrency
+
+Review found that the historical full matrices did not combine exact maximum
+body size with concurrency. One focused pair closed that gap, using the same
+selected 12 MP image (`sha256:2345d281f2abec057c0b122f9ac8534cf283ff0c00f1ca36873e49ded62e45b5`),
+512 MiB memory/memory-plus-swap, zero cgroup swap, and one CPU. No product code,
+full matrix, unit suite or browser suite changed or reran.
+
+Both uploads used the pre-generated nontrivial 16383 x 2055 alpha WebP with EXIF
+6, off-center zoom 8, padded from 2,076,766 to exactly **10,485,760 bytes** before
+the measurement. Raw HTTP instrumentation observed `Content-Length: 10485760`
+for both requests. The second started 61.2 ms after the first and arrived with
+one native decoder active. It returned **503 `avatar_busy` in 12.4 ms**, before the
+first returned **200 in 481.2 ms**. Peak active decoders remained one. All 30
+health responses were 200, maximum 31.4 ms. Kernel peak was **281,538,560 bytes
+(268.5 MiB)**; sampled API RSS was **334,487,552 bytes (319.0 MiB)**. OOM/kill
+counters remained zero and the owned container stopped with exit 0.
+
+`client-maxbody.mjs`, `server-maxbody.mjs`, `maxbody-results.json`,
+`maxbody-final-state.json`, `docker-maxbody.json` and `maxbody-assertions.log`
+preserve the single-pair evidence. The initial harness asserted `.code` instead
+of the API's actual `.error` field after saving all responses; `maxbody.log`
+retains that harness-only assertion failure. Corrected assertions against the
+saved raw data passed without sending another pair. These observations close
+the named body/admission case; actual-target and other stated limits remain.
 
 ## V2 final integration gates
 
