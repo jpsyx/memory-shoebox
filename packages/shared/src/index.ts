@@ -4,6 +4,11 @@
  * The explicit API remains erasable TypeScript for Node runtime imports.
  */
 export {
+  accountNameSchema,
+  makeAccountNameKeyFromName,
+  type AccountName,
+} from "./accountNames/accountNames.ts";
+export {
   createSessionRequestSchema,
   createSessionResponseSchema,
   listMySessionsResponseSchema,

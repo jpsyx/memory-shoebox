@@ -18,6 +18,17 @@ generated entry remains plain, erasable TypeScript without an `export *`.
 
 The contract modules are:
 
+- `accountNames/accountNames.ts`: the account-name schema, inferred `AccountName`
+  type, and `makeAccountNameKeyFromName` comparison helper. The schema returns
+  NFC, trimmed display spelling with whitespace collapsed to single spaces,
+  preserving case and accents. Names must contain 1 to 80 characters after
+  normalization and cannot contain `@`, line breaks, or Unicode formatting
+  controls. Validation rejects those characters before normalization so they
+  cannot disappear through trimming or whitespace collapse. Comparison keys
+  apply the same normalization followed by `toLowerCase()`, without locale
+  selection or accent folding. These account-specific contracts leave existing
+  payload shapes and vocabulary normalization unchanged; `MemberRef` remains
+  email-free.
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
   and the email module imports it, so the six digits are spelled once rather than

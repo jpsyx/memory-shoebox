@@ -1,5 +1,10 @@
 [
   {
+    "module": "./accountNames/accountNames.ts",
+    "values": ["accountNameSchema", "makeAccountNameKeyFromName"],
+    "types": ["AccountName"]
+  },
+  {
     "module": "./auth.ts",
     "values": [
       "createSessionRequestSchema",
