@@ -27,6 +27,7 @@ async function _makeStaleAuthorityContext(): Promise<
     sessionId,
     role: "admin",
     isAdmin: true,
+    profileComplete: true,
     visibleRuleIds: [],
   };
   const itemId = await insertItem(context.database, { uploadedBy: memberId });
@@ -88,6 +89,7 @@ it("recomputes visibility when the request carries an obsolete rule membership",
   Object.assign(authenticatedViewer, {
     role: "uploader",
     isAdmin: false,
+    profileComplete: true,
     visibleRuleIds: [ruleId],
   });
   const response = await app.inject({

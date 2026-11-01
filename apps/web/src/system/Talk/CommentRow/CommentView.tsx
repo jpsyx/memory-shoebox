@@ -1,9 +1,11 @@
+import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import type { ReactNode, RefObject } from "react";
 import type {
   CommentDto,
   MemberRef,
   ReactionKind,
 } from "@memory-shoebox/shared";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
 import { Reactions } from "@/system/Reactions/Reactions";
 import { CommentOwnActions } from "@/system/Talk/CommentRow/CommentOwnActions/CommentOwnActions";
@@ -12,6 +14,7 @@ import { Prose } from "@/system/typography/Prose";
 import classes from "@/system/system.module.css";
 
 type Props = {
+  itemId: string;
   comment: CommentDto;
   viewer: MemberRef;
   onSeek?: (seconds: number) => void;
@@ -30,6 +33,7 @@ type Props = {
  */
 export function CommentView({
   comment,
+  itemId,
   viewer,
   onSeek,
   onReact,
@@ -40,10 +44,18 @@ export function CommentView({
 }: Readonly<Props>): ReactNode {
   return (
     <div className={classes.comment}>
-      <span className={classes.commentWho}>{comment.author.displayName}</span>
+      <span className={classes.commentWho}>
+        <MemberAvatar member={comment.author} size={30} />{" "}
+        {comment.author.displayName}
+      </span>
       <CommentWhen comment={comment} onSeek={onSeek} />
       <p className={classes.commentBody}>
-        {comment.body}
+        <CommentTagText
+          itemId={itemId}
+          commentId={comment.commentId}
+          body={comment.body}
+          commentTags={comment.commentTags}
+        />
         {comment.editedAt === null ? null : (
           <>
             {" "}

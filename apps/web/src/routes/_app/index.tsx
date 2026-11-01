@@ -31,6 +31,7 @@ function _oneOrMany() {
 const searchSchema = z.object({
   tag: _oneOrMany(),
   person: _oneOrMany(),
+  member: z.uuid().optional(),
   from: z.string().optional(),
   until: z.string().optional(),
   /**

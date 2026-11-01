@@ -1,0 +1,104 @@
+.root {
+  --comment-input-size: var(--micro, 15px);
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+.fieldWrap {
+  position: relative;
+  width: 100%;
+  background: var(--print);
+}
+.root .field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  resize: vertical;
+  padding: 2px;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  font-size: var(--comment-input-size);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--on-print);
+  position: relative;
+}
+.root .field::placeholder {
+  color: var(--on-print-quiet);
+  opacity: 1;
+}
+.mirror {
+  font-size: var(--comment-input-size);
+  line-height: 1.55;
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: var(--on-print);
+}
+.selectedTag {
+  background: color-mix(in oklab, var(--on-print) 8%, transparent);
+  -webkit-text-stroke: 0.3px currentColor;
+}
+.picker {
+  color: var(--on-print);
+  background: var(--print);
+}
+.options {
+  max-height: min(15rem, 35dvh);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.option {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  min-height: 3rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.option[data-combobox-selected] {
+  background: color-mix(in oklab, var(--on-print) 8%, var(--print));
+  color: var(--on-print);
+  border-inline-start: 1px solid currentColor;
+}
+.announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.counter {
+  font-size: var(--micro, 15px);
+  margin: 0.5rem 0 0;
+  color: var(--on-print-quiet);
+}
+
+.correction {
+  color: var(--on-print);
+  font-size: var(--micro);
+}
+.correction p {
+  margin-block: 0.5rem;
+}
+
+.help {
+  margin: 0.375rem 0 0;
+  font-size: max(15px, var(--micro, 15px));
+  color: var(--on-print-quiet);
+}
+
+@media (max-width: 800px), (pointer: coarse) {
+  .root {
+    --comment-input-size: max(16px, var(--micro, 15px));
+  }
+}

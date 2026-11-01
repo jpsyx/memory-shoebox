@@ -24,6 +24,7 @@ export const detail =
 
 /** Shared authoritative fixture for the controller scenarios. */
 export const VIEWER: Viewer = {
+  avatar: null,
   memberId: "member-one",
   displayName: "Mamá",
   role: "uploader",

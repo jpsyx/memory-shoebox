@@ -1,3 +1,5 @@
+import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
+import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import { useState, type ReactNode } from "react";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
 import { agoLabel, clockLabel } from "@/system/labelHelpers/labelHelpers";
@@ -6,7 +8,7 @@ import { CommentEditor } from "@/system/Talk/CommentRow/CommentEditor/CommentEdi
 import { useEditComment } from "@/surfaces/Item/itemWrites/useEditComment";
 import { ItemCommentActions } from "../ItemCommentActions/ItemCommentActions";
 import { VideoReply } from "../../VideoConversation/VideoReply/VideoReply";
-import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import classes from "./ItemComment.module.css";
 
 type Props = {
@@ -29,22 +31,32 @@ export function ItemComment({
   onSeek,
   onFocusLost,
 }: Readonly<Props>): ReactNode {
-  const editing = useCommentEditing(comment.canEdit);
+  const editing = useCommentEditing(comment.canEdit, { itemId, comment });
   const write = useEditComment({ itemId, commentId: comment.commentId });
   const [isReplying, setIsReplying] = useState(false);
+  const memory = useConversationJourney();
+  const hasReply = !!memory?.readDraft({
+    itemId,
+    mode: "reply",
+    commentId: comment.commentId,
+  });
   return (
-    <article className={classes.itemComment}>
-      <span className={classes.itemCommentAvatar} aria-hidden="true">
-        {getInitialsFromDisplayName(comment.author.displayName)}
-      </span>
+    <article
+      className={classes.itemComment}
+      data-comment-id={comment.commentId}
+      tabIndex={-1}
+    >
+      <MemberAvatar member={comment.author} size={30} />
       <div className={classes.itemCommentContent}>
         {editing.isEditorShown ? (
           <CommentEditor
+            itemId={itemId}
+            tagFailure={write.tagFailure}
             comment={comment}
             isSaving={write.isSaving}
             onCancel={editing.closeEditor}
-            onSave={(body) => {
-              write.save({ body, onSaved: editing.closeEditor });
+            onSave={(draft, onSaved) => {
+              write.save({ ...draft, onSaved });
             }}
           />
         ) : (
@@ -68,7 +80,12 @@ export function ItemComment({
               <span>{agoLabel({ timestamp: comment.createdAt })}</span>
             </div>
             <p className={classes.itemCommentBody}>
-              {comment.body}
+              <CommentTagText
+                itemId={itemId}
+                commentId={comment.commentId}
+                body={comment.body}
+                commentTags={comment.commentTags}
+              />
               {comment.editedAt === null ? null : (
                 <span className={classes.itemCommentEdited}> (edited)</span>
               )}
@@ -95,9 +112,10 @@ export function ItemComment({
             {write.error}
           </p>
         )}
-        {isReplying ? (
+        {isReplying || hasReply ? (
           <VideoReply
             itemId={itemId}
+            viewer={viewer}
             parent={comment}
             onSent={() => {
               setIsReplying(false);

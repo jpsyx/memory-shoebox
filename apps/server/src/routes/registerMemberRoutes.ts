@@ -1,3 +1,5 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   type ListMembersResponse,
@@ -26,21 +28,28 @@ import {
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 
 async function _readMemberRefs(
-  database: DatabaseExecutor,
+  options: Readonly<{ database: DatabaseExecutor; b2: B2Client; now: string }>,
 ): Promise<Extract<ListMembersResponse, { shape: "directory" }>> {
-  const members = await database
+  const members = await options.database
     .selectFrom("members")
     .select(["id", "display_name", "email"])
     .where("status", "in", ["active", "invited"])
     .orderBy("created_at")
     .orderBy("id")
     .execute();
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: members.map((member) => {
+      return member.id;
+    }),
+  });
   return {
     shape: "directory",
     nextCursor: null,
     members: members.map((member) => {
       return {
         memberId: member.id,
+        avatar: avatars.get(member.id) ?? null,
         displayName: getDisplayNameFromMember({
           storedDisplayName: member.display_name ?? undefined,
           email: member.email,
@@ -70,12 +79,17 @@ async function _readDirectory(
   });
   return viewer.isAdmin
     ? readAdminMembers({
+        b2: request.server.b2,
         database: request.server.database,
         currentSessionId: viewer.sessionId,
         statuses: query.status ?? ["active", "invited"],
         now: request.server.clock().toISOString(),
       })
-    : _readMemberRefs(request.server.database);
+    : _readMemberRefs({
+        database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
+      });
 }
 
 function _getMemberAuthorityOptions(
@@ -86,6 +100,7 @@ function _getMemberAuthorityOptions(
   const { memberId } = memberIdParamsSchema.parse(request.params);
   return {
     database: request.server.database,
+    b2: request.server.b2,
     viewer,
     memberId,
     now: request.server.clock().toISOString(),
@@ -129,6 +144,7 @@ function _registerMemberSessionRoute(app: FastifyInstance): void {
       const viewer = requireViewer(request);
       requireMemberAdmin(viewer);
       await revokeMemberSession({
+        b2: request.server.b2,
         database: request.server.database,
         viewer,
         ...revokeMemberSessionParamsSchema.parse(request.params),
@@ -154,6 +170,7 @@ export async function registerMemberRoutes(
       throw ApiError.forbidden("members_forbidden");
     }
     const member = await inviteMember({
+      b2: request.server.b2,
       database: request.server.database,
       viewer,
       body: inviteMemberRequestSchema.parse(request.body),

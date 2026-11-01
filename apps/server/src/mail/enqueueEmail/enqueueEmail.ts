@@ -35,6 +35,9 @@ function _preferencesUrl(options: {
     (options.payload.outcome === "declined" ||
       (options.payload.outcome === "deleted" &&
         options.payload.relation === "requester"));
+  if (options.kind === "comment_tag") {
+    return `${options.baseUrl.replace(/\/$/, "")}/account?email=comment-tag`;
+  }
   return options.kind === "sign_in_code" || isRequesterAnswer
     ? undefined
     : `${options.baseUrl}/account`;

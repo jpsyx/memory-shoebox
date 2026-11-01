@@ -1,3 +1,4 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { AdminMemberDto } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { InvitationsTable } from "../db/types/identityAndAccess.types.ts";
@@ -9,6 +10,7 @@ import { bumpVisibilityGeneration } from "../visibility/bumpVisibilityGeneration
 
 /** Inputs shared by administrative member mutations. */
 export type MemberAuthorityOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   memberId: string;
@@ -54,6 +56,7 @@ export async function getAdminMemberFromId(
   options: Readonly<MemberAuthorityOptions>,
 ): Promise<AdminMemberDto> {
   const directory = await readAdminMembers({
+    b2: options.b2,
     database: options.database,
     currentSessionId: options.viewer.sessionId,
     statuses: ["active", "invited", "removed"],

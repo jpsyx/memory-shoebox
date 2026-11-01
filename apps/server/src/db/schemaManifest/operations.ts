@@ -8,6 +8,11 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const OPERATIONS_MANIFEST = {
+  comment_tag_notifications: {
+    comment_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    scheduled_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
   media_processing_jobs: {
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     item_id: { isNullable: false, type: "TEXT", defaultValue: null },
@@ -132,6 +137,7 @@ export const OPERATIONS_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
+  | "comment_tag_notifications"
   | "media_processing_jobs"
   | "media_processing_outputs"
   | "media_processing_discovery"

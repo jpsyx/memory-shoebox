@@ -1,59 +1,51 @@
-import { Textarea } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-import type { CommentDto } from "@memory-shoebox/shared";
+import type { CommentTagFailure } from "@/api/comments/comments";
+import { CommentTagInputField } from "@/system/CommentTagInputField/CommentTagInputField";
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
-import { CommentEditorActions } from "@/system/Talk/CommentRow/CommentEditor/CommentEditorActions/CommentEditorActions";
 import classes from "@/system/system.module.css";
-import editorClasses from "@/system/Talk/CommentRow/CommentEditor/CommentEditor.module.css";
-
+import type { CommentDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import { useCommentEditorDraft } from "../useCommentEditing";
+import editorClasses from "./CommentEditor.module.css";
+import { CommentEditorActions } from "./CommentEditorActions/CommentEditorActions";
 type Props = {
   comment: CommentDto;
+  itemId: string;
+  tagFailure?: CommentTagFailure[];
   isSaving: boolean;
-  onSave: (body: string) => void;
+  onSave: (draft: CommentDraft, onSaved: (comment: CommentDto) => void) => void;
   onCancel: () => void;
 };
-
 /**
- * Your own comment, open for editing.
- *
- * It says before saving that it will say it was edited, because a comment
- * that changes under a reader with no sign of it is worse than one that
- * could not change at all.
+ * Edits the author's words and references, keeping newer edits after a save.
  */
-export function CommentEditor({
-  comment,
-  isSaving,
-  onSave,
-  onCancel,
-}: Readonly<Props>): ReactNode {
-  const [draft, setDraft] = useState(comment.body);
-  const isUnchanged = draft.trim() === comment.body.trim();
-
+export function CommentEditor(props: Readonly<Props>): ReactNode {
+  const { comment, itemId, tagFailure, isSaving, onCancel } = props;
+  const { draft, setDraft, fieldRef, save, canSave } =
+    useCommentEditorDraft(props);
   return (
     <div className={classes.comment}>
       <span className={classes.commentWho}>{comment.author.displayName}</span>
       <span className={classes.commentWhen}>
         {agoLabel({ timestamp: comment.createdAt })}
       </span>
-      <Textarea
-        aria-label="What you wrote"
-        // Pressing Edit unmounts the button that had focus, so the field it
-        // opens takes focus instead of leaving it on the page behind.
-        autoFocus
-        value={draft}
-        autosize
-        minRows={2}
-        onChange={(event) => {
-          return setDraft(event.currentTarget.value);
-        }}
-        className={editorClasses.commentEditorField}
-      />
+      <div className={editorClasses.commentEditorField}>
+        <CommentTagInputField
+          itemId={itemId}
+          value={draft}
+          onChange={setDraft}
+          onSubmit={save}
+          fieldRef={fieldRef}
+          isSending={isSaving}
+          tagFailure={tagFailure}
+          label="What you wrote"
+          autoFocus
+        />
+      </div>
       <CommentEditorActions
-        canSave={draft.trim().length > 0 && !isUnchanged}
+        canSave={canSave}
         isSaving={isSaving}
-        onSave={() => {
-          onSave(draft);
-        }}
+        onSave={save}
         onCancel={onCancel}
       />
     </div>

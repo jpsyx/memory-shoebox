@@ -1,3 +1,5 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type { MilestoneDetail, MilestoneSummary } from "@memory-shoebox/shared";
 import { getDayCountFromMilestone } from "../archive/milestoneSpanHelpers/milestoneSpanHelpers.ts";
 import { readMilestoneItemCounts } from "../archive/readMilestoneItemCounts.ts";
@@ -37,6 +39,8 @@ export function makeMilestoneSummaryFromMilestoneRow(
 }
 
 type DetailOptions = {
+  b2: B2Client;
+  now: string;
   database: DatabaseExecutor;
   viewer: Viewer;
   milestoneId: string;
@@ -104,6 +108,10 @@ export async function readMilestoneDetail(
     milestoneIds: [milestoneId],
   });
   const mismatchCount = await _readMismatchCount({ ...options, row });
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: row.creatorId === null ? [] : [row.creatorId],
+  });
   return {
     ...makeMilestoneSummaryFromMilestoneRow({
       row,
@@ -116,6 +124,7 @@ export async function readMilestoneDetail(
         ? null
         : {
             memberId: row.creatorId,
+            avatar: avatars.get(row.creatorId) ?? null,
             displayName: getDisplayNameFromMember({
               storedDisplayName: row.creatorName ?? undefined,
               email: row.creatorEmail,

@@ -1,25 +1,59 @@
-import type { Kysely } from "kysely";
+import type { Selectable, Kysely } from "kysely";
+import { sql } from "kysely";
+import { makeAccountNameKeyFromName } from "@memory-shoebox/shared";
 import { createId } from "../../../src/db/createId.ts";
 import type { Database } from "../../../src/db/types/db.types.ts";
 import { NOW, shiftDays } from "./seedTime.ts";
 
+async function _getProfileFromFixture(options: {
+  database: Kysely<Database>;
+  overrides: Partial<Selectable<Database["members"]>>;
+  id: string;
+}) {
+  const columns = await sql<{
+    name: string;
+  }>`pragma table_info(members)`.execute(options.database);
+  const hasClaims = columns.rows.some((column) => {
+    return column.name === "profile_completed_at";
+  });
+  const displayName =
+    options.overrides.display_name === undefined
+      ? hasClaims
+        ? `Member ${options.id}`
+        : "Abuela Rosa"
+      : options.overrides.display_name;
+  const completedAt =
+    options.overrides.profile_completed_at === undefined
+      ? displayName
+        ? NOW
+        : null
+      : options.overrides.profile_completed_at;
+  return { hasClaims, displayName, completedAt };
+}
+
 /**
  * Inserts one member and returns its id.
  *
- * Defaults to an active uploader who wants every notification, because that is
- * the row most tests need and the interesting cases are the departures from it.
+ * Current catalogs default to a unique claimed, completed active uploader.
+ * Pre-0019 migration fixtures retain their historical name and schema shape.
  */
 export async function insertMember(
   database: Kysely<Database>,
-  overrides: Partial<Database["members"]> = {},
+  overrides: Partial<Selectable<Database["members"]>> = {},
 ): Promise<string> {
   const id = overrides.id ?? createId();
+  const { hasClaims, displayName, completedAt } = await _getProfileFromFixture({
+    database,
+    overrides,
+    id,
+  });
   await database
     .insertInto("members")
     .values({
       id,
       email: `${id}@example.com`,
-      display_name: "Abuela Rosa",
+      display_name: displayName,
+      ...(hasClaims ? { profile_completed_at: completedAt } : {}),
       role: "uploader",
       status: "active",
       notify_on_upload: 1,
@@ -34,6 +68,17 @@ export async function insertMember(
       ...overrides,
     })
     .execute();
+  if (hasClaims && completedAt && displayName) {
+    await database
+      .insertInto("member_name_claims")
+      .values({
+        name_key: makeAccountNameKeyFromName(displayName),
+        member_id: id,
+        display_name: displayName,
+        created_at: NOW,
+      })
+      .execute();
+  }
   return id;
 }
 
@@ -87,4 +132,16 @@ export async function insertInvitation(
     })
     .execute();
   return id;
+}
+
+/** Insert an identity that still needs to choose its account name. */
+export async function insertIncompleteMember(
+  database: Kysely<Database>,
+  overrides: Partial<Selectable<Database["members"]>> = {},
+): Promise<string> {
+  return insertMember(database, {
+    ...overrides,
+    display_name: null,
+    profile_completed_at: null,
+  });
 }

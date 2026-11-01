@@ -5,9 +5,9 @@ import type { ReactNode, RefObject } from "react";
 import type { MemberRef } from "@memory-shoebox/shared";
 import type { VideoTransport } from "@/surfaces/Item/ItemViewer/useVideoTransport";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
-import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
+import { MemberAvatar } from "@/system/MemberAvatar/MemberAvatar";
 import { useItemCommentDraft } from "../useItemCommentDraft/useItemCommentDraft";
-import { submitCommentOnShortcut } from "../submitCommentOnShortcut";
+import { CommentTagInputField } from "@/system/CommentTagInputField/CommentTagInputField";
 import classes from "./ItemComposer.module.css";
 
 type Props = {
@@ -41,24 +41,21 @@ export function ItemComposer({
       }}
     >
       <div className={classes.itemComposerInput}>
-        <span className={classes.itemComposerAvatar} aria-hidden="true">
-          {getInitialsFromDisplayName(viewer.displayName)}
-        </span>
-        <textarea
-          ref={fieldRef}
-          rows={2}
-          aria-label="Write a comment"
+        <MemberAvatar member={viewer} size={30} />
+        <CommentTagInputField
+          itemId={itemId}
+          fieldRef={fieldRef}
+          value={draft.draft}
+          onChange={draft.setDraft}
+          onSubmit={draft.submit}
+          onFocus={draft.start}
+          isSending={draft.isSending}
+          tagFailure={draft.tagFailure}
           placeholder={
             transport === undefined
               ? "Say something about this photo…"
               : "Say something about this moment…"
           }
-          value={draft.body}
-          onFocus={draft.start}
-          onKeyDown={submitCommentOnShortcut}
-          onChange={(event) => {
-            draft.setBody(event.currentTarget.value);
-          }}
         />
       </div>
       <div className={classes.itemComposerActions}>

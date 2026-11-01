@@ -49,6 +49,7 @@ async function _deletesOnlyJoinsReturningVisibleCountAnd5Stage1(
   const { database } = state;
   const { cookie, memberId, sessionId } = await insertSignedInMember({
     database,
+    member: { display_name: "Abuela Rosa" },
     session: { device_label: "Milestone phone" },
   });
   const other = await insertMember(database);

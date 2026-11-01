@@ -1,5 +1,5 @@
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
-import { syncMemberPerson } from "../members/syncMemberPerson.ts";
+import { claimMemberName } from "../members/claimMemberName.ts";
 import type { FastifyInstance } from "fastify";
 import type { Updateable } from "kysely";
 import {
@@ -21,12 +21,7 @@ function _makeMemberPatchFromBody(
   body: UpdateMeRequest,
 ): Updateable<Database["members"]> {
   return {
-    // An omitted key is left alone; `null` and `""` both clear the name back
-    // to the email local-part fallback (Decision 1).
-    ...(body.displayName === undefined
-      ? {}
-      : { display_name: body.displayName === "" ? null : body.displayName }),
-    // All four, or none: "turn them all off" is a client convenience that
+    // Original four, or none: "turn them all off" is a client convenience that
     // sends four booleans, not an API feature (Decision 16).
     ...(body.notify === undefined
       ? {}
@@ -35,6 +30,9 @@ function _makeMemberPatchFromBody(
           notify_on_comment: body.notify.onComment ? 1 : 0,
           notify_on_reply: body.notify.onReply ? 1 : 0,
           notify_on_removal: body.notify.onRemoval ? 1 : 0,
+          ...(body.notify.onCommentTag === undefined
+            ? {}
+            : { notify_on_comment_tag: body.notify.onCommentTag ? 1 : 0 }),
         }),
   };
 }
@@ -52,8 +50,11 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       // `role` is read on this request, so a demotion takes effect on the
       // next one. The visibility side of a role change is the generation
       // bump's job, not this route's.
+      sessionId: viewer.sessionId,
       me: await getMeDtoFromMemberId({
         database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
         memberId: viewer.memberId,
       }),
       settings: await readShellSettings(request.server.database),
@@ -65,17 +66,20 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     const body = updateMeRequestSchema.parse(request.body);
     const patch = _makeMemberPatchFromBody(body);
 
-    if (Object.keys(patch).length > 0) {
+    if (Object.keys(patch).length > 0 || body.displayName !== undefined) {
       await runInImmediateTransaction({
         database: request.server.database,
         callback: async (transaction) => {
-          await transaction
-            .updateTable("members")
-            .set(patch)
-            .where("id", "=", viewer.memberId)
-            .execute();
+          if (Object.keys(patch).length > 0) {
+            await transaction
+              .updateTable("members")
+              .set(patch)
+              .where("id", "=", viewer.memberId)
+              .execute();
+          }
           if (body.displayName !== undefined) {
-            await syncMemberPerson({
+            await claimMemberName({
+              displayName: body.displayName,
               transaction,
               memberId: viewer.memberId,
               now: request.server.clock().toISOString(),
@@ -89,8 +93,11 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     // not bump `visibility.generation`: only group membership, a rule's
     // subjects and a member's role do.
     return {
+      sessionId: viewer.sessionId,
       me: await getMeDtoFromMemberId({
         database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
         memberId: viewer.memberId,
       }),
       settings: await readShellSettings(request.server.database),

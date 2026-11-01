@@ -155,7 +155,7 @@ async function _readSummaryLookups(
           ),
         ],
       }),
-      readMemberRefs(readOptions.database),
+      readMemberRefs({ ...readOptions, now: readOptions.now.toISOString() }),
       readInstanceSettings({
         database: readOptions.database,
         keys: ["shoebox.timezone"],
@@ -185,6 +185,7 @@ function _makeSummaryFromItem(
     uploadedBy: lookups.members.get(item.uploadedBy) ?? {
       memberId: item.uploadedBy,
       displayName: "",
+      avatar: null,
     },
     visibility: lookups.visibilities.get(item.visibilityRuleId) ?? {
       visibilityRuleId: item.visibilityRuleId,

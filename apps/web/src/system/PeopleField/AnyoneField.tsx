@@ -68,6 +68,7 @@ export function AnyoneField(props: Readonly<Props>): ReactNode {
               people={props.people ?? []}
               value={props.value}
               selectedPersonIds={props.selectedPersonIds}
+              selectedPeople={props.selectedPeople}
               search={field.search}
               onRenamePerson={props.onRenamePerson}
               onDeletePerson={props.onDeletePerson}

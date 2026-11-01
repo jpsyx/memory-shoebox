@@ -1,3 +1,4 @@
+import { NOW } from "./seedHelpers/seedTime.ts";
 import type { FastifyInstance } from "fastify";
 import type { Kysely } from "kysely";
 import { createApp, type AppDeps } from "../../src/createApp/createApp.ts";
@@ -44,6 +45,9 @@ export async function createTestApp(
     config,
     database,
     logger: false,
+    clock: () => {
+      return new Date(NOW);
+    },
     releaseStatusReader: async () => {
       return {
         status: "unavailable",

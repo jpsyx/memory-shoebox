@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { collectionSchema } from "./collectionSchema.ts";
 import { idSchema, memberRefSchema, timestampSchema } from "./dtos.ts";
-import { LIMITS } from "./limits.ts";
+import { accountNameSchema } from "./accountNames/accountNames.ts";
 import { shellSettingsSchema } from "./settings.ts";
 
 /**
@@ -56,11 +56,10 @@ export const MEMBER_STATUSES = ["invited", "active", "removed"] as const;
 export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 
 /**
- * The four switches on My account. Four boolean columns on `members`, not
+ * The five switches on My account. Boolean columns on `members`, not
  * settings rows (Decision 16).
  *
- * All four, always: requiring them whenever `notify` is present is what keeps
- * a partial write from looking like the "turn them all off" the button sends.
+ * Reads always include all five. PATCH preserves legacy four-switch writes.
  */
 export const notifyPreferencesSchema = z.object({
   /** Somebody puts photographs up. One email per batch. */
@@ -71,10 +70,17 @@ export const notifyPreferencesSchema = z.object({
   onReply: z.boolean(),
   /** Stored for every role; only admins and uploaders are ever sent one. */
   onRemoval: z.boolean(),
+  /** Somebody selects this member in a comment. */
+  onCommentTag: z.boolean(),
 });
 
-/** The four switches on My account. */
+/** The five switches on My account. */
 export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
+
+/** The original four switches remain required; legacy PATCH omits only tags. */
+export const updateNotifyPreferencesSchema = notifyPreferencesSchema.extend({
+  onCommentTag: z.boolean().optional(),
+});
 
 /**
  * The signed-in member's own account.
@@ -84,13 +90,14 @@ export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
  * (`conventions.md` § The frozen DTOs).
  */
 export const meDtoSchema = z.object({
-  /** `displayName` is resolved, falling back to the email local part. */
+  /** Chosen name, or the neutral label Member until completion. */
   member: memberRefSchema,
   /**
-   * The raw column: null when none has ever been set, so the form can show
-   * the fallback as a placeholder rather than as text somebody typed.
+   * The raw claimed spelling, null until the identity chooses its name.
    */
   storedDisplayName: z.string().nullable(),
+  profileComplete: z.boolean(),
+  suggestedDisplayName: z.string().nullable(),
   /** Never writable, anywhere. This is the identity, not a field on it. */
   email: z.email(),
   role: memberRoleSchema,
@@ -187,6 +194,8 @@ export type CreateSessionResponse = z.infer<typeof createSessionResponseSchema>;
  * resource in its post-mutation read shape (`conventions.md` § Envelope).
  */
 export const meResponseSchema = z.object({
+  /** Current device identity, never the cookie token. */
+  sessionId: idSchema,
   me: meDtoSchema,
   settings: shellSettingsSchema,
 });
@@ -203,17 +212,10 @@ export type MeResponse = z.infer<typeof meResponseSchema>;
  * doing nothing.
  */
 export const updateMeRequestSchema = z.strictObject({
-  /** Trimmed. `null` or `""` clears it back to the email local part. */
-  displayName: z
-    .string()
-    .transform((value) => {
-      return value.trim();
-    })
-    .pipe(z.string().max(LIMITS.memberDisplayNameMaxLength))
-    .nullable()
-    .optional(),
-  /** All four, always, when present. There is no fifth field. */
-  notify: notifyPreferencesSchema.optional(),
+  /** A chosen, nonempty name. Omission preserves the current claim. */
+  displayName: accountNameSchema.optional(),
+  /** Legacy clients can omit only onCommentTag; its stored value survives. */
+  notify: updateNotifyPreferencesSchema.optional(),
 });
 
 /** Body of `PATCH /api/me`. */

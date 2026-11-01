@@ -1,0 +1,44 @@
+.body {
+  display: flex;
+  flex-direction: column;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+}
+.preview {
+  position: relative;
+  width: min(100%, 264px);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--print-sunk);
+}
+.preview img {
+  position: absolute;
+  max-width: none;
+}
+.preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 100px color-mix(in oklab, var(--ink-dark) 38%, transparent);
+  pointer-events: none;
+}
+.slider {
+  flex: 1;
+  min-width: 0;
+}
+.footer {
+  margin-top: auto;
+  padding-top: var(--sp-2);
+}
+@media (max-width: 40em) {
+  .body {
+    min-height: calc(100dvh - 5rem);
+    padding-bottom: max(var(--sp-2), env(safe-area-inset-bottom));
+  }
+}

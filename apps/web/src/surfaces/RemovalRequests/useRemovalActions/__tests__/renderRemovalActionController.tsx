@@ -10,6 +10,7 @@ import { useRemovalActions } from ".././useRemovalActions";
 import type { RemovalActions } from "../useRemovalActions";
 /** Shared authoritative fixture for the controller scenarios. */
 export const VIEWER = {
+  avatar: null,
   memberId: "member",
   displayName: "Mamá",
   role: "admin",

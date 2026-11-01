@@ -1,4 +1,7 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type {
+  AvatarRef,
   ItemViewerRow,
   ItemViewersResponse,
 } from "@memory-shoebox/shared";
@@ -108,10 +111,12 @@ function _isEligibleMemberView(
 
 function _makeViewerRowFromMemberView(
   row: Readonly<MemberView>,
+  avatars: ReadonlyMap<string, AvatarRef>,
 ): ItemViewerRow {
   return {
     member: {
       memberId: row.id,
+      avatar: avatars.get(row.id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: row.display_name ?? undefined,
         email: row.email,
@@ -131,6 +136,8 @@ export async function readItemViewers(
     database: DatabaseExecutor;
     viewer: Viewer;
     itemId: string;
+    b2: B2Client;
+    now: string;
   }>,
 ): Promise<ItemViewersResponse> {
   const item = await getVisibleItemOr404(options);
@@ -147,11 +154,19 @@ export async function readItemViewers(
     ruleId: item.visibilityRuleId,
   });
   const rows = await _readMemberViewsFromItem(options);
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: rows.map((row) => {
+      return row.id;
+    }),
+  });
   const viewers = rows
     .filter((row) => {
       return _isEligibleMemberView({ row, item, mode: rule.mode, expandedIds });
     })
-    .map(_makeViewerRowFromMemberView)
+    .map((row) => {
+      return _makeViewerRowFromMemberView(row, avatars);
+    })
     .sort(_compareViewerRows);
   return { viewers, nextCursor: null };
 }

@@ -1,5 +1,9 @@
 import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
-import type { CommentDto, VideoReaction } from "@memory-shoebox/shared";
+import type {
+  CommentDto,
+  CommentTag,
+  VideoReaction,
+} from "@memory-shoebox/shared";
 import { clockLabel } from "@/system/labelHelpers/labelHelpers";
 
 /** One comment or reaction that can be reached on the timeline. */
@@ -10,6 +14,7 @@ export type VideoMoment = {
   glyph: string;
   authorName: string;
   body?: string;
+  commentTags?: CommentTag[];
   reaction?: VideoReaction;
 };
 /** Nearby marks share one focus target and open into their full list. */
@@ -42,6 +47,7 @@ export function makeMomentGroupsFromEvents(
             glyph: getInitialsFromDisplayName(comment.author.displayName),
             authorName: comment.author.displayName,
             body: comment.body,
+            commentTags: comment.commentTags,
           },
         ];
   });

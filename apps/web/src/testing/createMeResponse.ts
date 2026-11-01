@@ -14,6 +14,8 @@ import type { MeResponse } from "@memory-shoebox/shared";
 export function createMeResponse(
   overrides: Readonly<{
     memberId?: string;
+    sessionId?: string;
+    avatar?: MeResponse["me"]["member"]["avatar"];
     displayName?: string;
     storedDisplayName?: string | null;
     email?: string;
@@ -22,6 +24,7 @@ export function createMeResponse(
   }> = {},
 ): MeResponse {
   const {
+    avatar = null,
     memberId = "018f0000-0000-7000-8000-000000000000",
     displayName = "Papá",
     storedDisplayName = displayName,
@@ -31,9 +34,12 @@ export function createMeResponse(
   } = overrides;
 
   return {
+    sessionId: overrides.sessionId ?? "018f0000-0000-7000-8000-000000000001",
     me: {
-      member: { memberId, displayName },
+      member: { avatar, memberId, displayName },
       storedDisplayName,
+      profileComplete: storedDisplayName !== null,
+      suggestedDisplayName: null,
       email,
       role,
       notify: {
@@ -41,6 +47,7 @@ export function createMeResponse(
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
       joinedAt,
       lastSignedInAt: "2026-09-28T10:00:00.000Z",

@@ -37,7 +37,11 @@ export type PeopleFieldGroup = {
 };
 
 /** An existing identity or a new name waiting for its first save. */
-export type PersonChoice = { personId?: string; displayName: string };
+export type PersonChoice = {
+  personId?: string;
+  displayName: string;
+  isMember: boolean;
+};
 
 /** A tagged person, with how many photographs the name is already on. */
 export type PeopleFieldPerson = PersonRef & {
@@ -60,6 +64,7 @@ type Props = {
   /** Required by `anyone`, ignored by the other two modes. */
   people?: readonly PeopleFieldPerson[];
   selectedPersonIds?: ReadonlyArray<string | undefined>;
+  selectedPeople?: readonly PersonChoice[];
   onSelectPerson?: (person: PersonRef) => void;
   onRemovePerson?: (index: number) => void;
   onRenamePerson?: (person: PeopleFieldPerson) => void;
@@ -149,6 +154,7 @@ export function PeopleField({
   groups = [],
   people = [],
   selectedPersonIds,
+  selectedPeople,
   onSelectPerson,
   onRemovePerson,
   onRenamePerson,
@@ -167,6 +173,7 @@ export function PeopleField({
         onChange={onChange}
         people={people}
         selectedPersonIds={selectedPersonIds}
+        selectedPeople={selectedPeople}
         onSelectPerson={onSelectPerson}
         onRemovePerson={onRemovePerson}
         onRenamePerson={onRenamePerson}

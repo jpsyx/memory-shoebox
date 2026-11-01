@@ -14,13 +14,15 @@ export function registerAppBackgroundWork(
 ): void {
   const { app, deps } = options;
   const backgroundShutdown = new AbortController();
+  const coordinator = createMediaDecodeCoordinator();
+  app.decorate("mediaDecodeCoordinator", coordinator);
   const processingDependencies = {
     database: deps.database,
     b2: app.b2,
     clock: app.clock,
     logger: app.log,
     signal: backgroundShutdown.signal,
-    coordinator: createMediaDecodeCoordinator(),
+    coordinator,
     runtime: createMediaProcessingRuntime(deps.config.mediaProcessing),
   };
   const jobRunner = createJobRunner({
@@ -43,7 +45,7 @@ export function registerAppBackgroundWork(
   app.decorate("jobRunner", jobRunner);
 
   if (deps.startBackgroundWork === true) {
-    jobRunner.start();
+    _startAppJobs(app);
   }
 
   // Fly stops a machine with SIGTERM, and index.ts closes the app on it. The
@@ -52,5 +54,12 @@ export function registerAppBackgroundWork(
   app.addHook("onClose", async () => {
     backgroundShutdown.abort();
     await jobRunner.stop();
+  });
+}
+
+function _startAppJobs(app: FastifyInstance): void {
+  app.jobRunner.start();
+  app.addHook("onReady", async () => {
+    await app.jobRunner.runOnce("avatar-reservation-sweep");
   });
 }

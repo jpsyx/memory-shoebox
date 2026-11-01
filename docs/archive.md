@@ -106,10 +106,11 @@ cannot receive it.
 
 `makeSelectionExpressionFromFilter` composes the viewer's predicate from
 [auth.md § The visibility predicate](auth.md) with the date range, one `EXISTS`
-per selected tag, one per selected person, and the milestone attachment, and
+per selected tag, one per selected person, the member union and the milestone
+attachment, and
 returns a single Kysely expression. The day aggregate, the item query,
-`resultCount`, the rail, the facet counts and the seen latch all take that same
-object.
+`resultCount`, the rail and the narrowed facet counts all take that same
+object. The seen latch separately authorizes explicit item/burst IDs.
 
 That is structural rather than tidy. A count and the rows it heads cannot
 disagree while they are the same expression, and they begin to the moment
@@ -124,6 +125,56 @@ The rule that governs the whole slice comes from `conventions.md`: **no count
 that visibility can filter may ever be stored.** Every number in every response
 here is computed for the viewer who asked, which is why there are no rollups
 and why the caches below are deferred rather than merely unbuilt.
+
+## Member collections
+
+The optional UUID `member` query parameter narrows the existing archive to
+visible items uploaded by that account OR photo-tagged with a person whose
+`people.member_id` is that account. The central selection expression ANDs this
+union with reader visibility, dates, tags, people and attachment filters. A
+correlated `EXISTS` joins photo identities inside the OR, so overlap counts once
+and namesakes never match. Videos and retained removed-account identities remain
+eligible. Comment tags and photo tags grant no access. Unknown IDs produce zero
+items and counts; member selection also excludes milestone-only days.
+
+`GET /api/member-collections/:memberId` requires authentication and returns only
+`{ member: MemberRef | null }`: stable ID, current public display name and current
+private avatar. It returns retained identities regardless of active/removed
+status and null for unknown IDs, with no email, role, status or totals.
+`members/readMemberCollectionIdentity.ts` uses the existing batched avatar
+metadata/signing helper and request clock. Item reads still authorize each row.
+
+Member selection is normalized into `TimelineFilter.memberId` and participates
+in cursor fingerprints. Reusing a timeline cursor for another member returns 400. Shared JSON navigation selection and query schemas validate the same UUID.
+The existing `people` API parameter (browser `person`) remains photo-tag-only.
+
+Consumer inventory for this change, including the required
+`rg -l 'TimelineSelection|makeTimelineFilterFromQuery|makeSelectionExpressionFromFilter' apps/server/src packages/shared/src` audit:
+
+| Consumer                                                                                                          | Result                                                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/shared/src/timeline/selection.ts`, `timeline/timeline.ts`                                               | Added optional UUID `member`.                                                                                                                                                                  |
+| `archive/selectionFilterHelpers.ts`                                                                               | Added normalized member, content-filter detection and the single predicate.                                                                                                                    |
+| `archive/timelineCursorHelpers/timelineCursorHelpers.ts`                                                          | Added member to the deterministic digest.                                                                                                                                                      |
+| `routes/timelineRoutes.ts`, `routes/filters.ts`, `routes/bursts.ts`                                               | Unchanged: normalize and pass the complete parsed query.                                                                                                                                       |
+| `archive/readItemDays.ts`, `readItemsForDays.ts`, `countSelectedItems.ts`, `readFacets.ts`, `readTimelinePage.ts` | Unchanged: use the complete central filter for rows and counts.                                                                                                                                |
+| `archive/readRailDays.ts`, `readDayStream.ts`                                                                     | Unchanged: pass the complete filter, including content-filter handling.                                                                                                                        |
+| `items/readBurstFramePage/readBurstFrameRows.ts`, `readBurstFramePage.ts`                                         | Unchanged: pass or apply the complete filter before paging.                                                                                                                                    |
+| `media/readMediaPosition.ts`, `readMediaNeighbors.ts`                                                             | Unchanged: normalize the complete JSON selection.                                                                                                                                              |
+| `packages/shared/src/mediaPosition.ts`, `mediaPreview/mediaPreview.ts`, `items.ts`                                | Unchanged: compose the extended shared selection/query schema.                                                                                                                                 |
+| `media/readMediaPreviews.ts`                                                                                      | Unchanged: authorizes explicit IDs independently; has no archive-selection input to copy.                                                                                                      |
+| `routes/items/itemsSeenRoute.ts`, `archive/latchItemsSeen.ts`                                                     | Unchanged: authorize explicit item/burst IDs. Filtered burst reads already latch returned matching frame IDs rather than expanding the whole stack.                                            |
+| `routes/items/bulkEditItemsRoute.ts`, `items/bulkEditItems/bulkEditItems.ts`, shared `bulkItemEdits.ts`           | Unchanged: accept selected explicit IDs and recheck each item's visibility atomically.                                                                                                         |
+| Archive attachment picking                                                                                        | Unchanged: timeline/rail/facet requests carry the full query plus attachment predicates. The separate milestone candidate endpoint uses its own span/date contract, with no archive selection. |
+| `packages/shared/src/index.ts`                                                                                    | Regenerated exports for the narrow identity contract.                                                                                                                                          |
+| `archive/timelineCursorHelpers/timelineCursorHelpers.test.ts`                                                     | Unchanged: existing normalized digest/paging checks retained; real wrong-member cursor covered by the new collection fixture.                                                                  |
+
+The shared privacy fixture pins exact visible IDs, overlap uniqueness, video,
+rail/date counts, facets, burst cover/frames, seen writes, bulk selected IDs,
+media ranks/neighbors, preview authorization and filtered attachment picking.
+Every fixture response is checked for hidden item IDs. Its representative
+`EXPLAIN QUERY PLAN` uses existing uploader/capture and correlated indexed
+person/item-person lookups, so this change adds no index.
 
 ## The day stream
 
@@ -627,3 +678,41 @@ so bulk work does not add phantom opens. The toolbar inherits upload's ink and
 square controls, wraps into two columns on phones, and measures the header so
 its sticky position still works with wrapped navigation or zoom. Timeline tick
 marks sit away from visibility labels, unseen dots and video runtimes.
+
+## Photo-tag membership labels
+
+Person references from item reads, tagging options, the people directory, facets,
+member suggestions and upload batch edits include `isMember`. Readers derive it
+from a left join to the linked member and require active status. They never infer
+membership from a name. A removed linked identity remains in the archive and is
+shown with `(not a member)`, just like an ad-hoc person. Names stored in the
+catalog stay raw; suffixes belong only to presentation. Pending filter chips use
+`Loading person...` until the identity is available, keeping raw IDs out of the UI.
+
+## Member collections in the web archive
+
+`/?member=<UUID>` opens the existing pile with one combined selection: media
+uploaded by that member OR photo-tagged through their linked person, intersected
+with reader visibility and any extra filters. The `person` filter keeps its
+photo-tag-only meaning. Collection links start clean; opening Find preserves the
+current archive selection. Removing the member chip keeps later tag, person and
+date filters. A no-results collection can clear only its extra filters.
+
+The identity header uses the narrow member-collection read, showing the current
+name and 56px avatar without email, role, account status or hidden totals. It
+refetches on entry so renamed members appear under their current name. Unknown
+identities use a generic heading; unknown, retained former members and members
+with no visible media share “No photos or videos to show.” A failed identity
+read offers retry without losing selection. Header space is reserved while
+loading, and the collection filter strip does not flash a zero total.
+
+The complete member selection participates in page and rail URLs, cursor-bound
+query keys, timeline visit memory and filter facets. Bulk burst reads, item
+navigation, media previews and theater positions use that same selection.
+Private identity requests consume cancellation and verify the current reader's
+private lifetime before returning. Direct/shared URLs offer Back to the timeline;
+comment return journeys are supplied separately by the same-tab journey owner.
+
+The integrated [comment-tagging acceptance record](superpowers/verification/2026-10-31-comment-tagging.md)
+covers the combined member collection, hidden totals, independent same-name
+people, and same-tab return journey using disposable member sessions.

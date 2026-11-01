@@ -1,13 +1,4 @@
 import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
   ITEM_ID,
   makeComment,
   makeVideoDetail,
@@ -21,6 +12,15 @@ import {
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
@@ -117,7 +117,7 @@ describe("video conversation interactions", () => {
     await screen.findByText("Stay here.");
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "Stay here.", atSeconds: 3 });
+    ).toEqual({ commentTags: [], body: "Stay here.", atSeconds: 3 });
     expect(getRecordedCountFromLine("POST /api/media/preview")).toBe(1);
     expect(getRecordedCountFromLine(`GET /api/items/${ITEM_ID}`)).toBe(1);
   });
@@ -204,6 +204,7 @@ describe("video conversation interactions", () => {
       expect(
         getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
       ).toEqual({
+        commentTags: [],
         body: "That moment.",
         atSeconds: 3,
       });
@@ -257,7 +258,7 @@ describe("video conversation interactions", () => {
       await screen.findByText("That smile!");
       expect(
         getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-      ).toEqual({ body: "That smile!", atSeconds: 4 });
+      ).toEqual({ commentTags: [], body: "That smile!", atSeconds: 4 });
       expect(field).toHaveValue("");
     },
   );
@@ -275,6 +276,11 @@ describe("video conversation interactions", () => {
       isComposing: true,
     });
     fireEvent.keyDown(field, { key: "Enter", ctrlKey: true, repeat: true });
+    await act(async () => {
+      await new Promise<void>((fulfill) => {
+        setTimeout(fulfill, 0);
+      });
+    });
     expect(field).toHaveValue("First\nSecond");
     expect(
       getRecordedCountFromLine(`POST /api/items/${ITEM_ID}/comments`),
@@ -313,7 +319,11 @@ describe("video conversation interactions", () => {
     ).not.toBeInTheDocument();
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "Yes!", parentCommentId: parent.commentId });
+    ).toEqual({
+      commentTags: [],
+      body: "Yes!",
+      parentCommentId: parent.commentId,
+    });
   });
 
   it("retains a reopened reply's words when the cancelled sender later succeeds", async () => {

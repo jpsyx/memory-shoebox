@@ -120,3 +120,20 @@ describe("attachment selection", () => {
     ).toBe("excludeAttached=false");
   });
 });
+
+describe("member collection selection", () => {
+  const member = "018f0000-0000-7000-8000-000000000021";
+  it("round-trips the member with later filters and sends it to every wire consumer", () => {
+    const selection = { ...EMPTY, member, tags: ["holiday"] };
+    expect(getViewFromSearch({ member }).selection.member).toBe(member);
+    expect(isSelectionActive({ ...EMPTY, member })).toBe(true);
+    expect(makeQueryFromSelection(selection).get("member")).toBe(member);
+    expect(makeSearchFromSelection(selection)).toEqual({
+      member,
+      tag: ["holiday"],
+    });
+    expect(
+      getViewFromSearch(makeSearchFromSelection(selection)).selection,
+    ).toEqual(selection);
+  });
+});

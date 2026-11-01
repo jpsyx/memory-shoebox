@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import { createSetupResponseSchema } from "@memory-shoebox/shared";
 import type { LightMyRequestResponse } from "fastify";
 import { describe, expect, it } from "vitest";
@@ -22,6 +23,8 @@ function _expectCreatedAdminResponse(
   expect(createSetupResponseSchema.parse(created.json())).toMatchObject({
     me: {
       storedDisplayName: "Rosa",
+      profileComplete: true,
+      suggestedDisplayName: null,
       email: "rosa@example.com",
       role: "admin",
       joinedAt: NOW,
@@ -31,6 +34,7 @@ function _expectCreatedAdminResponse(
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
     },
     isFirstSignIn: true,
@@ -49,7 +53,10 @@ function _expectCreatedAdminResponse(
 }
 
 async function _expectInitialAdminCatalog(
-  options: Readonly<{ members: Array<Database["members"]>; context: TestApp }>,
+  options: Readonly<{
+    members: Array<Selectable<Database["members"]>>;
+    context: TestApp;
+  }>,
 ): Promise<void> {
   const { members, context } = options;
   expect(members).toHaveLength(1);
@@ -59,7 +66,22 @@ async function _expectInitialAdminCatalog(
     joined_at: NOW,
     last_signed_in_at: NOW,
     removed_at: null,
+    profile_completed_at: NOW,
+    suggested_display_name: null,
   });
+  expect(
+    await context.database
+      .selectFrom("member_name_claims")
+      .selectAll()
+      .execute(),
+  ).toEqual([
+    {
+      name_key: "rosa",
+      member_id: members[0]!.id,
+      display_name: "Rosa",
+      created_at: NOW,
+    },
+  ]);
   expect(
     await context.database.selectFrom("invitations").selectAll().execute(),
   ).toEqual([]);

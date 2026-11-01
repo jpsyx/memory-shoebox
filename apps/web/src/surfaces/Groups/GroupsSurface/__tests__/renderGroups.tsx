@@ -30,7 +30,13 @@ export const GROUP: AdminGroupDto = {
   groupId: "018f0000-0000-7000-8000-000000000010",
   name: "Cousins",
   createdAt: "2026-09-01T10:00:00.000Z",
-  members: [{ memberId: INVITED.memberId, displayName: INVITED.displayName }],
+  members: [
+    {
+      avatar: null,
+      memberId: INVITED.memberId,
+      displayName: INVITED.displayName,
+    },
+  ],
   usedByOnlyRules: 9,
   usedByExceptRules: 5,
 };
@@ -42,7 +48,11 @@ export const USAGE: GroupUsageResponse = {
   emptyAllowListItemCount: 9,
   membersLosingAccess: [INVITED],
   membersGainingAccess: [
-    { memberId: makeMemberFromOverrides().memberId, displayName: "Papá" },
+    {
+      avatar: null,
+      memberId: makeMemberFromOverrides().memberId,
+      displayName: "Papá",
+    },
   ],
   rules: [
     {
@@ -88,6 +98,7 @@ function _respondWithGroups({
           makeMemberFromOverrides(),
           INVITED,
           makeMemberFromOverrides({
+            avatar: null,
             memberId: "018f0000-0000-7000-8000-000000000099",
             displayName: "Removed",
             status: "removed",

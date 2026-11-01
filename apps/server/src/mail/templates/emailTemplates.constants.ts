@@ -4,6 +4,7 @@ import {
   RemovalResolvedEmailTemplate,
   invitationEmail,
   commentEmail,
+  commentTagEmail,
   signInCodeEmail,
   uploadSessionEmail,
 } from "@memory-shoebox/emails";
@@ -17,6 +18,8 @@ import {
   invitationEmailPayloadSchema,
   type InvitationEmailPayload,
   commentEmailPayloadSchema,
+  commentTagEmailPayloadSchema,
+  type CommentTagEmailPayload,
   signInCodeEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
   type CommentEmailPayload,
@@ -46,6 +49,7 @@ export type EmailPayloadExtras = {
     : never;
   sign_in_code: Omit<SignInCodeEmailPayload, keyof EmailCommon>;
   comment: Omit<CommentEmailPayload, keyof EmailCommon>;
+  comment_tag: Omit<CommentTagEmailPayload, keyof EmailCommon>;
   upload_session: Omit<UploadSessionEmailPayload, keyof EmailCommon>;
 };
 
@@ -82,6 +86,7 @@ export const EMAIL_TEMPLATES = {
   removal_resolved: RemovalResolvedEmailTemplate,
   sign_in_code: signInCodeEmail,
   comment: commentEmail,
+  comment_tag: commentTagEmail,
   upload_session: uploadSessionEmail,
 } as const satisfies EmailTemplateRegistry;
 
@@ -139,6 +144,10 @@ export const EMAIL_RENDERERS = {
   sign_in_code: _createRenderer({
     template: signInCodeEmail,
     schema: signInCodeEmailPayloadSchema,
+  }),
+  comment_tag: _createRenderer({
+    template: commentTagEmail,
+    schema: commentTagEmailPayloadSchema,
   }),
   comment: _createRenderer({
     template: commentEmail,

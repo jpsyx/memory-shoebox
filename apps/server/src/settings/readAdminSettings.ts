@@ -1,4 +1,7 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import {
+  type AvatarRef,
   EDITABLE_INSTANCE_SETTING_KEYS,
   getSettingValueFromStoredValue,
   type GetSettingsResponse,
@@ -80,6 +83,7 @@ function _getResolvedSettingsFromRows(
 
 function _getProvenanceFromRows(
   rows: readonly SettingRow[],
+  avatars: ReadonlyMap<string, AvatarRef>,
 ): Pick<GetSettingsResponse, "changedBy" | "defaultedKeys"> {
   const stored = new Map(
     rows.map((row) => {
@@ -98,7 +102,11 @@ function _getProvenanceFromRows(
       const updatedBy =
         row.memberId === null
           ? null
-          : { memberId: row.memberId, displayName: row.displayName ?? "" };
+          : {
+              memberId: row.memberId,
+              displayName: row.displayName ?? "",
+              avatar: avatars.get(row.memberId) ?? null,
+            };
       return [{ key, updatedAt: row.updated_at, updatedBy }];
     }),
   };
@@ -106,12 +114,19 @@ function _getProvenanceFromRows(
 
 /** Reads editable values, provenance, catalog totals and deployed version. */
 export async function readAdminSettings(
-  database: DatabaseExecutor,
+  options: Readonly<{ database: DatabaseExecutor; b2: B2Client; now: string }>,
 ): Promise<GetSettingsResponse> {
+  const { database } = options;
   const rows = await _readSettingRows(database);
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: rows.flatMap((row) => {
+      return row.memberId === null ? [] : [row.memberId];
+    }),
+  });
   return {
     ..._getResolvedSettingsFromRows(rows),
-    ..._getProvenanceFromRows(rows),
+    ..._getProvenanceFromRows(rows, avatars),
     storage: await _readStorage(database),
     version: SHOEBOX_VERSION,
   };

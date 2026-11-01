@@ -1,5 +1,7 @@
 import { Combobox, Group } from "@mantine/core";
 import type { ComponentProps, ReactNode } from "react";
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
+import { personLabel } from "@/system/personLabel/personLabel";
 import { PersonOptionActions } from "./PersonOptionActions";
 import type { PeopleFieldPerson } from "./PeopleField";
 import classes from "@/theme/components.module.css";
@@ -28,10 +30,13 @@ export function PersonNameOption({
     <Group gap={0} wrap="nowrap" className={fieldClasses.optionRow}>
       <Combobox.Option
         value={optionValue}
+        aria-label={personLabel(person)}
         disabled={isChosen || actions.isManaging}
         className={fieldClasses.optionName}
       >
-        <span className={fieldClasses.name}>{person.displayName}</span>
+        <span className={fieldClasses.name}>
+          <PersonIdentityLabel person={person} />
+        </span>
         <span className={classes.comboOptionCount}>
           {isChosen
             ? "tagged"

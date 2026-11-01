@@ -17,7 +17,7 @@ type AddUploadSessionAgreementIssuesOptions = {
 };
 
 /**
- * The seven kinds the product sends.
+ * The eight kinds the product sends.
  *
  * A reaction is deliberately not one of them and must not become one
  * (`apis/notifications.md` § Rules that hold for all nine): it is one tap,
@@ -32,17 +32,18 @@ export const OUTBOUND_EMAIL_KINDS = [
   "invitation",
   "upload_session",
   "comment",
+  "comment_tag",
   "removal_request",
   "removal_reminder",
   "removal_resolved",
 ] as const;
 
-/** One of the seven kinds. */
+/** One of the eight kinds. */
 export const outboundEmailKindSchema = z.enum(
   OUTBOUND_EMAIL_KINDS,
 ) satisfies z.ZodType;
 
-/** One of the seven kinds. */
+/** One of the eight kinds. */
 export type OutboundEmailKind = z.infer<typeof outboundEmailKindSchema>;
 
 /**
@@ -152,6 +153,21 @@ export const commentEmailPayloadSchema = emailCommonSchema.extend({
 
 /** `comment`'s payload. */
 export type CommentEmailPayload = z.infer<typeof commentEmailPayloadSchema>;
+
+/** Frozen words and item identity for an explicit comment tag. */
+export const commentTagEmailPayloadSchema = emailCommonSchema.extend({
+  authorDisplayName: z.string(),
+  body: z.string(),
+  atSeconds: z.number().nonnegative().nullable(),
+  itemKind: z.enum(["photo", "video"]),
+  itemCapturedOn: calendarDateSchema,
+  itemUrl: signedUrlSchema,
+}) satisfies z.ZodType;
+
+/** The explicit tag message's immutable payload. */
+export type CommentTagEmailPayload = z.infer<
+  typeof commentTagEmailPayloadSchema
+>;
 
 /**
  * Reports every way an `upload_session` payload's figures can disagree with

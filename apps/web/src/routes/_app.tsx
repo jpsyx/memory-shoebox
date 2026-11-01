@@ -1,3 +1,5 @@
+import { ConversationJourneyProvider } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
+import { makeSafeHrefFromRedirect } from "@/surfaces/SignIn/makeSafeHrefFromRedirect/makeSafeHrefFromRedirect";
 import type { ReactNode } from "react";
 import { MediaLoadingProvider } from "@/media/MediaLoadingProvider/MediaLoadingProvider";
 import { requireSignedIn } from "@/session/requireSignedIn/requireSignedIn";
@@ -9,6 +11,7 @@ import { ProductBar } from "@/system/ProductBar/ProductBar";
 import { UploadSessionProvider } from "@/upload/UploadSessionProvider/UploadSessionProvider";
 import {
   createFileRoute,
+  redirect,
   Outlet,
   useLocation,
   useMatches,
@@ -22,6 +25,13 @@ import { useEffect, useLayoutEffect } from "react";
 export const Route = createFileRoute("/_app")({
   beforeLoad: async ({ context, location }) => {
     const me = context.setupMe;
+    if (me && !me.me.profileComplete) {
+      throw redirect({
+        to: "/complete-profile",
+        search: { redirect: makeSafeHrefFromRedirect(location.href) },
+        replace: true,
+      });
+    }
     return requireSignedIn({ me: me ?? null, attemptedHref: location.href });
   },
   component: AppShell,
@@ -81,7 +91,9 @@ function AppShell(): ReactNode {
         committedSurfaceKey={committedSurfaceKey}
       >
         <UploadSessionProvider key={viewer.memberId} viewer={viewer}>
-          <Outlet />
+          <ConversationJourneyProvider>
+            <Outlet />
+          </ConversationJourneyProvider>
         </UploadSessionProvider>
       </MediaLoadingProvider>
     </div>

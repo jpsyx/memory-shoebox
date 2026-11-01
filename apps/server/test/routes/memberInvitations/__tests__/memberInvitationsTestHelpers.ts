@@ -135,6 +135,7 @@ export async function expectRestoredMemberIdentity(
   const { response, database, ownItemId, memberId } = options;
   expect(response.statusCode).toBe(201);
   expect(response.json()).toMatchObject({
+    avatar: null,
     memberId,
     displayName: "Original",
     joinedAt: NOW,
@@ -202,7 +203,7 @@ export async function prepareFrozenInvitationFixture(): Promise<FrozenInvitation
   const member = adminMemberDtoSchema.parse(response.json());
   expect(member).toMatchObject({
     email: "ana+family@example.com",
-    displayName: "Ana",
+    displayName: "Member",
     status: "invited",
     role: "viewer",
     joinedAt: null,

@@ -21,6 +21,7 @@ async function _postMilestoneReconcile(
     database: request.server.database,
     callback: (transaction) => {
       return reconcileMilestone({
+        b2: request.server.b2,
         transaction,
         viewer,
         milestoneId,

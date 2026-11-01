@@ -21,7 +21,11 @@ import type { PeopleResponse } from "@memory-shoebox/shared";
 const DIRECTORY: PeopleResponse = {
   people: [
     {
-      person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
+      person: {
+        personId: PERSON_SOFIA_ID,
+        displayName: "Sofía",
+        isMember: false,
+      },
       itemCount: 3,
       firstCapturedOn: "2026-09-01",
       lastCapturedOn: "2026-09-20",
@@ -40,10 +44,9 @@ describe("who and what is in it", () => {
     renderItem(ITEM_ID);
     await openItemDetails();
 
-    expect(await screen.findByRole("link", { name: "Mateo" })).toHaveAttribute(
-      "href",
-      `/?person=${PERSON_MATEO_ID}`,
-    );
+    expect(
+      await screen.findByRole("link", { name: "Mateo (not a member)" }),
+    ).toHaveAttribute("href", `/?person=${PERSON_MATEO_ID}`);
     expect(screen.getByRole("link", { name: "hospital" })).toHaveAttribute(
       "href",
       `/?tag=${TAG_HOSPITAL_ID}`,
@@ -55,8 +58,10 @@ describe("who and what is in it", () => {
     renderItem(ITEM_ID);
     await openItemDetails();
 
-    await screen.findByRole("link", { name: "Mateo" });
-    expect(screen.queryByRole("button", { name: "+ Tag somebody" })).toBeNull();
+    await screen.findByRole("link", { name: "Mateo (not a member)" });
+    expect(
+      screen.queryByRole("button", { name: "+ Photo-tag someone" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "+ Add a tag" })).toBeNull();
   });
 
@@ -66,7 +71,7 @@ describe("who and what is in it", () => {
     await openItemDetails();
 
     expect(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     ).not.toHaveAttribute("aria-pressed");
     expect(
       screen.getByRole("button", { name: "+ Add a tag" }),
@@ -77,8 +82,12 @@ describe("who and what is in it", () => {
     const answer = makeItemDetail({
       capabilities: OTHER_UPLOADER_CAPABILITIES,
       people: [
-        { personId: PERSON_MATEO_ID, displayName: "Mateo" },
-        { personId: PERSON_ELENA_ID, displayName: "Bisabuela Elena" },
+        { personId: PERSON_MATEO_ID, displayName: "Mateo", isMember: false },
+        {
+          personId: PERSON_ELENA_ID,
+          displayName: "Bisabuela Elena",
+          isMember: false,
+        },
       ],
       media: {
         ...EDITABLE.media,
@@ -96,7 +105,7 @@ describe("who and what is in it", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     await userEvent.type(
       screen.getByRole("combobox", { name: "Who is in it" }),
@@ -132,7 +141,7 @@ describe("who and what is in it", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     // Typed in two halves, so the name only lands once the directory has: the
     // option appearing is what says the archive knows her.
@@ -164,7 +173,7 @@ describe("who and what is in it", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     await userEvent.type(
       screen.getByRole("combobox", { name: "Who is in it" }),

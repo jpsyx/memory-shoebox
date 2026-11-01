@@ -1,3 +1,4 @@
+import { removePrivateQueries } from "@/api/me/privateQueryHelpers";
 import type { MeResponse } from "@memory-shoebox/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -194,13 +195,17 @@ function useRedeemCode(
       // written rather than invalidated: a refetch here would be a second
       // round trip for an answer already in hand.
       const account: MeResponse = {
+        sessionId: created.session.sessionId,
         me: created.me,
         settings: created.settings,
       };
+      removePrivateQueries(queryClient);
       queryClient.setQueryData(meQueryOptions.queryKey, account);
       setFirstSignIn(created.isFirstSignIn);
       void navigate({
-        href: makeSafeHrefFromRedirect(search.redirect),
+        href: created.me.profileComplete
+          ? makeSafeHrefFromRedirect(search.redirect)
+          : `/complete-profile?redirect=${encodeURIComponent(makeSafeHrefFromRedirect(search.redirect))}`,
         replace: true,
       });
     },

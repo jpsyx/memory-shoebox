@@ -1,3 +1,4 @@
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   createMilestoneRequestSchema,
@@ -23,11 +24,16 @@ import {
 
 function _getMutationContextFromRequest(request: Readonly<FastifyRequest>): {
   viewer: Viewer;
+  b2: B2Client;
   now: string;
 } {
   const viewer = requireViewer(request);
   assertMayMutateMilestones(viewer);
-  return { viewer, now: request.server.clock().toISOString() };
+  return {
+    viewer,
+    b2: request.server.b2,
+    now: request.server.clock().toISOString(),
+  };
 }
 
 async function _createMilestone(

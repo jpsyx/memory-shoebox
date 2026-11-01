@@ -166,7 +166,7 @@ describe("video conversations", () => {
     await screen.findByRole("alert");
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "There.", atSeconds: 4.37 });
+    ).toEqual({ commentTags: [], body: "There.", atSeconds: 4.37 });
     expect(
       screen.getByRole("textbox", { name: "Write a comment" }),
     ).toHaveValue("There.");
@@ -201,7 +201,7 @@ describe("video conversations", () => {
       await waitFor(() => {
         expect(
           getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-        ).toEqual({ body: "All of it.", atSeconds: null });
+        ).toEqual({ commentTags: [], body: "All of it.", atSeconds: null });
       });
     },
   );
@@ -276,7 +276,7 @@ describe("video conversations", () => {
     await screen.findByText("All of it.");
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "All of it.", atSeconds: null });
+    ).toEqual({ commentTags: [], body: "All of it.", atSeconds: null });
     expect(
       screen.getByRole("textbox", { name: "Write a comment" }),
     ).toHaveValue("");
@@ -310,7 +310,11 @@ describe("video conversations", () => {
     await screen.findByText("Yes!");
     expect(
       getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-    ).toEqual({ body: "Yes!", parentCommentId: parent.commentId });
+    ).toEqual({
+      commentTags: [],
+      body: "Yes!",
+      parentCommentId: parent.commentId,
+    });
     expect(screen.getAllByRole("button", { name: /Reply to/ })).toHaveLength(1);
   });
   it("opens a single comment from its marker and restores focus on Escape", async () => {

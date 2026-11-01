@@ -46,6 +46,7 @@ describe("side-effect-free media reads", () => {
       sessionId: context.sessionId,
       role: "viewer" as const,
       isAdmin: false,
+      profileComplete: true,
       visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     };
     const tagId = await insertTag(context.database, { name: "sparse" });

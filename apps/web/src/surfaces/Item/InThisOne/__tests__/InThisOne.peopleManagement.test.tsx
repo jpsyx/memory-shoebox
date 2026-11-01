@@ -26,13 +26,21 @@ const DETAIL = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 const OPTIONS = {
   people: [
     {
-      person: { personId: PERSON_MATEO_ID, displayName: "Mateo" },
+      person: {
+        personId: PERSON_MATEO_ID,
+        displayName: "Mateo",
+        isMember: false,
+      },
       itemCount: 1,
       canRename: true,
       canDelete: true,
     },
     {
-      person: { personId: PERSON_SOFIA_ID, displayName: "Pablo" },
+      person: {
+        personId: PERSON_SOFIA_ID,
+        displayName: "Pablo",
+        isMember: false,
+      },
       itemCount: 0,
       canRename: false,
       canDelete: false,
@@ -48,7 +56,7 @@ async function _openEditor(routes: Record<string, Answer> = {}): Promise<void> {
   renderItem(ITEM_ID);
   await openItemDetails();
   await userEvent.click(
-    await screen.findByRole("button", { name: "+ Tag somebody" }),
+    await screen.findByRole("button", { name: "+ Photo-tag someone" }),
   );
 }
 
@@ -72,7 +80,13 @@ describe("person management from the tagging menu", () => {
         status: 200,
         body: {
           ...DETAIL,
-          people: [{ personId: PERSON_MATEO_ID, displayName: "Matías" }],
+          people: [
+            {
+              personId: PERSON_MATEO_ID,
+              displayName: "Matías",
+              isMember: false,
+            },
+          ],
         },
       },
     });
@@ -111,7 +125,9 @@ describe("person management from the tagging menu", () => {
       expect(getRecordedCountFromLine(PERSON_DELETE)).toBe(1);
     });
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.queryByRole("link", { name: "Mateo" })).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "Mateo (not a member)" }),
+    ).toBeNull();
     expect(getRecordedCountFromLine(PEOPLE_PUT)).toBe(0);
   });
 
@@ -130,7 +146,9 @@ describe("person management from the tagging menu", () => {
       /tagged elsewhere/i,
     );
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.getByRole("link", { name: "Mateo" })).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Mateo (not a member)" }),
+    ).toBeVisible();
   });
 
   it("filters member suggestions case-insensitively and tags the member by person id", async () => {
@@ -163,7 +181,11 @@ describe("tagging identity after person management", () => {
       OPTIONS.people[0]!,
       {
         ...OPTIONS.people[1]!,
-        person: { personId: PERSON_SOFIA_ID, displayName: "Mateo" },
+        person: {
+          personId: PERSON_SOFIA_ID,
+          displayName: "Mateo",
+          isMember: true,
+        },
       },
     ];
     await _openEditor({
@@ -192,7 +214,7 @@ describe("tagging identity after person management", () => {
       });
     });
     await userEvent.click(
-      screen.getAllByRole("button", { name: "Untag Mateo" })[0]!,
+      screen.getAllByRole("button", { name: "Untag Mateo (not a member)" })[0]!,
     );
     await waitFor(() => {
       expect(getRecordedBodyFromRequest(PEOPLE_PUT)).toEqual({
@@ -222,14 +244,16 @@ describe("tagging identity after person management", () => {
     });
     await userEvent.click(deleteButton);
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "Untag Mateo" })).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Untag Mateo (not a member)" }),
+      ).toBeNull();
     });
     await waitFor(() => {
       expect(screen.getByRole("combobox")).toBeEnabled();
     });
     await userEvent.type(screen.getByRole("combobox"), "Mateo");
     expect(
-      await screen.findByRole("option", { name: /^Mateo\s*new$/ }),
+      await screen.findByRole("option", { name: "Add “Mateo” (not a member)" }),
     ).toBeVisible();
     expect(getRecordedCountFromLine(PERSON_DELETE)).toBe(1);
   });
@@ -252,7 +276,9 @@ it("does not create a duplicate when selecting a differently cased pending name"
   await userEvent.click(await screen.findByRole("option", { name: /Pablo/ }));
   hold.letGo();
   await waitFor(() => {
-    expect(screen.getByRole("button", { name: "Untag Pablo" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Untag Pablo (not a member)" }),
+    ).toBeVisible();
   });
   expect(getRecordedCountFromLine(PEOPLE_PUT)).toBe(1);
 });

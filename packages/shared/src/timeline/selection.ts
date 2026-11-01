@@ -5,6 +5,8 @@ import { calendarDateSchema, idSchema } from "../dtos.ts";
 export const timelineSelectionSchema = z.strictObject({
   tags: z.array(idSchema),
   people: z.array(idSchema),
+  /** Visible uploads or linked photo tags for this retained account. */
+  member: idSchema.optional(),
   /** Inclusive capture dates, including any effective jump boundary. */
   from: calendarDateSchema.optional(),
   until: calendarDateSchema.optional(),

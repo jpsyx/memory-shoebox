@@ -95,7 +95,11 @@ async function _readItemLookups(
         database: options.database,
         ruleIds: options.ruleIds,
       }),
-      readMemberRefs(options.database),
+      readMemberRefs({
+        database: options.database,
+        b2: options.b2,
+        now: options.now.toISOString(),
+      }),
       readInstanceSettings({
         database: options.database,
         keys: ["shoebox.timezone"],

@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Kysely } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
@@ -17,13 +18,13 @@ describe("getDisplayNameFromMember", () => {
     ).toBe("Abuela Rosa");
   });
 
-  it("falls back to the email local part when none is stored", () => {
+  it("uses a neutral label when none is stored", () => {
     expect(
       getDisplayNameFromMember({
         storedDisplayName: undefined,
         email: "abuela.rosa@example.com",
       }),
-    ).toBe("abuela.rosa");
+    ).toBe("Member");
   });
 
   it("treats a whitespace name as none", () => {
@@ -32,7 +33,7 @@ describe("getDisplayNameFromMember", () => {
         storedDisplayName: "   ",
         email: "rosa@example.com",
       }),
-    ).toBe("rosa");
+    ).toBe("Member");
   });
 });
 
@@ -57,9 +58,18 @@ describe("getMeDtoFromMemberId", () => {
       last_signed_in_at: NOW,
     });
 
-    expect(await getMeDtoFromMemberId({ database, memberId })).toEqual({
-      member: { memberId, displayName: "rosa" },
+    expect(
+      await getMeDtoFromMemberId({
+        database,
+        memberId,
+        b2: createFakeB2Client(),
+        now: NOW,
+      }),
+    ).toEqual({
+      member: { avatar: null, memberId, displayName: "Member" },
       storedDisplayName: null,
+      profileComplete: false,
+      suggestedDisplayName: null,
       email: "rosa@example.com",
       role: "viewer",
       notify: {
@@ -67,13 +77,14 @@ describe("getMeDtoFromMemberId", () => {
         onComment: false,
         onReply: true,
         onRemoval: false,
+        onCommentTag: true,
       },
       joinedAt: NOW,
       lastSignedInAt: NOW,
     });
   });
 
-  it("returns all four switches for a viewer, including onRemoval", async () => {
+  it("returns all five switches for a viewer, including onRemoval", async () => {
     // The recipient query filters on role as well as on the boolean; hiding
     // the field here would lose the member's setting the moment an admin
     // promoted them (`auth.md`, `GET /api/me`).
@@ -82,7 +93,12 @@ describe("getMeDtoFromMemberId", () => {
       role: "viewer",
       notify_on_removal: 1,
     });
-    const me = await getMeDtoFromMemberId({ database, memberId });
+    const me = await getMeDtoFromMemberId({
+      database,
+      memberId,
+      b2: createFakeB2Client(),
+      now: NOW,
+    });
     expect(me.notify.onRemoval).toBe(true);
   });
 });

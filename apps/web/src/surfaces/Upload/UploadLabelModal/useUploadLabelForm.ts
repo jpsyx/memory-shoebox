@@ -1,3 +1,4 @@
+import { usePersonSelections } from "@/system/PeopleField/usePersonSelections";
 import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
 import type {
   UploadDraftLabel,
@@ -27,8 +28,14 @@ function _getLabelFromName(
       ? { kind: "tag", tagId: tag.tag.tagId }
       : { kind: "tag", labelSnapshot: name };
   }
+  if (personId) {
+    return { kind: "person", personId };
+  }
   const matches = options.options.people.filter((entry) => {
-    return makeNameKeyFromName(entry.person.displayName) === key;
+    return (
+      !entry.person.isMember &&
+      makeNameKeyFromName(entry.person.displayName) === key
+    );
   });
   const chosen = matches.find((entry) => {
     return entry.person.personId === personId;
@@ -45,10 +52,11 @@ type Form = {
   names: string[];
   onNamesChange: (value: readonly string[]) => void;
   personIds: Record<string, string>;
+  onRemovePerson: (index: number) => void;
   onPersonChoice: ({
     name,
     personId,
-  }: Readonly<{ name: string; personId: string }>) => void;
+  }: Readonly<{ name: string; personId: string; index?: number }>) => void;
   error?: string;
   isSaving: boolean;
   onSubmit: () => Promise<void>;
@@ -57,7 +65,7 @@ type Submission = {
   options: Options;
   names: string[];
   labels: UploadDraftLabel[];
-  onNamesChange: (names: string[]) => void;
+  onNamesChange: (names: string[], retainedIndices?: number[]) => void;
   onError: (error: string) => void;
   attempts: Map<string, UploadEditAttempt>;
 };
@@ -94,10 +102,14 @@ async function _submitLabels({
     onNamesChange([]);
     options.onClose();
   } catch (failure) {
+    const retainedIndices = names.flatMap((_, position) => {
+      return completedLabels.has(labels[position]!) ? [] : [position];
+    });
     onNamesChange(
-      names.filter((_, position) => {
-        return !completedLabels.has(labels[position]!);
+      retainedIndices.map((index) => {
+        return names[index]!;
       }),
+      retainedIndices,
     );
     onError(failure instanceof Error ? failure.message : String(failure));
   }
@@ -109,11 +121,11 @@ function _getLabelsFromNames(
     personIds: Readonly<Record<string, string>>;
   }>,
 ): UploadDraftLabel[] {
-  return options.names.map((name) => {
+  return options.names.map((name, index) => {
     return _getLabelFromName({
       name,
       options: options.formOptions,
-      personId: options.personIds[name],
+      personId: options.personIds[String(index)],
     });
   });
 }
@@ -140,8 +152,8 @@ async function _submitForm(
  * Retains unsaved modal input and removes only fully confirmed label writes.
  */
 export function useUploadLabelForm(options: Readonly<Options>): Form {
-  const [names, setNames] = useState<string[]>([]);
-  const [personIds, setPersonIds] = useState<Record<string, string>>({});
+  const selections = usePersonSelections();
+  const { names, personIds } = selections;
   const [error, setError] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const pending = useRef(false);
@@ -159,7 +171,7 @@ export function useUploadLabelForm(options: Readonly<Options>): Form {
         attempts: attempts.current,
         names,
         personIds,
-        onNamesChange: setNames,
+        onNamesChange: selections.retain,
         onError: setError,
       });
     } finally {
@@ -168,16 +180,7 @@ export function useUploadLabelForm(options: Readonly<Options>): Form {
     }
   };
   return {
-    names,
-    onNamesChange: (value) => {
-      setNames([...value]);
-    },
-    personIds,
-    onPersonChoice: ({ name, personId }) => {
-      setPersonIds((choices) => {
-        return { ...choices, [name]: personId };
-      });
-    },
+    ...selections,
     error,
     isSaving,
     onSubmit,

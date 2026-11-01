@@ -118,7 +118,20 @@ function _toApiError(error: unknown): ApiError {
  */
 export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error, request, reply) => {
-    const apiError = _toApiError(error);
+    const isAvatarOverflow =
+      request.method === "PUT" &&
+      request.routeOptions.url === "/api/me/avatar-uploads/:avatarId" &&
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      error.statusCode === 413;
+    const apiError = isAvatarOverflow
+      ? new ApiError({
+          statusCode: 413,
+          code: "avatar_too_large",
+          message: "Choose a photo smaller than 10 MB.",
+        })
+      : _toApiError(error);
 
     if (apiError.statusCode >= 500) {
       request.log.error({ err: error }, "request failed");

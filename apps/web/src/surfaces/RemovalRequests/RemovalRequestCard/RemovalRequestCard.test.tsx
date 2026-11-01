@@ -6,6 +6,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RemovalRequestCard } from "./RemovalRequestCard";
 const VIEWER = {
+  avatar: null,
   memberId: "member",
   displayName: "Mamá",
   role: "admin",
@@ -40,7 +41,11 @@ describe("removal request presentation", () => {
       state: "declined",
       canWithdraw: false,
       declineReason: WORDS,
-      resolvedBy: { memberId: VIEWER.memberId, displayName: "José" },
+      resolvedBy: {
+        avatar: null,
+        memberId: VIEWER.memberId,
+        displayName: "José",
+      },
     });
     expect(screen.getByText("What José said back")).toBeVisible();
     expect(screen.getByText(/Sí, la guardamos/).textContent).toBe(WORDS);

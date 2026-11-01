@@ -10,6 +10,7 @@ const ME = createMeResponse();
 describe("makeViewerFromMeResponse", () => {
   it("keeps only what the browser needs to know about who is looking", () => {
     expect(makeViewerFromMeResponse(ME)).toEqual({
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-000000000000",
       displayName: "Papá",
       role: "admin",

@@ -1,4 +1,5 @@
-import { syncMemberPerson } from "../members/syncMemberPerson.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { claimMemberName } from "../members/claimMemberName.ts";
 import {
   createSetupRequestSchema,
   type CreateSetupRequest,
@@ -21,6 +22,7 @@ import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivity
 import { readSetupStatus } from "./readSetupStatus.ts";
 
 type InitializeShoeboxOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   body: CreateSetupRequest;
   userAgent: string | undefined;
@@ -56,7 +58,7 @@ async function _insertInitialAdmin(
     .values({
       id: memberId,
       email: options.body.admin.email,
-      display_name: options.body.admin.displayName,
+      display_name: null,
       role: "admin",
       status: "active",
       notify_on_upload: 1,
@@ -132,11 +134,18 @@ async function _getResponseFromInitialSession(
     transaction: DatabaseExecutor;
     memberId: string;
     session: CreatedSession;
+    b2: B2Client;
+    now: string;
   }>,
 ): Promise<CreateSessionResponse> {
   const { transaction, memberId, session } = options;
   return {
-    me: await getMeDtoFromMemberId({ database: transaction, memberId }),
+    me: await getMeDtoFromMemberId({
+      database: transaction,
+      memberId,
+      b2: options.b2,
+      now: options.now,
+    }),
     session: {
       sessionId: session.sessionId,
       deviceLabel: session.deviceLabel,
@@ -168,7 +177,12 @@ export async function initializeShoebox(
         body,
         now: options.now,
       });
-      await syncMemberPerson({ transaction, memberId, now: options.now });
+      await claimMemberName({
+        transaction,
+        memberId,
+        displayName: body.admin.displayName,
+        now: options.now,
+      });
       const session = await createSessionForMember({
         transaction,
         memberId,
@@ -180,6 +194,7 @@ export async function initializeShoebox(
         sessionId: session.sessionId,
         role: "admin",
         isAdmin: true,
+        profileComplete: true,
         visibleRuleIds: [],
       };
       await _saveSetupSettings({ transaction, body, viewer, now: options.now });
@@ -187,6 +202,8 @@ export async function initializeShoebox(
         transaction,
         memberId,
         session,
+        b2: options.b2,
+        now: options.now,
       });
       return { response, token: session.token };
     },

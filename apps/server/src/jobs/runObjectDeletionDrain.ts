@@ -1,7 +1,6 @@
-import { type Selectable, sql, type Kysely } from "kysely";
+import { sql, type Kysely, type Selectable } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Database } from "../db/types/db.types.ts";
-import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
 import { runMediaProcessingQueueTransition } from "../mediaProcessing/queue/runMediaProcessingQueueTransition.ts";
 import { isStorageKeyInUse } from "../upload/isStorageKeyInUse.ts";
 import { getUploadFileRefFromStorageKey } from "../upload/presignUploadFile/uploadStorageKeyHelpers.ts";
@@ -9,6 +8,7 @@ import {
   UPLOAD_OBJECT_RECHECK_INTERVAL_MS,
   UPLOAD_OBJECT_SETTLING_WINDOW_MS,
 } from "../upload/uploadObjectCleanup.constants.ts";
+import { withUploadObjectCleanupLock } from "../upload/withUploadObjectCleanupLock.ts";
 
 /** Inputs for _drainOne. */
 type DrainOneOptions = {
@@ -50,6 +50,7 @@ function _getPendingDeletionsFromDatabase(
         expression("last_error", "is not", null),
         expression.and([
           expression("storage_key", "not like", "uploads/%/%/%"),
+          expression("storage_key", "not like", "avatars/%/%"),
           expression.not(
             expression.exists(
               expression
@@ -96,6 +97,7 @@ async function _isProcessingCleanupKey(
 async function _recordDeletedObject(options: DrainOneOptions): Promise<void> {
   const { database, row, now } = options;
   if (
+    row.storage_key.startsWith("avatars/") ||
     getUploadFileRefFromStorageKey(row.storage_key) !== undefined ||
     (await _isProcessingCleanupKey(options))
   ) {
@@ -119,7 +121,8 @@ async function _deleteUnusedObject(
   const { row, b2 } = options;
   const isRepeatUploadCheck =
     row.last_attempted_at !== null &&
-    (getUploadFileRefFromStorageKey(row.storage_key) !== undefined ||
+    (row.storage_key.startsWith("avatars/") ||
+      getUploadFileRefFromStorageKey(row.storage_key) !== undefined ||
       (await _isProcessingCleanupKey(options)));
   // The B2 adapter maps HEAD's 404 to undefined; other failures retry.
   if (
@@ -245,7 +248,8 @@ async function _drainOne(
  * delete is a bill somebody is paying and a promise that has not been kept, and
  * a row that gave up would be neither visible nor recoverable.
  *
- * Upload keys retain durable tombstones: delete early, recheck after two
+ * Upload and avatar keys retain durable tombstones: delete early, recheck
+ * after two
  * presign lifetimes, then daily. Browser timers cannot bound every issued
  * request's finish, so rows survive indefinitely. Rechecks HEAD first and
  * delete only present objects, avoiding repeat S3 hide markers. Successful

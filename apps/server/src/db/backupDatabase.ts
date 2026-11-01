@@ -65,5 +65,5 @@ export async function backupMigrationDatabase(
     `${basename(path)}.${Date.now()}.${randomUUID()}.db`,
   );
   await backupDatabase(path, destination);
-  console.log(`Pre-migration backup: ${destination}`);
+  console.error(`Pre-migration backup: ${destination}`);
 }

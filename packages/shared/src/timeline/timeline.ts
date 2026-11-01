@@ -73,6 +73,8 @@ export const timelineFilterQuerySchema = z.object({
   tags: repeatedIdsQuerySchema,
   /** Repeated. Being in a photograph is not a key to it. */
   people: repeatedIdsQuerySchema,
+  /** Visible uploads OR photo tags linked to this account, never access. */
+  member: idSchema.optional(),
   /** Inclusive capture date. Capture, never upload. */
   from: calendarDateSchema.optional(),
   /** Inclusive capture date. */

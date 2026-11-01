@@ -1,3 +1,7 @@
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+} from "@/api/me/privateQueryHelpers";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -112,4 +116,53 @@ describe("surface 1", () => {
       expect.anything(),
     );
   });
+});
+
+it("takes an incomplete account to completion with the complete comment destination", async () => {
+  respondWith({
+    "/api/auth/session": {
+      body: {
+        ...CREATED_SESSION,
+        me: {
+          ...CREATED_SESSION.me,
+          storedDisplayName: null,
+          profileComplete: false,
+          suggestedDisplayName: "Abuela",
+        },
+      },
+      status: 201,
+    },
+  });
+  const router = renderAt(`${SENT}&redirect=%2Fitems%2Fabc%3Fcomment%3Dthread`);
+  await userEvent.type(await screen.findByLabelText(/six digits/i), "410233");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Open the photos" }),
+  );
+  await waitFor(() => {
+    expect(router.state.location.pathname).toBe("/complete-profile");
+  });
+  expect(router.state.location.search).toEqual({
+    redirect: "/items/abc?comment=thread",
+  });
+  expect(await screen.findByLabelText("Your name")).toHaveValue("Abuela");
+});
+it("publishes the actual newly created session and retires same-account continuations", async () => {
+  const user = userEvent.setup();
+  respondWith({ "/api/auth/session": { body: CREATED_SESSION, status: 201 } });
+  const router = renderAt(SENT);
+  await screen.findByLabelText(/six digits/i);
+  const client = router.options.context!.queryClient;
+  client.setQueryData(["me"], {
+    ...CREATED_SESSION,
+    sessionId: "00000000-0000-4000-8000-000000000099",
+  });
+  const ticket = capturePrivateAuthority(client);
+  await user.type(screen.getByLabelText(/six digits/i), "410233");
+  await user.click(screen.getByRole("button", { name: "Open the photos" }));
+  await waitFor(() => {
+    return expect(client.getQueryData(["me"])).toMatchObject({
+      sessionId: CREATED_SESSION.session.sessionId,
+    });
+  });
+  expect(isPrivateAuthorityCurrent(client, ticket)).toBe(false);
 });

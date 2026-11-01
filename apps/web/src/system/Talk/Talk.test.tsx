@@ -7,14 +7,15 @@ import { Talk } from "@/system/Talk/Talk";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-const VIEWER: MemberRef = { memberId: "m0", displayName: "Papá" };
+const VIEWER: MemberRef = { avatar: null, memberId: "m0", displayName: "Papá" };
 
 const COMMENT: CommentDto = {
   commentId: "c1",
-  author: { memberId: "m1", displayName: "Abuela Rosa" },
+  author: { avatar: null, memberId: "m1", displayName: "Abuela Rosa" },
   body: "He has his mother's chin.",
   atSeconds: null,
   parentCommentId: null,
+  commentTags: [],
   createdAt: "2026-09-26T09:00:00.000Z",
   editedAt: null,
   canEdit: false,
@@ -30,7 +31,7 @@ describe("the comments panel", () => {
         cssVariablesResolver={cssVariablesResolver}
       >
         <Talk heading="What people said">
-          <CommentRow comment={COMMENT} viewer={VIEWER} />
+          <CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />
         </Talk>
       </MantineProvider>,
     );

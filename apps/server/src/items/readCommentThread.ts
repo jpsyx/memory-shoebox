@@ -1,4 +1,5 @@
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
+import { readCommentTags } from "../commentTags/commentTagPersistenceHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
@@ -16,9 +17,10 @@ import {
  * `GET /api/items/:itemId/comments` collection, not a cursor bolted onto
  * `ItemDetail`.
  *
- * **Two queries whatever the thread's size**: the comments on
+ * **Three queries whatever the thread's size**: the comments on
  * `comments (item_id, created_at)`, then every reaction on all of them in one
- * `comment_id IN (...)` through `readCommentReactionRows`. One query per
+ * `comment_id IN (...)` through `readCommentReactionRows`, then all
+ * occurrences in one batch. One query per
  * comment is the N+1 the data model calls out by name.
  *
  * `canEdit` is authorship alone and `canDelete` is authorship or admin
@@ -62,6 +64,13 @@ export async function readCommentThread(options: {
     viewerMemberId: options.viewer.memberId,
   });
 
+  const tags = await readCommentTags({
+    database: options.database,
+    commentIds: rows.map((row) => {
+      return row.commentId;
+    }),
+  });
+
   return rows.map((row) => {
     const isAuthor = row.authorMemberId === options.viewer.memberId;
     return {
@@ -69,8 +78,10 @@ export async function readCommentThread(options: {
       author: options.members.get(row.authorMemberId) ?? {
         memberId: row.authorMemberId,
         displayName: "",
+        avatar: null,
       },
       body: row.body,
+      commentTags: tags.get(row.commentId) ?? [],
       atSeconds: row.atSeconds,
       parentCommentId: row.parentCommentId,
       createdAt: row.createdAt,

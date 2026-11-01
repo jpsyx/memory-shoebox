@@ -167,3 +167,39 @@ because somebody fixed their own spelling costs something and buys nothing.
 - How many items a brand-new member's archive holds. The first sign-in seeds
   `item_views` for every existing item so the accent dot means "arrived since
   you joined", and the response says nothing about how many rows that was.
+
+## Claimed profiles
+
+The viewer includes `profileComplete`, read from `members.profile_completed_at`
+on each request. Both session bootstrap and `/api/me` expose that flag and the
+self-scoped `suggestedDisplayName`. Profile updates claim a valid nonempty name
+atomically with linked-person synchronization and preferences. Null/empty names
+fail validation; collisions return `409 name_taken` without owner information.
+The first successful claim records completion, preserved by renames. Incomplete
+identities can sign in, read, complete profile/avatar setup and sign out, but
+comment creation/editing and archive-upload mutations require completion with
+`403 profile_required`. Public unnamed identities use “Member”, never an email
+local part. See [member profiles](member-profiles.md).
+
+## Private client session lifetime
+
+`MeResponse` includes a top-level `sessionId` alongside `me` and `settings`.
+GET/PATCH `/me`, bootstrap's account, and own-avatar mutation responses take it
+from the authenticated request viewer. This is the self-visible session row ID
+already available from `/me/sessions`, never the cookie token. Sign-in and setup
+publish their newly created `session.sessionId` into the same account cache.
+
+Private client authority includes account, role and this actual session ID.
+A fresh self-response, including a name, notification or own-avatar mutation,
+observing another same-account cookie session retires private queries,
+conversation drafts and captured continuations. Within the existing publication
+ordering fence, a changed account/role/session publishes the complete new response
+as its baseline; fields from different identities are never merged. Same-session
+mutations still merge only their own fields, preserving independent name/avatar
+ordering, and responses captured under an already retired lifetime are rejected.
+Local sign-in also explicitly rotates the private generation before publishing
+the new account.
+Existing read/publication ordering guards continue to reject old responses.
+Member-global `lastSignedInAt` remains informational: another device signing in
+must not retire this tab. This adds no polling or broadcast mechanism; replacement
+is detected when a server account response is observed.

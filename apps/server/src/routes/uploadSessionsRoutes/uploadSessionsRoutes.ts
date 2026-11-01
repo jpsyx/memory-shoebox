@@ -1,15 +1,17 @@
-import { patchUploadFileBurst } from "./patchUploadFileBurst.ts";
-import type { FastifyInstance } from "fastify";
-import { deleteUploadSession } from "./deleteUploadSession.ts";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { requireViewer } from "../../http/requestContextHelpers.ts";
+import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
 import { deleteUploadFiles } from "./deleteUploadFiles.ts";
+import { deleteUploadSession } from "./deleteUploadSession.ts";
+import { patchUploadFileBurst } from "./patchUploadFileBurst.ts";
+import { patchUploadManifest } from "./patchUploadManifest.ts";
 import { postUploadFileComplete } from "./postUploadFileComplete.ts";
-import { postUploadSessionCommit } from "./postUploadSessionCommit.ts";
-import { postUploadSession } from "./postUploadSession.ts";
 import { postUploadFilePresign } from "./postUploadFilePresign.ts";
+import { postUploadFileRetry } from "./postUploadFileRetry.ts";
+import { postUploadSession } from "./postUploadSession.ts";
+import { postUploadSessionCommit } from "./postUploadSessionCommit.ts";
 import { getCurrentUploadSession } from "./readUploadSessionRoutes/getCurrentUploadSession.ts";
 import { getUploadSession } from "./readUploadSessionRoutes/getUploadSession.ts";
-import { postUploadFileRetry } from "./postUploadFileRetry.ts";
-import { patchUploadManifest } from "./patchUploadManifest.ts";
 import { deleteUploadEdit } from "./uploadPlanRouteHelpers/deleteUploadEdit.ts";
 import { patchUploadVisibility } from "./uploadPlanRouteHelpers/patchUploadVisibility.ts";
 import { postUploadEdit } from "./uploadPlanRouteHelpers/postUploadEdit.ts";
@@ -26,9 +28,22 @@ const UPLOAD_ROUTE_OPTIONS = {
   config: { rateLimit: ["uploadSessionPerSession"] },
 } as const;
 
+/**
+ * Guard upload mutations while reads and whole-session cancellation remain
+ * available.
+ */
+async function _requireUploadProfile(request: FastifyRequest): Promise<void> {
+  requireCompleteProfile(requireViewer(request));
+}
+
+const UPLOAD_MUTATION_OPTIONS = {
+  ...UPLOAD_ROUTE_OPTIONS,
+  preHandler: _requireUploadProfile,
+} as const;
+
 /** The batch itself: open it, find it, read it, cancel it, commit it. */
 function _registerSessionRoutes(app: FastifyInstance): void {
-  app.post("/upload-sessions", UPLOAD_ROUTE_OPTIONS, postUploadSession);
+  app.post("/upload-sessions", UPLOAD_MUTATION_OPTIONS, postUploadSession);
 
   app.get(
     "/upload-sessions/current",
@@ -50,7 +65,7 @@ function _registerSessionRoutes(app: FastifyInstance): void {
 
   app.post(
     "/upload-sessions/:sessionId/commit",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     postUploadSessionCommit,
   );
 }
@@ -59,31 +74,31 @@ function _registerSessionRoutes(app: FastifyInstance): void {
 function _registerPlanRoutes(app: FastifyInstance): void {
   app.patch(
     "/upload-sessions/:sessionId/manifest",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     patchUploadManifest,
   );
 
   app.delete(
     "/upload-sessions/:sessionId/files",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     deleteUploadFiles,
   );
 
   app.patch(
     "/upload-sessions/:sessionId/visibility",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     patchUploadVisibility,
   );
 
   app.post(
     "/upload-sessions/:sessionId/edits",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     postUploadEdit,
   );
 
   app.delete(
     "/upload-sessions/:sessionId/edits/:editId",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     deleteUploadEdit,
   );
 }
@@ -92,24 +107,24 @@ function _registerPlanRoutes(app: FastifyInstance): void {
 function _registerFileRoutes(app: FastifyInstance): void {
   app.patch(
     "/upload-sessions/:sessionId/files/:fileId/burst",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     patchUploadFileBurst,
   );
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/presign",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     postUploadFilePresign,
   );
 
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/complete",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     postUploadFileComplete,
   );
 
   app.post(
     "/upload-sessions/:sessionId/files/:fileId/retry",
-    UPLOAD_ROUTE_OPTIONS,
+    UPLOAD_MUTATION_OPTIONS,
     postUploadFileRetry,
   );
 }

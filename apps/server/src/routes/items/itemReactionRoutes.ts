@@ -58,7 +58,11 @@ export async function putItemReaction(
         database: request.server.database,
         itemId: item.itemId,
       }),
-      members: await readMemberRefs(request.server.database),
+      members: await readMemberRefs({
+        database: request.server.database,
+        b2: request.server.b2,
+        now: request.server.clock().toISOString(),
+      }),
       viewerMemberId: viewer.memberId,
     }).get(item.itemId) ?? makeEmptyReactionSummary()
   );

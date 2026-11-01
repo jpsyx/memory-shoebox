@@ -87,7 +87,7 @@ describe("GET /api/filters/facets", () => {
       ],
       people: [
         {
-          person: { personId: elenaId, displayName: "Elena" },
+          person: { personId: elenaId, displayName: "Elena", isMember: false },
           isSelected: false,
           narrowedCount: 1,
           ownCount: null,

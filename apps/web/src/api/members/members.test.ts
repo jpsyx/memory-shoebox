@@ -13,6 +13,7 @@ afterEach(() => {
 });
 
 const PAPA = {
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000000",
   displayName: "Papá",
 };

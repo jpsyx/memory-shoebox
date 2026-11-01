@@ -1,3 +1,5 @@
+import type { MediaDecodeCoordinator } from "../mediaProcessing/createMediaDecodeCoordinator.ts";
+import { memberAvatarRoutes } from "../routes/memberAvatars.ts";
 import {
   makeReleaseStatusReaderFromDependencies,
   type ReleaseStatusReader,
@@ -44,6 +46,7 @@ import { registerMilestoneRoutes } from "../routes/registerMilestoneRoutes/regis
 import { registerRemovalRoutes } from "../routes/removals/registerRemovalRoutes.ts";
 import { bootstrapRoutes } from "../routes/bootstrapRoutes.ts";
 import { meRoutes } from "../routes/me.ts";
+import { memberCollectionsRoutes } from "../routes/memberCollections.ts";
 import { peopleRoutes } from "../routes/people.ts";
 import { publicSettingsRoutes } from "../routes/publicSettings.ts";
 import { tagsRoutes } from "../routes/tags.ts";
@@ -63,6 +66,8 @@ declare module "fastify" {
     database: Kysely<Database>;
     b2: B2Client;
     jobRunner: JobRunner;
+    /** Shared admission for avatars, media processing and fingerprint work. */
+    mediaDecodeCoordinator: MediaDecodeCoordinator;
     emailService: EmailService | undefined;
     /** Read-only provider verification seam. */
     mailDomainReader: MailDomainReader | undefined;
@@ -249,6 +254,7 @@ async function _registerApiRoutes(
       await authRoutes(api);
       await registerSetupRoutes(api);
       await meRoutes(api);
+      await memberAvatarRoutes(api);
       await bootstrapRoutes(api);
       await timelineRoutes(api);
       await mediaPreviewRoutes(api);
@@ -264,6 +270,7 @@ async function _registerApiRoutes(
 
       await filtersRoutes(api);
       await peopleRoutes(api);
+      await memberCollectionsRoutes(api);
       await itemsRoutes(api);
       await burstsRoutes(api);
       await commentsRoutes(api);

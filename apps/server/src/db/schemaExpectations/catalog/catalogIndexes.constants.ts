@@ -4,6 +4,18 @@ import type { CatalogTable } from "./catalog.types.ts";
 
 /** Every declared index on a catalog table. See `EXPECTED_INDEXES`. */
 export const CATALOG_INDEXES: Record<CatalogTable, IndexInfo[]> = {
+  comment_tags: [
+    {
+      name: "comment_tags_comment",
+      columns: indexColumns("comment_id"),
+      isUnique: false,
+    },
+    {
+      name: "comment_tags_member",
+      columns: indexColumns("member_id"),
+      isUnique: false,
+    },
+  ],
   item_burst_history: [
     {
       name: "item_burst_history__burst",

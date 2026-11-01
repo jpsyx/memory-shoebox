@@ -123,6 +123,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         me: await getMeDtoFromMemberId({
           database: request.server.database,
           memberId: outcome.memberId,
+          b2: request.server.b2,
+          now: request.server.clock().toISOString(),
         }),
         session: {
           sessionId: outcome.session.sessionId,

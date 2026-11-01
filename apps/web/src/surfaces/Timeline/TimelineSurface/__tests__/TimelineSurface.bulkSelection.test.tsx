@@ -22,7 +22,10 @@ describe("timeline bulk selection boundaries", () => {
       const isFiltered =
         new URL(String(url), "https://shoebox.test").searchParams.get(
           "tags",
-        ) === "holiday";
+        ) === "holiday" &&
+        new URL(String(url), "https://shoebox.test").searchParams.get(
+          "member",
+        ) === "018f0000-0000-7000-8000-000000000021";
       return Response.json({
         frames: isFiltered
           ? [makeBurstFrameFromPosition(2)]
@@ -37,6 +40,7 @@ describe("timeline bulk selection boundaries", () => {
         {
           tags: ["holiday"],
           people: [],
+          member: "018f0000-0000-7000-8000-000000000021",
           from: undefined,
           until: undefined,
         },

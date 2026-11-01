@@ -47,7 +47,7 @@ export const PROGRESS = {
 export const SESSION_DETAIL = {
   sessionId: SESSION_ID,
   state: "draft",
-  uploadedBy: { memberId: MEMBER_ID, displayName: "Abuela" },
+  uploadedBy: { avatar: null, memberId: MEMBER_ID, displayName: "Abuela" },
   visibility: {
     visibilityRuleId: "visibility-rule-everyone",
     mode: "everyone",

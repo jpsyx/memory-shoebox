@@ -1,10 +1,3 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import type {
-  NotifyPreferences,
-  SessionDto,
-  UpdateMeRequest,
-} from "@memory-shoebox/shared";
 import { deleteSession } from "@/api/auth/auth";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
@@ -13,7 +6,20 @@ import {
   revokeMySession,
   updateMe,
 } from "@/api/me/me";
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  reconcileAccountFields,
+  type PrivateAuthority,
+} from "@/api/me/privateQueryHelpers";
 import { accountFailure } from "@/surfaces/Account/accountCopy/accountCopy";
+import type {
+  NotifyPreferences,
+  SessionDto,
+  UpdateMeRequest,
+} from "@memory-shoebox/shared";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 
 /**
  * Every write My account can make, in one file so the scope they share is
@@ -82,16 +88,32 @@ export function useSaveMe(): AccountSave<UpdateMeRequest> & {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     scope: ACCOUNT_MUTATION_SCOPE,
-    mutationFn: updateMe,
-    onSuccess: (updated) => {
-      queryClient.setQueryData(meQueryOptions.queryKey, updated);
+    mutationFn: async ({
+      body,
+      ticket,
+    }: {
+      body: UpdateMeRequest;
+      ticket: PrivateAuthority;
+    }) => {
+      if (!isPrivateAuthorityCurrent(queryClient, ticket)) {
+        return undefined;
+      }
+      return updateMe(body);
+    },
+    onSuccess: (updated, { ticket }) => {
+      if (updated) {
+        reconcileAccountFields(queryClient, updated, "name", ticket);
+      }
     },
   });
 
   return {
-    save: mutation.mutate,
+    save: (body) => {
+      mutation.mutate({ body, ticket: capturePrivateAuthority(queryClient) });
+    },
     isSaving: mutation.isPending,
-    savedAt: mutation.isSuccess ? mutation.submittedAt : undefined,
+    savedAt:
+      mutation.isSuccess && mutation.data ? mutation.submittedAt : undefined,
     error: mutation.error === null ? undefined : accountFailure(mutation.error),
   };
 }
@@ -115,14 +137,26 @@ export function useSaveNotify(): AccountSave<NotifyPreferences> {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     scope: ACCOUNT_MUTATION_SCOPE,
-    mutationFn: (notify: NotifyPreferences) => {
+    mutationFn: async ({
+      notify,
+      ticket,
+    }: {
+      notify: NotifyPreferences;
+      ticket: PrivateAuthority;
+    }) => {
+      if (!isPrivateAuthorityCurrent(queryClient, ticket)) {
+        return undefined;
+      }
       return updateMe({ notify });
     },
-    onMutate: async (notify) => {
+    onMutate: async ({ notify, ticket }) => {
       await queryClient.cancelQueries({
         queryKey: meQueryOptions.queryKey,
         exact: true,
       });
+      if (!isPrivateAuthorityCurrent(queryClient, ticket)) {
+        return undefined;
+      }
       const previous = queryClient.getQueryData(meQueryOptions.queryKey);
       queryClient.setQueryData(meQueryOptions.queryKey, (current) => {
         // Two different absences, treated alike: `undefined` is no cache
@@ -133,18 +167,32 @@ export function useSaveNotify(): AccountSave<NotifyPreferences> {
           ? current
           : { ...current, me: { ...current.me, notify } };
       });
-      return { previous };
+      return { previous, ticket };
     },
     onError: (_error, _notify, context) => {
-      queryClient.setQueryData(meQueryOptions.queryKey, context?.previous);
+      if (
+        context?.previous &&
+        isPrivateAuthorityCurrent(queryClient, context.ticket)
+      ) {
+        reconcileAccountFields(
+          queryClient,
+          context.previous,
+          "notify",
+          context.ticket,
+        );
+      }
     },
-    onSuccess: (updated) => {
-      queryClient.setQueryData(meQueryOptions.queryKey, updated);
+    onSuccess: (updated, { ticket }) => {
+      if (updated) {
+        reconcileAccountFields(queryClient, updated, "notify", ticket);
+      }
     },
   });
 
   return {
-    save: mutation.mutate,
+    save: (notify) => {
+      mutation.mutate({ notify, ticket: capturePrivateAuthority(queryClient) });
+    },
     isSaving: mutation.isPending,
     error: mutation.error === null ? undefined : accountFailure(mutation.error),
   };

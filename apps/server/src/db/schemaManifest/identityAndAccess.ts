@@ -8,10 +8,49 @@ import type { SchemaManifestShape } from "./schemaManifest.ts";
  * fails as one `TS1360` at the entry point instead.
  */
 export const IDENTITY_AND_ACCESS_MANIFEST = {
+  member_avatar_uploads: {
+    id: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    storage_key: { isNullable: false, type: "TEXT", defaultValue: null },
+    expected_avatar_id: { isNullable: true, type: "TEXT", defaultValue: null },
+    crop_json: { isNullable: false, type: "TEXT", defaultValue: null },
+    content_type: { isNullable: false, type: "TEXT", defaultValue: null },
+    declared_byte_size: {
+      isNullable: false,
+      type: "INTEGER",
+      defaultValue: null,
+    },
+    output_byte_size: { isNullable: true, type: "INTEGER", defaultValue: null },
+    state: { isNullable: false, type: "TEXT", defaultValue: null },
+    expires_at: { isNullable: false, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
+  member_name_claims: {
+    name_key: { isNullable: false, type: "TEXT", defaultValue: null },
+    member_id: { isNullable: false, type: "TEXT", defaultValue: null },
+    display_name: { isNullable: false, type: "TEXT", defaultValue: null },
+    created_at: { isNullable: false, type: "TEXT", defaultValue: null },
+  },
   members: {
+    notify_on_comment_tag: {
+      isNullable: false,
+      type: "INTEGER",
+      defaultValue: "1",
+    },
+    avatar_id: { isNullable: true, type: "TEXT", defaultValue: null },
     id: { isNullable: false, type: "TEXT", defaultValue: null },
     email: { isNullable: false, type: "TEXT", defaultValue: null },
     display_name: { isNullable: true, type: "TEXT", defaultValue: null },
+    profile_completed_at: {
+      isNullable: true,
+      type: "TEXT",
+      defaultValue: null,
+    },
+    suggested_display_name: {
+      isNullable: true,
+      type: "TEXT",
+      defaultValue: null,
+    },
     role: { isNullable: false, type: "TEXT", defaultValue: "'viewer'" },
     status: { isNullable: false, type: "TEXT", defaultValue: "'invited'" },
     notify_on_upload: { isNullable: false, type: "INTEGER", defaultValue: "1" },
@@ -96,7 +135,9 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
   },
 } as const satisfies Pick<
   SchemaManifestShape,
+  | "member_name_claims"
   | "members"
+  | "member_avatar_uploads"
   | "sign_in_codes"
   | "sessions"
   | "invitations"

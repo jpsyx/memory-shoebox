@@ -73,6 +73,7 @@ describe("bidirectional atomic-day timeline pages", () => {
             sessionId: member.sessionId,
             role: isAdmin ? "admin" : "viewer",
             isAdmin,
+            profileComplete: true,
             visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
           },
           cursor: {

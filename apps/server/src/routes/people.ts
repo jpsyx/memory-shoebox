@@ -11,9 +11,9 @@ import { requireViewer } from "../http/requestContextHelpers.ts";
  * The people directory: `tech-specs/apis/timeline.md`.
  *
  * **`memberId` is absent from every entry**, which is why `DirectoryPerson`
- * wraps the frozen `PersonRef` and adds nothing that could stand in for one.
- * Members and non-members are drawn identically: holding an account is a
- * permission fact and this is a family.
+ * wraps `PersonRef` without exposing an account ID. Its `isMember` flag is
+ * derived from an active linked account and drives the visible non-member
+ * suffix. Photo identities remain independent from archive permissions.
  */
 export async function peopleRoutes(app: FastifyInstance): Promise<void> {
   app.get(

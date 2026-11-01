@@ -77,7 +77,7 @@ async function _openMatrixAction({
   if (state === "tag" || state === "person") {
     await page
       .getByRole("button", {
-        name: state === "tag" ? "Add a tag" : "Tag somebody",
+        name: state === "tag" ? "Add a tag" : "Photo-tag someone",
         exact: true,
       })
       .click();

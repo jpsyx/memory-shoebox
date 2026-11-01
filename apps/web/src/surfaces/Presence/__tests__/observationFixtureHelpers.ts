@@ -9,7 +9,11 @@ export function makePresenceRowFromOverrides(
   overrides: Readonly<Partial<PresenceRow>> = {},
 ): PresenceRow {
   return {
-    member: { memberId: OBSERVATION_MEMBER_ID, displayName: "Tomás" },
+    member: {
+      avatar: null,
+      memberId: OBSERVATION_MEMBER_ID,
+      displayName: "Tomás",
+    },
     email: "tomas@example.com",
     status: "invited",
     invitedAt: "2026-09-01T10:00:00.000Z",

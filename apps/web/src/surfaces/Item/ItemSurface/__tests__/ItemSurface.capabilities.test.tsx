@@ -18,7 +18,7 @@ import { renderItem, respondWithItem } from "@/testing/itemHarnessHelpers";
  */
 const CONTROLS = {
   tags: { role: "button", name: "+ Add a tag" },
-  people: { role: "button", name: "+ Tag somebody" },
+  people: { role: "button", name: "+ Photo-tag someone" },
   describe: { role: "textbox", name: "Describe this photograph" },
   visibility: { role: "button", name: "Change who can see it" },
   date: { role: "button", name: "Put the date right" },

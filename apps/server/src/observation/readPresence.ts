@@ -1,5 +1,12 @@
+import type { Selectable } from "kysely";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import type {
+  AvatarRef,
+  PresenceResponse,
+  PresenceRow,
+} from "@memory-shoebox/shared";
 import { sql } from "kysely";
-import type { PresenceResponse, PresenceRow } from "@memory-shoebox/shared";
 import type { MembersTable } from "../db/types/identityAndAccess.types.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
@@ -9,6 +16,7 @@ import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { getPresenceLocalDayIntervalsFromWindow } from "./getPresenceLocalDayIntervalsFromWindow.ts";
 
 type PresenceOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   memberId: string | undefined;
@@ -89,7 +97,8 @@ function _comparePresenceRows(
 
 function _makePresenceRowFromMember(
   options: Readonly<{
-    member: MembersTable;
+    member: Selectable<MembersTable>;
+    avatars: ReadonlyMap<string, AvatarRef>;
     activeDays: ReadonlyMap<string, number>;
     liveCounts: ReadonlyMap<string, ReadonlyMap<string, number>>;
   }>,
@@ -99,6 +108,7 @@ function _makePresenceRowFromMember(
   return {
     member: {
       memberId: member.id,
+      avatar: options.avatars.get(member.id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: member.display_name ?? undefined,
         email: member.email,
@@ -120,7 +130,7 @@ function _makePresenceRowFromMember(
 
 async function _readPresenceMembers(
   options: Readonly<PresenceOptions>,
-): Promise<MembersTable[]> {
+): Promise<Array<Selectable<MembersTable>>> {
   const { database, viewer } = options;
   if (
     !viewer.isAdmin &&
@@ -161,9 +171,20 @@ export async function readPresence(
     }),
     _readLiveCounts(database),
   ]);
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: members.map((member) => {
+      return member.id;
+    }),
+  });
   const presence = members
     .map((member) => {
-      return _makePresenceRowFromMember({ member, activeDays, liveCounts });
+      return _makePresenceRowFromMember({
+        member,
+        activeDays,
+        liveCounts,
+        avatars,
+      });
     })
     .sort(_comparePresenceRows);
   return { presence, nextCursor: null };

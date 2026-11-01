@@ -117,8 +117,20 @@ export type MediaReadPurpose =
 /** Everything needed to draw one print without a second request. */
 export type MediaRef = z.infer<typeof mediaRefSchema>;
 
+/** One immutable private avatar and its freshly signed validity interval. */
+export const avatarRefSchema = z.object({
+  avatarId: idSchema,
+  url: signedUrlSchema,
+  issuedAt: timestampSchema,
+  expiresAt: timestampSchema,
+});
+
+/** A member-selected image, independent of archive renditions. */
+export type AvatarRef = z.infer<typeof avatarRefSchema>;
+
 /** An account. No email unless the route is admin-scoped. */
 export const memberRefSchema = z.object({
+  avatar: avatarRefSchema.nullable(),
   memberId: idSchema,
   displayName: z.string(),
 });
@@ -128,12 +140,14 @@ export type MemberRef = z.infer<typeof memberRefSchema>;
 
 /**
  * Someone tagged in a photograph. Never carries `memberId`: a tagged person is
- * not an account, and the people directory is not the member list
+ * not an account. `isMember` describes an active linked account for labels,
+ * never an access grant, and the people directory is not the member list
  * (`data-models.md` § `people`, `item_people`).
  */
 export const personRefSchema = z.object({
   personId: idSchema,
   displayName: z.string(),
+  isMember: z.boolean(),
 });
 
 /** Someone tagged in a photograph. A tagged person is not an account. */
@@ -270,6 +284,47 @@ export const reactionSummarySchema = z.object({
 /** Every reaction on one thing, plus the viewer's own. */
 export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
 
+/** One explicit selection, with an optional retained historical occurrence. */
+export const commentTagInputSchema = z
+  .object({
+    memberId: idSchema,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    tagId: idSchema.optional(),
+  })
+  .refine(
+    (tag) => {
+      return tag.end > tag.start;
+    },
+    {
+      message: "Tag end must follow start",
+    },
+  );
+
+/** Raw UTF-16 range including @, with an exclusive end. */
+export type CommentTagInput = z.infer<typeof commentTagInputSchema>;
+
+/** A persisted occurrence with its validated label snapshot, excluding @. */
+export const commentTagSchema = z
+  .object({
+    tagId: idSchema,
+    memberId: idSchema,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().positive(),
+    label: z.string().min(1),
+  })
+  .refine(
+    (tag) => {
+      return tag.end > tag.start;
+    },
+    {
+      message: "Tag end must follow start",
+    },
+  );
+
+/** A persisted member reference and the exact wording selected when posted. */
+export type CommentTag = z.infer<typeof commentTagSchema>;
+
 /** One comment, on an item or at a point in a video. */
 export const commentDtoSchema = z.object({
   commentId: idSchema,
@@ -277,6 +332,7 @@ export const commentDtoSchema = z.object({
   parentCommentId: idSchema.nullable().default(null),
   author: memberRefSchema,
   body: z.string(),
+  commentTags: z.array(commentTagSchema),
   /** Where in a video the comment is pinned. Null on a photograph. */
   atSeconds: z.number().nonnegative().nullable(),
   createdAt: timestampSchema,

@@ -1,4 +1,10 @@
-import type { AdminGroupDto, ListGroupsResponse } from "@memory-shoebox/shared";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import type {
+  AdminGroupDto,
+  ListGroupsResponse,
+  MemberRef,
+} from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { ApiError } from "../http/ApiError.ts";
@@ -30,8 +36,10 @@ async function _readGroupMemberships(
   options: Readonly<{
     database: DatabaseExecutor;
     groupIds: readonly string[];
+    b2: B2Client;
+    now: string;
   }>,
-): Promise<Array<{ groupId: string; memberId: string; displayName: string }>> {
+): Promise<Array<{ groupId: string } & MemberRef>> {
   const { database, groupIds } = options;
   const members = await database
     .selectFrom("group_members")
@@ -45,10 +53,17 @@ async function _readGroupMemberships(
     .where("group_id", "in", [...groupIds])
     .orderBy("members.id")
     .execute();
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: members.map((member) => {
+      return member.memberId;
+    }),
+  });
   return members.map((member) => {
     return {
       groupId: member.group_id,
       memberId: member.memberId,
+      avatar: avatars.get(member.memberId) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: member.display_name ?? undefined,
         email: member.email,
@@ -86,6 +101,8 @@ async function _readGroupItemCounts(
 async function _readAdminGroups(
   options: Readonly<{
     database: DatabaseExecutor;
+    b2: B2Client;
+    now: string;
     groups: ReadonlyArray<{ groupId: string; name: string; createdAt: string }>;
   }>,
 ): Promise<AdminGroupDto[]> {
@@ -97,7 +114,7 @@ async function _readAdminGroups(
     return group.groupId;
   });
   const [memberships, counts] = await Promise.all([
-    _readGroupMemberships({ database, groupIds }),
+    _readGroupMemberships({ ...options, database, groupIds }),
     _readGroupItemCounts({ database, groupIds }),
   ]);
   return groups.map((group) => {
@@ -107,8 +124,8 @@ async function _readAdminGroups(
         .filter((membership) => {
           return membership.groupId === group.groupId;
         })
-        .map(({ memberId, displayName }) => {
-          return { memberId, displayName };
+        .map(({ memberId, displayName, avatar }) => {
+          return { memberId, displayName, avatar };
         }),
       usedByOnlyRules:
         counts.find((groupItemCount) => {
@@ -130,7 +147,12 @@ async function _readAdminGroups(
 
 /** Reads all groups in the role-selected administrative or picker shape. */
 export async function readGroups(
-  options: Readonly<{ database: DatabaseExecutor; viewer: Viewer }>,
+  options: Readonly<{
+    database: DatabaseExecutor;
+    viewer: Viewer;
+    b2: B2Client;
+    now: string;
+  }>,
 ): Promise<ListGroupsResponse> {
   if (options.viewer.role === "viewer") {
     throw ApiError.forbidden("groups_forbidden");
@@ -143,7 +165,7 @@ export async function readGroups(
   return options.viewer.isAdmin
     ? {
         shape: "admin",
-        groups: await _readAdminGroups({ database: options.database, groups }),
+        groups: await _readAdminGroups({ ...options, groups }),
         nextCursor: null,
       }
     : {
@@ -161,11 +183,11 @@ export async function getAdminGroupFromId(
     database: DatabaseExecutor;
     viewer: Viewer;
     groupId: string;
+    b2: B2Client;
+    now: string;
   }>,
 ): Promise<AdminGroupDto> {
   requireGroupAdmin(options.viewer);
   const group = await getGroupFromId(options);
-  return (
-    await _readAdminGroups({ database: options.database, groups: [group] })
-  )[0]!;
+  return (await _readAdminGroups({ ...options, groups: [group] }))[0]!;
 }

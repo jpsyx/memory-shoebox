@@ -15,7 +15,11 @@ import {
 } from "../__tests__/observationFixtureHelpers";
 function _respondWithDistinctViewerFacts(): void {
   const base = {
-    member: { memberId: OBSERVATION_MEMBER_ID, displayName: "Rosa" },
+    member: {
+      avatar: null,
+      memberId: OBSERVATION_MEMBER_ID,
+      displayName: "Rosa",
+    },
     hasOpened: true,
     firstSeenAt: null,
     firstOpenedAt: "2026-09-14T04:41:00.000Z",
@@ -31,7 +35,7 @@ function _respondWithDistinctViewerFacts(): void {
             base,
             {
               ...base,
-              member: { memberId: ITEM_ID, displayName: "Inés" },
+              member: { avatar: null, memberId: ITEM_ID, displayName: "Inés" },
               hasOpened: false,
               firstSeenAt: base.firstOpenedAt,
               firstOpenedAt: null,
@@ -41,6 +45,7 @@ function _respondWithDistinctViewerFacts(): void {
             {
               ...base,
               member: {
+                avatar: null,
                 memberId: "018f0000-0000-7000-8000-000000000099",
                 displayName: "Tomás",
               },
@@ -68,7 +73,11 @@ describe("Presence", () => {
             presence: [
               makePresenceRowFromOverrides(),
               makePresenceRowFromOverrides({
-                member: { memberId: ITEM_ID, displayName: "Rosa" },
+                member: {
+                  avatar: null,
+                  memberId: ITEM_ID,
+                  displayName: "Rosa",
+                },
                 status: "active",
                 activeDaysCount: 84,
                 itemsOpenedCount: 1912,

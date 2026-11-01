@@ -18,10 +18,23 @@ generated entry remains plain, erasable TypeScript without an `export *`.
 
 The contract modules are:
 
+- `accountNames/accountNames.ts`: the account-name schema, inferred `AccountName`
+  type, and `makeAccountNameKeyFromName` comparison helper. The schema returns
+  NFC, trimmed display spelling with whitespace collapsed to single spaces,
+  preserving case and accents. Names must contain 1 to 80 characters after
+  normalization and cannot contain `@`, line breaks, or Unicode formatting
+  controls. Validation rejects those characters before normalization so they
+  cannot disappear through trimming or whitespace collapse. Comparison keys
+  apply the same normalization followed by `toLowerCase()`, without locale
+  selection or accent folding. These account-specific contracts leave existing
+  payload shapes and vocabulary normalization unchanged; `MemberRef` remains
+  email-free.
 - `auth.ts`: the authentication slice's request and response schemas, plus
   `MeDto`, `SessionDto` and `NotifyPreferences`. `signInCodeSchema` lives here
   and the email module imports it, so the six digits are spelled once rather than
-  once per side of the round trip.
+  once per side of the round trip. The self-scoped `MeResponse` also requires a
+  top-level current `sessionId` for private client lifetime retirement. `MeDto`
+  stays unchanged; the marker is a session row ID, never a cookie credential.
 - `health.ts`: the schema and type for `GET /api/health`.
 - `errors.ts`: the error envelope every non-2xx response uses, `details`
   included.
@@ -32,8 +45,11 @@ The contract modules are:
   beside `LIMITS` and holds the upload slice's request caps (manifest entries
   per call, edit targets, the session detail's page size, `pendingFiles`), so
   they read together.
-- `dtos.ts`: the twelve frozen DTOs, the shapes the API hands back for items,
-  members, tags, milestones, and the rest.
+- `dtos.ts`: the shared DTOs handed back for items, members, tags, milestones,
+  and the rest. `PersonRef` carries raw `displayName`, `personId` and required
+  `isMember`, derived from the linked member's active status. The flag drives
+  visible `(not a member)` labels without exposing account IDs or granting
+  access. Names and persisted photo-tag requests never contain that suffix.
 - `settings.ts`: `SETTING_DEFINITIONS`, the registry of every settings key
   with its Zod schema, default, and scope, plus
   `getSettingValueFromStoredValue` for reading one against whatever the
@@ -136,10 +152,11 @@ Administration request bodies exclude path fields, which have separate params
 schemas. `UpdateSettingsRequest` carries the optional preview query beside its
 partial body; `DeleteGroupRequest` contains the confirmation query only.
 
-## The one change to a frozen DTO
+## Changes to the original DTOs
 
-The twelve DTOs in `dtos.ts` were frozen by step 1, and the item slice changed
-exactly one of them: **`VisibilitySummary` gained `visibilityRuleId`**
+The original DTOs in `dtos.ts` have gained narrowly scoped contract fields.
+Photo-tag identity references now require `PersonRef.isMember` for active linked
+account labels. The item slice also changed **`VisibilitySummary` gained `visibilityRuleId`**
 (`tech-specs/apis/items.md` § Additions requested 2). The edit control has to
 pre-fill from the current rule and detect a no-op save, and a selection has to
 know whether its items already share one rule before it offers to change them.
@@ -310,3 +327,57 @@ subject schema discriminates on `kind`: all other kinds keep UUID-or-null IDs.
 The exact-match activity subject filter accepts UUIDs and the same bounded
 historical strings, because it does not carry a subject-kind parameter. Actor,
 entry and item/member path IDs retain the standard UUID validator.
+
+## Avatar contracts
+
+`dtos.ts` defines `AvatarRef` before `MemberRef`, avoiding a runtime schema cycle
+with `avatars.ts`. Every `MemberRef` now requires `avatar: AvatarRef | null`;
+`MeDto.member` uses the same shape. Avatar references use the shared UUID, signed
+HTTP(S) URL, and precise UTC timestamp validators, independently of archive
+rendition identities. `avatars.ts` exports the bounded `AvatarCrop` and reservation
+request/response schemas and inferred types, plus removal and renewal envelopes.
+See [member profiles](member-profiles.md#private-avatars) for lifecycle semantics.
+
+## Member collection selection and identity
+
+Archive queries accept optional UUID `member`, and `TimelineSelection` carries
+the same field through media position/neighbors and attachment picking. It means
+visible uploads OR exact linked photo tags, intersected with every other filter.
+`people` retains its photo-tag-only semantics. Selection normalization preserves
+the member, and timeline cursor fingerprints distinguish different members.
+
+`memberCollections.ts` publishes `memberCollectionParamsSchema`,
+`memberCollectionResponseSchema` and `MemberCollectionResponse` for authenticated
+`GET /api/member-collections/:memberId`. The response is exactly a nullable
+`MemberRef`: ID, public display name and avatar, without account email, role,
+status or counts. Retained removed accounts keep their identity; unknown UUIDs
+return null and an empty filtered archive. The contract is exported through the
+allowlist generator and remains erasable TypeScript.
+
+## Comment occurrence ranges and preference compatibility
+
+`CommentTagInput` identifies a selected member and a UTF-16 range including `@`
+with an exclusive end. An optional `tagId` retains that exact historical
+occurrence during an edit. `CommentTag` adds the server's occurrence ID and the
+validated label snapshot without `@`. `CommentDto.commentTags` is always an array.
+The tag schemas live above the comment DTO in `dtos.ts`; the normalization helper
+imports them, and `dtos.ts` never imports the helper.
+
+`makeNormalizedCommentFromDraft` validates raw bounds, integer offsets, ordering,
+non-overlap, unique retained IDs, surrogate boundaries, and trimmed whitespace
+before returning the trimmed body and shifted ranges. Both comment request
+schemas use this joint normalization and keep the 4,000 UTF-16 unit limit.
+Creates default omitted occurrences to `[]`; updates preserve omission so the
+server can distinguish legacy edits from explicit removal. Plain `@name` text
+never creates a reference. See [comment tagging](comment-tagging.md).
+
+`NotifyPreferences.onCommentTag` is required in responses. The update-specific
+preference schema requires the original four booleans and allows only the new
+field to be omitted. An older four-switch PATCH preserves the stored tag
+preference; it does not reset it to the default. The persisted preference defaults
+on for existing and newly created members.
+
+The [rollout compatibility record](comment-tagging-rollout.md#compatibility-to-retain)
+keeps legacy creates plain, rejects omission on an already-tagged edit, and
+preserves the new preference when an older four-switch client saves. The shared
+full-resolution crop helper remains unchanged by the bounded server decoder.

@@ -24,6 +24,7 @@ type Props = {
  *
  * "Clear them all" is the strip's own clear-all under another name, so it
  * goes through the same handler and keeps `?at=` for the same reason.
+ * In a member collection this clears extra filters and keeps the member.
  * Dropping one filter is a narrower edit and behaves like any other
  * selection change.
  */
@@ -35,6 +36,11 @@ export function WaysOut({
   onChange,
   onClear,
 }: Readonly<Props>): ReactNode {
+  const onClearExtras = () => {
+    onChange((current) => {
+      return { tags: [], people: [], member: current.member };
+    });
+  };
   return (
     <ChipRow>
       {hasDates ? (
@@ -48,8 +54,11 @@ export function WaysOut({
           onChange={onChange}
         />
       )}
-      <Button variant="panel" onClick={onClear}>
-        Clear them all
+      <Button
+        variant="panel"
+        onClick={selection.member ? onClearExtras : onClear}
+      >
+        {selection.member ? "Clear extra filters" : "Clear them all"}
       </Button>
     </ChipRow>
   );

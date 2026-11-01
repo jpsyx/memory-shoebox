@@ -217,10 +217,28 @@ export async function readFacets(options: {
     };
   });
 
+  const membershipRows = await options.database
+    .selectFrom("people")
+    .leftJoin("members", "members.id", "people.member_id")
+    .select(["people.id", "members.status"])
+    .execute();
+  const activePeople = new Set(
+    membershipRows
+      .filter((row) => {
+        return row.status === "active";
+      })
+      .map((row) => {
+        return row.id;
+      }),
+  );
   const people: PersonFacet[] = personCounts.map((count) => {
     const isSelected = options.filter.personIds.includes(count.id);
     return {
-      person: { personId: count.id, displayName: count.name },
+      person: {
+        personId: count.id,
+        displayName: count.name,
+        isMember: activePeople.has(count.id),
+      },
       isSelected,
       ..._makeCounts({ count, isSelected, narrowed: narrowedPeople }),
     };

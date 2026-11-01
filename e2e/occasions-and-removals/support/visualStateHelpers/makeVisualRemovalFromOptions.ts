@@ -80,6 +80,7 @@ export function makeVisualRemovalFromOptions({
 } {
   const ASKER = {
     memberId: "018f0000-0000-7000-8000-00000000c002",
+    avatar: null,
     displayName: "Prima Inés",
   };
   const request = makeRemovalRequestFromOverrides({

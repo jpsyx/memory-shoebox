@@ -64,7 +64,7 @@ describe("member authority", () => {
       .executeTakeFirstOrThrow();
     expect(event).toMatchObject({
       kind: "member_removed",
-      actor_label: "Abuela Rosa",
+      actor_label: `Member ${admin.memberId}`,
       device_label: "A phone",
     });
     expect(JSON.parse(event.detail_json ?? "null")).toEqual({

@@ -282,6 +282,7 @@ describe("persistent media theater", () => {
     const selection = {
       tags: [TAG_HOSPITAL_ID],
       people: [],
+      member: "018f0000-0000-7000-8000-000000000021",
       from: "2026-09-01",
       until: "2026-09-30",
     };

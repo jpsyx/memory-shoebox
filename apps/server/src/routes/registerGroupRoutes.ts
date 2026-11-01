@@ -1,3 +1,4 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import {
   createGroupRequestSchema,
@@ -22,6 +23,7 @@ import { readGroupUsage } from "../administration/groupUsageHelpers.ts";
 import { deleteGroup } from "../administration/deleteGroup.ts";
 
 function _getAdminOptions(request: FastifyRequest): {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   now: string;
@@ -30,6 +32,7 @@ function _getAdminOptions(request: FastifyRequest): {
   requireGroupAdmin(viewer);
   return {
     database: request.server.database,
+    b2: request.server.b2,
     viewer,
     now: request.server.clock().toISOString(),
   };
@@ -38,6 +41,8 @@ function _getAdminOptions(request: FastifyRequest): {
 function _registerGroupReadRoutes(app: FastifyInstance): void {
   app.get("/groups", async (request) => {
     return readGroups({
+      b2: request.server.b2,
+      now: request.server.clock().toISOString(),
       database: request.server.database,
       viewer: requireViewer(request),
     });

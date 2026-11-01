@@ -12,6 +12,7 @@ const VIEWER: Viewer = {
   sessionId: "session",
   role: "viewer",
   isAdmin: false,
+  profileComplete: true,
   visibleRuleIds: [],
 };
 
@@ -26,6 +27,7 @@ const ADMIN: Viewer = {
   memberId: "member-admin",
   role: "admin",
   isAdmin: true,
+  profileComplete: true,
 };
 
 /**
@@ -40,6 +42,7 @@ const DEMOTED_UPLOADER: Viewer = {
   memberId: UPLOADER.memberId,
   role: "viewer",
   isAdmin: false,
+  profileComplete: true,
 };
 
 describe("assertMayEditItemContent", () => {

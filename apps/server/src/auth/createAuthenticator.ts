@@ -22,6 +22,7 @@ type ActiveSessionRow = {
   memberId: string;
   role: string;
   lastSeenAt: string | null;
+  profileCompletedAt: string | null;
 };
 
 /**
@@ -70,6 +71,7 @@ async function _getActiveSessionFromTokenHash(options: {
       "members.id as memberId",
       "members.role as role",
       "members.last_seen_at as lastSeenAt",
+      "members.profile_completed_at as profileCompletedAt",
     ])
     .where("sessions.token_hash", "=", options.tokenHash)
     .where("sessions.expires_at", ">", options.nowIso)
@@ -130,6 +132,7 @@ function _getViewerFromSessionRow(options: {
     sessionId: options.row.sessionId,
     role,
     isAdmin: role === "admin",
+    profileComplete: options.row.profileCompletedAt !== null,
     // The cache's frozen array, deliberately: `Viewer.visibleRuleIds` is
     // readonly because it is shared rather than copied.
     visibleRuleIds: options.visibleRuleIds,

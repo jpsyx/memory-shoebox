@@ -1,3 +1,4 @@
+import type { Selectable } from "kysely";
 import type { Database } from "../../db/types/db.types.ts";
 import {
   enqueueEmail,
@@ -13,13 +14,13 @@ import type { EmailPayloadExtras } from "../../mail/templates/emailTemplates.con
 type IsRemovalEmailRecipientOptions = {
   event: RemovalEmailOptions["event"];
   request: RemovalRequestRow;
-  member: Database["members"];
+  member: Selectable<Database["members"]>;
   actorMemberId: string;
 };
 
 /** Batched names, settings and live fallback facts for this transaction. */
 type Lookups = {
-  members: Array<Database["members"]>;
+  members: Array<Selectable<Database["members"]>>;
   names: Map<string, string>;
   baseUrl: string;
   timezone: string;
@@ -41,7 +42,7 @@ type EmailContext = {
 type RecipientOptions = {
   options: RemovalEmailOptions;
   context: EmailContext;
-  member: Database["members"];
+  member: Selectable<Database["members"]>;
   lookups: Lookups;
 };
 

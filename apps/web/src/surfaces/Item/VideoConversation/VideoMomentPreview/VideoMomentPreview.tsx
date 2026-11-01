@@ -1,3 +1,4 @@
+import { CommentTagText } from "@/system/CommentTagText/CommentTagText";
 import { ActionIcon, UnstyledButton } from "@mantine/core";
 import { IconPlayerPlayFilled, IconTrash } from "@tabler/icons-react";
 import type { ReactNode } from "react";
@@ -52,7 +53,13 @@ export function VideoMomentPreview({
         {_removeReaction(moment.reaction, onRemove, onClose)}
       </div>
       {moment.body !== undefined ? (
-        <p className={classes.videoMomentPreviewBody}>{moment.body}</p>
+        <p className={classes.videoMomentPreviewBody}>
+          <CommentTagText
+            commentId={moment.id}
+            body={moment.body}
+            commentTags={moment.commentTags ?? []}
+          />
+        </p>
       ) : null}
     </li>
   );

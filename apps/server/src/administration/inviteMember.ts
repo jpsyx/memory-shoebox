@@ -1,4 +1,7 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { claimMemberName } from "../members/claimMemberName.ts";
 import { syncMemberPerson } from "../members/syncMemberPerson.ts";
+import { accountNameSchema } from "@memory-shoebox/shared";
 import type {
   AdminMemberDto,
   InviteMemberRequest,
@@ -13,6 +16,7 @@ import { enqueueInvitationEmail } from "../mail/enqueueInvitationEmail.ts";
 import { readAdminMembers } from "./readAdminMembers.ts";
 
 type InviteMemberOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   body: InviteMemberRequest;
@@ -36,6 +40,7 @@ type RecordInvitationOptions = {
   expiresAt: string;
 };
 type ReadInvitedMemberOptions = {
+  b2: B2Client;
   transaction: DatabaseExecutor;
   memberId: string;
   sessionId: string;
@@ -56,7 +61,8 @@ async function _insertInvitedMember(
     .values({
       id: memberId,
       email: body.email,
-      display_name: body.displayName ?? null,
+      display_name: null,
+      suggested_display_name: body.displayName ?? null,
       role: body.role,
       status: "invited",
       notify_on_upload: 1,
@@ -83,7 +89,7 @@ async function _inviteIdentity(
   const { transaction, body } = options;
   const existing = await transaction
     .selectFrom("members")
-    .select(["id", "status"])
+    .select(["id", "status", "profile_completed_at"])
     .where("email", "=", body.email)
     .executeTakeFirst();
   if (existing !== undefined && existing.status !== "removed") {
@@ -96,21 +102,78 @@ async function _inviteIdentity(
     });
   }
   if (existing !== undefined) {
-    await transaction
-      .updateTable("members")
-      .set({
-        status: "invited",
-        removed_at: null,
-        role: body.role,
-        ...(body.displayName === undefined
-          ? {}
-          : { display_name: body.displayName }),
-      })
-      .where("id", "=", existing.id)
-      .execute();
+    await _restoreInvitedMember({ ...options, existing });
     return existing.id;
   }
   return _insertInvitedMember(options);
+}
+
+function _getSuggestionPatchFromRestoration(
+  options: Readonly<{
+    body: InviteMemberRequest;
+    hasClaim: boolean;
+    isComplete: boolean;
+  }>,
+): { suggested_display_name?: string | null } {
+  const { body, hasClaim, isComplete } = options;
+  if (body.displayName === undefined) {
+    return {};
+  }
+  if (hasClaim && isComplete) {
+    return { suggested_display_name: null };
+  }
+  return {
+    suggested_display_name:
+      hasClaim && body.displayName !== null
+        ? accountNameSchema.parse(body.displayName)
+        : body.displayName,
+  };
+}
+
+async function _restoreInvitedMember(
+  options: Readonly<{
+    transaction: DatabaseExecutor;
+    body: InviteMemberRequest;
+    now: string;
+    existing: { id: string; profile_completed_at: string | null };
+  }>,
+): Promise<void> {
+  const { transaction, existing, body, now } = options;
+  const claim = await transaction
+    .selectFrom("member_name_claims")
+    .select("member_id")
+    .where("member_id", "=", existing.id)
+    .executeTakeFirst();
+  if (claim && body.displayName !== undefined) {
+    if (body.displayName === null) {
+      throw ApiError.invalidRequest({
+        displayName: ["A claimed name cannot be cleared."],
+      });
+    }
+    await claimMemberName({
+      transaction,
+      memberId: existing.id,
+      displayName: body.displayName,
+      now,
+    });
+  }
+  // An admin restoring a legacy claim cannot complete an unverified identity.
+  const suggestion = _getSuggestionPatchFromRestoration({
+    body,
+    hasClaim: claim !== undefined,
+    isComplete: existing.profile_completed_at !== null,
+  });
+  await transaction
+    .updateTable("members")
+    .set({
+      status: "invited",
+      removed_at: null,
+      role: body.role,
+      profile_completed_at: existing.profile_completed_at,
+      ...suggestion,
+    })
+    .where("id", "=", existing.id)
+    .execute();
 }
 
 async function _insertInvitation(
@@ -164,6 +227,7 @@ async function _readInvitedMember(
 ): Promise<AdminMemberDto> {
   const { transaction, memberId } = options;
   const directory = await readAdminMembers({
+    b2: options.b2,
     database: transaction,
     currentSessionId: options.sessionId,
     statuses: ["invited"],
@@ -207,6 +271,7 @@ export async function inviteMember(
         expiresAt,
       });
       const member = await _readInvitedMember({
+        b2: options.b2,
         transaction,
         memberId,
         sessionId: options.viewer.sessionId,

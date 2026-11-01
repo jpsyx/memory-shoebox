@@ -1,3 +1,4 @@
+import { createSessionResponseSchema } from "@memory-shoebox/shared";
 import { renderAt as renderSurfaceAt } from "@/testing/surfaceHarnessHelpers";
 import type {
   PublicSettingsResponse,
@@ -39,7 +40,8 @@ export const ME = createMeResponse({
 
 /** The `201` from `POST /api/auth/session`, as `auth.test.ts` spells it. */
 export const CREATED_SESSION = {
-  ...ME,
+  settings: ME.settings,
+  me: { ...ME.me, storedDisplayName: "Abuela", profileComplete: true },
   session: {
     sessionId: "018f0000-0000-7000-8000-000000000001",
     deviceLabel: "iPhone, Safari",
@@ -118,7 +120,12 @@ export function respondWith(
           ? await getBootstrapAnswerFromReader(read)
           : read(path);
       if (path === "/api/auth/session" && answer.status === 201) {
-        signedInAccount = answer.body;
+        const created = createSessionResponseSchema.parse(answer.body);
+        signedInAccount = {
+          sessionId: created.session.sessionId,
+          me: created.me,
+          settings: created.settings,
+        };
       }
       // A route may be held open, which is how a case gets to press something
       // twice while the first request is still in flight.

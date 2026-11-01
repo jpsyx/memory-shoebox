@@ -1,3 +1,4 @@
+import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -6,7 +7,6 @@ import {
   type PersonRef,
 } from "@memory-shoebox/shared";
 import { itemQueryOptions } from "@/api/items/items";
-import { makeNameKeyFromName } from "@/system/PeopleField/makeNameKeyFromName/makeNameKeyFromName";
 import type { PersonChoice } from "@/system/PeopleField/PeopleField";
 import type { ItemWrite } from "@/surfaces/Item/itemWrites/useItemDetailWrite/useItemDetailWrite";
 
@@ -24,7 +24,8 @@ function _hasChosenPerson(
   return options.choices.some((choice) => {
     return (
       choice.personId === options.person.personId ||
-      (!choice.personId &&
+      (!options.person.isMember &&
+        !choice.personId &&
         makeNameKeyFromName(choice.displayName) ===
           makeNameKeyFromName(options.person.displayName))
     );
@@ -40,7 +41,7 @@ function _getAddedChoicesFromNames(
   return [
     ...options.choices,
     ...options.names.slice(options.choices.length).map((displayName) => {
-      return { displayName };
+      return { displayName, isMember: false };
     }),
   ];
 }

@@ -9,6 +9,7 @@ import {
   makeRemovalResponseFromConfirmedRequest,
 } from "./removalStateHelpers";
 const VIEWER = {
+  avatar: null,
   memberId: "own",
   displayName: "Papá",
   role: "admin",
@@ -17,7 +18,7 @@ const VIEWER = {
 describe("own history grouping", () => {
   it("selects newest own history by creation and gives an older open ask precedence", () => {
     const open = makeRemovalRequestFromOverrides({
-      requestedBy: { memberId: "own", displayName: "Old name" },
+      requestedBy: { avatar: null, memberId: "own", displayName: "Old name" },
       createdAt: "2026-09-01T12:00:00Z",
     });
     const declined = {

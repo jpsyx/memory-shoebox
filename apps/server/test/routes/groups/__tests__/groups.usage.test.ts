@@ -1,3 +1,4 @@
+import { createFakeB2Client } from "../../../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { describe, expect, it } from "vitest";
 import { readGroups } from "../../../../src/administration/groupReadHelpers.ts";
 import { readGroupUsage } from "../../../../src/administration/groupUsageHelpers.ts";
@@ -49,6 +50,7 @@ describe("groups", () => {
     const { counted, groupId, database, admin, viewer, close } =
       await prepareCountedGroupFixture();
     await readGroupUsage({
+      b2: createFakeB2Client(),
       database: counted.database,
       groupId,
       secret: "test",
@@ -61,11 +63,17 @@ describe("groups", () => {
       memberId: admin.memberId,
     });
     counted.reset();
-    const expanded = await readGroups({ database: counted.database, viewer });
-    expect(counted.getQueryCount()).toBe(3);
+    const expanded = await readGroups({
+      b2: createFakeB2Client(),
+      now: NOW,
+      database: counted.database,
+      viewer,
+    });
+    expect(counted.getQueryCount()).toBe(4);
     expect(expanded.groups).toHaveLength(11);
     counted.reset();
     const usage = await readGroupUsage({
+      b2: createFakeB2Client(),
       database: counted.database,
       groupId,
       secret: "test",

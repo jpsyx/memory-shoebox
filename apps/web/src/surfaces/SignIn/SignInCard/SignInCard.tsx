@@ -1,3 +1,5 @@
+import { useSearch } from "@tanstack/react-router";
+import { Prose } from "@/system/typography/Prose";
 import { Stack } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -35,6 +37,7 @@ const UNNAMED_SHOEBOX = "Shoebox";
 export function SignInCard(): ReactNode {
   // The state is the card's own business, for the lede and the body. The form
   // gets the rest, which is exactly what it draws.
+  const { expired } = useSearch({ from: "/sign-in" });
   const { state, ...formProps } = useSignInFlow();
   const { data: publicSettings } = useQuery(publicSettingsQueryOptions);
   const shoeboxName = publicSettings?.shoeboxName ?? UNNAMED_SHOEBOX;
@@ -49,6 +52,9 @@ export function SignInCard(): ReactNode {
             <SignInBody state={state} email={formProps.email} />
           </Stack>
 
+          {expired ? (
+            <Prose role="status">Sign in again to finish your profile.</Prose>
+          ) : null}
           <SignInForm {...formProps} />
         </Card>
       </Centred>

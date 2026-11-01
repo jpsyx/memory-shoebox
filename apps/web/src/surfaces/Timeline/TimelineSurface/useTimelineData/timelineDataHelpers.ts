@@ -1,5 +1,6 @@
 import type { MediaLoadingResources } from "@/media/createMediaLoadingResources/createMediaLoadingResources";
 import { getSelectedSourceFromPreview } from "@/media/getSelectedSourceFromPreview";
+import { personLabel } from "@/system/personLabel/personLabel";
 import { getNavigationSelectionFromView } from "@/media/getNavigationSelectionFromView";
 
 import {
@@ -160,7 +161,7 @@ export function getPersonNamesFromFacets(
 ): Map<string, string> {
   return new Map(
     (facets?.people ?? []).map((facet) => {
-      return [facet.person.personId, facet.person.displayName] as const;
+      return [facet.person.personId, personLabel(facet.person)] as const;
     }),
   );
 }

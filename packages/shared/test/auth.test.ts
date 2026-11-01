@@ -3,6 +3,7 @@ import {
   createSessionRequestSchema,
   listMySessionsResponseSchema,
   meDtoSchema,
+  notifyPreferencesSchema,
   requestSignInCodeRequestSchema,
   updateMeRequestSchema,
 } from "../src/auth.ts";
@@ -51,11 +52,14 @@ describe("updateMeRequestSchema", () => {
     expect(updateMeRequestSchema.parse({})).toEqual({});
   });
 
-  it("clears the display name with null", () => {
-    expect(updateMeRequestSchema.parse({ displayName: null })).toEqual({
-      displayName: null,
-    });
-  });
+  it.each([null, "", "  ", "bad@name", "line\nbreak", "hidden\u200bname"])(
+    "rejects an invalid chosen name %s",
+    (displayName) => {
+      expect(updateMeRequestSchema.safeParse({ displayName }).success).toBe(
+        false,
+      );
+    },
+  );
 
   it("trims the display name", () => {
     expect(updateMeRequestSchema.parse({ displayName: "  Rosa " })).toEqual({
@@ -91,8 +95,10 @@ describe("updateMeRequestSchema", () => {
 describe("meDtoSchema", () => {
   it("carries the caller's own address and the raw stored name", () => {
     const parsed = meDtoSchema.parse({
-      member: { memberId: MEMBER_ID, displayName: "Abuela Rosa" },
+      member: { avatar: null, memberId: MEMBER_ID, displayName: "Abuela Rosa" },
       storedDisplayName: null,
+      profileComplete: false,
+      suggestedDisplayName: "Abuela Rosa",
       email: "abuela@example.com",
       role: "viewer",
       notify: {
@@ -100,6 +106,7 @@ describe("meDtoSchema", () => {
         onComment: true,
         onReply: true,
         onRemoval: true,
+        onCommentTag: true,
       },
       joinedAt: "2026-09-27T10:00:00.000Z",
       lastSignedInAt: "2026-09-27T10:00:00.000Z",
@@ -125,4 +132,21 @@ describe("listMySessionsResponseSchema", () => {
     });
     expect(parsed.sessions[0]?.isCurrent).toBe(true);
   });
+});
+
+it("requires the new preference on reads while preserving legacy PATCH omission", () => {
+  const legacy = {
+    onUpload: true,
+    onComment: false,
+    onReply: true,
+    onRemoval: false,
+  };
+  expect(notifyPreferencesSchema.safeParse(legacy).success).toBe(false);
+  expect(updateMeRequestSchema.parse({ notify: legacy }).notify).toEqual(
+    legacy,
+  );
+  expect(
+    updateMeRequestSchema.parse({ notify: { ...legacy, onCommentTag: false } })
+      .notify?.onCommentTag,
+  ).toBe(false);
 });

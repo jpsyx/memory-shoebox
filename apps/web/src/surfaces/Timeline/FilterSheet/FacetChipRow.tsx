@@ -6,7 +6,7 @@ import classes from "@/system/system.module.css";
 /** One chip's shape, once a tag facet or a person facet is boiled down to it. */
 export type FacetChipData = {
   id: string;
-  name: string;
+  name: ReactNode;
   isSelected: boolean;
   /** Undefined on a selected chip, where the server sends `ownCount` instead. */
   narrowedCount: number | undefined;

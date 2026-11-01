@@ -17,6 +17,7 @@ type Options = {
   isUnavailable?: boolean;
   fileCount?: number;
   tags?: TagCount[];
+  people?: Array<import("@memory-shoebox/shared").DirectoryPerson>;
 };
 function _getPersonFromPosition(
   position: number,
@@ -25,6 +26,7 @@ function _getPersonFromPosition(
     person: {
       personId: makeUploadFileFromPosition(position + 3000).fileId,
       displayName: "Alex",
+      isMember: false,
     },
     itemCount: position + 10,
     firstCapturedOn: null,
@@ -35,6 +37,7 @@ function _getPersonFromPosition(
 function _stubDirectories({
   tags = [],
   isUnavailable,
+  people,
 }: Readonly<Options>): void {
   stubFetch({
     "GET /api/tags": {
@@ -44,7 +47,10 @@ function _stubDirectories({
     "GET /api/people": {
       status: 200,
       body: {
-        people: [_getPersonFromPosition(0), _getPersonFromPosition(1)],
+        people: people ?? [
+          _getPersonFromPosition(0),
+          _getPersonFromPosition(1),
+        ],
         peopleCount: 2,
         nextCursor: null,
       },

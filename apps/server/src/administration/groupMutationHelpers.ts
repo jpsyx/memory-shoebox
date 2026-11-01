@@ -1,3 +1,5 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type {
   AdminGroupDto,
   CreateGroupRequest,
@@ -22,6 +24,7 @@ import {
 } from "./groupReadHelpers.ts";
 
 type ChangeGroupOptions<Body> = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   body: Body;
@@ -49,6 +52,8 @@ async function _getMemberRefsFromIds(
   options: Readonly<{
     database: DatabaseExecutor;
     memberIds: readonly string[];
+    b2: B2Client;
+    now: string;
   }>,
 ): Promise<MemberRef[]> {
   const memberIds = [...new Set(options.memberIds)].sort();
@@ -67,9 +72,11 @@ async function _getMemberRefsFromIds(
       memberIds: ["Choose active or invited members of the Shoebox."],
     });
   }
+  const avatars = await readMemberAvatars({ ...options, memberIds });
   return members.map((member) => {
     return {
       memberId: member.id,
+      avatar: avatars.get(member.id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: member.display_name ?? undefined,
         email: member.email,
@@ -128,7 +135,10 @@ type MembershipDeltaOptions = InsertMembershipsOptions & {
 
 async function _applyMembershipDelta(
   options: Readonly<MembershipDeltaOptions>,
-): Promise<{ added: MemberRef[]; removed: MemberRef[] }> {
+): Promise<{
+  added: Array<Pick<MemberRef, "memberId" | "displayName">>;
+  removed: Array<Pick<MemberRef, "memberId" | "displayName">>;
+}> {
   const memberIds = new Set(
     options.members.map((member) => {
       return member.memberId;
@@ -159,7 +169,10 @@ async function _applyMembershipDelta(
       .execute();
   }
   await _insertMemberships({ ...options, members: added });
-  return { added, removed };
+  const snapshot = ({ memberId, displayName }: MemberRef) => {
+    return { memberId, displayName };
+  };
+  return { added: added.map(snapshot), removed: removed.map(snapshot) };
 }
 
 /** Creates a group and initial invited or active membership atomically. */
@@ -172,6 +185,7 @@ export async function createGroup(
     callback: async (database) => {
       await _assertNameAvailable({ database, name: options.body.name });
       const members = await _getMemberRefsFromIds({
+        ...options,
         database,
         memberIds: options.body.memberIds ?? [],
       });
@@ -201,7 +215,7 @@ export async function createGroup(
         },
         now: options.now,
       });
-      return getAdminGroupFromId({ database, viewer: options.viewer, groupId });
+      return getAdminGroupFromId({ ...options, database, groupId });
     },
   });
 }
@@ -244,6 +258,7 @@ export async function renameGroup(
         now: options.now,
       });
       return getAdminGroupFromId({
+        ...options,
         database,
         viewer: options.viewer,
         groupId: options.groupId,
@@ -263,11 +278,13 @@ export async function replaceGroupMembers(
     database: options.database,
     callback: async (database) => {
       const group = await getAdminGroupFromId({
+        ...options,
         database,
         viewer: options.viewer,
         groupId: options.groupId,
       });
       const members = await _getMemberRefsFromIds({
+        ...options,
         database,
         memberIds: options.body.memberIds,
       });

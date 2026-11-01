@@ -18,6 +18,7 @@ export const ROSA: Viewer = {
   sessionId: "session-rosa",
   role: "uploader",
   isAdmin: false,
+  profileComplete: true,
   visibleRuleIds: [],
 };
 

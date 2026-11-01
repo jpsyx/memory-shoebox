@@ -25,7 +25,7 @@
   width: 100%;
   resize: vertical;
   font: inherit;
-  font-size: var(--micro);
+  font-size: var(--comment-input-size, var(--micro));
   line-height: 1.55;
   border: 0;
   background: var(--print);
@@ -78,7 +78,7 @@
 }
 @media (max-width: 800px) {
   .itemComposer textarea {
-    font-size: var(--micro);
+    font-size: var(--comment-input-size, max(16px, var(--micro)));
     min-height: 63px;
   }
   .itemComposerActions button {

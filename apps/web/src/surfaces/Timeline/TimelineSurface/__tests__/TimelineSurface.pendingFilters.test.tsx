@@ -51,7 +51,7 @@ async function _holdNavigation(
         ],
         people: [
           {
-            person: { personId: ELENA, displayName: "Elena" },
+            person: { personId: ELENA, displayName: "Elena", isMember: false },
             isSelected: false,
             narrowedCount: 3,
             ownCount: null,
@@ -139,7 +139,7 @@ it("applies repeated tag toggles against pending membership and preserves the pe
   try {
     await _press("beach 3");
     await _press("hospital 3");
-    await _press("Elena 3");
+    await _press("Elena (not a member) 3");
     await _press("beach 3");
     expect(held.router.state.location.search).toEqual({
       find: true,
@@ -158,7 +158,7 @@ it("removes only the requested chips from pending selection, including dates and
     await _press("Stop filtering by hospital");
     await _press("Stop filtering by beach");
     await _press("Clear the dates");
-    await _press("Stop filtering by Elena");
+    await _press("Stop filtering by Elena (not a member)");
     expect(held.router.state.location.search).toEqual({ find: true });
   } finally {
     await held.release();

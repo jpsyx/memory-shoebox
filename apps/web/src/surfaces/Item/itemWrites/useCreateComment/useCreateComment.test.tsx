@@ -1,3 +1,4 @@
+import { createMeResponse } from "@/testing/createMeResponse";
 import { act, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useCreateComment } from "@/surfaces/Item/itemWrites/useCreateComment/useCreateComment";
@@ -36,7 +37,7 @@ describe("a comment", () => {
 
     act(() => {
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
     });
@@ -67,11 +68,11 @@ describe("a comment", () => {
     // Both presses come from one render, before `isSending` could arrive.
     act(() => {
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
       result.current.send({
-        draft: { body: "Hello.", atSeconds: null },
+        draft: { commentTags: [], body: "Hello.", atSeconds: null },
         onSent,
       });
     });
@@ -105,7 +106,7 @@ describe("comment ownership across navigation", () => {
     const onSent = vi.fn();
     act(() => {
       return sender.result.current.send({
-        draft: { body: "Away.", atSeconds: null },
+        draft: { commentTags: [], body: "Away.", atSeconds: null },
         onSent,
       });
     });
@@ -138,7 +139,7 @@ describe("comment ownership across navigation", () => {
     });
     act(() => {
       return first.result.current.send({
-        draft: { body: "Once.", atSeconds: null },
+        draft: { commentTags: [], body: "Once.", atSeconds: null },
         onSent: () => {},
       });
     });
@@ -152,7 +153,7 @@ describe("comment ownership across navigation", () => {
     expect(returned.result.current.isSending).toBe(true);
     act(() => {
       return returned.result.current.send({
-        draft: { body: "Twice.", atSeconds: null },
+        draft: { commentTags: [], body: "Twice.", atSeconds: null },
         onSent: () => {},
       });
     });
@@ -183,6 +184,10 @@ describe("per-item pending writes", () => {
       },
     });
     const queryClient = makeQueryClientFromItemDetail();
+    queryClient.setQueryData(["items", otherItemId], {
+      ...getCachedItemFromQueryClient(queryClient)!,
+      itemId: otherItemId,
+    });
     let itemId = ITEM_ID;
     const sender = renderHookWithQueryClient({
       queryClient,
@@ -194,7 +199,7 @@ describe("per-item pending writes", () => {
     const onSecondSent = vi.fn();
     act(() => {
       sender.result.current.send({
-        draft: { body: "First", atSeconds: 6.25 },
+        draft: { commentTags: [], body: "First", atSeconds: 6.25 },
         onSent: onFirstSent,
       });
     });
@@ -204,6 +209,7 @@ describe("per-item pending writes", () => {
     act(() => {
       sender.result.current.send({
         draft: {
+          commentTags: [],
           body: "Second",
           atSeconds: null,
           parentCommentId: "00000000-0000-4000-8000-000000000003",
@@ -227,12 +233,13 @@ describe("per-item pending writes", () => {
     ).toEqual([
       {
         url: `/api/items/${ITEM_ID}/comments`,
-        body: { body: "First", atSeconds: 6.25 },
+        body: { commentTags: [], body: "First", atSeconds: 6.25 },
       },
       {
         url: `/api/items/${otherItemId}/comments`,
         body: {
           body: "Second",
+          commentTags: [],
           atSeconds: null,
           parentCommentId: "00000000-0000-4000-8000-000000000003",
         },
@@ -243,3 +250,46 @@ describe("per-item pending writes", () => {
     );
   });
 });
+it.each(["query", "session"])(
+  "never publishes an old send into a replacement private %s",
+  async (replacement) => {
+    const deferred = makeHold();
+    const comment = makeComment({
+      author: SIGNED_IN,
+      body: "Old session text",
+    });
+    stubFetch({
+      [COMMENT_POST]: { status: 201, body: comment, waitFor: deferred.hold },
+    });
+    const queryClient = makeQueryClientFromItemDetail();
+    const { result } = renderHookWithQueryClient({
+      useHook: () => {
+        return useCreateComment(ITEM_ID);
+      },
+      queryClient,
+    });
+    const onSent = vi.fn();
+    act(() => {
+      result.current.send({
+        draft: { body: "Old session text", commentTags: [] },
+        onSent,
+      });
+    });
+    const detail = getCachedItemFromQueryClient(queryClient)!;
+    if (replacement === "query") {
+      queryClient.removeQueries({ queryKey: ["items", ITEM_ID], exact: true });
+      queryClient.setQueryData(["items", ITEM_ID], detail);
+    } else {
+      queryClient.setQueryData(
+        ["me"],
+        createMeResponse({ sessionId: "00000000-0000-4000-8000-000000000099" }),
+      );
+    }
+    await act(async () => {
+      deferred.letGo();
+    });
+    await waitForWritesToSettle(queryClient);
+    expect(getCachedItemFromQueryClient(queryClient)?.comments).toEqual([]);
+    expect(onSent).not.toHaveBeenCalled();
+  },
+);

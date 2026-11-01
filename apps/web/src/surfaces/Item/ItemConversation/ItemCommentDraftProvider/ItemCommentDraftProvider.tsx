@@ -1,75 +1,63 @@
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-
-/** Main-composer values retained for one item-viewer visit. */
-export type ItemCommentDraftValue = {
-  body: string;
-  atSeconds: number | undefined;
-  hasStarted: boolean;
-  revision: number;
-};
-
+  ConversationJourneyContext,
+  useConversationDraftOwner,
+  useConversationJourney,
+} from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
+import {
+  EMPTY_CONVERSATION_DRAFT,
+  type ConversationDraft,
+  type ConversationJourney,
+} from "@/session/conversationJourneyHelpers/conversationJourneyHelpers";
+import { createContext, useContext, type ReactNode } from "react";
+/** Main-composer values owned by the signed-in conversation session. */
+export type ItemCommentDraftValue = ConversationDraft;
 type DraftUpdate = Partial<Omit<ItemCommentDraftValue, "revision">>;
 type DraftMemory = {
   read: (itemId: string) => ItemCommentDraftValue;
-  update: (itemId: string, updateValue: DraftUpdate) => void;
-  remove: (itemId: string) => void;
+  update: (itemId: string, value: DraftUpdate) => void;
+  remove: (itemId: string, expectedRevision?: number) => void;
+  retireItem: (itemId: string) => void;
 };
-type Props = { children: ReactNode };
-const EMPTY_DRAFT: ItemCommentDraftValue = {
-  body: "",
-  atSeconds: undefined,
-  hasStarted: false,
-  revision: 0,
-};
-const DraftMemoryContext = createContext<DraftMemory | undefined>(undefined);
-
-/** Owns ephemeral per-item drafts across composer and detail-query changes. */
+const DraftMemoryContext = createContext<ConversationJourney | undefined>(
+  undefined,
+);
+/**
+ * Adapts existing main composers to the one session owner; standalone
+ * fallback.
+ */
 export function ItemCommentDraftProvider({
   children,
-}: Readonly<Props>): ReactNode {
-  const drafts = useRef<ReadonlyMap<string, ItemCommentDraftValue>>(new Map());
-  const revision = useRef(0);
-  const [, renderValues] = useState(drafts.current);
-  const read = useCallback<DraftMemory["read"]>((itemId) => {
-    return drafts.current.get(itemId) ?? EMPTY_DRAFT;
-  }, []);
-  const update = useCallback<DraftMemory["update"]>((itemId, updateValue) => {
-    revision.current += 1;
-    drafts.current = new Map(drafts.current).set(itemId, {
-      ...(drafts.current.get(itemId) ?? EMPTY_DRAFT),
-      ...updateValue,
-      revision: revision.current,
-    });
-    renderValues(drafts.current);
-  }, []);
-  const remove = useCallback<DraftMemory["remove"]>((itemId) => {
-    if (!drafts.current.has(itemId)) {
-      return;
-    }
-    const remainingDrafts = new Map(drafts.current);
-    remainingDrafts.delete(itemId);
-    drafts.current = remainingDrafts;
-    renderValues(drafts.current);
-  }, []);
+}: Readonly<{ children: ReactNode }>): ReactNode {
+  const memory = useConversationDraftOwner();
   return (
-    <DraftMemoryContext value={{ read, update, remove }}>
-      {children}
-    </DraftMemoryContext>
+    <ConversationJourneyContext value={memory}>
+      <DraftMemoryContext value={memory}>{children}</DraftMemoryContext>
+    </ConversationJourneyContext>
   );
 }
-
-/** Reads and changes the draft memory owned by the enclosing item surface. */
+/** Reads and changes the shared main-composer draft without a parallel map. */
 export function useItemCommentDraftMemory(): DraftMemory {
   const memory = useContext(DraftMemoryContext);
-  if (memory === undefined) {
+  useConversationJourney();
+  if (!memory) {
     throw new Error("Item comment drafts require ItemCommentDraftProvider.");
   }
-  return memory;
+  return {
+    read: (itemId) => {
+      return (
+        memory.readDraft({ itemId, mode: "main" }) ?? EMPTY_CONVERSATION_DRAFT
+      );
+    },
+    update: (itemId, value) => {
+      const key = { itemId, mode: "main" } as const;
+      memory.writeDraft(key, {
+        ...(memory.readDraft(key) ?? EMPTY_CONVERSATION_DRAFT),
+        ...value,
+      });
+    },
+    remove: (itemId, revision) => {
+      return memory.removeDraft({ itemId, mode: "main" }, revision);
+    },
+    retireItem: memory.retireItem,
+  };
 }

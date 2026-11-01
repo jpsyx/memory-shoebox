@@ -5,6 +5,7 @@ import type {
 } from "./mediaProcessing.types.ts";
 import type { Kysely } from "kysely";
 import type {
+  CommentTagsTable,
   ItemCaptureDateChangesTable,
   ItemBurstHistoryTable,
   ItemMilestonesTable,
@@ -22,6 +23,8 @@ import type {
   GroupsTable,
   InvitationsTable,
   MembersTable,
+  MemberAvatarUploadsTable,
+  MemberNameClaimsTable,
   SessionsTable,
   SignInCodesTable,
   VisibilityRuleSubjectsTable,
@@ -35,6 +38,7 @@ import type {
   VideoReactionsTable,
 } from "./moderation.types.ts";
 import type {
+  CommentTagNotificationsTable,
   ActivityEventsTable,
   EmailDeliveryEventsTable,
   EmailSuppressionsTable,
@@ -62,6 +66,8 @@ export type Database = {
   media_processing_outputs: MediaProcessingOutputsTable;
   media_processing_discovery: MediaProcessingDiscoveryTable;
   members: MembersTable;
+  member_avatar_uploads: MemberAvatarUploadsTable;
+  member_name_claims: MemberNameClaimsTable;
   sign_in_codes: SignInCodesTable;
   sessions: SessionsTable;
   invitations: InvitationsTable;
@@ -81,6 +87,8 @@ export type Database = {
   people: PeopleTable;
   item_people: ItemPeopleTable;
   comments: CommentsTable;
+  comment_tags: CommentTagsTable;
+  comment_tag_notifications: CommentTagNotificationsTable;
   item_reactions: ItemReactionsTable;
   comment_reactions: CommentReactionsTable;
   video_reactions: VideoReactionsTable;

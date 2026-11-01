@@ -22,14 +22,14 @@ describe("the comment routes", () => {
     await expect(
       createComment({
         itemId: ITEM_ID,
-        body: { body: "Hello", atSeconds: 4.25 },
+        body: { commentTags: [], body: "Hello", atSeconds: 4.25 },
       }),
     ).resolves.toEqual(COMMENT);
     expect(getRecordedRequests()).toEqual([
       {
         url: `/api/items/${ITEM_ID}/comments`,
         method: "POST",
-        body: { body: "Hello", atSeconds: 4.25 },
+        body: { commentTags: [], body: "Hello", atSeconds: 4.25 },
       },
     ]);
   });
@@ -39,12 +39,15 @@ describe("the comment routes", () => {
       [`POST /api/items/${ITEM_ID}/comments`]: { body: COMMENT, status: 201 },
     });
 
-    await createComment({ itemId: ITEM_ID, body: { body: "Hello" } });
+    await createComment({
+      itemId: ITEM_ID,
+      body: { commentTags: [], body: "Hello" },
+    });
     expect(getRecordedRequests()).toEqual([
       {
         url: `/api/items/${ITEM_ID}/comments`,
         method: "POST",
-        body: { body: "Hello" },
+        body: { commentTags: [], body: "Hello" },
       },
     ]);
   });

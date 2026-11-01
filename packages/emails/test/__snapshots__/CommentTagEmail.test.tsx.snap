@@ -1,0 +1,90 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`registers comment-tag copy with equivalent safe photo/video and moment content > photo-unanchored 1`] = `
+{
+  "html": "<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/></head><body style="background-color:#ffffff"><!--$--><!--html--><!--head--><!--body--><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:#ffffff;color:#1b1f22;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;margin:0;padding:24px"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;margin:0 auto"><tbody><tr style="width:100%"><td><p style="font-size:18px;line-height:24px;font-weight:bold;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">Shoebox</p><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#1b1f22;border-top-width:2px;margin:12px 0 0"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:24px;line-height:1.2;font-weight:bold;margin:24px 0 0;margin-top:24px;margin-right:0;margin-bottom:0;margin-left:0">Ana tagged you in a comment.</p><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">On a photo from 27 September 2026.</p><p style="font-size:16px;line-height:24px;border-left:2px solid #1b1f22;font-style:italic;margin:16px 0 0;padding:0 0 0 16px;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0"><span>@Jorge &lt;script&gt;bad&lt;/script&gt;</span><span><br/>Second line</span></p><a href="https://shoebox.example/items/123?comment=456" style="color:#ffffff;text-decoration-line:none;display:inline-block;margin:20px 0 0;padding:12px 20px;border:1px solid #1b1f22;background-color:#1b1f22;font-size:16px;font-weight:bold;text-decoration:none" target="_blank">View comment</a><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">You&#x27;re receiving this because Ana tagged you in a comment.</p></td></tr></tbody></table><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#cccccc;margin:28px 0 16px"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0">This went to you because you are in Shoebox.</p><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0"><a href="https://shoebox.example/account?email=comment-tag" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">Change comment-tag emails</a> · <!-- -->Memory Shoebox, which you can <a href="https://github.com/jpsyx/memory-shoebox" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">get the source of</a>.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table><!--/$--></body></html>",
+  "text": "Shoebox
+
+----------------------------------------------------------
+
+Ana tagged you in a comment.
+
+On a photo from 27 September 2026.
+
+@Jorge <script>bad</script>
+Second line
+
+View comment https://shoebox.example/items/123?comment=456
+
+You're receiving this because Ana tagged you in a comment.
+
+----------------------------------------------------------
+
+This went to you because you are in Shoebox.
+
+Change comment-tag emails
+https://shoebox.example/account?email=comment-tag · Memory
+Shoebox, which you can get the source of
+https://github.com/jpsyx/memory-shoebox.",
+}
+`;
+
+exports[`registers comment-tag copy with equivalent safe photo/video and moment content > video-18 1`] = `
+{
+  "html": "<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/></head><body style="background-color:#ffffff"><!--$--><!--html--><!--head--><!--body--><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:#ffffff;color:#1b1f22;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;margin:0;padding:24px"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;margin:0 auto"><tbody><tr style="width:100%"><td><p style="font-size:18px;line-height:24px;font-weight:bold;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">Shoebox</p><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#1b1f22;border-top-width:2px;margin:12px 0 0"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:24px;line-height:1.2;font-weight:bold;margin:24px 0 0;margin-top:24px;margin-right:0;margin-bottom:0;margin-left:0">Ana tagged you in a comment.</p><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">On a video from 27 September 2026.</p><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">At 0:18</p><p style="font-size:16px;line-height:24px;border-left:2px solid #1b1f22;font-style:italic;margin:16px 0 0;padding:0 0 0 16px;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0"><span>@Jorge &lt;script&gt;bad&lt;/script&gt;</span><span><br/>Second line</span></p><a href="https://shoebox.example/items/123?comment=456" style="color:#ffffff;text-decoration-line:none;display:inline-block;margin:20px 0 0;padding:12px 20px;border:1px solid #1b1f22;background-color:#1b1f22;font-size:16px;font-weight:bold;text-decoration:none" target="_blank">View comment</a><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">You&#x27;re receiving this because Ana tagged you in a comment.</p></td></tr></tbody></table><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#cccccc;margin:28px 0 16px"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0">This went to you because you are in Shoebox.</p><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0"><a href="https://shoebox.example/account?email=comment-tag" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">Change comment-tag emails</a> · <!-- -->Memory Shoebox, which you can <a href="https://github.com/jpsyx/memory-shoebox" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">get the source of</a>.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table><!--/$--></body></html>",
+  "text": "Shoebox
+
+----------------------------------------------------------
+
+Ana tagged you in a comment.
+
+On a video from 27 September 2026.
+
+At 0:18
+
+@Jorge <script>bad</script>
+Second line
+
+View comment https://shoebox.example/items/123?comment=456
+
+You're receiving this because Ana tagged you in a comment.
+
+----------------------------------------------------------
+
+This went to you because you are in Shoebox.
+
+Change comment-tag emails
+https://shoebox.example/account?email=comment-tag · Memory
+Shoebox, which you can get the source of
+https://github.com/jpsyx/memory-shoebox.",
+}
+`;
+
+exports[`registers comment-tag copy with equivalent safe photo/video and moment content > video-unanchored 1`] = `
+{
+  "html": "<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/></head><body style="background-color:#ffffff"><!--$--><!--html--><!--head--><!--body--><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:#ffffff;color:#1b1f22;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;margin:0;padding:24px"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:600px;margin:0 auto"><tbody><tr style="width:100%"><td><p style="font-size:18px;line-height:24px;font-weight:bold;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">Shoebox</p><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#1b1f22;border-top-width:2px;margin:12px 0 0"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:24px;line-height:1.2;font-weight:bold;margin:24px 0 0;margin-top:24px;margin-right:0;margin-bottom:0;margin-left:0">Ana tagged you in a comment.</p><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">On a video from 27 September 2026.</p><p style="font-size:16px;line-height:24px;border-left:2px solid #1b1f22;font-style:italic;margin:16px 0 0;padding:0 0 0 16px;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0"><span>@Jorge &lt;script&gt;bad&lt;/script&gt;</span><span><br/>Second line</span></p><a href="https://shoebox.example/items/123?comment=456" style="color:#ffffff;text-decoration-line:none;display:inline-block;margin:20px 0 0;padding:12px 20px;border:1px solid #1b1f22;background-color:#1b1f22;font-size:16px;font-weight:bold;text-decoration:none" target="_blank">View comment</a><p style="font-size:16px;line-height:24px;margin:16px 0 0;margin-top:16px;margin-right:0;margin-bottom:0;margin-left:0">You&#x27;re receiving this because Ana tagged you in a comment.</p></td></tr></tbody></table><hr style="width:100%;border:none;border-top:1px solid #eaeaea;border-color:#cccccc;margin:28px 0 16px"/><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody><tr><td><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0">This went to you because you are in Shoebox.</p><p style="font-size:14px;line-height:24px;color:#4a4a4a;margin:0 0 8px;margin-top:0;margin-right:0;margin-bottom:8px;margin-left:0"><a href="https://shoebox.example/account?email=comment-tag" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">Change comment-tag emails</a> · <!-- -->Memory Shoebox, which you can <a href="https://github.com/jpsyx/memory-shoebox" style="color:#1b1f22;text-decoration-line:none;text-decoration:underline" target="_blank">get the source of</a>.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table><!--/$--></body></html>",
+  "text": "Shoebox
+
+----------------------------------------------------------
+
+Ana tagged you in a comment.
+
+On a video from 27 September 2026.
+
+@Jorge <script>bad</script>
+Second line
+
+View comment https://shoebox.example/items/123?comment=456
+
+You're receiving this because Ana tagged you in a comment.
+
+----------------------------------------------------------
+
+This went to you because you are in Shoebox.
+
+Change comment-tag emails
+https://shoebox.example/account?email=comment-tag · Memory
+Shoebox, which you can get the source of
+https://github.com/jpsyx/memory-shoebox.",
+}
+`;

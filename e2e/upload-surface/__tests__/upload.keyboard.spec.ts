@@ -28,7 +28,7 @@ test("surface 8 keyboard can choose files, client contract can tag people, attac
   await _pressButton({ page: page, name: "Tick all 1" });
   await _keyboardLabel({
     page: page,
-    button: "Tag somebody",
+    button: "Photo-tag someone",
     label: "Who is in them",
     value: "Keyboard Cousin",
   });

@@ -31,10 +31,12 @@ export async function readPeopleRefsByItemId(options: {
   const rows = await options.database
     .selectFrom("item_people")
     .innerJoin("people", "people.id", "item_people.person_id")
+    .leftJoin("members", "members.id", "people.member_id")
     .select([
       "item_people.item_id as itemId",
       "people.id as personId",
       "people.display_name as displayName",
+      "members.status as memberStatus",
     ])
     .where("item_people.item_id", "in", [...options.itemIds])
     .orderBy("item_people.tagged_at", "asc")
@@ -45,7 +47,11 @@ export async function readPeopleRefsByItemId(options: {
     const people = peopleByItemId.get(row.itemId) ?? [];
     // `PersonRef` never carries `memberId`, here or anywhere: holding an
     // account is a permission fact and this is a family.
-    people.push({ personId: row.personId, displayName: row.displayName });
+    people.push({
+      personId: row.personId,
+      displayName: row.displayName,
+      isMember: row.memberStatus === "active",
+    });
     peopleByItemId.set(row.itemId, people);
     return peopleByItemId;
   }, new Map());

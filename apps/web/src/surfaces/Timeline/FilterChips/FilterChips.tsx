@@ -1,3 +1,5 @@
+import { useMemberCollection } from "@/api/memberCollections/memberCollections";
+import { Chip } from "@/system/Chip/Chip";
 import type { ReactNode } from "react";
 import type { FilterFacetsResponse } from "@memory-shoebox/shared";
 import type {
@@ -25,8 +27,23 @@ export function FilterChips({
   facets,
   onChange,
 }: Readonly<Props>): ReactNode {
+  const identity = useMemberCollection(selection.member);
+  const name = identity.data?.member?.displayName ?? "Member";
   return (
     <>
+      {selection.member ? (
+        <Chip
+          onPanel
+          removeLabel={`Stop filtering by ${name}`}
+          onRemove={() => {
+            onChange((current) => {
+              return { ...current, member: undefined };
+            });
+          }}
+        >
+          {name}: uploaded or photo-tagged
+        </Chip>
+      ) : null}
       <PeopleChips selection={selection} facets={facets} onChange={onChange} />
       <TagChips selection={selection} facets={facets} onChange={onChange} />
       <DateChip selection={selection} onChange={onChange} />

@@ -1,3 +1,4 @@
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type {
   CreateMilestoneRequest,
   DeleteMilestoneResponse,
@@ -16,6 +17,7 @@ import { readMilestoneDetail } from "../milestoneReadHelpers.ts";
 
 /** Shared context supplied by the enclosing immediate transaction. */
 type MutationContext = {
+  b2: B2Client;
   transaction: DatabaseExecutor;
   viewer: Viewer;
   now: string;
@@ -97,7 +99,13 @@ export async function insertMilestone(
     milestoneId,
     itemIds: body.itemIds ?? [],
   });
-  return readMilestoneDetail({ database: transaction, viewer, milestoneId });
+  return readMilestoneDetail({
+    b2: options.b2,
+    now: options.now,
+    database: transaction,
+    viewer,
+    milestoneId,
+  });
 }
 
 /**
@@ -115,6 +123,8 @@ export async function updateMilestone(
   const { transaction, viewer, milestoneId, body, now } = options;
   assertMayMutateMilestones(viewer);
   const detail = await readMilestoneDetail({
+    b2: options.b2,
+    now: options.now,
     database: transaction,
     viewer,
     milestoneId,
@@ -147,7 +157,13 @@ export async function updateMilestone(
       .where("milestone_id", "=", milestoneId)
       .execute();
   }
-  return readMilestoneDetail({ database: transaction, viewer, milestoneId });
+  return readMilestoneDetail({
+    b2: options.b2,
+    now: options.now,
+    database: transaction,
+    viewer,
+    milestoneId,
+  });
 }
 
 /** Deletes only the occasion and joins, auditing the true attachment count. */
@@ -157,6 +173,8 @@ export async function deleteMilestone(
   const { transaction, viewer, milestoneId } = options;
   assertMayMutateMilestones(viewer);
   const detail = await readMilestoneDetail({
+    b2: options.b2,
+    now: options.now,
     database: transaction,
     viewer,
     milestoneId,
@@ -202,7 +220,13 @@ export async function setMilestoneItems(
 ): Promise<SetMilestoneItemsResponse> {
   const { transaction, viewer, milestoneId, body } = options;
   assertMayMutateMilestones(viewer);
-  await readMilestoneDetail({ database: transaction, viewer, milestoneId });
+  await readMilestoneDetail({
+    b2: options.b2,
+    now: options.now,
+    database: transaction,
+    viewer,
+    milestoneId,
+  });
   await assertVisibleMilestoneItems({
     database: transaction,
     viewer,
@@ -222,6 +246,8 @@ export async function setMilestoneItems(
           .executeTakeFirstOrThrow();
   return {
     ...(await readMilestoneDetail({
+      b2: options.b2,
+      now: options.now,
       database: transaction,
       viewer,
       milestoneId,

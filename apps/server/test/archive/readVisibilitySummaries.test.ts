@@ -1,3 +1,5 @@
+import { NOW } from "../helpers/seedHelpers/seedTime.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { describe, expect, it } from "vitest";
 import { readMemberRefs } from "../../src/archive/readMemberRefs.ts";
 import { readVisibilitySummaries } from "../../src/archive/readVisibilitySummaries.ts";
@@ -86,7 +88,7 @@ describe("readVisibilitySummaries", () => {
       await readVisibilitySummaries({ database, ruleIds: [ruleId] })
     ).get(ruleId);
     expect(summary?.subjects).toEqual([
-      { kind: "member", id: memberId, displayName: "abuela" },
+      { kind: "member", id: memberId, displayName: "Member" },
     ]);
     expect(summary?.label).toBeNull();
 
@@ -95,7 +97,7 @@ describe("readVisibilitySummaries", () => {
 });
 
 describe("readMemberRefs", () => {
-  it("reads every member once, falling back to the email local part", async () => {
+  it("reads every member once without disclosing an email local part", async () => {
     const database = createDatabase(":memory:");
     await migrateToLatest(database);
     const namedId = await insertMember(database, { display_name: "Lucía" });
@@ -104,14 +106,20 @@ describe("readMemberRefs", () => {
       email: "papa@example.com",
     });
 
-    const members = await readMemberRefs(database);
+    const members = await readMemberRefs({
+      database: database,
+      b2: createFakeB2Client(),
+      now: NOW,
+    });
     expect(members.get(namedId)).toEqual({
+      avatar: null,
       memberId: namedId,
       displayName: "Lucía",
     });
     expect(members.get(unnamedId)).toEqual({
+      avatar: null,
       memberId: unnamedId,
-      displayName: "papa",
+      displayName: "Member",
     });
 
     await database.destroy();

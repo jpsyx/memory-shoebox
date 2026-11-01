@@ -13,7 +13,7 @@ describe("GET /api/me", () => {
         return new Date(NOW);
       },
     });
-    const { cookie, memberId } = await insertSignedInMember({
+    const { cookie, memberId, sessionId } = await insertSignedInMember({
       database,
       member: {
         email: "abuela@example.com",
@@ -34,9 +34,12 @@ describe("GET /api/me", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
+      sessionId,
       me: {
-        member: { memberId, displayName: "abuela" },
+        member: { avatar: null, memberId, displayName: "Member" },
         storedDisplayName: null,
+        profileComplete: false,
+        suggestedDisplayName: null,
         email: "abuela@example.com",
         role: "viewer",
         notify: {
@@ -44,6 +47,7 @@ describe("GET /api/me", () => {
           onComment: true,
           onReply: true,
           onRemoval: true,
+          onCommentTag: true,
         },
         joinedAt: NOW,
         lastSignedInAt: NOW,
@@ -69,7 +73,7 @@ describe("GET /api/me", () => {
 describe("PATCH /api/me", () => {
   it("corrects the display name and answers the read shape", async () => {
     const { app, database, close } = await createTestApp();
-    const { cookie, memberId } = await insertSignedInMember({
+    const { cookie, memberId, sessionId } = await insertSignedInMember({
       database,
       member: { email: "abuela@example.com", display_name: "Rosa" },
     });
@@ -82,6 +86,7 @@ describe("PATCH /api/me", () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(response.json().sessionId).toBe(sessionId);
     expect(response.json().me.storedDisplayName).toBe("Abuela Rosa");
     expect(response.json().me.member.displayName).toBe("Abuela Rosa");
 
@@ -94,7 +99,7 @@ describe("PATCH /api/me", () => {
     await close();
   });
 
-  it("clears the name back to the fallback with null", async () => {
+  it("refuses clearing a claimed name with null", async () => {
     const { app, database, close } = await createTestApp();
     const { cookie } = await insertSignedInMember({
       database,
@@ -108,8 +113,8 @@ describe("PATCH /api/me", () => {
       payload: { displayName: null },
     });
 
-    expect(response.json().me.storedDisplayName).toBeNull();
-    expect(response.json().me.member.displayName).toBe("abuela");
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toBe("invalid_request");
     await close();
   });
 
@@ -136,6 +141,7 @@ describe("PATCH /api/me", () => {
       onComment: false,
       onReply: false,
       onRemoval: false,
+      onCommentTag: true,
     });
     const row = await database
       .selectFrom("members")
@@ -258,4 +264,45 @@ describe("PATCH /api/me", () => {
     expect(response.statusCode).toBe(401);
     await close();
   });
+});
+
+it("stores tag preferences and preserves them through legacy four-switch PATCH", async () => {
+  const { app, database, close } = await createTestApp({
+    clock: () => {
+      return new Date(NOW);
+    },
+  });
+  try {
+    const { cookie } = await insertSignedInMember({ database });
+    const notify = {
+      onUpload: true,
+      onComment: false,
+      onReply: true,
+      onRemoval: false,
+    };
+    const changed = await app.inject({
+      method: "PATCH",
+      url: "/api/me",
+      headers: { cookie },
+      payload: { notify: { ...notify, onCommentTag: false } },
+    });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.json().me.notify.onCommentTag).toBe(false);
+    const legacy = await app.inject({
+      method: "PATCH",
+      url: "/api/me",
+      headers: { cookie },
+      payload: { notify },
+    });
+    expect(legacy.statusCode).toBe(200);
+    expect(legacy.json().me.notify.onCommentTag).toBe(false);
+    const read = await app.inject({
+      method: "GET",
+      url: "/api/me",
+      headers: { cookie },
+    });
+    expect(read.json().me.notify.onCommentTag).toBe(false);
+  } finally {
+    await close();
+  }
 });

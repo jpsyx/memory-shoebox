@@ -58,7 +58,7 @@ function BulkActions(
       {(
         [
           { kind: "tag", label: "Add a tag", Icon: IconTag },
-          { kind: "person", label: "Tag somebody", Icon: IconUser },
+          { kind: "person", label: "Photo-tag someone", Icon: IconUser },
           {
             kind: "milestone",
             label: "Put under a milestone",

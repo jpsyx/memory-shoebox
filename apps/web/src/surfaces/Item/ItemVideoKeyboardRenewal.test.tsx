@@ -244,7 +244,7 @@ describe("real video button keyboard renewal ownership", () => {
       await screen.findByText("Keyboard moment.");
       expect(
         getRecordedBodyFromRequest(`POST /api/items/${ITEM_ID}/comments`),
-      ).toEqual({ body: "Keyboard moment.", atSeconds: 3 });
+      ).toEqual({ commentTags: [], body: "Keyboard moment.", atSeconds: 3 });
       await _activate({ name: control.paused, key: control.key });
       expect(play).toHaveBeenCalledOnce();
       expect(video.paused).toBe(false);

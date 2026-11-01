@@ -1,5 +1,26 @@
 [
   {
+    "module": "./avatarGeometry/avatarGeometry.ts",
+    "values": ["getExtractionFromAvatarCrop"],
+    "types": []
+  },
+  {
+    "module": "./accountNames/accountNames.ts",
+    "values": ["accountNameSchema", "makeAccountNameKeyFromName"],
+    "types": ["AccountName"]
+  },
+  {
+    "module": "./avatars.ts",
+    "values": [
+      "avatarCropSchema",
+      "reserveAvatarRequestSchema",
+      "reserveAvatarResponseSchema",
+      "removeAvatarRequestSchema",
+      "readMemberAvatarResponseSchema"
+    ],
+    "types": ["AvatarCrop", "ReserveAvatarRequest", "ReserveAvatarResponse"]
+  },
+  {
     "module": "./auth.ts",
     "values": [
       "createSessionRequestSchema",
@@ -16,7 +37,8 @@
       "sessionDtoSchema",
       "signInCodeSchema",
       "updateMeRequestSchema",
-      "MEMBER_STATUSES"
+      "MEMBER_STATUSES",
+      "updateNotifyPreferencesSchema"
     ],
     "types": [
       "CreateSessionRequest",
@@ -76,7 +98,10 @@
       "tagRefSchema",
       "timestampSchema",
       "visibilityRuleIdSchema",
-      "visibilitySummarySchema"
+      "visibilitySummarySchema",
+      "avatarRefSchema",
+      "commentTagSchema",
+      "commentTagInputSchema"
     ],
     "types": [
       "BurstSummary",
@@ -91,7 +116,10 @@
       "ReactionKind",
       "ReactionSummary",
       "TagRef",
-      "VisibilitySummary"
+      "VisibilitySummary",
+      "AvatarRef",
+      "CommentTag",
+      "CommentTagInput"
     ]
   },
   {
@@ -112,7 +140,8 @@
       "OUTBOUND_EMAIL_STATES",
       "invitationEmailPayloadSchema",
       "signInCodeEmailPayloadSchema",
-      "uploadSessionEmailPayloadSchema"
+      "uploadSessionEmailPayloadSchema",
+      "commentTagEmailPayloadSchema"
     ],
     "types": [
       "RemovalRequestEmailPayload",
@@ -130,7 +159,8 @@
       "OutboundEmailState",
       "OutboundEmailTriggerKind",
       "SignInCodeEmailPayload",
-      "UploadSessionEmailPayload"
+      "UploadSessionEmailPayload",
+      "CommentTagEmailPayload"
     ]
   },
   {
@@ -735,5 +765,22 @@
     "module": "./mediaPosition.ts",
     "values": ["mediaPositionRequestSchema", "mediaPositionResponseSchema"],
     "types": ["MediaPositionRequest", "MediaPositionResponse"]
+  },
+  {
+    "module": "./memberCollections.ts",
+    "values": [
+      "memberCollectionParamsSchema",
+      "memberCollectionResponseSchema"
+    ],
+    "types": ["MemberCollectionResponse"]
+  },
+  {
+    "module": "./commentTags/commentTags.ts",
+    "values": [
+      "makeNormalizedCommentFromDraft",
+      "commentTagCandidatesQuerySchema",
+      "commentTagCandidatesResponseSchema"
+    ],
+    "types": ["CommentTagCandidatesQuery", "CommentTagCandidatesResponse"]
   }
 ]

@@ -20,6 +20,7 @@ export function makeViewer(
     sessionId: createId(),
     role: "uploader",
     isAdmin: false,
+    profileComplete: true,
     visibleRuleIds: [EVERYONE_VISIBILITY_RULE_ID],
     ...options,
   };

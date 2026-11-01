@@ -1,4 +1,7 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type {
+  AvatarRef,
   GroupUsageResponse,
   GroupUsageRuleDto,
   VisibilitySummary,
@@ -12,6 +15,7 @@ import { getGroupFromId } from "./groupReadHelpers.ts";
 import { makeGroupUsageTokenFromSnapshot } from "./groupUsageTokenHelpers.ts";
 
 type UsageOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   groupId: string;
   secret: string;
@@ -214,6 +218,7 @@ function _getChangedMembersFromRules(
     facts: UsageFacts;
     rules: readonly GroupUsageRuleDto[];
     effect: "narrows" | "widens";
+    avatars: ReadonlyMap<string, AvatarRef>;
   }>,
 ): MemberRef[] {
   const changedIds = new Set(
@@ -236,6 +241,7 @@ function _getChangedMembersFromRules(
     .map((member) => {
       return {
         memberId: member.id,
+        avatar: options.avatars.get(member.id) ?? null,
         displayName: member.displayName,
       };
     });
@@ -275,6 +281,12 @@ export async function readGroupUsageSnapshot(
     return _makeUsageRuleFromSummary({ summary, groupId, items: facts.items });
   });
   const snapshot = JSON.stringify({ group: { groupId, name }, ...facts });
+  const avatars = await readMemberAvatars({
+    ...options,
+    memberIds: facts.members.map((member) => {
+      return member.id;
+    }),
+  });
   const usage: GroupUsageResponse = {
     group: { groupId, name },
     rules,
@@ -283,11 +295,13 @@ export async function readGroupUsageSnapshot(
       facts,
       rules,
       effect: "narrows",
+      avatars,
     }),
     membersGainingAccess: _getChangedMembersFromRules({
       facts,
       rules,
       effect: "widens",
+      avatars,
     }),
     confirmationToken:
       rules.length === 0

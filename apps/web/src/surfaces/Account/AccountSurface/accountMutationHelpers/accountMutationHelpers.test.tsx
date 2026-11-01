@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 it.each(["name", "notify"] as const)(
-  "publishes the held %s PATCH once after its hook unmounts and the cache clears",
+  "retires the held %s PATCH after its hook unmounts and the cache clears",
   async (field) => {
     const oldAccount = createMeResponse({
       displayName: "Old name",
@@ -84,12 +84,161 @@ it.each(["name", "notify"] as const)(
         expect(mutation.state.status).toBe("success");
       });
     });
-    expect(client.getQueryData(["me"])).toEqual(savedAccount);
+    expect(client.getQueryData(["me"])).toBeUndefined();
     expect(writes).toEqual([
       field === "name"
         ? { displayName: "Saved name" }
         : { notify: savedAccount.me.notify },
     ]);
     client.clear();
+  },
+);
+
+it("does not publish an old name save into a different current account", async () => {
+  const original = createMeResponse({ displayName: "Original" });
+  const other = createMeResponse({
+    avatar: null,
+    memberId: "018f0000-0000-7000-8000-000000000001",
+    displayName: "Other",
+  });
+  const client = new QueryClient();
+  client.setQueryData(["me"], original);
+  const pending = Promise.withResolvers<Response>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => {
+      return pending.promise;
+    }),
+  );
+  const hook = renderHook(
+    () => {
+      return useSaveMe();
+    },
+    {
+      wrapper: ({ children }) => {
+        return (
+          <AccountMutationFixture client={client}>
+            {children}
+          </AccountMutationFixture>
+        );
+      },
+    },
+  );
+  act(() => {
+    return hook.result.current.save({ displayName: "Saved original" });
+  });
+  await vi.waitFor(() => {
+    return expect(fetch).toHaveBeenCalled();
+  });
+  client.setQueryData(["me"], other);
+  await act(async () => {
+    pending.resolve(
+      Response.json(createMeResponse({ displayName: "Saved original" })),
+    );
+    await pending.promise;
+  });
+  await vi.waitFor(() => {
+    return expect(hook.result.current.isSaving).toBe(false);
+  });
+  expect(client.getQueryData(["me"])).toEqual(other);
+});
+
+it("does not roll back a newer avatar when a held name response arrives", async () => {
+  const original = createMeResponse({ displayName: "Original" });
+  const avatar = {
+    avatarId: "018f0000-0000-7000-8000-000000000010",
+    url: "https://example.com/new",
+    issuedAt: "2026-10-31T00:00:00.000Z",
+    expiresAt: "2099-10-31T01:00:00.000Z",
+  };
+  const client = new QueryClient();
+  client.setQueryData(["me"], original);
+  const pending = Promise.withResolvers<Response>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => {
+      return pending.promise;
+    }),
+  );
+  const hook = renderHook(
+    () => {
+      return useSaveMe();
+    },
+    {
+      wrapper: ({ children }) => {
+        return (
+          <AccountMutationFixture client={client}>
+            {children}
+          </AccountMutationFixture>
+        );
+      },
+    },
+  );
+  act(() => {
+    return hook.result.current.save({ displayName: "New" });
+  });
+  await vi.waitFor(() => {
+    return expect(fetch).toHaveBeenCalled();
+  });
+  client.setQueryData(["me"], createMeResponse({ avatar }));
+  await act(async () => {
+    pending.resolve(Response.json(createMeResponse({ displayName: "New" })));
+    await pending.promise;
+  });
+  await vi.waitFor(() => {
+    return expect(hook.result.current.isSaving).toBe(false);
+  });
+  expect(
+    client.getQueryData<ReturnType<typeof createMeResponse>>(["me"])?.me.member,
+  ).toMatchObject({ displayName: "New", avatar });
+});
+
+it.each([false, true])(
+  "publishes a first-observed replacement name response unless its lifetime already retired (%s)",
+  async (hasRetired) => {
+    const client = new QueryClient();
+    client.setQueryData(["me"], createMeResponse());
+    const held = Promise.withResolvers<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        return held.promise;
+      }),
+    );
+    const { result } = renderHook(useSaveMe, {
+      wrapper: ({ children }) => {
+        return (
+          <AccountMutationFixture client={client}>
+            {children}
+          </AccountMutationFixture>
+        );
+      },
+    });
+    act(() => {
+      result.current.save({ displayName: "Saved" });
+    });
+    await vi.waitFor(() => {
+      expect(fetch).toHaveBeenCalled();
+    });
+    const replacement = createMeResponse({
+      sessionId: "018f0000-0000-7000-8000-000000000099",
+      displayName: "Replacement",
+    });
+    if (hasRetired) {
+      client.setQueryData(["me"], replacement);
+    }
+    await act(async () => {
+      held.resolve(
+        Response.json(
+          hasRetired
+            ? createMeResponse({ displayName: "Old save" })
+            : replacement,
+        ),
+      );
+      await vi.waitFor(() => {
+        expect(result.current.isSaving).toBe(false);
+      });
+    });
+    expect(client.getQueryData(["me"])).toEqual(replacement);
   },
 );

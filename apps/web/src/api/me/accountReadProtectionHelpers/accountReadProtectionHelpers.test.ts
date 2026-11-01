@@ -2,7 +2,11 @@ import { getBootstrapGenerationFromClient } from "@/api/bootstrapHelpers/bootstr
 import { createMeResponse } from "@/testing/createMeResponse";
 import { CancelledError, QueryClient } from "@tanstack/react-query";
 import { expect, it, vi } from "vitest";
-import { ensureAccountReadProtection } from "./accountReadProtectionHelpers";
+import { capturePrivateAuthority } from "../privateQueryHelpers";
+import {
+  ensureAccountReadProtection,
+  hasPendingAccountWrite,
+} from "./accountReadProtectionHelpers";
 
 function _makeDeferredWrite(): {
   promise: Promise<void>;
@@ -113,3 +117,42 @@ it.each(["context", "undefined", "continue"])(
     client.clear();
   },
 );
+
+it("holds avatar reads only for the live authority and cancels an older bootstrap", async () => {
+  const client = new QueryClient();
+  client.setQueryData(["me"], createMeResponse());
+  ensureAccountReadProtection(client);
+  const held = Promise.withResolvers<void>();
+  const read = Promise.withResolvers<void>();
+  const bootstrap = client
+    .fetchQuery({
+      queryKey: ["bootstrap"],
+      queryFn: async () => {
+        await read.promise;
+        return "old";
+      },
+    })
+    .catch((error: unknown) => {
+      return error;
+    });
+  const ticket = capturePrivateAuthority(client);
+  const mutation = client.getMutationCache().build(client, {
+    mutationKey: ["avatar"],
+    meta: { privateAuthority: ticket },
+    mutationFn: () => {
+      return held.promise;
+    },
+  });
+  const running = mutation.execute(undefined);
+  expect(hasPendingAccountWrite(client)).toBe(true);
+  read.resolve();
+  expect(await bootstrap).toBeInstanceOf(CancelledError);
+  client.setQueryData(
+    ["me"],
+    createMeResponse({ memberId: "018f0000-0000-7000-8000-000000000002" }),
+  );
+  expect(hasPendingAccountWrite(client)).toBe(false);
+  held.resolve();
+  await running;
+  expect(hasPendingAccountWrite(client)).toBe(false);
+});

@@ -166,7 +166,7 @@ export async function addSurfaceLabel(
   const { page, kind, name, selectedFileCount } = options;
   await page
     .getByRole("button", {
-      name: kind === "tag" ? "Add a tag" : "Tag somebody",
+      name: kind === "tag" ? "Add a tag" : "Photo-tag someone",
       exact: true,
     })
     .click();

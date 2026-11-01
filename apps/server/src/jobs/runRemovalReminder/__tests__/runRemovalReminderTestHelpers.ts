@@ -1,5 +1,5 @@
+import type { Selectable, Kysely } from "kysely";
 import { expect } from "vitest";
-import type { Kysely } from "kysely";
 import { createDatabase } from "../../../db/client.ts";
 import { migrateToLatest } from "../../../db/migrate.ts";
 import type { Database } from "../../../db/types/db.types.ts";
@@ -27,8 +27,8 @@ type RemovalReminderTestContext = {
 export async function createReminderContextWithOpenRequest(
   options: Readonly<{
     requestOverrides?: Partial<Database["removal_requests"]>;
-    uploaderOverrides?: Partial<Database["members"]>;
-    requesterOverrides?: Partial<Database["members"]>;
+    uploaderOverrides?: Partial<Selectable<Database["members"]>>;
+    requesterOverrides?: Partial<Selectable<Database["members"]>>;
   }> = {},
 ): Promise<RemovalReminderTestContext> {
   const database = createDatabase(":memory:");

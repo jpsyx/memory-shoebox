@@ -89,12 +89,18 @@ export async function readUploadProgress(
 
 /** Draft totals stay live; committed totals keep the frozen session values. */
 async function _readSessionSummary(options: {
+  b2: B2Client;
+  now: string;
   database: DatabaseExecutor;
   session: Readonly<UploadSessionRow>;
 }): Promise<UploadSessionSummary> {
   const { session } = options;
   const [members, visibilities, totals] = await Promise.all([
-    readMemberRefs(options.database),
+    readMemberRefs({
+      database: options.database,
+      b2: options.b2,
+      now: options.now,
+    }),
     readVisibilitySummaries({
       database: options.database,
       ruleIds: [session.visibility_rule_id],
@@ -113,6 +119,7 @@ async function _readSessionSummary(options: {
     uploadedBy: members.get(session.uploaded_by) ?? {
       memberId: session.uploaded_by,
       displayName: "",
+      avatar: null,
     },
     visibility: visibilities.get(session.visibility_rule_id) ?? {
       visibilityRuleId: session.visibility_rule_id,
@@ -203,7 +210,12 @@ export async function readUploadSessionDetail(
     } satisfies UploadFilePageRequest,
   } = options;
   const [summary, progress, plan, outcome, filePage] = await Promise.all([
-    _readSessionSummary({ database: options.database, session }),
+    _readSessionSummary({
+      database: options.database,
+      session,
+      b2: options.b2,
+      now: options.now.toISOString(),
+    }),
     readUploadProgress(scope),
     _readSessionPlan({ database: options.database, session }),
     session.settled_at === null

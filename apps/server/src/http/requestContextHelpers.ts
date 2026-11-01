@@ -14,6 +14,7 @@ export type Viewer = {
   sessionId: string;
   role: MemberRole;
   isAdmin: boolean;
+  profileComplete: boolean;
   /**
    * Cached per (memberId, visibilityGeneration).
    *

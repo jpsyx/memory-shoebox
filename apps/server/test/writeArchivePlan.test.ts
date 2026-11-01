@@ -26,12 +26,14 @@ async function _seededCatalog(): Promise<SeededArchiveCatalog> {
   const database = createDatabase(":memory:");
   await migrateToLatest(database);
   const uploader = await seedMember({
+    displayName: "Seeded Uploader",
     database,
     email: "uploader@example.com",
     role: "uploader",
     baseUrl: "http://localhost:5173",
   });
   const viewer = await seedMember({
+    displayName: "Seeded Viewer",
     database,
     email: "viewer@example.com",
     role: "viewer",

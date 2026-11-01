@@ -30,6 +30,7 @@ describe("groupsQueryOptions", () => {
 
   it("keeps an admin's member list and drops the usage counts", async () => {
     const papa = {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-000000000000",
       displayName: "Papá",
     };

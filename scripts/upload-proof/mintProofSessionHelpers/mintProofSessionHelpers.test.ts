@@ -33,9 +33,10 @@ describe("mintProofSession", () => {
   ): Promise<void> => {
     const database = createDatabase(join(serverDirectory, "catalog.db"));
     await migrateToLatest(database);
-    await members.reduce(async (previous, member) => {
+    await members.reduce(async (previous, member, memberIndex) => {
       await previous;
       const seeded = await seedMember({
+        displayName: `Seeded Member ${memberIndex + 1}`,
         database,
         email: member.email,
         role: member.role,

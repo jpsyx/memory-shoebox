@@ -1,3 +1,4 @@
+import { checkCommentTagDelivery } from "./checkCommentTagDelivery.ts";
 import { z } from "zod";
 import type {
   WorkerContext,
@@ -113,6 +114,24 @@ async function _recordDeliveryFailure(
   return "failed";
 }
 
+async function _cancelIneligibleTag(
+  options: Readonly<{ context: WorkerContext; row: OutboundEmailRow }>,
+): Promise<boolean> {
+  const { context, row } = options;
+  if (
+    row.kind !== "comment_tag" ||
+    (await checkCommentTagDelivery({ database: context.database, row }))
+  ) {
+    return false;
+  }
+  await finalizeQueuedEmail({
+    context,
+    id: row.id,
+    values: { state: "cancelled" },
+  });
+  return true;
+}
+
 /**
  * Renders and sends one claimed row, and writes down what happened.
  *
@@ -136,6 +155,9 @@ export async function deliverQueuedEmail(
     }
     const identity = await _getOrFreezeSender({ context, row, fromAddress });
     if (!(await _isStillSending({ context, row }))) {
+      return "skipped";
+    }
+    if (await _cancelIneligibleTag({ context, row })) {
       return "skipped";
     }
     const result = await sender.send({

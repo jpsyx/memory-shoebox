@@ -1,6 +1,6 @@
 # Outbound mail (`apps/server/src/mail`)
 
-Memory Shoebox sends seven kinds of transactional message, and one of them is
+Memory Shoebox sends eight kinds of transactional message, and one of them is
 how anybody gets in at all: the six-digit sign-in code. So the mail path is
 built around a failure that is not hypothetical. A self-hosted instance spends
 its first hour with no Resend key and no sending address, and the family it
@@ -593,3 +593,35 @@ inserts `removal-reminder:requestId:memberId:weekIndex`; unique conflicts keep
 existing mail unchanged. Current admins are recomputed each run, with no
 last-reminded state, catch-up, or cancellation of already queued messages.
 See [removals.md](removals.md) for privacy, snapshots, and idempotency rules.
+
+## Explicit comment tags
+
+`reconcileCommentTagEmails` writes the tag mail and the permanent
+`comment_tag_notifications` scheduling ledger in the comment transaction.
+On creation, an eligible tagged recipient with tag mail enabled receives the
+tag message instead of generic comment mail. Otherwise the existing uploader
+or conversation preference applies. Self-tags never send mail. On edits only
+newly added recipients can schedule their first tag message; a previous generic
+message does not block that first tag message. Removing and re-adding a tag, or
+scrubbing the outbox, never resets the lifetime ledger. A failed base-URL
+configuration still counts as scheduled, and a database error rolls back the
+comment, occurrences, ledger and outbox together.
+
+Removing a recipient cancels queued tag messages. Deleting a parent comment
+cancels queued generic and tag messages for both parent and cascading replies.
+Ordinary edits retain the queued snapshot. After rendering and durable sender
+freezing, every tag delivery attempt rechecks the current active completed
+recipient, tag preference, comment, tag and item visibility. Ineligibility
+finalizes the claimed row as cancelled without calling the sender. Changes
+after provider handoff cannot recall mail. Existing suppression and sender
+idempotency behavior are unchanged.
+
+Failed configuration recovery validates the real tag payload and extant comment
+trigger, restoring `/items/<itemId>?comment=<commentId>` and the focused account
+preference link without scheduling another notification. Legacy message links
+retain their existing paths.
+
+The [rollout and compatibility guide](comment-tagging-rollout.md#compatibility-to-retain)
+requires no retroactive tag mail. The local populated migration rehearsal preserved
+queued rows and repeated startup did not duplicate scheduling or mail. Production
+provider sends are not part of acceptance.

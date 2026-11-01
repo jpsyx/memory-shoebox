@@ -241,6 +241,7 @@ describe("readMediaSources", () => {
           sessionId: "test-session",
           role: "viewer" as const,
           isAdmin: false,
+          profileComplete: true,
           visibleRuleIds: ["visibility-rule-everyone"],
         },
         filter: makeTimelineFilterFromQuery({}),

@@ -4,6 +4,7 @@ import {
   invitationEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
   commentEmailPayloadSchema,
+  commentTagEmailPayloadSchema,
   removalRequestEmailPayloadSchema,
   removalReminderEmailPayloadSchema,
   removalResolvedEmailPayloadSchema,
@@ -16,6 +17,7 @@ const PAYLOAD_SCHEMAS = {
   invitation: invitationEmailPayloadSchema,
   upload_session: uploadSessionEmailPayloadSchema,
   comment: commentEmailPayloadSchema,
+  comment_tag: commentTagEmailPayloadSchema,
   removal_request: removalRequestEmailPayloadSchema,
   removal_reminder: removalReminderEmailPayloadSchema,
   removal_resolved: removalResolvedEmailPayloadSchema,
@@ -32,7 +34,8 @@ async function _hasTrigger(
       ? "invitations"
       : row.kind === "upload_session" && row.trigger_kind === "upload_session"
         ? "upload_sessions"
-        : row.kind === "comment" && row.trigger_kind === "comment"
+        : (row.kind === "comment" || row.kind === "comment_tag") &&
+            row.trigger_kind === "comment"
           ? "comments"
           : row.kind.startsWith("removal_") &&
               row.trigger_kind === "removal_request"
@@ -58,7 +61,7 @@ function _getLinkFieldsFromPayload(
   if (options.kind === "upload_session") {
     return ["dayUrl"];
   }
-  if (options.kind === "comment") {
+  if (options.kind === "comment" || options.kind === "comment_tag") {
     return ["itemUrl"];
   }
   if (
@@ -70,7 +73,13 @@ function _getLinkFieldsFromPayload(
   return options.payload.outcome === "deleted" ? [] : ["itemUrl"];
 }
 function _getRebasedLinkFromStoredLink(
-  options: Readonly<{ value: unknown; baseUrl: string; field: string }>,
+  options: Readonly<{
+    value: unknown;
+    baseUrl: string;
+    field: string;
+    kind: RetainedKind;
+    triggerId: string;
+  }>,
 ): string | undefined {
   if (typeof options.value !== "string" || options.value.length === 0) {
     return undefined;
@@ -91,7 +100,17 @@ function _getRebasedLinkFromStoredLink(
           ? /^\/$/
           : options.field === "requestsUrl"
             ? /^\/removal-requests$/
-            : /^\/item\/[^/]+$/;
+            : options.kind === "comment_tag"
+              ? /^\/items\/[^/]+$/
+              : /^\/item\/[^/]+$/;
+    if (
+      options.kind === "comment_tag" &&
+      (link.searchParams.get("comment") !== options.triggerId ||
+        [...link.searchParams].length !== 1 ||
+        link.hash)
+    ) {
+      return undefined;
+    }
     if (!expectedPath.test(link.pathname)) {
       return undefined;
     }
@@ -103,6 +122,7 @@ function _getRebasedLinkFromStoredLink(
 function _makeRepairedLinksFromPayload(
   options: Readonly<{
     kind: RetainedKind;
+    triggerId: string;
     payload: Record<string, unknown>;
     baseUrl: string;
   }>,
@@ -112,6 +132,8 @@ function _makeRepairedLinksFromPayload(
       field,
       link: _getRebasedLinkFromStoredLink({
         field,
+        kind: options.kind,
+        triggerId: options.triggerId,
         value: options.payload[field],
         baseUrl: options.baseUrl,
       }),
@@ -141,7 +163,7 @@ function _makeRepairedLinksFromPayload(
     baseUrl: options.baseUrl,
     preferencesUrl: isRequesterAnswer
       ? null
-      : `${options.baseUrl.replace(/\/$/, "")}/account`,
+      : `${options.baseUrl.replace(/\/$/, "")}/account${options.kind === "comment_tag" ? "?email=comment-tag" : ""}`,
   };
 }
 function _hasValidRetainedCommonLinks(
@@ -175,6 +197,7 @@ function _makeRepairedPayloadFromRow(
     }
     const repaired = _makeRepairedLinksFromPayload({
       kind: options.row.kind,
+      triggerId: options.row.trigger_id,
       payload,
       baseUrl: options.baseUrl,
     });

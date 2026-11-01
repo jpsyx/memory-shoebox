@@ -31,6 +31,7 @@ export const ADMIN = createMeResponse({
 }) satisfies MeResponse;
 /** A pending invitation belonging to the setup admin. */
 export const INVITED = {
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-000000000011",
   displayName: "One",
   email: "one@example.com",

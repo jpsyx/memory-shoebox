@@ -1,3 +1,4 @@
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { getDomainFromAddress } from "../mail/getDomainFromAddress.ts";
 import {
   EDITABLE_INSTANCE_SETTING_KEYS,
@@ -23,6 +24,7 @@ import {
 import { applyTimezoneChange } from "./applyTimezoneChange.ts";
 
 type UpdateAdminSettingsOptions = {
+  b2: B2Client;
   database: DatabaseExecutor;
   viewer: Viewer;
   body: UpdateSettingsRequest;
@@ -223,7 +225,7 @@ async function _calculateAndUpdateSettings(
     await _applySettingsChanges({ ...options, changes, plan });
   }
   return {
-    ...(await readAdminSettings(options.database)),
+    ...(await readAdminSettings(options)),
     isPreview: options.isPreview,
     timezoneImpact: plan?.impact ?? null,
   };

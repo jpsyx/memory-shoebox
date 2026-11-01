@@ -1,3 +1,4 @@
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
 import type { BulkEditItemsRequest } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 import type { Viewer } from "../../http/requestContextHelpers.ts";
@@ -15,6 +16,7 @@ import { addBulkItemPeople, addBulkItemTags } from "./addBulkItemLabels.ts";
 import { getBulkEditViewerFromTransaction } from "./getBulkEditViewerFromTransaction.ts";
 
 type BulkEditContext = {
+  b2: B2Client;
   transaction: DatabaseExecutor;
   viewer: Viewer;
   body: Readonly<BulkEditItemsRequest>;
@@ -40,6 +42,7 @@ async function _applyBulkEdit(
       return;
     case "milestone":
       await setMilestoneItems({
+        b2: options.b2,
         transaction,
         viewer,
         now,

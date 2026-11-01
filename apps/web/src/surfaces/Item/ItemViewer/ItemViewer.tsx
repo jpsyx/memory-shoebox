@@ -1,3 +1,4 @@
+import { CommentArrival } from "../CommentArrival/CommentArrival";
 import {
   PhotoReadinessContext,
   ViewerReadinessContext,
@@ -89,6 +90,12 @@ export function ItemViewer({
           fieldRef={fieldRef}
           theater={theater}
           dockController={dockController}
+        />
+        <CommentArrival
+          detail={detail}
+          theater={theater}
+          dock={dockController}
+          isAuthorized={!isPlaceholder}
         />
       </ViewerReadinessContext>
     </PhotoReadinessContext>

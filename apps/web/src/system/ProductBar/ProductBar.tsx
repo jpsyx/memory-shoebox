@@ -4,6 +4,7 @@ import {
   IconUserCircle,
   IconUsers,
 } from "@tabler/icons-react";
+import { useLocation } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { TopBar } from "@/system/Chrome/TopBar";
 import { BarLink } from "@/system/ProductBar/BarLink";
@@ -40,11 +41,22 @@ export function ProductBar({
   role,
   detail,
 }: Readonly<Props>): ReactNode {
+  const pathname = useLocation({
+    select: (location) => {
+      return location.pathname;
+    },
+  });
   return (
     <TopBar title={shoeboxName} titleTo="/" detail={detail}>
       <BarLink
         to="/"
-        search={{ find: true }}
+        search={
+          pathname === "/"
+            ? (current) => {
+                return { ...current, find: true };
+              }
+            : { find: true }
+        }
         variant="panel"
         leftSection={<IconSearch {...ICON_PROPS} />}
       >

@@ -1,11 +1,16 @@
-import type { UseQueryResult } from "@tanstack/react-query";
+import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
+import type { QueryClient, UseQueryResult } from "@tanstack/react-query";
 import type { ItemDetail } from "@memory-shoebox/shared";
-import { idSchema } from "@memory-shoebox/shared";
+import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+} from "@/api/me/privateQueryHelpers";
+import { apiFetch, ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { idSchema, itemDetailSchema } from "@memory-shoebox/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext, useLocation } from "@tanstack/react-router";
 import { useMediaLoading } from "@/media/MediaLoadingContext";
-import { useLayoutEffect, type ReactNode } from "react";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { itemQueryOptions } from "@/api/items/items";
 import { useItemCommentDraftMemory } from "@/surfaces/Item/ItemConversation/ItemCommentDraftProvider/ItemCommentDraftProvider";
 import { ItemTheaterHeader } from "../ItemTheater/ItemTheaterHeader";
@@ -23,29 +28,85 @@ type Props = {
   transport: VideoTransport;
 };
 
+type ItemEntry = {
+  itemId: string;
+  journey: ReturnType<typeof useConversationJourney>;
+  active: boolean;
+  authorized: boolean;
+  ticket: ReturnType<typeof capturePrivateAuthority>;
+};
 function useSelectedItemDetail({
   itemId,
   isWellFormed,
-}: {
-  itemId: string;
-  isWellFormed: boolean;
-}): UseQueryResult<ItemDetail, Error> {
+}: Readonly<{ itemId: string; isWellFormed: boolean }>): UseQueryResult<
+  ItemDetail,
+  Error
+> & { isEntryAuthorized: boolean } {
   const queryClient = useQueryClient();
-  return useQuery({
+  const authority = useItemEntryAuthority(itemId, queryClient);
+  const query = useQuery({
     ...itemQueryOptions(itemId),
+    queryFn: authority.read,
     enabled: isWellFormed,
-    // Previous detail retains inert conversation controls while media changes.
-    // After a failure, Try again returns to pending with no data, so the error
-    // count prevents restoring the previous item during the retry.
+    // Only previous-item detail can remain as an inert transition placeholder.
     placeholderData: (previousDetail) => {
-      const queryState = queryClient.getQueryState(
+      const state = queryClient.getQueryState(
         itemQueryOptions(itemId).queryKey,
       );
-      return (queryState?.errorUpdateCount ?? 0) > 0
+      return (state?.errorUpdateCount ?? 0) > 0 ||
+        previousDetail?.itemId === itemId
         ? undefined
         : previousDetail;
     },
   });
+  return { ...query, isEntryAuthorized: authority.isEntryAuthorized };
+}
+function useItemEntryAuthority(itemId: string, client: QueryClient) {
+  const journey = useConversationJourney();
+  const entry = useMemo<ItemEntry>(() => {
+    return {
+      itemId,
+      journey,
+      active: true,
+      authorized: false,
+      ticket: capturePrivateAuthority(client),
+    };
+  }, [itemId, client, journey]);
+  const [, redraw] = useState(0);
+  useLayoutEffect(() => {
+    entry.active = true;
+    return () => {
+      entry.active = false;
+      void client.cancelQueries({
+        queryKey: ["items", entry.itemId],
+        exact: true,
+      });
+    };
+  }, [entry, client]);
+  return {
+    isEntryAuthorized:
+      entry.authorized &&
+      entry.active &&
+      isPrivateAuthorityCurrent(client, entry.ticket),
+    read: async ({ signal }: { signal: AbortSignal }) => {
+      const detail = await apiFetch({
+        path: `/items/${encodeURIComponent(entry.itemId)}`,
+        schema: itemDetailSchema,
+        init: { signal },
+      });
+      if (
+        entry.active &&
+        !signal.aborted &&
+        isPrivateAuthorityCurrent(client, entry.ticket)
+      ) {
+        entry.authorized = true;
+        redraw((version) => {
+          return version + 1;
+        });
+      }
+      return detail;
+    },
+  };
 }
 
 function useDiscardDeniedItemDraft({
@@ -55,12 +116,12 @@ function useDiscardDeniedItemDraft({
   itemId: string;
   isDenied: boolean;
 }>): void {
-  const { remove } = useItemCommentDraftMemory();
+  const { retireItem } = useItemCommentDraftMemory();
   useLayoutEffect(() => {
     if (isDenied) {
-      remove(itemId);
+      retireItem(itemId);
     }
-  }, [isDenied, itemId, remove]);
+  }, [isDenied, itemId, retireItem]);
 }
 
 function useCurrentTheaterPosition({
@@ -109,6 +170,7 @@ function useItemSurfaceState({
       (query.error instanceof ApiRequestError && query.error.status === 403),
   });
   const isAuthorized =
+    query.isEntryAuthorized &&
     !isNotHere &&
     !query.isError &&
     !query.isPlaceholderData &&
@@ -162,6 +224,9 @@ export function ItemSurfaceContent({
         transport={transport}
         query={query}
         isNotHere={isNotHere}
+        isAwaitingAuthorization={
+          !query.isEntryAuthorized && !query.isPlaceholderData
+        }
         selectedPreview={selectedPreview}
         viewer={viewer}
         timezone={settings.timezone}

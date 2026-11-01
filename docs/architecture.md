@@ -405,3 +405,41 @@ A plain tick ends only the current Shift range gesture. Independently requested
 full-burst selection and burst opening continue and merge against the latest
 selection. Cancelling a range releases its queue wait even if the underlying
 membership request has not settled.
+
+## Small profile-image upload exception
+
+Avatar originals use a dedicated authenticated binary PUT through Fastify rather
+than an archive upload session. The encapsulated parser accepts at most 10 MiB;
+a single slot is acquired before buffering and has no waiting queue. Contention
+returns `503 avatar_busy`, and each member has three attempts per five-minute
+window. A parsing abort releases only unstarted work. Once processing begins,
+the slot stays held until Sharp and B2 actually settle, even after client abort.
+
+Sharp checks actual JPEG/PNG/WebP format, still-image frame count and a
+50-megapixel input limit before raster allocation. PNG chunk inspection also
+rejects APNG, whose animation Sharp's PNG decoder does not expose as pages.
+Orientation precedes square cropping and 256-by-256 WebP output; originals and
+metadata are not stored. SQLite transactions fence ownership, expiry and current
+version before publication and never span decoding or B2 I/O. The publication
+clock is read after storage completes, so an expired request cannot publish even
+before the next sweep. Archive transfers and downloads retain their direct path.
+
+These limits and tiny-fixture tests alone are not a deployment memory-safety
+result. V2 measured maximum accepted 50 MP decodes, serial 10 MiB uploads, and
+natural-size concurrency in its full matrix. A separate focused probe verified
+two overlapping exact-10-MiB requests in the same explicit local serving
+envelope recorded below. The actual deployed
+target still needs its own configuration/headroom check before shipping. See
+[member profiles](member-profiles.md#private-avatars) for recovery.
+
+## Profile/tagging acceptance and decoder admission
+
+Small own-avatar originals are the bounded exception to direct browser-to-B2
+archive transfer: Fastify validates and produces one private 256-square WebP.
+Its pre-body permit shares the existing media/fingerprint decode coordinator,
+rejecting concurrent request bodies while jobs wait for the admitted request to
+settle. Large WebP uses bounded reduced decoding and fractional crop mapping;
+other archive transfer and media-worker isolation boundaries are unchanged.
+See [member profiles](member-profiles.md#avatar-processing-budget), the
+[local resource evidence](superpowers/verification/2026-10-31-comment-tagging.md#v2-avatar-resource-boundary),
+and [rollout/recovery](comment-tagging-rollout.md) before release.

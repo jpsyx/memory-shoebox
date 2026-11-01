@@ -23,7 +23,7 @@ import {
     await page.getByRole("button", { name: "Tick all 2", exact: true }).click();
     await page
       .getByRole("button", {
-        name: kind === "tag" ? "Add a tag" : "Tag somebody",
+        name: kind === "tag" ? "Add a tag" : "Photo-tag someone",
         exact: true,
       })
       .click();

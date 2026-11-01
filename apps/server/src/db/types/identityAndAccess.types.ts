@@ -1,11 +1,17 @@
+import type { Generated } from "kysely";
+
 /** One invited address, for the life of the Shoebox. Never hard-deleted. */
 export type MembersTable = {
+  avatar_id: string | null;
   id: string;
   email: string;
   display_name: string | null;
+  profile_completed_at: string | null;
+  suggested_display_name: string | null;
   role: string;
   status: string;
   notify_on_upload: number;
+  notify_on_comment_tag: Generated<number>;
   notify_on_comment: number;
   notify_on_reply: number;
   notify_on_removal: number;
@@ -114,4 +120,27 @@ export type VisibilityRuleSubjectsTable = {
   subject_type: string;
   member_id: string | null;
   group_id: string | null;
+};
+
+/** A name remains reserved to its original member after rename or removal. */
+export type MemberNameClaimsTable = {
+  name_key: string;
+  member_id: string;
+  display_name: string;
+  created_at: string;
+};
+
+/** One immutable avatar upload and its publication lifecycle. */
+export type MemberAvatarUploadsTable = {
+  id: string;
+  member_id: string;
+  storage_key: string;
+  expected_avatar_id: string | null;
+  crop_json: string;
+  content_type: string;
+  declared_byte_size: number;
+  output_byte_size: number | null;
+  state: "reserved" | "uploading" | "published" | "retired";
+  expires_at: string;
+  created_at: string;
 };

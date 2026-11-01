@@ -25,7 +25,11 @@ const PEOPLE_PUT = `PUT /api/items/${ITEM_ID}/people`;
 const DIRECTORY: PeopleResponse = {
   people: [
     {
-      person: { personId: PERSON_SOFIA_ID, displayName: "Sofía" },
+      person: {
+        personId: PERSON_SOFIA_ID,
+        displayName: "Sofía",
+        isMember: false,
+      },
       itemCount: 3,
       firstCapturedOn: "2026-09-01",
       lastCapturedOn: "2026-09-20",
@@ -35,6 +39,7 @@ const DIRECTORY: PeopleResponse = {
       person: {
         personId: "018f0000-0000-7000-8000-00000000e104",
         displayName: "Tío Andrés",
+        isMember: false,
       },
       itemCount: 7,
       firstCapturedOn: "2026-09-01",
@@ -52,8 +57,12 @@ const EDITABLE = makeItemDetail({ capabilities: OTHER_UPLOADER_CAPABILITIES });
 const WITH_ELENA = makeItemDetail({
   capabilities: OTHER_UPLOADER_CAPABILITIES,
   people: [
-    { personId: PERSON_MATEO_ID, displayName: "Mateo" },
-    { personId: PERSON_ELENA_ID, displayName: "Bisabuela Elena" },
+    { personId: PERSON_MATEO_ID, displayName: "Mateo", isMember: false },
+    {
+      personId: PERSON_ELENA_ID,
+      displayName: "Bisabuela Elena",
+      isMember: false,
+    },
   ],
 });
 
@@ -87,7 +96,7 @@ function _answerInTurn(
 /** Opens the people field and adds two names, the first save still out. */
 async function _addTwoNames(): Promise<void> {
   await userEvent.click(
-    await screen.findByRole("button", { name: "+ Tag somebody" }),
+    await screen.findByRole("button", { name: "+ Photo-tag someone" }),
   );
   const field = screen.getByRole("combobox", { name: "Who is in it" });
   await userEvent.type(field, "Bisabuela Elena{enter}");
@@ -171,7 +180,7 @@ describe("people saved one after another", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     const field = screen.getByRole("combobox", { name: "Who is in it" });
     await userEvent.type(field, "Bisabuela Elena{enter}");
@@ -205,7 +214,7 @@ describe("people saved one after another", () => {
     await openItemDetails();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "+ Tag somebody" }),
+      await screen.findByRole("button", { name: "+ Photo-tag someone" }),
     );
     const field = screen.getByRole("combobox", { name: "Who is in it" });
     // Rosa's save goes out and is held; Sofía's queues behind it, typed

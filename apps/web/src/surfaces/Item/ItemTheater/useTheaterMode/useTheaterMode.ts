@@ -6,7 +6,11 @@ export type TheaterMode = {
   hostRef: RefObject<HTMLDivElement | null>;
   presentation: ItemPresentation;
   isFullscreen: boolean;
-  playbackPreferences: RefObject<{ isMuted: boolean }>;
+  playbackPreferences: RefObject<{
+    isMuted: boolean;
+    preventAutoplayForItemId?: string;
+  }>;
+  restore?: (intent: "window" | "native", itemId: string) => void;
   enter: () => void;
   exit: () => void;
   toggleFullscreen: () => void;
@@ -117,7 +121,10 @@ export function useTheaterMode({
   onBeforeExit,
 }: Readonly<{ onBeforeExit: () => void }>): TheaterMode {
   const hostRef = useRef<HTMLDivElement>(null);
-  const playbackPreferences = useRef({ isMuted: false });
+  const playbackPreferences = useRef<{
+    isMuted: boolean;
+    preventAutoplayForItemId?: string;
+  }>({ isMuted: false });
   const [presentation, setPresentation] = useState<ItemPresentation>("page");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const owner = useRef<Owner>({
@@ -136,5 +143,19 @@ export function useTheaterMode({
     isFullscreen,
     playbackPreferences,
     ..._getActionsFromOwner({ owner, hostRef, setPresentation }),
+    enter: () => {
+      playbackPreferences.current.preventAutoplayForItemId = undefined;
+      _getActionsFromOwner({ owner, hostRef, setPresentation }).enter();
+    },
+    restore: (intent, itemId) => {
+      playbackPreferences.current.preventAutoplayForItemId = itemId;
+      owner.scrollPosition = { left: window.scrollX, top: window.scrollY };
+      owner.root = hostRef.current;
+      owner.presentation = "theater";
+      setPresentation("theater");
+      if (intent === "native") {
+        _requestFullscreen(owner);
+      }
+    },
   };
 }

@@ -8,6 +8,7 @@ import {
 import { SIGNED_IN } from "@/testing/itemFixtureHelpers";
 
 const TIA = {
+  avatar: null,
   memberId: "018f0000-0000-7000-8000-00000000c003",
   displayName: "Tía Marisol",
 };
@@ -24,6 +25,31 @@ const ONLY_TIA_AND_COUSINS: VisibilitySummary = {
 };
 
 describe("makePickerOptionsFromSources", () => {
+  it("preserves the known viewer avatar when directory loading fails and the rule already names that viewer", () => {
+    const avatar = {
+      avatarId: "018f0000-0000-7000-8000-00000000c003",
+      url: "https://b2.test/avatar",
+      issuedAt: "2026-09-27T10:00:00.000Z",
+      expiresAt: "2026-09-27T11:00:00.000Z",
+    };
+    const viewer = { ...SIGNED_IN, avatar };
+    const result = makePickerOptionsFromSources({
+      members: undefined,
+      groups: undefined,
+      viewer,
+      visibility: {
+        ...ONLY_TIA_AND_COUSINS,
+        subjects: [
+          {
+            kind: "member",
+            id: viewer.memberId,
+            displayName: viewer.displayName,
+          },
+        ],
+      },
+    });
+    expect(result.members[0]?.avatar).toEqual(avatar);
+  });
   it("offers what the rule already names, and the viewer, with no lists at all", () => {
     expect(
       makePickerOptionsFromSources({

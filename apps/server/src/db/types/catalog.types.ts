@@ -207,3 +207,13 @@ export type ItemBurstHistoryTable = Omit<BurstsTable, "id"> & {
   burst_index: number;
 };
 import type { Generated } from "kysely";
+
+/** One persisted UTF-16 occurrence and its label without the leading @. */
+export type CommentTagsTable = {
+  id: string;
+  comment_id: string;
+  member_id: string;
+  start_offset: number;
+  end_offset: number;
+  label_snapshot: string;
+};

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MantineProvider } from "@mantine/core";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,14 +13,15 @@ import classes from "@/system/system.module.css";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
 
-const VIEWER: MemberRef = { memberId: "m0", displayName: "Papá" };
+const VIEWER: MemberRef = { avatar: null, memberId: "m0", displayName: "Papá" };
 
 const COMMENT: CommentDto = {
   commentId: "c1",
-  author: { memberId: "m1", displayName: "Abuela Rosa" },
+  author: { avatar: null, memberId: "m1", displayName: "Abuela Rosa" },
   body: "He has his mother's chin.",
   atSeconds: null,
   parentCommentId: null,
+  commentTags: [],
   createdAt: "2026-09-26T09:00:00.000Z",
   editedAt: null,
   canEdit: false,
@@ -33,7 +35,9 @@ function _Providers({
 }: Readonly<{ children: ReactNode }>): ReactNode {
   return (
     <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
-      {children}
+      <QueryClientProvider client={new QueryClient()}>
+        {children}
+      </QueryClientProvider>
     </MantineProvider>
   );
 }
@@ -49,6 +53,7 @@ function _renderSavingRow(): Mock<(body: string) => void> {
     const [isSaving, setIsSaving] = useState(false);
     return (
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         isSaving={isSaving}
@@ -74,7 +79,7 @@ function _getGridItemFromPart(part: Element): Element | undefined {
 
 describe("one comment", () => {
   it("offers no edit or delete to somebody the server said cannot", () => {
-    _render(<CommentRow comment={COMMENT} viewer={VIEWER} />);
+    _render(<CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />);
 
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
@@ -82,7 +87,11 @@ describe("one comment", () => {
 
   it("splits the two, because the contract does", () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     expect(screen.getByRole("button", { name: "Edit" })).toBeVisible();
@@ -94,6 +103,7 @@ describe("one comment", () => {
       vi.fn<NonNullable<ComponentProps<typeof CommentRow>["onSaveEdit"]>>();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         onSaveEdit={onSaveEdit}
@@ -110,6 +120,7 @@ describe("one comment", () => {
 
     expect(onSaveEdit).toHaveBeenCalledWith({
       body: "His father's chin, then.",
+      commentTags: [],
       onSaved: expect.any(Function),
     });
     expect(
@@ -117,7 +128,10 @@ describe("one comment", () => {
     ).toBeVisible();
 
     act(() => {
-      onSaveEdit.mock.calls[0]?.[0].onSaved();
+      onSaveEdit.mock.calls[0]?.[0].onSaved({
+        ...COMMENT,
+        body: "His father's chin, then.",
+      });
     });
     expect(
       screen.queryByRole("textbox", { name: "What you wrote" }),
@@ -127,7 +141,11 @@ describe("one comment", () => {
 
   it("puts the cursor in the editor when Edit is pressed", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -139,7 +157,11 @@ describe("one comment", () => {
 
   it("gives focus back to Edit when the editor is left", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -152,7 +174,11 @@ describe("one comment", () => {
 
   it("gives the editor's field, Save and note the classes that span the comment's columns", async () => {
     _render(
-      <CommentRow comment={{ ...COMMENT, canEdit: true }} viewer={VIEWER} />,
+      <CommentRow
+        itemId="photo"
+        comment={{ ...COMMENT, canEdit: true }}
+        viewer={VIEWER}
+      />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -178,6 +204,7 @@ describe("one comment", () => {
   it("puts Edit and Delete in one grid item with the class that spans the comment's columns", () => {
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true, canDelete: true }}
         viewer={VIEWER}
       />,
@@ -198,6 +225,7 @@ describe("one comment", () => {
     const onSaveEdit = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: true }}
         viewer={VIEWER}
         onSaveEdit={onSaveEdit}
@@ -241,6 +269,7 @@ describe("one comment", () => {
     const onDelete = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canDelete: true }}
         viewer={VIEWER}
         onDelete={onDelete}
@@ -259,6 +288,7 @@ describe("one comment", () => {
     const onDelete = vi.fn();
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canDelete: true }}
         viewer={VIEWER}
         onDelete={onDelete}
@@ -276,6 +306,7 @@ describe("one comment", () => {
   it("titles an admin's delete of somebody else's comment 'Delete this comment?'", async () => {
     _render(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, canEdit: false, canDelete: true }}
         viewer={VIEWER}
       />,
@@ -290,11 +321,12 @@ describe("one comment", () => {
 
   it("draws the server's words rather than a local copy", () => {
     const { rerender } = _render(
-      <CommentRow comment={COMMENT} viewer={VIEWER} />,
+      <CommentRow itemId="photo" comment={COMMENT} viewer={VIEWER} />,
     );
 
     rerender(
       <CommentRow
+        itemId="photo"
         comment={{ ...COMMENT, body: "Edited elsewhere." }}
         viewer={VIEWER}
       />,
@@ -302,4 +334,64 @@ describe("one comment", () => {
 
     expect(screen.getByText("Edited elsewhere.")).toBeVisible();
   });
+});
+
+it("uses the author's chosen decorative photo in the existing comment position", () => {
+  _render(
+    <CommentRow
+      itemId="photo"
+      comment={{
+        ...COMMENT,
+        author: {
+          ...COMMENT.author,
+          avatar: {
+            avatarId: "photo",
+            url: "https://example.com/author",
+            issuedAt: "2026-10-31T00:00:00.000Z",
+            expiresAt: "2099-10-31T01:00:00.000Z",
+          },
+        },
+      }}
+      viewer={VIEWER}
+    />,
+  );
+  expect(screen.getByAltText("")).toHaveAttribute(
+    "src",
+    "https://example.com/author",
+  );
+  expect(screen.getByAltText("").parentElement).toHaveStyle({
+    width: "30px",
+    height: "30px",
+  });
+});
+
+it("ignores a saved acknowledgement after the edit instance was cancelled", async () => {
+  const onSaveEdit =
+    vi.fn<NonNullable<ComponentProps<typeof CommentRow>["onSaveEdit"]>>();
+  _render(
+    <CommentRow
+      itemId="photo"
+      comment={{ ...COMMENT, canEdit: true }}
+      viewer={VIEWER}
+      onSaveEdit={onSaveEdit}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  await userEvent.type(screen.getByRole("textbox"), " More words");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Save the change" }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Leave it as it was" }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  act(() => {
+    onSaveEdit.mock.calls[0]?.[0].onSaved({
+      ...COMMENT,
+      body: "Saved old edit",
+    });
+  });
+  expect(screen.getByRole("textbox", { name: "What you wrote" })).toHaveValue(
+    COMMENT.body,
+  );
 });

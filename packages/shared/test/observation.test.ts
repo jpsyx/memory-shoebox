@@ -25,6 +25,7 @@ import {
 const MEMBER_ID = "019f0000-0000-7000-8000-000000000001" satisfies string;
 const TIMESTAMP = "2026-10-04T12:00:00.000Z" satisfies string;
 const MEMBER = {
+  avatar: null,
   memberId: MEMBER_ID,
   displayName: "Rosa",
 } as const satisfies MemberRef;

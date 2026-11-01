@@ -1,3 +1,5 @@
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { Kysely } from "kysely";
 import type { MeDto } from "@memory-shoebox/shared";
 import type { Database } from "../db/types/db.types.ts";
@@ -20,6 +22,8 @@ import { getMemberRoleFromStoredValue } from "./getMemberRoleFromStoredValue.ts"
 export async function getMeDtoFromMemberId(options: {
   database: Kysely<Database>;
   memberId: string;
+  b2: B2Client;
+  now: string;
 }): Promise<MeDto> {
   const row = await options.database
     .selectFrom("members")
@@ -27,9 +31,12 @@ export async function getMeDtoFromMemberId(options: {
       "id",
       "email",
       "display_name",
+      "profile_completed_at",
+      "suggested_display_name",
       "role",
       "notify_on_upload",
       "notify_on_comment",
+      "notify_on_comment_tag",
       "notify_on_reply",
       "notify_on_removal",
       "joined_at",
@@ -38,20 +45,25 @@ export async function getMeDtoFromMemberId(options: {
     .where("id", "=", options.memberId)
     .executeTakeFirstOrThrow();
 
+  const avatars = await readMemberAvatars({ ...options, memberIds: [row.id] });
   return {
     member: {
       memberId: row.id,
+      avatar: avatars.get(row.id) ?? null,
       displayName: getDisplayNameFromMember({
         storedDisplayName: row.display_name ?? undefined,
         email: row.email,
       }),
     },
     storedDisplayName: row.display_name,
+    profileComplete: row.profile_completed_at !== null,
+    suggestedDisplayName: row.suggested_display_name,
     email: row.email,
     role: getMemberRoleFromStoredValue(row.role),
     notify: {
       onUpload: row.notify_on_upload === 1,
       onComment: row.notify_on_comment === 1,
+      onCommentTag: row.notify_on_comment_tag === 1,
       onReply: row.notify_on_reply === 1,
       onRemoval: row.notify_on_removal === 1,
     },

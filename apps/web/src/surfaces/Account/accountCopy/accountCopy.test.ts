@@ -26,9 +26,7 @@ describe("accountFailure", () => {
       }),
     );
 
-    expect(failure).toBe(
-      "That is longer than the space we have. Eighty characters at most.",
-    );
+    expect(failure).toBe("Keep your name to 80 characters or fewer.");
   });
 
   it("says a device had already gone, on a 404 signing it out", () => {

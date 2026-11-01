@@ -1,5 +1,6 @@
 /** The tables migration 'catalog' creates, as `Database` names them. */
 export type CatalogTable =
+  | "comment_tags"
   | "items"
   | "item_renditions"
   | "bursts"

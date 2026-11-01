@@ -5,6 +5,7 @@ import { SignInCard } from "@/surfaces/SignIn/SignInCard/SignInCard";
 const searchSchema = z.object({
   /** Where to go once they are in. A link is an address, never a credential. */
   redirect: z.string().optional(),
+  expired: z.boolean().optional(),
   /**
    * The address, pre-filled.
    *

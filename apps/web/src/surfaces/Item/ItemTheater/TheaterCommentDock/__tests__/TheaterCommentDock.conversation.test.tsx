@@ -106,3 +106,56 @@ describe("TheaterCommentDock shared conversation", () => {
     expect(editor).toHaveValue("Edited but unsent");
   });
 });
+
+it("holds the dock for a member list inside its scoped portal and consumes the first Escape", async () => {
+  const { stubFetch } = await import("@/testing/fetchStubHelpers");
+  const { ITEM_ID, SIGNED_IN } = await import("@/testing/itemFixtureHelpers");
+  stubFetch({
+    [`GET /api/items/${ITEM_ID}/comment-tag-candidates`]: {
+      status: 200,
+      body: { members: [SIGNED_IN] },
+    },
+  });
+  const { panel, container } = renderDock();
+  hoverDock(getCommentBubble());
+  const field = screen.getByRole("textbox", { name: "Write a comment" });
+  fireEvent.change(field, {
+    target: { value: "@", selectionStart: 1, selectionEnd: 1 },
+  });
+  const picker = await screen.findByRole("listbox", { name: "Members to tag" });
+  expect(
+    container.querySelector("[data-theater-comment-portals]"),
+  ).toContainElement(picker);
+  vi.useFakeTimers();
+  leaveDock(panel);
+  advanceDockTimers(1000);
+  expect(panel).not.toHaveAttribute("inert");
+  fireEvent.keyDown(field, { key: "Escape" });
+  advanceDockTimers(350);
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(panel).not.toHaveAttribute("inert");
+  vi.unstubAllGlobals();
+});
+
+it("restores selected identity with undo through the actual main draft provider", async () => {
+  const { stubFetch } = await import("@/testing/fetchStubHelpers");
+  const { ITEM_ID, SIGNED_IN } = await import("@/testing/itemFixtureHelpers");
+  stubFetch({
+    [`GET /api/items/${ITEM_ID}/comment-tag-candidates`]: {
+      status: 200,
+      body: { members: [{ ...SIGNED_IN, displayName: "Jorge" }] },
+    },
+  });
+  renderDock("page");
+  const field = screen.getByRole("textbox", { name: "Write a comment" });
+  fireEvent.change(field, {
+    target: { value: "@", selectionStart: 1, selectionEnd: 1 },
+  });
+  fireEvent.click(await screen.findByRole("option", { name: "Jorge" }));
+  expect(field).toHaveValue("@Jorge ");
+  fireEvent.keyDown(field, { key: "z", ctrlKey: true });
+  expect(field).toHaveValue("@");
+  fireEvent.keyDown(field, { key: "z", ctrlKey: true, shiftKey: true });
+  expect(field).toHaveValue("@Jorge ");
+  vi.unstubAllGlobals();
+});

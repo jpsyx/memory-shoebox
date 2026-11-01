@@ -2,6 +2,7 @@ import { Stack, TextInput } from "@mantine/core";
 import { IconMail } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
+import { AvatarEditor } from "@/surfaces/Account/AvatarEditor/AvatarEditor";
 import { NameField } from "@/surfaces/Account/NameField";
 import { Banner } from "@/system/Chrome/Banner";
 import { Sheet } from "@/system/Chrome/Sheet";
@@ -43,7 +44,9 @@ export function YouSheet({
     <Sheet wide label="You">
       <SheetHead title="You" />
       <Stack gap="md">
+        <AvatarEditor key={me.member.memberId} me={me} onSaved={() => {}} />
         <NameField
+          key={me.member.memberId}
           me={me}
           onSave={onSave}
           isSaving={isSaving}

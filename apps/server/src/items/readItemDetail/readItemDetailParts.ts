@@ -198,7 +198,7 @@ async function _readItemDetailLookups(options: {
     }),
     readPeopleRefsByItemId({ database, itemIds: options.itemIds }),
     readVisibilitySummaries({ database, ruleIds: [item.visibilityRuleId] }),
-    readMemberRefs(database),
+    readMemberRefs({ database, b2, now: now.toISOString() }),
     readInstanceSettings({ database, keys: ["shoebox.timezone"] }),
     _readTags({ database, itemId: item.itemId }),
     _readAttachedMilestones({

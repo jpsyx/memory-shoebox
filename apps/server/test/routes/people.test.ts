@@ -53,13 +53,14 @@ describe("GET /api/people", () => {
     expect(body.people[0]?.person).toEqual({
       personId: mateoId,
       displayName: "Mateo",
+      isMember: false,
     });
     expect(body.people[0]?.itemCount).toBe(2);
     expect(body.people[0]?.firstCapturedOn).toBe("2026-09-11");
     expect(body.people[0]?.lastCapturedOn).toBe("2026-09-14");
     // Nobody has been tagged in anything, which is a state of its own.
     expect(body.people[1]).toEqual({
-      person: { personId: elenaId, displayName: "Elena" },
+      person: { personId: elenaId, displayName: "Elena", isMember: false },
       itemCount: 0,
       firstCapturedOn: null,
       lastCapturedOn: null,
@@ -80,7 +81,7 @@ describe("GET /api/people", () => {
     });
     expect(response.json().people).toEqual([
       {
-        person: { personId, displayName: "Abuela" },
+        person: { personId, displayName: "Abuela", isMember: false },
         itemCount: 0,
         firstCapturedOn: null,
         lastCapturedOn: null,
@@ -219,6 +220,7 @@ describe("GET /api/people", () => {
     expect(Object.keys(response.json().people[0].person)).toEqual([
       "personId",
       "displayName",
+      "isMember",
     ]);
     await close();
   });

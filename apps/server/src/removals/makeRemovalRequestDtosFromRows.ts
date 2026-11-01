@@ -45,7 +45,7 @@ function _makeRequestDtoFromRow(
 ): RemovalRequestDto {
   const { row, viewer, members, items } = options;
   const member = (memberId: string) => {
-    return members.get(memberId) ?? { memberId, displayName: "" };
+    return members.get(memberId) ?? { memberId, displayName: "", avatar: null };
   };
   const isOpen = row.state === "open";
   const mayDecide =
@@ -81,7 +81,11 @@ export async function makeRemovalRequestDtosFromRows(
     return [];
   }
   const [members, items] = await Promise.all([
-    readMemberRefs(options.database),
+    readMemberRefs({
+      database: options.database,
+      b2: options.b2,
+      now: options.now.toISOString(),
+    }),
     options.itemSummaries ??
       readItemSummariesByItemIds({
         ...options,

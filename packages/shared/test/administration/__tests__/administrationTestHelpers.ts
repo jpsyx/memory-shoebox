@@ -22,6 +22,7 @@ export const TIMESTAMP = "2026-10-04T12:00:00.000Z" satisfies string;
 
 /** Shared administration test input. */
 export const MEMBER = {
+  avatar: null,
   memberId: MEMBER_ID,
   displayName: "Rosa",
 } as const satisfies MemberRef;

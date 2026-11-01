@@ -1,4 +1,4 @@
-import { test, expect } from "./admin.fixtures.ts";
+import { expect, test } from "./admin.fixtures.ts";
 
 /** The drawer accepts a tag only through an explicit selection. */
 test("typing then leaving the field or drawer never creates a person", async ({
@@ -7,11 +7,11 @@ test("typing then leaving the field or drawer never creates a person", async ({
 }) => {
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("accidental z");
   await page.getByRole("button", { name: "Done", exact: true }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   await field.fill("accidental outside");
   await page
     .getByRole("dialog", { name: "Photo details" })
@@ -37,7 +37,7 @@ test("typing then leaving the field or drawer never creates a person", async ({
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
     await page.getByRole("button", { name: "More photo details" }).click();
-    await page.getByRole("button", { name: "+ Tag somebody" }).click();
+    await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
     const field = page.getByRole("combobox", { name: "Who is in it" });
     await field.fill("accidental z");
     await field.press("Enter");
@@ -90,7 +90,7 @@ test("offers Pablo for either p or P and never shows member management actions",
   expect(response.ok()).toBe(true);
   await page.reload();
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("p");
   await expect(page.getByRole("option", { name: /Pablo/ })).toBeVisible();
@@ -118,6 +118,12 @@ test("keeps an ad-hoc person and a member with the same name distinct", async ({
   page,
   catalog,
 }) => {
+  // This disposable fixture uses a live clock and an older fixed seed date.
+  await catalog.database
+    .updateTable("sessions")
+    .set({ expires_at: new Date(Date.now() + 86_400_000).toISOString() })
+    .where("id", "=", catalog.admin.sessionId)
+    .execute();
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   expect(
     (
@@ -140,19 +146,23 @@ test("keeps an ad-hoc person and a member with the same name distinct", async ({
   ).toBe(true);
   await page.reload();
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   await page.getByRole("combobox", { name: "Who is in it" }).fill("Pablo");
   await expect(page.getByRole("option", { name: /Pablo/ })).toHaveCount(2);
-  await page
-    .getByRole("option", { name: "Pablo none yet", exact: true })
-    .click();
-  await expect(page.getByRole("button", { name: "Untag Pablo" })).toHaveCount(
-    2,
-  );
-  await page.getByRole("button", { name: "Untag Pablo" }).first().click();
-  await expect(page.getByRole("button", { name: "Untag Pablo" })).toHaveCount(
-    1,
-  );
+  await page.getByRole("option", { name: "Pablo", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Untag Pablo", exact: true }),
+  ).toBeVisible();
+  const adHoc = page.getByRole("button", {
+    name: "Untag Pablo (not a member)",
+    exact: true,
+  });
+  await expect(adHoc).toBeVisible();
+  await adHoc.click();
+  await expect(adHoc).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Untag Pablo", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(async () => {
       return catalog.database
@@ -171,7 +181,7 @@ test("keyboard activation opens rename without submitting the search text", asyn
 }) => {
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   await page.getByRole("button", { name: "More photo details" }).click();
-  await page.getByRole("button", { name: "+ Tag somebody" }).click();
+  await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   const field = page.getByRole("combobox", { name: "Who is in it" });
   await field.fill("Zora keyboard");
   await field.press("Enter");

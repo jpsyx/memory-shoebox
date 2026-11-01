@@ -1,3 +1,6 @@
+import * as migration0021CommentTags from "./0021_comment_tags.ts";
+import * as migration0020MemberAvatars from "./0020_member_avatars.ts";
+import * as migration0019MemberNameClaims from "./0019_member_name_claims.ts";
 import * as migration0018TimelineUploaderCapture from "./0018_timeline_uploader_capture.ts";
 import * as migration0017MediaProcessing from "./0017_media_processing.ts";
 import * as migration0016MediaNavigationIndexes from "./0016_media_navigation_indexes.ts";
@@ -48,5 +51,8 @@ export const migrations: Record<string, Migration> = {
   "0016_media_navigation_indexes": migration0016MediaNavigationIndexes,
   "0017_media_processing": migration0017MediaProcessing,
   "0018_timeline_uploader_capture": migration0018TimelineUploaderCapture,
+  "0019_member_name_claims": migration0019MemberNameClaims,
+  "0020_member_avatars": migration0020MemberAvatars,
+  "0021_comment_tags": migration0021CommentTags,
 };
 import * as migration0015VisualDuplicates from "./0015_visual_duplicates.ts";

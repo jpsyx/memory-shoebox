@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RemovalActions } from "../useRemovalActions/useRemovalActions";
 import { RemovalActionDialogs } from "./RemovalActionDialogs";
 const VIEWER = {
+  avatar: null,
   memberId: "member",
   displayName: "Mamá",
   role: "admin",

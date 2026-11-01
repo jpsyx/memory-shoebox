@@ -38,6 +38,7 @@ export const detail: MilestoneDetail = {
 };
 /** Editor whose member identity owns these isolated query reads. */
 export const VIEWER: Viewer = {
+  avatar: null,
   memberId: "member-one",
   displayName: "Mamá",
   role: "uploader",

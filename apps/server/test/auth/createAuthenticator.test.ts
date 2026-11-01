@@ -60,7 +60,12 @@ describe("createAuthenticator", () => {
   });
 
   it("is anonymous for a token no row matches", async () => {
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
     expect(await authenticate(_requestWith("not-a-token"))).toBeUndefined();
   });
 
@@ -101,7 +106,12 @@ describe("createAuthenticator", () => {
       token_hash: makeTokenHashFromToken(TOKEN),
     });
 
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
     expect(await authenticate(_requestWith(TOKEN))).toMatchObject({
       role: "admin",
       isAdmin: true,
@@ -138,7 +148,12 @@ describe("createAuthenticator", () => {
       token_hash: makeTokenHashFromToken(TOKEN),
     });
 
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
     expect(await authenticate(_requestWith(TOKEN))).toBeUndefined();
   });
 
@@ -340,7 +355,12 @@ describe("createAuthenticator", () => {
     const groupId = await insertGroup(database, { name: "Cousins" });
     await insertVisibilityRuleSubject(database, { ruleId, groupId });
 
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
     const before = await authenticate(_requestWith(TOKEN));
     expect(before?.visibleRuleIds).not.toContain(ruleId);
 
@@ -363,7 +383,12 @@ describe("createAuthenticator", () => {
     const ruleId = await insertVisibilityRule(database, { mode: "only" });
     await insertVisibilityRuleSubject(database, { ruleId, memberId });
 
-    const authenticate = createAuthenticator({ database });
+    const authenticate = createAuthenticator({
+      database,
+      clock: () => {
+        return new Date(NOW);
+      },
+    });
     const first = await authenticate(_requestWith(TOKEN));
     expect(first?.visibleRuleIds).toContain(ruleId);
 

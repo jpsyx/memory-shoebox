@@ -1,3 +1,4 @@
+import { MemberCollectionHeader } from "@/surfaces/Timeline/MemberCollectionHeader/MemberCollectionHeader";
 import type { TimelineSearch } from "@/api/timelineHelpers/timelineSelectionHelpers/timelineSelectionHelpers";
 import { EmptyArchive } from "@/surfaces/Timeline/EmptyArchive/EmptyArchive";
 import { FirstSignInBanner } from "@/surfaces/Timeline/TimelineSurface/FirstSignInBanner";
@@ -32,6 +33,9 @@ export function TimelineSurface({
 
   return (
     <>
+      {search.member ? (
+        <MemberCollectionHeader key={search.member} memberId={search.member} />
+      ) : null}
       {data.role === "viewer" ? null : <TimelineDropzone />}
       {isFirstSignIn ? <FirstSignInBanner railDays={data.railDays} /> : null}
       {data.isEmptyArchive ? (

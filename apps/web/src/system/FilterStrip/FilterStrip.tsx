@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import classes from "@/system/system.module.css";
 
 type Props = {
-  count: number;
+  count: number | undefined;
   children: ReactNode;
   onClear?: () => void;
 };
@@ -21,9 +21,11 @@ export function FilterStrip({
 }: Readonly<Props>): ReactNode {
   return (
     <div className={classes.filterStrip}>
-      <span className={classes.filterStripCount}>
-        {count.toLocaleString("en-GB")}
-      </span>
+      {count === undefined ? null : (
+        <span className={classes.filterStripCount}>
+          {count.toLocaleString("en-GB")}
+        </span>
+      )}
       {children}
       {onClear === undefined ? null : (
         <div className={classes.filterStripEnd}>

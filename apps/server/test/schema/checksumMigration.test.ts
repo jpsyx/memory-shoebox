@@ -1,24 +1,32 @@
-import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
+import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
+import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import {
-  insertItem,
-  insertMember,
-  insertUploadSession,
-  NOW,
   insertComment,
+  insertItem,
+  insertItemTag,
+  insertMember,
   insertRendition,
   insertTag,
-  insertItemTag,
+  insertUploadSession,
+  NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("checksum migration", () => {
   it("preserves populated items including existing duplicates and adds indexed lookup", async () => {
     const database = createDatabase(":memory:");
     try {
-      const sources = await getMigrationSourcesFromFiles();
+      // Bound this historical migration test so later identity upgrades
+      // cannot change its fixtures.
+      const sources = Object.fromEntries(
+        Object.entries(await getMigrationSourcesFromFiles()).filter(
+          ([name]) => {
+            return name < "0019";
+          },
+        ),
+      );
       await migrateToLatest(database, {
         sources: Object.fromEntries(
           Object.entries(sources).filter(([name]) => {
@@ -77,7 +85,7 @@ describe("checksum migration", () => {
         .selectFrom("members")
         .selectAll()
         .execute();
-      await migrateToLatest(database);
+      await migrateToLatest(database, { sources });
       expect(await database.selectFrom("items").selectAll().execute()).toEqual(
         beforeItems.map((item) => {
           return { ...item, visual_fingerprint: null };
@@ -119,7 +127,7 @@ describe("checksum migration", () => {
       expect(
         (await sql`pragma foreign_key_check`.execute(database)).rows,
       ).toEqual([]);
-      expect(await migrateToLatest(database)).toEqual([]);
+      expect(await migrateToLatest(database, { sources })).toEqual([]);
     } finally {
       await database.destroy();
     }

@@ -54,7 +54,7 @@ function _getRootFromOwner(
 function _hasNestedInteraction(owner: Readonly<DockOwner>): boolean {
   return Array.from(
     _getRootFromOwner(owner)?.querySelectorAll(
-      '[role="dialog"], [role="menu"]',
+      '[role="dialog"], [role="menu"], [role="listbox"]',
     ) ?? [],
   ).some((element) => {
     return (
@@ -243,7 +243,9 @@ function _onDockKeyDown(
     if (
       event.target instanceof Element &&
       _getRootFromOwner(owner)?.contains(
-        event.target.closest('[role="dialog"], [role="menu"]'),
+        event.target.closest(
+          '[role="dialog"], [role="menu"], [role="listbox"]',
+        ),
       )
     ) {
       return;

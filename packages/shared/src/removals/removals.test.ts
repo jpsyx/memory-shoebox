@@ -14,6 +14,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 const MEMBER = {
+  avatar: null,
   memberId: "0199a1f0-2c3d-7e4a-8b5c-6d7e8f905678",
   displayName: "Inés",
 } as const satisfies MemberRef;

@@ -20,6 +20,7 @@ export function makePeopleInputsFromChoices(
     }
     const matched = options.known.find((person) => {
       return (
+        !person.isMember &&
         !usedIds.has(person.personId) &&
         makeNameKeyFromName(person.displayName) ===
           makeNameKeyFromName(choice.displayName)

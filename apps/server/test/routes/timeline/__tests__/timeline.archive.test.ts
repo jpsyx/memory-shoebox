@@ -80,7 +80,11 @@ describe("GET /api/timeline", () => {
     expect(item?.itemId).toBe(itemId);
     expect(item?.kind).toBe("photo");
     expect(item?.isUnseen).toBe(true);
-    expect(item?.uploadedBy).toEqual({ memberId, displayName: "Lucía" });
+    expect(item?.uploadedBy).toEqual({
+      avatar: null,
+      memberId,
+      displayName: "Lucía",
+    });
     expect(item?.burst).toBeNull();
     expect(item?.visibility).toEqual({
       visibilityRuleId: EVERYONE_VISIBILITY_RULE_ID,

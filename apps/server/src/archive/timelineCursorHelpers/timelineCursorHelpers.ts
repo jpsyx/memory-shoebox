@@ -50,6 +50,7 @@ export function makeDigestFromFilter(filter: Readonly<TimelineFilter>): string {
   const normalised = JSON.stringify([
     filter.tagIds,
     filter.personIds,
+    filter.memberId ?? "",
     filter.from ?? "",
     filter.until ?? "",
     filter.attachedToMilestoneId ?? "",

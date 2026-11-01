@@ -120,3 +120,92 @@ describe("upload label modal", () => {
     client.clear();
   });
 });
+
+it("persists explicit ad-hoc creation beside a same-name member as a typed label", async () => {
+  const memberId = makeUploadFileFromPosition(3001).fileId;
+  const harness = await renderUploadLabelModal({
+    kind: "person",
+    people: [
+      {
+        person: { personId: memberId, displayName: "Jorge", isMember: true },
+        itemCount: 1,
+        firstCapturedOn: null,
+        lastCapturedOn: null,
+        face: null,
+      },
+    ],
+  });
+  await userEvent.type(
+    screen.getByRole("combobox", { name: "Who is in them" }),
+    "Jorge",
+  );
+  await userEvent.click(await screen.findByRole("option", { name: "Jorge" }));
+  await userEvent.type(
+    screen.getByRole("combobox", { name: "Who is in them" }),
+    "Jorge",
+  );
+  await userEvent.click(
+    await screen.findByRole("option", { name: "Add “Jorge” (not a member)" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Untag Jorge (not a member)" }),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Untag Jorge" })).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Untag Jorge" }));
+  await userEvent.click(screen.getByRole("button", { name: "Tag all 1" }));
+  await waitFor(() => {
+    return expect(harness.api.createUploadEdit).toHaveBeenCalled();
+  });
+  expect(harness.api.createUploadEdit.mock.calls[0]).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        body: expect.objectContaining({
+          kind: "person",
+          labelSnapshot: "Jorge",
+        }),
+      }),
+    ]),
+  );
+});
+
+it("keeps an explicit member selection when duplicate ad-hoc people share its name", async () => {
+  const personId = makeUploadFileFromPosition(3010).fileId;
+  const harness = await renderUploadLabelModal({
+    kind: "person",
+    people: [
+      {
+        person: { personId, displayName: "Jorge", isMember: true },
+        itemCount: 0,
+        firstCapturedOn: null,
+        lastCapturedOn: null,
+        face: null,
+      },
+      ...[3011, 3012].map((position) => {
+        return {
+          person: {
+            personId: makeUploadFileFromPosition(position).fileId,
+            displayName: "Jorge",
+            isMember: false,
+          },
+          itemCount: 0,
+          firstCapturedOn: null,
+          lastCapturedOn: null,
+          face: null,
+        };
+      }),
+    ],
+  });
+  await userEvent.type(
+    screen.getByRole("combobox", { name: "Who is in them" }),
+    "Jorge",
+  );
+  await userEvent.click(await screen.findByRole("option", { name: "Jorge" }));
+  expect(screen.queryByRole("combobox", { name: "Which Jorge?" })).toBeNull();
+  expect(screen.queryByText("Which Jorge?")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Tag all 1" }));
+  await waitFor(() => {
+    expect(harness.api.createUploadEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ personId }) }),
+    );
+  });
+});

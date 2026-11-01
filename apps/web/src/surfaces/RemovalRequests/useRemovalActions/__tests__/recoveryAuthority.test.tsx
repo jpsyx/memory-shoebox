@@ -85,6 +85,7 @@ function _installWithdrawalRecovery(): WithdrawalRecoveryState {
   };
 
   const viewer = {
+    avatar: null,
     memberId: REQUEST.requestedBy.memberId,
     displayName: REQUEST.requestedBy.displayName,
     role: "uploader" as const,

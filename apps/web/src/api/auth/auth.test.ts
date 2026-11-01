@@ -64,10 +64,13 @@ describe("createSession", () => {
       {
         me: {
           member: {
+            avatar: null,
             memberId: "018f0000-0000-7000-8000-000000000000",
             displayName: "Abuela",
           },
           storedDisplayName: null,
+          profileComplete: false,
+          suggestedDisplayName: null,
           email: "abuela@example.com",
           role: "viewer",
           notify: {
@@ -75,6 +78,7 @@ describe("createSession", () => {
             onComment: true,
             onReply: true,
             onRemoval: true,
+            onCommentTag: true,
           },
           joinedAt: "2026-09-28T10:00:00.000Z",
           lastSignedInAt: "2026-09-28T10:00:00.000Z",

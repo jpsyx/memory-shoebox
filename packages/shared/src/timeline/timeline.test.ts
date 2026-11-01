@@ -210,7 +210,7 @@ describe("tagFacetSchema", () => {
 
 describe("personFacetSchema", () => {
   it("refuses a chip carrying exactly one count, but the wrong one", () => {
-    const person = { personId: TAG_ID, displayName: "Elena" };
+    const person = { personId: TAG_ID, displayName: "Elena", isMember: false };
 
     expect(
       personFacetSchema.safeParse({
@@ -230,4 +230,12 @@ describe("filterFacetsResponseSchema", () => {
         .resultCount,
     ).toBe(0);
   });
+});
+
+it("retains a UUID member across archive query consumers", () => {
+  const member = "018f0000-0000-7000-8000-00000000f001";
+  expect(timelineRequestSchema.parse({ member }).member).toBe(member);
+  expect(timelineRequestSchema.safeParse({ member: "bad" }).success).toBe(
+    false,
+  );
 });

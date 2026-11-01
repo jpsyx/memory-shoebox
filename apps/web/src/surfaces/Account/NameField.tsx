@@ -1,7 +1,8 @@
-import { Button, TextInput } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
+import { profileNameError } from "@/surfaces/ProfileCompletion/profileNameCopy";
 import { Prose } from "@/system/typography/Prose";
+import { Button, TextInput } from "@mantine/core";
+import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Props for the name field: the member's own record, the save callback, and
@@ -22,30 +23,47 @@ type Props = {
  * sections (the name, the address) rather than as this field's state.
  *
  * `storedDisplayName` is the raw column, null until somebody types a name of
- * their own. `member.displayName` is resolved, falling back to the email's
- * local part. The field's value starts from the first and its placeholder is
- * the second, so the fallback shows as a hint rather than as text the member
- * appears to have typed.
+ * their own. `member.displayName` is the public name or Member. The field's
+ * value starts from the stored name and its placeholder is the public label.
  */
-export function NameField({
-  me,
-  onSave,
-  isSaving,
-  savedAt,
-  error,
-}: Readonly<Props>): ReactNode {
-  const [value, setValue] = useState(me.storedDisplayName ?? "");
+function useNameField(props: Readonly<Props>) {
+  const [value, setValue] = useState(props.me.storedDisplayName ?? "");
+  const input = useRef<HTMLInputElement>(null);
+  const [validationError, setValidationError] = useState<string>();
+  useEffect(() => {
+    if (props.error) {
+      input.current?.focus();
+    }
+  }, [props.error]);
   const trimmed = value.trim();
-  const storedValue = me.storedDisplayName ?? "";
+  const storedValue = props.me.storedDisplayName ?? "";
   const hasChanged = trimmed !== storedValue;
 
   const onSubmit = () => {
-    onSave({ displayName: trimmed === "" ? null : trimmed });
+    const invalid = profileNameError(value);
+    setValidationError(invalid);
+    if (invalid) {
+      input.current?.focus();
+      return;
+    }
+    props.onSave({ displayName: trimmed });
   };
 
+  return { value, setValue, input, validationError, hasChanged, onSubmit };
+}
+
+/**
+ * The member's editable claimed name with inline validation and save status.
+ */
+export function NameField(props: Readonly<Props>): ReactNode {
+  const { value, setValue, input, validationError, hasChanged, onSubmit } =
+    useNameField(props);
+  const { me, isSaving, savedAt, error } = props;
   return (
     <>
       <TextInput
+        ref={input}
+        error={validationError ?? error}
         label="Your name"
         description="What the family sees on your comments and on anything you put up."
         placeholder={me.member.displayName}
@@ -54,7 +72,6 @@ export function NameField({
           setValue(event.currentTarget.value);
         }}
       />
-      {error === undefined ? null : <Prose role="alert">{error}</Prose>}
       <Button
         variant="default"
         size="sm"
@@ -63,7 +80,9 @@ export function NameField({
       >
         Save your name
       </Button>
-      {savedAt === undefined || hasChanged ? null : <Prose>Saved.</Prose>}
+      {savedAt === undefined || hasChanged ? null : (
+        <Prose role="status">Name saved.</Prose>
+      )}
     </>
   );
 }

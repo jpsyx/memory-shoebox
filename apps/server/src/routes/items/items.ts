@@ -1,3 +1,4 @@
+import { getCommentTagCandidates } from "./commentTagCandidatesRoute.ts";
 import { patchItemBurst } from "./itemBurstRoute.ts";
 import { postBulkEditItems } from "./bulkEditItemsRoute.ts";
 import {
@@ -42,6 +43,7 @@ import {
  */
 export async function itemsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/items/:itemId", getItem);
+  app.get("/items/:itemId/comment-tag-candidates", getCommentTagCandidates);
 
   app.get("/items/:itemId/original", getItemOriginal);
 

@@ -1,3 +1,4 @@
+import { PersonIdentityLabel } from "@/system/personLabel/PersonIdentityLabel";
 import type { ReactNode } from "react";
 import type { PersonFacet, TagFacet } from "@memory-shoebox/shared";
 import { Prose } from "@/system/typography/Prose";
@@ -23,7 +24,12 @@ export function Explanation({
   return (
     <Prose onPanel>
       {people.map((facet) => {
-        return `${facet.person.displayName} is in ${facet.ownCount ?? 0} photographs. `;
+        return (
+          <span key={facet.person.personId}>
+            <PersonIdentityLabel person={facet.person} />
+            {` is in ${facet.ownCount ?? 0} photographs. `}
+          </span>
+        );
       })}
       {tags.map((facet) => {
         return `There are ${facet.ownCount ?? 0} tagged ${facet.tag.name}. `;

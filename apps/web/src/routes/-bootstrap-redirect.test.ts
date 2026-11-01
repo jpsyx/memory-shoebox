@@ -40,9 +40,11 @@ const INVITATION = {
 function _makeRouterFromResponse({
   initial,
   track = true,
+  initialHref = "/people?tag=family",
 }: {
   initial: BootstrapResponse;
   track?: boolean;
+  initialHref?: string;
 }): BootstrapRouterFixture {
   let failDestination = false;
   const client = new QueryClient();
@@ -56,7 +58,15 @@ function _makeRouterFromResponse({
   });
   const router = createRouter({
     routeTree: root.addChildren(
-      ["/", "/people", "/setup", "/setup/invite", "/sign-in"].map((path) => {
+      [
+        "/",
+        "/people",
+        "/setup",
+        "/setup/invite",
+        "/sign-in",
+        "/complete-profile",
+        "/items/$itemId",
+      ].map((path) => {
         return createRoute({
           getParentRoute: () => {
             return root;
@@ -71,7 +81,7 @@ function _makeRouterFromResponse({
       }),
     ),
     context: { queryClient: client },
-    history: createMemoryHistory({ initialEntries: ["/people?tag=family"] }),
+    history: createMemoryHistory({ initialEntries: [initialHref] }),
   });
   if (track) {
     installBootstrapRedirectTracking({ router, client });
@@ -281,5 +291,60 @@ it("a preload between redirect legs neither reads nor consumes the receipt", asy
   expect(router.state.location.pathname).toBe("/setup");
   expect(fetcher).toHaveBeenCalledTimes(1);
   stop();
+  client.clear();
+});
+
+it.each([
+  "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
+  "/sign-in?redirect=%2Fitems%2F00000000-0000-4000-8000-000000000001%3Fcomment%3D00000000-0000-4000-8000-000000000002",
+])(
+  "preserves the original deep link on profile completion from %s",
+  async (initialHref) => {
+    const { router, client } = _makeRouterFromResponse({
+      initial: {
+        ...ANONYMOUS,
+        account: createMeResponse({ storedDisplayName: null }),
+      },
+      initialHref,
+    });
+    await router.load();
+    expect(router.state.location.pathname).toBe("/complete-profile");
+    expect(router.state.location.search).toEqual({
+      redirect:
+        "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
+    });
+    client.clear();
+  },
+);
+it("preserves the original destination when completion loses its session", async () => {
+  const { router, client } = _makeRouterFromResponse({
+    initial: ANONYMOUS,
+    initialHref:
+      "/complete-profile?redirect=%2Fitems%2F00000000-0000-4000-8000-000000000001%3Fcomment%3D00000000-0000-4000-8000-000000000002",
+  });
+  await router.load();
+  expect(router.state.location.pathname).toBe("/sign-in");
+  expect(router.state.location.search).toEqual({
+    redirect:
+      "/items/00000000-0000-4000-8000-000000000001?comment=00000000-0000-4000-8000-000000000002",
+  });
+  client.clear();
+});
+it("retires private data when a fresh bootstrap observes another session of the same account", async () => {
+  const first = createMeResponse();
+  const { router, client, setResponse } = _makeRouterFromResponse({
+    initial: { ...ANONYMOUS, account: first },
+  });
+  await router.load();
+  client.setQueryData(["items", "private"], { body: "old data" });
+  setResponse({
+    ...ANONYMOUS,
+    account: { ...first, sessionId: "00000000-0000-4000-8000-000000000099" },
+  });
+  await router.navigate({ to: "/people" });
+  expect(client.getQueryData(["items", "private"])).toBeUndefined();
+  expect(client.getQueryData(["me"])).toMatchObject({
+    sessionId: "00000000-0000-4000-8000-000000000099",
+  });
   client.clear();
 });

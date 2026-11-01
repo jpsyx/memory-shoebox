@@ -39,7 +39,7 @@ describe("what readItemDetail's payload carries", () => {
     expect(detail.media.altText).toBe("Mateo, 14 September 2026");
     expect(detail.altTextOverride).toBeNull();
     expect(detail.people).toEqual([
-      { personId: mateoId, displayName: "Mateo" },
+      { personId: mateoId, displayName: "Mateo", isMember: false },
     ]);
     await database.destroy();
   });

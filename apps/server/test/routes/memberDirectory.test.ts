@@ -17,6 +17,7 @@ const VIEWER = {
   sessionId: "00000000-0000-4000-8000-000000000002",
   role: "admin",
   isAdmin: true,
+  profileComplete: true,
   visibleRuleIds: [],
 } as const satisfies Viewer;
 
@@ -33,8 +34,9 @@ function _expectLatestMemberDirectoryFacts(
       return member.memberId === memberId;
     }),
   ).toEqual({
+    avatar: null,
     memberId,
-    displayName: "rosa",
+    displayName: "Member",
     email: "rosa@example.com",
     role: "admin",
     status: "active",
@@ -45,7 +47,7 @@ function _expectLatestMemberDirectoryFacts(
     createdAt: NOW,
     invitation: {
       invitationId,
-      invitedBy: { memberId, displayName: "rosa" },
+      invitedBy: { avatar: null, memberId, displayName: "Member" },
       createdAt: NOW,
       expiresAt: shiftDays({ instant: NOW, days: 7 }),
       sendCount: 1,
@@ -123,13 +125,15 @@ describe("member directory", () => {
           return { ...VIEWER, role, isAdmin: false };
         },
       });
-      const memberId = await insertMember(database);
+      const memberId = await insertMember(database, {
+        display_name: "Abuela Rosa",
+      });
       await insertMember(database, { status: "removed" });
       const response = await app.inject("/api/members");
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({
         shape: "directory",
-        members: [{ memberId, displayName: "Abuela Rosa" }],
+        members: [{ avatar: null, memberId, displayName: "Abuela Rosa" }],
         nextCursor: null,
       });
       expect(response.json().members[0]).not.toHaveProperty("email");
@@ -139,7 +143,7 @@ describe("member directory", () => {
       await close();
     },
   );
-  it("keeps the same three read queries as the directory grows", async () => {
+  it("keeps the same four batched read queries as the directory grows", async () => {
     const fixture = await createOwnedTestApp({
       authenticate: async () => {
         return VIEWER;
@@ -164,7 +168,7 @@ describe("member directory", () => {
     counted.reset();
     expect((await fixture.app.inject("/api/members")).statusCode).toBe(200);
     expect(counted.getQueryCount()).toBe(smallCount);
-    expect(smallCount).toBe(3);
+    expect(smallCount).toBe(4);
     await fixture.close();
   });
   it("requires authentication and rejects unknown or invalid filters", async () => {

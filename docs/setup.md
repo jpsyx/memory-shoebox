@@ -36,7 +36,9 @@ of the address used to access the server.
 
 Creation takes a `BEGIN IMMEDIATE` writer lock, rechecks the absence of every
 member row, then writes the active admin, settings, durable progress and a
-standard 30-day hashed-token session. Settings changes have existing
+standard 30-day hashed-token session. The admin name is validated and permanently
+claimed in the same transaction, including linked-person synchronization and
+`profile_completed_at`. Bootstrap therefore returns `me.profileComplete: true`. Settings changes have existing
 `setting_changed` audit events attributed to the new admin and device. All
 writes and the composed session-bootstrap response belong to that transaction.
 An error rolls everything back. A competing request receives

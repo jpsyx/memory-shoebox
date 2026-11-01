@@ -68,6 +68,7 @@ export function makeItem(
     },
     isUnseen: false,
     uploadedBy: {
+      avatar: null,
       memberId: "018f0000-0000-7000-8000-00000000c001",
       displayName: "Papá",
     },

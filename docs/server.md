@@ -82,30 +82,31 @@ by resource, one module per group.
 
 The registered route modules include:
 
-| Module                         | Covers                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| `health.ts`                    | `GET /api/health`, for Fly.io's health check                               |
-| `auth.ts`                      | Sign-in codes and sessions, all four anonymous                             |
-| `bootstrap.ts`                 | Current navigation account and setup in one no-store response              |
-| `me.ts`                        | The signed-in member's own account and their devices                       |
-| `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                         |
-| `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                |
-| `registerObservationRoutes.ts` | `GET /api/presence`, item viewers and the admin activity feed              |
-| `registerMailHealthRoutes.ts`  | `GET /api/mail/health`: actionable configuration and delivery health       |
-| `timeline.ts`                  | `GET /api/timeline` and `GET /api/timeline/rail`                           |
-| `filters.ts`                   | `GET /api/filters/facets`                                                  |
-| `milestones/`                  | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)    |
-| `removals/`                    | Removal queues, item asks, and settlements: see [removals.md](removals.md) |
-| `tags.ts`                      | `GET /api/tags`                                                            |
-| `people.ts`                    | `GET /api/people`                                                          |
-| `items/`                       | One item: the permalink, the download, every edit, the                     |
-|                                | delete, comments on it, reactions, and the seen latch                      |
-| `comments.ts`                  | A comment by its own id: edit, delete, and its pair of                     |
-|                                | reaction routes                                                            |
-| `bursts.ts`                    | `GET /api/bursts/:burstId/frames`                                          |
-| `visibilityRules.ts`           | `POST /api/visibility-rules/resolve`                                       |
-| `uploadSessions/`              | The upload session's twelve routes, from opening a                         |
-|                                | draft to committing it                                                     |
+| Module                         | Covers                                                                      |
+| ------------------------------ | --------------------------------------------------------------------------- |
+| `health.ts`                    | `GET /api/health`, for Fly.io's health check                                |
+| `auth.ts`                      | Sign-in codes and sessions, all four anonymous                              |
+| `bootstrap.ts`                 | Current navigation account and setup in one no-store response               |
+| `me.ts`                        | The signed-in member's own account and their devices                        |
+| `publicSettings.ts`            | `GET /api/public-settings`, the one anonymous read                          |
+| `registerSettingsRoutes.ts`    | `GET /api/settings`: admin settings, provenance and storage                 |
+| `registerObservationRoutes.ts` | `GET /api/presence`, item viewers and the admin activity feed               |
+| `registerMailHealthRoutes.ts`  | `GET /api/mail/health`: actionable configuration and delivery health        |
+| `timeline.ts`                  | `GET /api/timeline` and `GET /api/timeline/rail`                            |
+| `filters.ts`                   | `GET /api/filters/facets`                                                   |
+| `milestones/`                  | Occasion CRUD and attachment deltas: see [milestones.md](milestones.md)     |
+| `removals/`                    | Removal queues, item asks, and settlements: see [removals.md](removals.md)  |
+| `tags.ts`                      | `GET /api/tags`                                                             |
+| `people.ts`                    | `GET /api/people`                                                           |
+| `memberCollections.ts`         | `GET /api/member-collections/:memberId`: authenticated public identity only |
+| `items/`                       | One item: the permalink, the download, every edit, the                      |
+|                                | delete, comments on it, reactions, and the seen latch                       |
+| `comments.ts`                  | A comment by its own id: edit, delete, and its pair of                      |
+|                                | reaction routes                                                             |
+| `bursts.ts`                    | `GET /api/bursts/:burstId/frames`                                           |
+| `visibilityRules.ts`           | `POST /api/visibility-rules/resolve`                                        |
+| `uploadSessions/`              | The upload session's twelve routes, from opening a                          |
+|                                | draft to committing it                                                      |
 
 `health.ts` is the odd one: it reports the server version and uptime, is
 unauthenticated, and deliberately reveals nothing else. `auth.ts`, `me.ts` and
@@ -158,7 +159,7 @@ respect.
 | `readItemDetail/`                  | `ItemDetail`, composed once for the read route and for every mutation                            |
 | `readBurstFrameRefs/`              | The strip: its rows, the refs, the aggregate, and the frames route's paging                      |
 | `makeBurstSummaryFromRows.ts`      | `BurstSummary`, from the totals over **every** visible sibling                                   |
-| `readCommentThread.ts`             | One item's whole thread, oldest first, with its reactions                                        |
+| `readCommentThread.ts`             | One item's whole thread, oldest first, with reactions and batched comment-tag occurrences        |
 | `readReactionSummaries.ts`         | Reaction rows to summaries, for items and for a whole thread of comments                         |
 | `readItemSummariesByIds/`          | `ItemSummary` per id, for the selection save's response                                          |
 | `setItemTags.ts`                   | The tag set by diff, and `getTagIdsFromNames`, which upload ingest shares                        |
@@ -256,6 +257,20 @@ it, `itemPermissionsMatrix.batch` runs the selection route beside it, and
 `itemPermissionsMatrix.demotedUploader` covers the persona the four columns
 cannot express. The expected column is the table above. **If a row fails, fix
 the route.**
+
+### Comment account references
+
+`src/commentTags/` owns eligible account lookup, occurrence validation and
+persistence. `GET /api/items/:itemId/comment-tag-candidates` authorizes the
+requester's item before searching completed active accounts through the actual
+visibility predicate. It returns public member references only.
+
+Both comment creation and editing validate current names and new-target access
+inside `BEGIN IMMEDIATE`, then write body and occurrence ranges atomically.
+Existing occurrence IDs preserve historical member identity and label snapshots.
+Older clients omitting tags cannot overwrite a tagged comment. Thread reads add
+one batch for all occurrences, independent of thread length. See
+[comment tagging](comment-tagging.md) for search order and recoverable errors.
 
 ### One composer
 
@@ -983,7 +998,7 @@ The runner reads each registered source file to record its SHA-256 checksum.
 [Catalog upgrades and recovery](migrations.md) describes the transaction,
 pre-upgrade backups, legacy checksum adoption, and offline restore commands.
 
-There are fifteen. The first seven match the sections `data-models.md` is
+There are twenty-one. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
 adds a capability without rewriting the shipped schema:
 
@@ -1007,8 +1022,11 @@ adds a capability without rewriting the shipped schema:
 | `0016_media_navigation_indexes`  | Ordered bounded media-neighbor capture and burst probes                                                       |
 | `0017_media_processing`          | Durable processing jobs, output ownership and discovery progress; expanded rendition purposes                 |
 | `0018_timeline_uploader_capture` | Uploader and capture-date index for viewer-owned timeline windows                                             |
+| `0019_member_name_claims`        | Permanent account-name claims, profile completion and invitation suggestions                                  |
+| `0020_member_avatars`            | Durable avatar uploads and nullable current-member pointer                                                    |
+| `0021_comment_tags`              | Explicit comment occurrences and the permanent per-recipient notification ledger                              |
 
-Thirty-nine tables in total. Column-level detail belongs in
+Forty-three tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 
@@ -1336,3 +1354,21 @@ progress. The response is always `Cache-Control: no-store`. Existing account and
 setup endpoints keep their contracts, including first-admin creation and
 completion recovery. The web root uses this response as current navigation
 authority, independently of previously cached identity.
+
+## Member avatars
+
+Migration `0020_member_avatars` adds durable immutable avatar upload ownership,
+indexed by owner and state/deadline, and the nullable current member pointer.
+`avatars/` provides own-avatar reservation, fenced publication/removal, and batched
+private reads. `routes/memberAvatars.ts` registers the JSON reservation, removal,
+and authenticated member renewal routes. Binary image processing/upload is a
+separate slice. No storage transfer runs in an avatar SQL transaction.
+
+`readMemberRefs` and `getMeDtoFromMemberId` require database, B2 and the explicit
+request clock so member references carry the current nullable avatar everywhere.
+Other directory/provenance readers batch through `readMemberAvatars`. Avatar
+`presignGet` calls use a one-hour TTL and an explicit signing date; the low-level
+signer aligns that date to seconds, making reference issuance/expiry match the
+signature exactly. Existing download callers retain their default seven-day TTL.
+See [member profiles](member-profiles.md#private-avatars) for conflict, rollback,
+retained-account, and storage key contracts.

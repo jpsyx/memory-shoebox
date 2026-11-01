@@ -85,6 +85,7 @@ function _makeSummaryFromRows(options: {
               options.members.get(row.memberId) ?? {
                 memberId: row.memberId,
                 displayName: "",
+                avatar: null,
               }
             );
           }),

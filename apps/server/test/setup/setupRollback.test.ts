@@ -14,6 +14,23 @@ const BODY = {
   public: { baseUrl: "https://photos.example.com" },
 } as const satisfies CreateSetupRequest;
 
+async function _expectRolledBackClaimedIdentity(
+  context: TestApp,
+): Promise<void> {
+  expect(
+    await context.database.selectFrom("members").selectAll().execute(),
+  ).toEqual([]);
+  expect(
+    await context.database
+      .selectFrom("member_name_claims")
+      .selectAll()
+      .execute(),
+  ).toEqual([]);
+  expect(
+    await context.database.selectFrom("people").selectAll().execute(),
+  ).toEqual([]);
+}
+
 async function _expectRolledBackSetupCatalog(
   options: Readonly<{
     refused: LightMyRequestResponse;
@@ -25,9 +42,7 @@ async function _expectRolledBackSetupCatalog(
   expect(refused.statusCode).toBe(500);
   expect(refused.json().error).toBe("internal_error");
   expect(refused.headers["set-cookie"]).toBeUndefined();
-  expect(
-    await context.database.selectFrom("members").selectAll().execute(),
-  ).toEqual([]);
+  await _expectRolledBackClaimedIdentity(context);
   expect(
     await context.database.selectFrom("sessions").selectAll().execute(),
   ).toEqual([]);
@@ -74,6 +89,27 @@ it("rolls back admin, settings, progress, session and audit when the late audit 
         })
       ).statusCode,
     ).toBe(201);
+  } finally {
+    await context.close();
+  }
+});
+
+it("rolls back the initial admin and its claim when linked-person creation fails", async () => {
+  const context = await createTestApp();
+  try {
+    const before = await context.database
+      .selectFrom("settings")
+      .selectAll()
+      .execute();
+    await sql`create trigger tr__people__abort_setup before insert on people begin select raise(abort, 'test person rollback'); end`.execute(
+      context.database,
+    );
+    const refused = await context.app.inject({
+      method: "POST",
+      url: "/api/setup",
+      payload: BODY,
+    });
+    await _expectRolledBackSetupCatalog({ refused, context, before });
   } finally {
     await context.close();
   }
