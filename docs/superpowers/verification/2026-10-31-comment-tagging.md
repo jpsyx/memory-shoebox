@@ -401,10 +401,61 @@ consumers passed 39/39. The final full check includes those corrections. Existin
 jsdom `scrollTo()` notices and the third-party build directive warning remain;
 they did not fail the checks.
 
-The final resource image, browser run and current source share the selected
-12 MP runtime behavior. Only erased type annotations and unit-test fixtures
-changed after the image build; source hashes and that distinction are retained
-in `source-manifest.json`. No repeated resource or visual sweep was required.
-Independent task/whole-branch review and consolidated Downloads Markdown/PDF/archive
-delivery remain controller-owned. Actual-target preflight and the native/assistive
-limitations above remain operator gates. Publication and deployment did not run.
+At the V2 measurement snapshot, the resource image, browser run and source shared
+the selected 12 MP runtime behavior. Only erased type annotations and unit-test
+fixtures had changed after that image build; source hashes and that distinction
+are retained in `source-manifest.json`. The later final-review corrections and
+resource-evidence applicability are qualified below. No repeated resource or visual
+sweep was required. Actual-target preflight and the native/assistive limitations
+above remain operator gates. Publication and deployment did not run.
+
+## Final independent review and local handoff
+
+The complete release received one independent whole-branch review through
+`385fe15a` and one scoped re-review of the combined fix through `97e87cfd`.
+The two Important findings were retired private work still issuing deferred HTTP
+and repeated Ctrl/Cmd+Enter submitting after tag selection. Both were corrected
+with permanent actual-hook/input RED/GREEN regressions. The scoped re-review found
+no new Critical or Important breakage and verified the remaining corrections,
+including legal tiny-image crop, fresh same-ID avatar sources, explicit member
+identity choice, TLS cleanup and bounded module/convention/documentation fixes.
+
+The final broad `pnpm check` exited 0 at the combined-fix source: root 302,
+shared 368, emails 56, web 2,463 and server 2,434, totaling 5,623 passing tests.
+The same seven conditional server skips remain, with their exact reasons above.
+The full comment-tagging browser matrix passed 60/60 without retries/skips.
+The affected existing admin same-name identity case passed 1/1 against its safe
+in-memory loopback/no-mail fixture. Its owned expired session was refreshed to
+the actual fixture clock; production authentication and the shared harness were
+unchanged. Root/E2E types and scoped lint/format passed after that E2E-only edit.
+
+The scoped reviewer correctly caught two residual Minor copy defects: an internal
+cancellation class name appeared in CLI text, and one test title said four while
+asserting five notification fields. A documented controller-authorized narrow
+exception corrected exactly those literals and strengthened the exact cancellation
+assertion in `d4c3e281`. The focused CLI test failed on the old text and passed
+after correction; scoped lint/format and exact title/five-assertion inspection
+passed. No further independent review or broad suite ran on that copy/test-only
+follow-up. The original implementer M10 overclaim and scoped verdict are retained
+transparently in the reports; they were not silently rewritten.
+
+The final HEAD was not container-resource-tested. The shared geometry correction
+is only `max(1, floor(shortSide / zoom))`: every previously nonzero crop is identical,
+and none of the recorded large resource fixtures enter that branch. Independent
+source review verified that the 12 MP cap, encoded ROI/fractional sampling, final
+orientation, limits and native lane remain unchanged. Existing measured V2 results
+apply to that unchanged large-image path as source evidence, not a new final-HEAD
+memory measurement. Tiny-image functional tests do not establish a memory bound.
+
+Downloads delivery contains the synchronized feature/plan/spec Markdown and PDFs,
+per-task/final review reports, early and integrated browser captures, the exhaustive
+chronological rulings with costs, and a checksummed raw execution archive retaining
+failed and successful logs, actual fixture/scripts/catalogs and restore/resource
+provenance. PDF pages were rendered and visually inspected, including long tables;
+source-copy and final artifact hashes are recorded in the delivery manifest.
+The exact clean checkout and commit list are recorded in the final delivery report
+and checkout-state manifest. The feature branch/worktree are preserved; main is
+unchanged. No push, merge, PR, provider send, production mutation or deployment ran.
+Physical/native/assistive and actual-target/catalog gates remain unpassed, including
+the screenshot-extent qualification documented above. This is a local implementation
+and automated-verification handoff, not rollout authorization.

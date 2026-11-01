@@ -133,3 +133,9 @@ feature. V1/V2 own final evidence. Record actual commands, results, captures, an
 limitations in `docs/superpowers/verification/2026-10-31-comment-tagging.md` at
 execution time. Do not mark unsupported browser, screen-reader, or runtime claims
 as passing. Implementation decisions and measured resource corrections are recorded in the verification record.
+
+The local implementation and executable acceptance sequence is complete. Final
+whole-branch and scoped fix reviews, the two-item copy exception, measured resource
+provenance, artifact synchronization and remaining manual/operator gates are
+recorded in the verification document. The physical/native V1 acceptance checkbox
+remains open deliberately. Publication and deployment are separate operator work.

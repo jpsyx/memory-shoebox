@@ -146,7 +146,7 @@ an actual collision report exists; no production collision-free claim is made.
       not, bound processing using the existing media-runtime isolation patterns before
       release and rerun the relevant tests; do not silently lower the approved 50 MP
       input support or claim a Promise timeout stops native decoding.
-- [ ] **Final verification:** Run `pnpm check` and
+- [x] **Final verification:** Run `pnpm check` and
       `pnpm exec playwright test -c playwright.comment-tagging.config.ts`. Expect all
       required checks passing, with no actual provider calls. Record commands and
       results, replay compatibility (legacy creates, omitted tags on tagged edits,
@@ -175,7 +175,13 @@ uses a 12 MP intermediate raster and the existing shared decoder lane; approved
 and actual-target preflight precede any operator rollout. See the verification
 record for gate results, not the original expected-output snippets above.
 
-The V2 final-verification checkbox remains open only for the controller-owned
-Downloads Markdown/PDF/archive delivery. Both required executable checks passed:
-`pnpm check` and all 60 browser tests. The server suite has seven existing environment-gated skips, recorded
-explicitly in the verification record.
+V2 local executable and artifact verification is complete. The final broad gate
+passed 5,623 tests with seven existing conditional server skips; all 60 comment-tagging
+browser cases and the targeted existing admin identity case passed. The independent
+whole-branch review and one scoped fix review are recorded. Two mechanical copy
+residuals were then corrected with a documented narrow exception and focused checks,
+without another broad run or independent review. Downloads contains synchronized
+Markdown/PDF reports, inspected captures and the checksummed raw execution archive.
+The V1 physical/native checkbox and actual-target operator gates remain explicitly
+unpassed. See the verification record and delivery report for exact source ranges,
+commands, limitations and artifact provenance.
