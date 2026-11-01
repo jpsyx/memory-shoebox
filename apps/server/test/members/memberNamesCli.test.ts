@@ -43,7 +43,7 @@ it("offers the bare-command action wizard with j/k and arrow navigation and clea
   );
   expect(result.status).toBe(130);
   expect(result.stdout).toBe("");
-  expect(result.stderr).toContain("Cancelled");
+  expect(result.stderr).toBe("⚠️ Cancelled. No assignments staged.\n");
   expect(result.terminal).toContain("> Audit names");
   expect(result.terminal).toContain("Stage assignments");
 });

@@ -43,7 +43,7 @@ describe("surface 9", () => {
     expect(await screen.findByText("Name saved.")).toBeVisible();
   });
 
-  it("saves a switch with one PATCH carrying all four booleans", async () => {
+  it("saves a switch with one PATCH carrying all five booleans", async () => {
     const user = userEvent.setup();
     respondWith();
     renderAccount();

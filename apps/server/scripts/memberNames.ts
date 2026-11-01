@@ -186,7 +186,7 @@ async function _runAction(options: CompleteArguments): Promise<unknown> {
 function _reportFailure(error: unknown): void {
   if (error instanceof MemberNamesCancelled) {
     process.stderr.write(
-      `${memberNamesMessage("⚠️ MemberNamesCancelled. No assignments staged.", "warning")}\n`,
+      `${memberNamesMessage("⚠️ Cancelled. No assignments staged.", "warning")}\n`,
     );
     process.exitCode = 130;
     return;
