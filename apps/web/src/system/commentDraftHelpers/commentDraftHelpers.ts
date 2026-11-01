@@ -1,8 +1,10 @@
-import { makeCommentTagFromSource } from "./commentTagProvenance";
 import type { CommentTagInput, MemberRef } from "@memory-shoebox/shared";
+import { makeCommentTagFromSource } from "./commentTagProvenance";
 /** Words and only the member references explicitly selected by their author. */
 export type CommentDraft = { body: string; commentTags: CommentTagInput[] };
-/** Applies one native text replacement while retaining unaffected references. */
+/**
+ * Applies one native text replacement while retaining unaffected references.
+ */
 export function makeCommentDraftFromEdit(
   options: Readonly<{
     draft: CommentDraft;
@@ -33,7 +35,10 @@ export function makeCommentDraftFromEdit(
     }),
   };
 }
-/** Inserts one explicit member selection, leaving a space for continued typing. */
+/**
+ * Inserts one explicit member selection, leaving a space for continued
+ * typing.
+ */
 export function makeCommentDraftFromMemberSelection(
   options: Readonly<{
     draft: CommentDraft;

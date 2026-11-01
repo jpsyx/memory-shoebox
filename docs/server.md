@@ -998,7 +998,7 @@ The runner reads each registered source file to record its SHA-256 checksum.
 [Catalog upgrades and recovery](migrations.md) describes the transaction,
 pre-upgrade backups, legacy checksum adoption, and offline restore commands.
 
-There are fifteen. The first seven match the sections `data-models.md` is
+There are twenty-one. The first seven match the sections `data-models.md` is
 grouped into; 0008 and 0009 are corrections. The video-conversation migration
 adds a capability without rewriting the shipped schema:
 
@@ -1024,8 +1024,9 @@ adds a capability without rewriting the shipped schema:
 | `0018_timeline_uploader_capture` | Uploader and capture-date index for viewer-owned timeline windows                                             |
 | `0019_member_name_claims`        | Permanent account-name claims, profile completion and invitation suggestions                                  |
 | `0020_member_avatars`            | Durable avatar uploads and nullable current-member pointer                                                    |
+| `0021_comment_tags`              | Explicit comment occurrences and the permanent per-recipient notification ledger                              |
 
-Forty-one tables in total. Column-level detail belongs in
+Forty-three tables in total. Column-level detail belongs in
 [`data-models.md`](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md),
 not here.
 

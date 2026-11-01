@@ -1,10 +1,10 @@
 import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
-import { idSchema } from "@memory-shoebox/shared";
 import {
   makeCommentDraftFromSavedTagIds,
   recordSavedCommentTagIdsInPlace,
 } from "@/system/commentDraftHelpers/commentTagProvenance";
-import type { CommentTagInput, CommentTag } from "@memory-shoebox/shared";
+import type { CommentTag, CommentTagInput } from "@memory-shoebox/shared";
+import { idSchema } from "@memory-shoebox/shared";
 
 /** One editor in an item's conversation. */
 export type DraftKey = { itemId: string } & (
@@ -30,7 +30,10 @@ export type ConversationReturn = {
   scrollTop: number;
   theater: "page" | "window" | "native";
 };
-/** Session-owned actions; retired action closures can never reach a new owner. */
+/**
+ * Session-owned actions; retired action closures can never reach a new
+ * owner.
+ */
 export type ConversationJourney = {
   readDraft: (key: Readonly<DraftKey>) => ConversationDraft | undefined;
   writeDraft: (

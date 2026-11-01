@@ -1,6 +1,9 @@
 import { sql, type Kysely } from "kysely";
 
-/** Adds independent durable avatar ownership without rewriting historical rows. */
+/**
+ * Adds independent durable avatar ownership without rewriting historical
+ * rows.
+ */
 export async function up(database: Kysely<unknown>): Promise<void> {
   await sql`create table member_avatar_uploads (
     id text primary key not null,

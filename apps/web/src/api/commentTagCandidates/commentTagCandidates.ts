@@ -1,11 +1,14 @@
-import { queryOptions } from "@tanstack/react-query";
+import { apiFetch } from "@/api/clientHelpers/clientHelpers";
+import { makeItemPathFromItemId } from "@/api/items/items";
 import {
   commentTagCandidatesResponseSchema,
   type CommentTagCandidatesResponse,
 } from "@memory-shoebox/shared";
-import { apiFetch } from "@/api/clientHelpers/clientHelpers";
-import { makeItemPathFromItemId } from "@/api/items/items";
-/** Eligible candidates keyed by item and the current query, never prior results. */
+import { queryOptions } from "@tanstack/react-query";
+/**
+ * Eligible candidates keyed by item and the current query, never prior
+ * results.
+ */
 export function commentTagCandidatesQueryOptions(
   options: Readonly<{ itemId: string; query: string }>,
 ): ReturnType<

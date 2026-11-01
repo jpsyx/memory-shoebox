@@ -4,9 +4,9 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type Dispatch,
   type ReactNode,
   type RefObject,
-  type Dispatch,
   type SetStateAction,
 } from "react";
 import { QueryClientContext, type QueryClient } from "@tanstack/react-query";
@@ -19,32 +19,19 @@ import {
 import { getInitialsFromDisplayName } from "@/system/labelHelpers/getInitialsFromDisplayName";
 import classes from "./MemberAvatar.module.css";
 
-/** Shows a private avatar with a fixed footprint and one renewal attempt. */
-export function MemberAvatar({
-  member,
-  size,
-}: Readonly<{ member: MemberRef; size: number }>): ReactNode {
-  const { displayed, setFailedUrl } = useMemberAvatarSource(member);
-  return (
-    <span
-      className={classes.avatar}
-      aria-hidden="true"
-      style={{ width: size, height: size, flexBasis: size }}
-    >
-      {displayed ? (
-        <img
-          src={displayed.url}
-          alt=""
-          onError={() => {
-            return setFailedUrl(displayed.url);
-          }}
-        />
-      ) : (
-        getInitialsFromDisplayName(member.displayName)
-      )}
-    </span>
-  );
-}
+type RenewedSource = {
+  avatar: MemberRef["avatar"] | undefined;
+  sourceUrl: string;
+};
+
+type RenewalOptions = {
+  client: QueryClient | undefined;
+  source: MemberRef["avatar"];
+  shouldRenew: boolean;
+  member: MemberRef;
+  setRenewed: Dispatch<SetStateAction<RenewedSource | undefined>>;
+  currentId: RefObject<string | undefined>;
+};
 
 function useMemberAvatarSource(member: Readonly<MemberRef>) {
   const client = useContext(QueryClientContext);
@@ -61,11 +48,16 @@ function useMemberAvatarSource(member: Readonly<MemberRef>) {
       ? account.me.member.avatar
       : member.avatar;
   const [failedUrl, setFailedUrl] = useState<string>();
-  const [renewed, setRenewed] = useState<MemberRef["avatar"]>();
+  const [renewed, setRenewed] = useState<RenewedSource>();
   const sourceId = source?.avatarId;
   const currentId = useRef(sourceId);
   currentId.current = sourceId;
-  const displayed = renewed?.avatarId === sourceId ? renewed : source;
+  const displayed =
+    renewed &&
+    renewed.avatar?.avatarId === sourceId &&
+    renewed.sourceUrl === source?.url
+      ? renewed.avatar
+      : source;
   const isExpired =
     !!displayed && Date.parse(displayed.expiresAt) <= Date.now();
   const shouldRenew = !!displayed && (isExpired || failedUrl === displayed.url);
@@ -86,14 +78,6 @@ function useMemberAvatarSource(member: Readonly<MemberRef>) {
   };
 }
 
-type RenewalOptions = {
-  client: QueryClient | undefined;
-  source: MemberRef["avatar"];
-  shouldRenew: boolean;
-  member: MemberRef;
-  setRenewed: Dispatch<SetStateAction<MemberRef["avatar"] | undefined>>;
-  currentId: RefObject<string | undefined>;
-};
 function useAvatarRenewal({
   client,
   source,
@@ -122,8 +106,35 @@ function useAvatarRenewal({
         isPrivateAuthorityCurrent(client, ticket) &&
         currentId.current === source.avatarId
       ) {
-        setRenewed(avatar);
+        setRenewed({ avatar, sourceUrl: source.url });
       }
     });
   }, [client, member, source, shouldRenew, currentId, setRenewed]);
+}
+
+/** Shows a private avatar with a fixed footprint and one renewal attempt. */
+export function MemberAvatar({
+  member,
+  size,
+}: Readonly<{ member: MemberRef; size: number }>): ReactNode {
+  const { displayed, setFailedUrl } = useMemberAvatarSource(member);
+  return (
+    <span
+      className={classes.avatar}
+      aria-hidden="true"
+      style={{ width: size, height: size, flexBasis: size }}
+    >
+      {displayed ? (
+        <img
+          src={displayed.url}
+          alt=""
+          onError={() => {
+            return setFailedUrl(displayed.url);
+          }}
+        />
+      ) : (
+        getInitialsFromDisplayName(member.displayName)
+      )}
+    </span>
+  );
 }

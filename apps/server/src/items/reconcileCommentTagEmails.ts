@@ -1,5 +1,5 @@
 import type { CommentTag } from "@memory-shoebox/shared";
-import { readEligibleCommentTagMembers } from "../commentTags/readCommentTagCandidates.ts";
+import { readEligibleCommentTagMembers } from "../commentTags/commentTagCandidateHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { enqueueEmail } from "../mail/enqueueEmail/enqueueEmail.ts";
@@ -135,7 +135,10 @@ async function _scheduleRecipient(
   });
 }
 
-/** Reconciles lifetime tag scheduling, cancellation and create-time generic arbitration. */
+/**
+ * Reconciles lifetime tag scheduling, cancellation and create-time generic
+ * arbitration.
+ */
 export async function reconcileCommentTagEmails(
   options: Options,
 ): Promise<void> {

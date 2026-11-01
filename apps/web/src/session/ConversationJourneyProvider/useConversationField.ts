@@ -1,11 +1,14 @@
 import { useLayoutEffect, useMemo, type RefObject } from "react";
-import { useConversationJourney } from "./ConversationJourneyProvider";
 import {
   getDraftIdFromKey,
-  type DraftKey,
   type ConversationJourney,
+  type DraftKey,
 } from "../conversationJourneyHelpers/conversationJourneyHelpers";
-/** Keeps a key stable without coupling its lifetime to render-created objects. */
+import { useConversationJourney } from "./ConversationJourneyProvider";
+/**
+ * Keeps a key stable without coupling its lifetime to render-created
+ * objects.
+ */
 export function useStableConversationKey(key: Readonly<DraftKey>): DraftKey {
   const { itemId, mode, commentId } = key;
   return useMemo(() => {
@@ -14,7 +17,10 @@ export function useStableConversationKey(key: Readonly<DraftKey>): DraftKey {
       : { itemId, mode, commentId: commentId! };
   }, [itemId, mode, commentId]);
 }
-/** Saves native selection and exposes an anchor without moving ordinary focus. */
+/**
+ * Saves native selection and exposes an anchor without moving ordinary
+ * focus.
+ */
 export function useConversationField(
   key: Readonly<DraftKey>,
   fieldRef: RefObject<HTMLTextAreaElement | null>,

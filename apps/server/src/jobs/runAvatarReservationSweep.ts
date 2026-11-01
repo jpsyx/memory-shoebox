@@ -1,8 +1,11 @@
 import type { Kysely } from "kysely";
-import type { Database } from "../db/types/db.types.ts";
 import { retireMemberAvatarUpload } from "../avatars/uploadMemberAvatar.ts";
+import type { Database } from "../db/types/db.types.ts";
 
-/** Retires expired reservations, including a crashed writer's durable ownership. */
+/**
+ * Retires expired reservations, including a crashed writer's durable
+ * ownership.
+ */
 export async function runAvatarReservationSweep(
   options: Readonly<{
     database: Kysely<Database>;

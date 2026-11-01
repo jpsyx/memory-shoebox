@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
+import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import {
   insertItem,
   insertItemPerson,
@@ -12,7 +12,8 @@ import {
 describe("member people migration", () => {
   it("backfills active members without stealing ad-hoc names or replacing linked identities", async () => {
     const database = createDatabase(":memory:");
-    // Bound this historical migration test so later identity upgrades cannot change its fixtures.
+    // Bound this historical migration test so later identity upgrades cannot
+    // change its fixtures.
     const sources = Object.fromEntries(
       Object.entries(await getMigrationSourcesFromFiles()).filter(([name]) => {
         return name < "0019";

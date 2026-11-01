@@ -22,6 +22,12 @@ export function UploadPersonChoice({
   isDisabled,
 }: Readonly<Props>): ReactNode {
   return names.map((name, index) => {
+    const selected = people.find((entry) => {
+      return entry.person.personId === choices[String(index)];
+    });
+    if (selected?.person.isMember) {
+      return null;
+    }
     const matches = people.filter((entry) => {
       return (
         !entry.person.isMember &&

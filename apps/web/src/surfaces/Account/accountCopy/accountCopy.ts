@@ -23,8 +23,9 @@ function _minutes(retryAfterSeconds: number): string {
  */
 export function accountFailure(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (error.code === "name_taken")
+    if (error.code === "name_taken") {
       return "That name is already taken. Try adding your last-name initial, like John M.";
+    }
     if (
       error.code === "invalid_request" &&
       error.details?.fieldErrors?.displayName !== undefined

@@ -28,7 +28,9 @@ function _getLabelFromName(
       ? { kind: "tag", tagId: tag.tag.tagId }
       : { kind: "tag", labelSnapshot: name };
   }
-  if (personId) return { kind: "person", personId };
+  if (personId) {
+    return { kind: "person", personId };
+  }
   const matches = options.options.people.filter((entry) => {
     return (
       !entry.person.isMember &&

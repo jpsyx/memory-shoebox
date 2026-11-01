@@ -18,7 +18,10 @@ export const accountNameSchema = z
 /** A validated account name with normalized display spelling. */
 export type AccountName = z.infer<typeof accountNameSchema>;
 
-/** Derive a locale-independent comparison key while keeping accents meaningful. */
+/**
+ * Derive a locale-independent comparison key while keeping accents
+ * meaningful.
+ */
 export function makeAccountNameKeyFromName(name: string): string {
   return _makeAccountDisplayNameFromName(name).toLowerCase();
 }

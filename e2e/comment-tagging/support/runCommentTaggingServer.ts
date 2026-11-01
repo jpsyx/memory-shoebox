@@ -1,9 +1,3 @@
-import { mkdtempSync, readFileSync, rmSync, chmodSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { execFileSync } from "node:child_process";
-import { createServer, type Server as SecureServer } from "node:https";
-import { request } from "node:http";
 import { fileURLToPath as fileUrlToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { createB2Client } from "../../../apps/server/src/b2/createB2Client/createB2Client.ts";
@@ -12,8 +6,8 @@ import { createTestConfig } from "../../../apps/server/test/helpers/createTestCo
 import { createRecordingEmailService } from "../../../apps/server/test/helpers/createRecordingEmailService.ts";
 import { insertSignedInMember } from "../../../apps/server/test/helpers/insertSignedInMember.ts";
 import {
-  insertPerson,
   insertItemPerson,
+  insertPerson,
 } from "../../../apps/server/test/helpers/seedHelpers/archiveSeedHelpers.ts";
 import { insertComment } from "../../../apps/server/test/helpers/seedHelpers/itemSeedHelpers.ts";
 import {
@@ -33,6 +27,17 @@ type Context = Awaited<ReturnType<typeof createTestApp>>;
 
 /** Exactly 80 characters, including the final distinguishing surname. */
 export const LONG_PERSON_NAME = `Alexandria ${"Montgomery ".repeat(6)}Lee`;
+
+/** The fixture lifetime is owned by the Playwright test process. */
+export type CommentTaggingCatalog = Context &
+  Awaited<ReturnType<typeof _seedArchive>> & {
+    members: Awaited<ReturnType<typeof _seedMembers>>;
+    origin: string;
+    endpoint: string;
+    sender: ReturnType<typeof createRecordingEmailService>;
+    objects: Map<string, StoredObject>;
+    drainMail: () => ReturnType<typeof runMailQueueOnce>;
+  };
 
 async function _seedMembers(database: Context["database"]) {
   const names = [
@@ -217,101 +222,6 @@ async function _startBucket(
   return { bucket, origins, endpoint };
 }
 
-/** Real HTTP app, private disposable catalog and local S3, with recorded mail. */
-export async function runCommentTaggingServer(): Promise<CommentTaggingCatalog> {
-  process.env.NODE_ENV = "development";
-  process.env.ENABLE_FAKE_EMAIL = "true";
-  const config = _getSafeConfig("http://127.0.0.1:1");
-  const sender = createRecordingEmailService();
-  const context = await createTestApp({
-    config,
-    emailService: sender,
-    mailDomainReader: "none",
-    clock: () => {
-      return new Date();
-    },
-  });
-  let bucket: Awaited<ReturnType<typeof _startBucket>>["bucket"] | undefined;
-  const close = async () => {
-    try {
-      await context.close();
-    } finally {
-      if (bucket) {
-        bucket.closeAllConnections();
-        await new Promise<void>((fulfill) => {
-          return bucket!.close(() => {
-            fulfill();
-          });
-        });
-      }
-    }
-  };
-  try {
-    return await _startCatalog(
-      context,
-      sender,
-      (started) => {
-        bucket = started;
-      },
-      close,
-    );
-  } catch (failure) {
-    await close();
-    throw failure;
-  }
-}
-
-/** The fixture lifetime is owned by the Playwright test process. */
-export type CommentTaggingCatalog = Context &
-  Awaited<ReturnType<typeof _seedArchive>> & {
-    members: Awaited<ReturnType<typeof _seedMembers>>;
-    origin: string;
-    endpoint: string;
-    sender: ReturnType<typeof createRecordingEmailService>;
-    objects: Map<string, StoredObject>;
-    drainMail: () => ReturnType<typeof runMailQueueOnce>;
-  };
-
-/** HTTPS only for owned-browser Secure-cookie acceptance, with no trust changes. */
-export async function startSecureCommentTaggingProxy(
-  catalog: CommentTaggingCatalog,
-): Promise<{ origin: string; close: () => Promise<void> }> {
-  [catalog.origin, catalog.endpoint].forEach((value) => {
-    if (new URL(value).hostname !== "127.0.0.1") {
-      throw new Error("Refusing non-loopback proxy upstream");
-    }
-  });
-  const { directory, key, certificate } = _makeTemporaryCertificate();
-  const server = _makeSecureProxy(catalog, key, certificate);
-  await new Promise<void>((fulfill) => {
-    server.listen(0, "127.0.0.1", fulfill);
-  });
-  const origin = `https://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const close = async () => {
-    server.closeAllConnections();
-    await new Promise<void>((fulfill) => {
-      server.close(() => {
-        fulfill();
-      });
-    });
-    rmSync(directory, { recursive: true, force: true });
-  };
-  try {
-    const signing = createB2Client({ ...catalog.config.b2, endpoint: origin });
-    catalog.b2.presignGet = signing.presignGet;
-    catalog.b2.getMediaLease = signing.getMediaLease;
-    await catalog.database
-      .updateTable("settings")
-      .set({ value: JSON.stringify(origin) })
-      .where("key", "=", "public.base_url")
-      .execute();
-    return { origin, close };
-  } catch (failure) {
-    await close();
-    throw failure;
-  }
-}
-
 async function _startCatalog(
   context: Context,
   sender: ReturnType<typeof createRecordingEmailService>,
@@ -357,66 +267,49 @@ async function _startCatalog(
   };
 }
 
-function _makeTemporaryCertificate() {
-  const directory = mkdtempSync(join(tmpdir(), "comment-tagging-tls-"));
-  chmodSync(directory, 0o700);
-  const key = join(directory, "key.pem");
-  const certificate = join(directory, "certificate.pem");
-  execFileSync(
-    "openssl",
-    [
-      "req",
-      "-x509",
-      "-newkey",
-      "rsa:2048",
-      "-nodes",
-      "-keyout",
-      key,
-      "-out",
-      certificate,
-      "-days",
-      "1",
-      "-subj",
-      "/CN=127.0.0.1",
-      "-addext",
-      "subjectAltName=IP:127.0.0.1",
-    ],
-    { stdio: "ignore" },
-  );
-  chmodSync(key, 0o600);
-  return { directory, key, certificate };
-}
-
-function _makeSecureProxy(
-  catalog: CommentTaggingCatalog,
-  key: string,
-  certificate: string,
-): SecureServer {
-  return createServer(
-    { key: readFileSync(key), cert: readFileSync(certificate) },
-    (incoming, outgoing) => {
-      const upstream = incoming.url?.startsWith(
-        `/${E2E_SERVER_ENVIRONMENT.B2_BUCKET}/`,
-      )
-        ? catalog.endpoint
-        : catalog.origin;
-      const url = new URL(incoming.url ?? "/", upstream);
-      if (url.origin !== upstream) {
-        outgoing.writeHead(400).end();
-        return;
-      }
-      const target = request(
-        url,
-        { method: incoming.method, headers: incoming.headers },
-        (response) => {
-          outgoing.writeHead(response.statusCode ?? 502, response.headers);
-          response.pipe(outgoing);
-        },
-      );
-      target.on("error", () => {
-        outgoing.writeHead(502).end();
-      });
-      incoming.pipe(target);
+/**
+ * Real HTTP app, private disposable catalog and local S3, with recorded
+ * mail.
+ */
+export async function runCommentTaggingServer(): Promise<CommentTaggingCatalog> {
+  process.env.NODE_ENV = "development";
+  process.env.ENABLE_FAKE_EMAIL = "true";
+  const config = _getSafeConfig("http://127.0.0.1:1");
+  const sender = createRecordingEmailService();
+  const context = await createTestApp({
+    config,
+    emailService: sender,
+    mailDomainReader: "none",
+    clock: () => {
+      return new Date();
     },
-  );
+  });
+  let bucket: Awaited<ReturnType<typeof _startBucket>>["bucket"] | undefined;
+  const close = async () => {
+    try {
+      await context.close();
+    } finally {
+      if (bucket) {
+        bucket.closeAllConnections();
+        await new Promise<void>((fulfill) => {
+          return bucket!.close(() => {
+            fulfill();
+          });
+        });
+      }
+    }
+  };
+  try {
+    return await _startCatalog(
+      context,
+      sender,
+      (started) => {
+        bucket = started;
+      },
+      close,
+    );
+  } catch (failure) {
+    await close();
+    throw failure;
+  }
 }

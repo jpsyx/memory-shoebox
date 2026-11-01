@@ -1,18 +1,18 @@
-import { claimMemberName } from "../src/members/claimMemberName.ts";
 import {
   accountNameSchema,
   normalisedEmailSchema,
 } from "@memory-shoebox/shared";
-import { runInImmediateTransaction } from "../src/db/runInImmediateTransaction.ts";
-import { fileURLToPath } from "node:url";
+import type { Kysely } from "kysely";
 import { openSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { ReadStream, WriteStream } from "node:tty";
-import type { Kysely } from "kysely";
+import { fileURLToPath } from "node:url";
 import { createDatabase } from "../src/db/client.ts";
 import { createId } from "../src/db/createId.ts";
 import { migrateToLatest } from "../src/db/migrate.ts";
+import { runInImmediateTransaction } from "../src/db/runInImmediateTransaction.ts";
 import type { Database } from "../src/db/types/db.types.ts";
+import { claimMemberName } from "../src/members/claimMemberName.ts";
 
 /** A local seeded identity, invited until its first successful sign-in. */
 export type SeededMember = {
@@ -132,7 +132,7 @@ export async function seedMember(
         .where("email", "=", email)
         .executeTakeFirst();
       const memberId = existing?.id ?? createId();
-      if (!existing)
+      if (!existing) {
         await _insertSeededMember({
           database: transaction,
           memberId,
@@ -140,6 +140,7 @@ export async function seedMember(
           role: options.role,
           now,
         });
+      }
       await claimMemberName({
         transaction,
         memberId,
@@ -187,7 +188,10 @@ function _isMemberRole(value: string): value is MemberRole {
   });
 }
 
-/** Everything `seedMember` needs except the database, read from the command line. */
+/**
+ * Everything `seedMember` needs except the database, read from the command
+ * line.
+ */
 export type SeedMemberArguments = Omit<SeedMemberOptions, "database">;
 
 type PartialSeedArguments = Omit<
@@ -213,15 +217,24 @@ function _getPartialArgumentsFromArgv(
       })
     ) {
       const value = argv[index + 1];
-      if (value === undefined || value.startsWith("-")) return undefined;
-      if (argument === "--display-name") parsed.displayName = value;
-      else if (argument === "--base-url") parsed.baseUrl = value;
-      else if (_isMemberRole(value)) parsed.role = value;
-      else return undefined;
+      if (value === undefined || value.startsWith("-")) {
+        return undefined;
+      }
+      if (argument === "--display-name") {
+        parsed.displayName = value;
+      } else if (argument === "--base-url") {
+        parsed.baseUrl = value;
+      } else if (_isMemberRole(value)) {
+        parsed.role = value;
+      } else {
+        return undefined;
+      }
       index += 1;
-    } else if (argument.startsWith("-") || parsed.email !== undefined)
+    } else if (argument.startsWith("-") || parsed.email !== undefined) {
       return undefined;
-    else parsed.email = argument;
+    } else {
+      parsed.email = argument;
+    }
   }
   return parsed;
 }
@@ -231,10 +244,16 @@ export function getSeedArgumentsFromArgv(
   argv: readonly string[],
 ): SeedMemberArguments | undefined {
   const parsed = _getPartialArgumentsFromArgv(argv);
-  if (!parsed?.email || !normalisedEmailSchema.safeParse(parsed.email).success)
+  if (
+    !parsed?.email ||
+    !normalisedEmailSchema.safeParse(parsed.email).success
+  ) {
     return undefined;
+  }
   const name = accountNameSchema.safeParse(parsed.displayName);
-  if (!name.success) return undefined;
+  if (!name.success) {
+    return undefined;
+  }
   return { ...parsed, email: parsed.email, displayName: name.data };
 }
 
@@ -267,10 +286,12 @@ async function _getArgumentsFromTerminalOrArgv(
 ): Promise<SeedMemberArguments | undefined> {
   const explicit = getSeedArgumentsFromArgv(argv);
   const parsed = _getPartialArgumentsFromArgv(argv);
-  if (explicit || !parsed || (!process.stdin.isTTY && !process.stderr.isTTY))
+  if (explicit || !parsed || (!process.stdin.isTTY && !process.stderr.isTTY)) {
     return explicit;
-  if (parsed.email !== undefined && parsed.displayName !== undefined)
+  }
+  if (parsed.email !== undefined && parsed.displayName !== undefined) {
     return undefined;
+  }
   const input = new ReadStream(openSync("/dev/tty", "r"));
   const output = new WriteStream(openSync("/dev/tty", "w"));
   const terminal = createInterface({ input, output, terminal: true });

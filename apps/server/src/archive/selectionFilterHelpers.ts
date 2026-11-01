@@ -1,5 +1,5 @@
-import { expressionBuilder } from "kysely";
 import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
+import { expressionBuilder } from "kysely";
 import type { Database } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import { visibilityExpression } from "../visibility/applyVisibilityFilter.ts";
@@ -94,7 +94,9 @@ export function hasAnyFilter(filter: Readonly<TimelineFilter>): boolean {
   );
 }
 
-/** An account narrows visible rows by uploads or exact linked photo identity. */
+/**
+ * An account narrows visible rows by uploads or exact linked photo identity.
+ */
 function _makeMemberConditions(
   options: Readonly<{
     eb: ExpressionBuilder<Database, "items">;

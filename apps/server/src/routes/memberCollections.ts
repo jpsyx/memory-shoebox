@@ -1,12 +1,15 @@
-import type { FastifyInstance } from "fastify";
 import {
   memberCollectionParamsSchema,
   type MemberCollectionResponse,
 } from "@memory-shoebox/shared";
+import type { FastifyInstance } from "fastify";
 import { requireViewer } from "../http/requestContextHelpers.ts";
 import { readMemberCollectionIdentity } from "../members/readMemberCollectionIdentity.ts";
 
-/** Serves only the public identity needed by an authenticated archive heading. */
+/**
+ * Serves only the public identity needed by an authenticated archive
+ * heading.
+ */
 export async function memberCollectionsRoutes(
   app: FastifyInstance,
 ): Promise<void> {

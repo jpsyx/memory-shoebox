@@ -1,26 +1,52 @@
 import { Combobox } from "@mantine/core";
 import type { ReactNode } from "react";
+import { CommentCharacterCount } from "./CommentCharacterCount";
 import { CommentTagCorrections } from "./CommentTagCorrections";
+import classes from "./CommentTagInputField.module.css";
+import type { CommentTagInputOptions } from "./CommentTagInputField.types";
 import { CommentTagPicker } from "./CommentTagPicker";
 import { CommentTagTextarea } from "./CommentTagTextarea";
 import { useCommentTagEditor } from "./useCommentTagEditor";
-import type { CommentTagInputOptions } from "./CommentTagInputField.types";
-import classes from "./CommentTagInputField.module.css";
 type Props = CommentTagInputOptions;
 /** Accessible native text editing, paired with explicit member selection. */
-export function CommentTagInputField(props: Readonly<Props>): ReactNode {
-  const editor = useCommentTagEditor(props);
+export function CommentTagInputField({
+  itemId,
+  value,
+  onChange,
+  onSubmit,
+  fieldRef,
+  isSending,
+  portalTarget,
+  tagFailure,
+  label,
+  placeholder,
+  onFocus,
+  autoFocus,
+}: Readonly<Props>): ReactNode {
+  const input = {
+    itemId,
+    value,
+    onChange,
+    onSubmit,
+    fieldRef,
+    isSending,
+    portalTarget,
+    tagFailure,
+    label,
+    placeholder,
+    onFocus,
+    autoFocus,
+  };
+  const editor = useCommentTagEditor(input);
   return (
     <div className={classes.root}>
       <Combobox
         store={editor.store}
         onOptionSubmit={editor.select}
         position="top-start"
-        portalProps={
-          props.portalTarget ? { target: props.portalTarget } : undefined
-        }
+        portalProps={portalTarget ? { target: portalTarget } : undefined}
       >
-        <CommentTagTextarea input={props} editor={editor} />
+        <CommentTagTextarea input={input} editor={editor} />
         {editor.isOpen ? (
           <CommentTagPicker
             members={editor.members}
@@ -35,27 +61,15 @@ export function CommentTagInputField(props: Readonly<Props>): ReactNode {
       </Combobox>
       <p className={classes.help}>Type @ to tag a member.</p>
       <CommentTagCorrections
-        itemId={props.itemId}
-        value={props.value}
-        failures={props.tagFailure ?? []}
+        itemId={itemId}
+        value={value}
+        failures={tagFailure ?? []}
         onChange={editor.correct}
       />
       <span className={classes.announcement} role="status">
         {editor.announcement}
       </span>
-      {_characterCount(props.value.body.length)}
+      <CommentCharacterCount length={value.body.length} />
     </div>
-  );
-}
-function _characterCount(length: number): ReactNode {
-  if (length < 3800) {
-    return null;
-  }
-  return (
-    <p className={classes.counter} role={length > 4000 ? "alert" : undefined}>
-      {length > 4000
-        ? `Remove ${length - 4000} characters to post.`
-        : `${length} / 4,000`}
-    </p>
   );
 }

@@ -16,11 +16,12 @@ export const Route = createFileRoute("/complete-profile")({
       me: context.setupMe ?? null,
       attemptedHref: location.href,
     });
-    if (context.setupMe?.me.profileComplete)
+    if (context.setupMe?.me.profileComplete) {
       throw routeRedirect({
         href: makeSafeHrefFromRedirect(search.redirect),
         replace: true,
       });
+    }
     return signedIn;
   },
   component: CompleteProfileRoute,

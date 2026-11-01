@@ -1,6 +1,6 @@
 import type { AvatarRef } from "@memory-shoebox/shared";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
+import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
 type AvatarReadOptions = Readonly<{
   database: DatabaseExecutor;
@@ -37,11 +37,16 @@ async function _signAvatarFromRow(
   ];
 }
 
-/** Batches current metadata and signs private keys using the exact whole-second signing clock. */
+/**
+ * Batches current metadata and signs private keys using the exact
+ * whole-second signing clock.
+ */
 export async function readMemberAvatars(
   options: AvatarReadOptions,
 ): Promise<Map<string, AvatarRef>> {
-  if (options.memberIds.length === 0) return new Map();
+  if (options.memberIds.length === 0) {
+    return new Map();
+  }
   const rows = await options.database
     .selectFrom("members")
     .innerJoin(

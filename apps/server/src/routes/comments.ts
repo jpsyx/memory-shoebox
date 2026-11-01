@@ -1,26 +1,25 @@
-import { reconcileCommentTagEmails } from "../items/reconcileCommentTagEmails.ts";
-import { validateCommentTags } from "../commentTags/validateCommentTags.ts";
-import {
-  readCommentTags,
-  replaceCommentTags,
-} from "../commentTags/replaceCommentTags.ts";
-import { requireCompleteProfile } from "../members/requireCompleteProfile.ts";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   commentIdParamsSchema,
   setReactionRequestSchema,
   updateCommentRequestSchema,
   type CommentDto,
   type CommentTag,
-  type UpdateCommentRequest,
   type ReactionSummary,
+  type UpdateCommentRequest,
 } from "@memory-shoebox/shared";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
 import { readMemberRefs } from "../archive/readMemberRefs.ts";
+import {
+  readCommentTags,
+  replaceCommentTags,
+} from "../commentTags/commentTagPersistenceHelpers.ts";
+import { validateCommentTags } from "../commentTags/validateCommentTags.ts";
 import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
+import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { requireViewer, type Viewer } from "../http/requestContextHelpers.ts";
-import { writeActivityEvent } from "../activity/writeActivityEvent/writeActivityEvent.ts";
 import {
   getVisibleItemOr404,
   type VisibleItem,
@@ -31,7 +30,8 @@ import {
   makeReactionSummariesFromRows,
   readCommentReactionRows,
 } from "../items/readReactionSummaries.ts";
-import type { DatabaseExecutor } from "../db/types/db.types.ts";
+import { reconcileCommentTagEmails } from "../items/reconcileCommentTagEmails.ts";
+import { requireCompleteProfile } from "../members/requireCompleteProfile.ts";
 
 /** One comment, with the item it hangs off already checked. */
 type VisibleComment = {
@@ -127,8 +127,9 @@ async function _writeCommentEdit(
         ...options,
         database: transaction,
       });
-      if (comment.authorMemberId !== options.viewer.memberId)
+      if (comment.authorMemberId !== options.viewer.memberId) {
         throw ApiError.forbidden("comment_edit_forbidden");
+      }
       const existingTags = await _readTagsForEdit({
         ...options,
         database: transaction,
@@ -183,11 +184,16 @@ async function _readUpdatedComment(
   const updated = thread.find((entry) => {
     return entry.commentId === comment.commentId;
   });
-  if (updated === undefined) throw ApiError.notFound("comment_not_found");
+  if (updated === undefined) {
+    throw ApiError.notFound("comment_not_found");
+  }
   return updated;
 }
 
-/** `PATCH /comments/:commentId`: edit a comment's own words and explicit ranges. */
+/**
+ * `PATCH /comments/:commentId`: edit a comment's own words and explicit
+ * ranges.
+ */
 async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
   const viewer = requireViewer(request);
   const { commentId } = commentIdParamsSchema.parse(request.params);
@@ -200,8 +206,9 @@ async function _patchComment(request: FastifyRequest): Promise<CommentDto> {
   });
   requireCompleteProfile(viewer);
   // Admins may delete another person's words but may never edit them.
-  if (comment.authorMemberId !== viewer.memberId)
+  if (comment.authorMemberId !== viewer.memberId) {
     throw ApiError.forbidden("comment_edit_forbidden");
+  }
   await _writeCommentEdit({
     database: request.server.database,
     viewer,

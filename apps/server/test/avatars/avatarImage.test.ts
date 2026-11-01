@@ -366,3 +366,26 @@ it("preserves translucent WebP colors across the bounded raw-image stages", asyn
   expect(Math.abs(imagePixels[2]! - 110)).toBeLessThan(8);
   expect(Math.abs(imagePixels[3]! - 64)).toBeLessThan(2);
 });
+
+it("extracts at least one pixel from a legal small image at maximum zoom", async () => {
+  const bytes = await sharp({
+    create: { width: 4, height: 4, channels: 3, background: "red" },
+  })
+    .png()
+    .toBuffer();
+  const output = await makeAvatarImageFromBytes({
+    bytes,
+    contentType: "image/png",
+    crop: { centerX: 1, centerY: 1, zoom: 8 },
+  });
+  expect(await sharp(output).metadata()).toMatchObject({
+    format: "webp",
+    width: 256,
+    height: 256,
+  });
+  const { data } = await sharp(output)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  expect(data[0]).toBeGreaterThan(240);
+  expect(data[2]).toBeLessThan(15);
+});

@@ -1,7 +1,10 @@
 import type { CommentTag } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
-/** Replaces one comment's occurrences in the caller's immediate write transaction. */
+/**
+ * Replaces one comment's occurrences in the caller's immediate write
+ * transaction.
+ */
 export async function replaceCommentTags(
   options: Readonly<{
     transaction: DatabaseExecutor;
@@ -13,7 +16,9 @@ export async function replaceCommentTags(
     .deleteFrom("comment_tags")
     .where("comment_id", "=", options.commentId)
     .execute();
-  if (options.tags.length === 0) return;
+  if (options.tags.length === 0) {
+    return;
+  }
   await options.transaction
     .insertInto("comment_tags")
     .values(
@@ -31,7 +36,10 @@ export async function replaceCommentTags(
     .execute();
 }
 
-/** Batch-reads persisted snapshots for an entire thread, including ineligible historical accounts. */
+/**
+ * Batch-reads persisted snapshots for an entire thread, including ineligible
+ * historical accounts.
+ */
 export async function readCommentTags(
   options: Readonly<{
     database: DatabaseExecutor;
@@ -39,7 +47,9 @@ export async function readCommentTags(
   }>,
 ): Promise<Map<string, CommentTag[]>> {
   const tags = new Map<string, CommentTag[]>();
-  if (options.commentIds.length === 0) return tags;
+  if (options.commentIds.length === 0) {
+    return tags;
+  }
   const rows = await options.database
     .selectFrom("comment_tags")
     .select([

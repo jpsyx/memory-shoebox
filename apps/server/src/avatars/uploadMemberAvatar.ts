@@ -1,13 +1,13 @@
-import type { MemberAvatarUploadsTable } from "../db/types/identityAndAccess.types.ts";
-import type { Kysely } from "kysely";
 import { avatarCropSchema } from "@memory-shoebox/shared";
-import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
+import type { Kysely } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import { createId } from "../db/createId.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
+import type { Database, DatabaseExecutor } from "../db/types/db.types.ts";
+import type { MemberAvatarUploadsTable } from "../db/types/identityAndAccess.types.ts";
 import { ApiError } from "../http/ApiError.ts";
-import { publishMemberAvatar } from "./publishMemberAvatar.ts";
 import { makeAvatarImageFromBytes } from "./makeAvatarImageFromBytes.ts";
+import { publishMemberAvatar } from "./memberAvatarWriteHelpers.ts";
 
 type UploadIdentity = Readonly<{
   database: Kysely<Database>;
@@ -130,7 +130,10 @@ async function _claimUpload(options: UploadIdentity) {
   });
 }
 
-/** Claims, processes and publishes one immutable avatar without holding SQL over I/O. */
+/**
+ * Claims, processes and publishes one immutable avatar without holding SQL
+ * over I/O.
+ */
 export async function uploadMemberAvatar(
   options: UploadOptions,
 ): Promise<void> {

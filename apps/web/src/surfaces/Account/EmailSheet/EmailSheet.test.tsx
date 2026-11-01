@@ -1,13 +1,13 @@
-import { MantineProvider } from "@mantine/core";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
-import type { NotifyPreferences } from "@memory-shoebox/shared";
 import { EmailSheet } from "@/surfaces/Account/EmailSheet/EmailSheet";
 import { NOTIFY_KINDS } from "@/surfaces/Account/notifyKinds";
 import { cssVariablesResolver } from "@/theme/cssVariablesResolver";
 import { theme } from "@/theme/theme";
+import { MantineProvider } from "@mantine/core";
+import type { NotifyPreferences } from "@memory-shoebox/shared";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
 
 function _inTheme(node: ReactNode): ReactNode {
   return (
@@ -34,7 +34,7 @@ const ALL_OFF: NotifyPreferences = {
 };
 
 describe("the Email sheet", () => {
-  it("sends all four switches when one is flipped", async () => {
+  it("sends all five switches when one is flipped", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
 

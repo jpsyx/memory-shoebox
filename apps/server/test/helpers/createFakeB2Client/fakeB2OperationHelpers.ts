@@ -1,10 +1,8 @@
 import { createMediaDelivery } from "../../../src/media/createMediaDelivery.ts";
-
 import type {
   B2Client,
   BucketCorsRule,
 } from "../../../src/b2/createB2Client/createB2Client.types.ts";
-
 import {
   type FakeB2Client,
   type FakeB2State,
@@ -143,8 +141,9 @@ export function makeReadOperationsFromContext(
           "expiresInSeconds",
           String(expiresInSeconds),
         );
-        if (downloadFilename !== undefined)
+        if (downloadFilename !== undefined) {
           signedUrl.searchParams.set("filename", downloadFilename);
+        }
         return signedUrl.href;
       }
       const url = `https://b2.test/get/${encodeURIComponent(key)}`;

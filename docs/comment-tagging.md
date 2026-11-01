@@ -202,7 +202,9 @@ unchanged innermost-overlay Escape handling. Returning never auto-resumes video.
 Late sends/saves clear only their submitted revision, and successful edits hydrate
 surviving occurrence provenance even when their editor has unmounted. Mutation
 cache reconciliation and acknowledgements are fenced by submitted item-query and
-private authority lifetimes. Pending writes stay exclusive after remount.
+private authority lifetimes. Queued sends and edits recheck that authority
+immediately before HTTP dispatch, so retired drafts settle without sending.
+Pending writes stay exclusive after remount.
 
 Sign-out, account/role changes, observed actual session replacement and explicit
 private-cache retirement destroy the owner, including captured action closures.
@@ -220,3 +222,8 @@ at least 15px. Desktop input sizing remains unchanged.
 Migration execution, permanent-ledger compatibility and backup recovery are
 covered by the [rollout guide](comment-tagging-rollout.md). Local acceptance does
 not authorize production migration, mail tests, deployment or publication.
+
+Holding a selection shortcut cannot post: repeated Enter activation is ignored
+while the picker is open or a submission modifier is held. Selecting a member
+and submitting still require separate deliberate presses. Native text editing,
+arrow navigation and composition keep their existing behavior.

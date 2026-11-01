@@ -31,7 +31,9 @@ function _getSelectionPropsFromForm({
       return form.personIds[String(index)];
     }),
     onSelectPerson: (person: import("@memory-shoebox/shared").PersonRef) => {
-      if (Object.values(form.personIds).includes(person.personId)) return;
+      if (Object.values(form.personIds).includes(person.personId)) {
+        return;
+      }
       form.onNamesChange([...form.names, person.displayName]);
       form.onPersonChoice({
         name: person.displayName,

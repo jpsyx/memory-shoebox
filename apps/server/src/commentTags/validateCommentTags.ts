@@ -4,7 +4,7 @@ import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import type { VisibleItem } from "../items/getVisibleItemOr404.ts";
-import { readEligibleCommentTagMembers } from "./readCommentTagCandidates.ts";
+import { readEligibleCommentTagMembers } from "./commentTagCandidateHelpers.ts";
 
 function _tagConflict(
   code: "comment_tag_stale" | "comment_tag_unavailable",
@@ -33,14 +33,18 @@ function _getValidatedOccurrence(
       stored === undefined ||
       options.retainedIds.has(input.tagId) ||
       stored.memberId !== input.memberId
-    )
+    ) {
       throw _tagConflict("comment_tag_stale", index);
+    }
     options.retainedIds.add(input.tagId);
   }
   const label = stored?.label ?? options.eligible.get(input.memberId);
-  if (label === undefined) throw _tagConflict("comment_tag_unavailable", index);
-  if (options.body.slice(input.start, input.end) !== `@${label}`)
+  if (label === undefined) {
+    throw _tagConflict("comment_tag_unavailable", index);
+  }
+  if (options.body.slice(input.start, input.end) !== `@${label}`) {
     throw _tagConflict("comment_tag_stale", index);
+  }
   return {
     tagId: stored?.tagId ?? createId(),
     memberId: input.memberId,
@@ -50,7 +54,10 @@ function _getValidatedOccurrence(
   };
 }
 
-/** Validates fresh identities against current names/access and retained IDs against their stored snapshots. */
+/**
+ * Validates fresh identities against current names/access and retained IDs
+ * against their stored snapshots.
+ */
 export async function validateCommentTags(
   options: Readonly<{
     database: DatabaseExecutor;

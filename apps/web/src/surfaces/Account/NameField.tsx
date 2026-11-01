@@ -1,8 +1,8 @@
-import { Button, TextInput } from "@mantine/core";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
 import { profileNameError } from "@/surfaces/ProfileCompletion/profileNameCopy";
 import { Prose } from "@/system/typography/Prose";
+import { Button, TextInput } from "@mantine/core";
+import type { MeDto, UpdateMeRequest } from "@memory-shoebox/shared";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Props for the name field: the member's own record, the save callback, and
@@ -31,7 +31,9 @@ function useNameField(props: Readonly<Props>) {
   const input = useRef<HTMLInputElement>(null);
   const [validationError, setValidationError] = useState<string>();
   useEffect(() => {
-    if (props.error) input.current?.focus();
+    if (props.error) {
+      input.current?.focus();
+    }
   }, [props.error]);
   const trimmed = value.trim();
   const storedValue = props.me.storedDisplayName ?? "";
@@ -50,7 +52,9 @@ function useNameField(props: Readonly<Props>) {
   return { value, setValue, input, validationError, hasChanged, onSubmit };
 }
 
-/** The member's editable claimed name with inline validation and save status. */
+/**
+ * The member's editable claimed name with inline validation and save status.
+ */
 export function NameField(props: Readonly<Props>): ReactNode {
   const { value, setValue, input, validationError, hasChanged, onSubmit } =
     useNameField(props);

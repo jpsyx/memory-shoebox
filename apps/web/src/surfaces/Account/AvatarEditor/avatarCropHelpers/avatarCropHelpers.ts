@@ -1,8 +1,8 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 import {
   getExtractionFromAvatarCrop,
   type AvatarCrop,
 } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
 
 /** Maps oriented decoded dimensions to the server's exact integer square. */
 export function getPreviewFromAvatarCrop(
@@ -53,7 +53,9 @@ export function avatarFailure(error: unknown): string {
   return "Couldn't save your photo. Try again.";
 }
 
-/** Reads browser-oriented dimensions without retaining an original elsewhere. */
+/**
+ * Reads browser-oriented dimensions without retaining an original elsewhere.
+ */
 export function getDimensionsFromAvatarUrl(
   url: string,
 ): Promise<{ width: number; height: number }> {

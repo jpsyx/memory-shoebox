@@ -160,7 +160,9 @@ it.each([
   const fetcher = vi.fn();
   vi.stubGlobal("fetch", fetcher);
   _render();
-  if (name) await userEvent.type(screen.getByLabelText("Your name"), name);
+  if (name) {
+    await userEvent.type(screen.getByLabelText("Your name"), name);
+  }
   await userEvent.click(screen.getByRole("button", { name: "Continue" }));
   expect(screen.getByText(error)).toBeVisible();
   expect(screen.getByLabelText("Your name")).toHaveFocus();

@@ -1,4 +1,10 @@
 import {
+  ApiRequestError,
+  apiFetch,
+  jsonInit,
+} from "@/api/clientHelpers/clientHelpers";
+import { makeItemPathFromItemId } from "@/api/items/items";
+import {
   commentDtoSchema,
   type CommentDto,
   type CommentTagInput,
@@ -6,12 +12,6 @@ import {
   type UpdateCommentRequest,
 } from "@memory-shoebox/shared";
 import { z } from "zod";
-import {
-  ApiRequestError,
-  apiFetch,
-  jsonInit,
-} from "@/api/clientHelpers/clientHelpers";
-import { makeItemPathFromItemId } from "@/api/items/items";
 
 /** The exact path one comment lives at, below `/api`. */
 export function makeCommentPathFromCommentId(commentId: string): string {
@@ -98,7 +98,10 @@ export function getCommentTagFailuresFromError(
   );
 }
 
-/** Matches refused wording to still-present references after intervening edits. */
+/**
+ * Matches refused wording to still-present references after intervening
+ * edits.
+ */
 export function getFailedCommentTagsFromDraft(
   options: Readonly<{
     draft: {

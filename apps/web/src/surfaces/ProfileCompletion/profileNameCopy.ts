@@ -1,11 +1,15 @@
-import { accountNameSchema } from "@memory-shoebox/shared";
 import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import { accountNameSchema } from "@memory-shoebox/shared";
 
 /** Validation copy shared by profile completion and account rename. */
 export function profileNameError(name: string): string | undefined {
-  if (!name.trim()) return "Enter the name your family knows you by.";
+  if (!name.trim()) {
+    return "Enter the name your family knows you by.";
+  }
   const parsed = accountNameSchema.safeParse(name);
-  if (parsed.success) return undefined;
+  if (parsed.success) {
+    return undefined;
+  }
   return parsed.error.issues.some((issue) => {
     return issue.code === "too_big";
   })

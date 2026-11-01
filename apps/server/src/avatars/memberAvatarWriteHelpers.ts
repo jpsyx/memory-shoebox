@@ -10,11 +10,13 @@ type AvatarOwnerOptions = Readonly<{
   memberId: string;
   now: string;
 }>;
+
 type PublicationOptions = AvatarOwnerOptions &
   Readonly<{
     avatarId: string;
     outputByteSize: number;
   }>;
+
 type RemovalOptions = AvatarOwnerOptions &
   Readonly<{
     expectedAvatarId: string | null;
@@ -40,7 +42,9 @@ async function _retireAvatar(
   avatarId: string | null,
   now: string,
 ): Promise<void> {
-  if (avatarId === null) return;
+  if (avatarId === null) {
+    return;
+  }
   const avatar = await transaction
     .selectFrom("member_avatar_uploads")
     .select("storage_key")
@@ -88,7 +92,26 @@ function _assertPublishableUpload(
   }
 }
 
-/** Publishes an owned processed image with atomic version fencing and cleanup ownership. */
+async function _retirePendingAvatars(
+  transaction: DatabaseExecutor,
+  options: AvatarOwnerOptions,
+): Promise<void> {
+  const rows = await transaction
+    .selectFrom("member_avatar_uploads")
+    .select("id")
+    .where("member_id", "=", options.memberId)
+    .where("state", "in", ["reserved", "uploading"])
+    .execute();
+  await rows.reduce(async (previous, row) => {
+    await previous;
+    await _retireAvatar(transaction, row.id, options.now);
+  }, Promise.resolve());
+}
+
+/**
+ * Publishes an owned processed image with atomic version fencing and cleanup
+ * ownership.
+ */
 export async function publishMemberAvatar(
   options: PublicationOptions,
 ): Promise<void> {
@@ -101,13 +124,16 @@ export async function publishMemberAvatar(
         .where("id", "=", options.avatarId)
         .where("member_id", "=", options.memberId)
         .executeTakeFirst();
-      if (upload === undefined)
+      if (upload === undefined) {
         throw ApiError.notFound("avatar_upload_not_found");
+      }
       const currentAvatarId = await _getCurrentAvatarFromOwner(
         transaction,
         options.memberId,
       );
-      if (upload.state === "published" && currentAvatarId === upload.id) return;
+      if (upload.state === "published" && currentAvatarId === upload.id) {
+        return;
+      }
       _assertPublishableUpload(upload, currentAvatarId, options);
       await transaction
         .updateTable("members")
@@ -124,7 +150,10 @@ export async function publishMemberAvatar(
   });
 }
 
-/** Removes only the expected own image, rolling back if durable cleanup cannot be queued. */
+/**
+ * Removes only the expected own image, rolling back if durable cleanup
+ * cannot be queued.
+ */
 export async function removeMemberAvatar(
   options: RemovalOptions,
 ): Promise<void> {
@@ -147,20 +176,4 @@ export async function removeMemberAvatar(
       await _retirePendingAvatars(transaction, options);
     },
   });
-}
-
-async function _retirePendingAvatars(
-  transaction: DatabaseExecutor,
-  options: AvatarOwnerOptions,
-): Promise<void> {
-  const rows = await transaction
-    .selectFrom("member_avatar_uploads")
-    .select("id")
-    .where("member_id", "=", options.memberId)
-    .where("state", "in", ["reserved", "uploading"])
-    .execute();
-  await rows.reduce(async (previous, row) => {
-    await previous;
-    await _retireAvatar(transaction, row.id, options.now);
-  }, Promise.resolve());
 }

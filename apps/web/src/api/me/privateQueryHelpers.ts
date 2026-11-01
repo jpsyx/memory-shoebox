@@ -82,7 +82,10 @@ export function isPrivateAuthorityCurrent(
   );
 }
 
-/** Merges same-session fields; a newly observed authority replaces the baseline. */
+/**
+ * Merges same-session fields; a newly observed authority replaces the
+ * baseline.
+ */
 export function reconcileAccountFields(
   client: QueryClient,
   response: Readonly<MeResponse>,

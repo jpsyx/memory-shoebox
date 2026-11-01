@@ -73,7 +73,10 @@ export const commentTagCandidatesQuerySchema = z.object({
   q: z.string().max(80).default(""),
 });
 
-/** Only public member references, never membership status or email preferences. */
+/**
+ * Only public member references, never membership status or email
+ * preferences.
+ */
 export const commentTagCandidatesResponseSchema = z.object({
   members: z.array(memberRefSchema),
 });

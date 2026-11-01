@@ -136,7 +136,9 @@ export const RATE_LIMIT_RULES = {
     scope: "session",
     windows: [{ limit: 3000, windowSeconds: 60 }],
   },
-  /** Own-avatar binary attempts, consumed before parsing in route middleware. */
+  /**
+   * Own-avatar binary attempts, consumed before parsing in route middleware.
+   */
   avatarUploadPerMember: {
     scope: "member",
     windows: [{ limit: 3, windowSeconds: 300 }],

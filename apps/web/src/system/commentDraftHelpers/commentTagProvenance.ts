@@ -8,7 +8,9 @@ export function getSourceFromCommentTag(
 ): CommentTagInput {
   return tag[SOURCE] ?? tag;
 }
-/** Derives range or saved-ID metadata without mutating the source occurrence. */
+/**
+ * Derives range or saved-ID metadata without mutating the source occurrence.
+ */
 export function makeCommentTagFromSource(
   options: Readonly<{
     source: CommentTagInput;
@@ -21,7 +23,10 @@ export function makeCommentTagFromSource(
     { value: getSourceFromCommentTag(options.source) },
   );
 }
-/** Records only server occurrences that correspond exactly to this submission. */
+/**
+ * Records only server occurrences that correspond exactly to this
+ * submission.
+ */
 export function recordSavedCommentTagIdsInPlace(
   options: Readonly<{
     submitted: CommentDraft;
@@ -45,7 +50,9 @@ export function recordSavedCommentTagIdsInPlace(
     }
   });
 }
-/** Adds acknowledged IDs only to surviving provenance, keeping current words. */
+/**
+ * Adds acknowledged IDs only to surviving provenance, keeping current words.
+ */
 export function makeCommentDraftFromSavedTagIds(
   options: Readonly<{
     draft: CommentDraft;
@@ -63,7 +70,10 @@ export function makeCommentDraftFromSavedTagIds(
   });
   return hasChanges ? { ...options.draft, commentTags } : options.draft;
 }
-/** Distinguishes metadata-only acknowledgements from external draft replacement. */
+/**
+ * Distinguishes metadata-only acknowledgements from external draft
+ * replacement.
+ */
 export function hasSameCommentDraftOccurrences(
   left: Readonly<CommentDraft>,
   right: Readonly<CommentDraft>,

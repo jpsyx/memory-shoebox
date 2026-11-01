@@ -1,8 +1,11 @@
-import { readEligibleCommentTagMembers } from "../commentTags/readCommentTagCandidates.ts";
+import { readEligibleCommentTagMembers } from "../commentTags/commentTagCandidateHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { OutboundEmailRow } from "./mailQueue.types.ts";
 
-/** Checks the live tag, preference, profile and item access immediately before sending. */
+/**
+ * Checks the live tag, preference, profile and item access immediately
+ * before sending.
+ */
 export async function checkCommentTagDelivery(
   options: Readonly<{ database: DatabaseExecutor; row: OutboundEmailRow }>,
 ): Promise<boolean> {

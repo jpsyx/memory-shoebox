@@ -182,9 +182,12 @@ hidden listbox cannot keep the dock pinned.
 
 Main-composer memory now includes explicit member ranges with its words and
 moment. Local undo/redo survives ordinary provider rerenders by comparing the
-actual controlled body/range values. Reply/edit forms keep their current mounted
-lifetime and only clear/close a matching successful submission. This change does
-not add session journey persistence or a separate conversation write pipeline.
+actual controlled body/range values. The signed-in tab owner retains main,
+reply and edit drafts through collection journeys, then restores them only after
+fresh item authorization. Successful submissions clear only their matching
+revision. Retirement fences queued HTTP dispatch as well as late responses;
+returning never resumes playback. The existing item write pipeline remains the
+single owner of comment mutations.
 
 The [integrated acceptance record](superpowers/verification/2026-10-31-comment-tagging.md)
 records comment-tag arrival, draft return and nested Escape behavior. Engine

@@ -1,65 +1,21 @@
-import { spawnSync } from "node:child_process";
-import {
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-  readFileSync,
-} from "node:fs";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
 import SQLite from "better-sqlite3";
 import { expect, it } from "vitest";
 import { sql } from "kysely";
 import { createDatabase } from "../../src/db/client.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
-import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
-import { insertMember } from "../helpers/seedHelpers/memberSeedHelpers.ts";
-
-const script = fileURLToPath(
-  new URL("../../scripts/memberNames.ts", import.meta.url),
-);
-function cli(args: string[]) {
-  return spawnSync(process.execPath, [script, ...args], {
-    encoding: "utf8",
-    env: { ...process.env, NO_COLOR: "1" },
-  });
-}
-async function fixture() {
-  const directory = mkdtempSync(join(tmpdir(), "name-rollout-"));
-  const path = join(directory, "catalog.db");
-  const database = createDatabase(path);
-  const sources = await getMigrationSourcesFromFiles();
-  await migrateToLatest(database, {
-    sources: Object.fromEntries(
-      Object.entries(sources).filter(([name]) => {
-        return name < "0019";
-      }),
-    ),
-  });
-  const first = await insertMember(database, { display_name: "John" });
-  const second = await insertMember(database, { display_name: " JOHN " });
-  await database.destroy();
-  return { directory, path, first, second };
-}
-
-it("shows complete root/subcommand help before any file access, with clean stdout", () => {
-  for (const action of [[], ["audit"], ["stage"]]) {
-    const result = cli([...action, "--database", "/does/not/exist", "--help"]);
-    expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout).toContain("--database");
-    expect(result.stdout).toContain("Examples");
-    expect(result.stderr).toBe("");
-  }
-});
+import {
+  createMemberNameRolloutFixture,
+  runMemberNamesCli,
+} from "./memberNameRolloutTestHelpers.ts";
 
 it("keeps audit read-only, reports collisions, and stages across process reopen with a verified backup", async () => {
-  const fixtureData = await fixture();
+  const fixtureData = await createMemberNameRolloutFixture();
   const { directory, path, first, second } = fixtureData;
   try {
     const before = readFileSync(path);
-    const audit = cli(["audit", "--database", path]);
+    const audit = runMemberNamesCli(["audit", "--database", path]);
     expect(audit.status, audit.stderr).toBe(0);
     const report = JSON.parse(audit.stdout);
     expect(report.rows).toHaveLength(2);
@@ -81,7 +37,7 @@ it("keeps audit read-only, reports collisions, and stages across process reopen 
         ],
       }),
     );
-    const staged = cli([
+    const staged = runMemberNamesCli([
       "stage",
       "--database",
       path,
@@ -101,7 +57,9 @@ it("keeps audit read-only, reports collisions, and stages across process reopen 
     ).toEqual({ display_name: "John" });
     backup.close();
     expect(readdirSync(join(directory, "backups")).length).toBeGreaterThan(1);
-    const repeatedAudit = JSON.parse(cli(["audit", "--database", path]).stdout);
+    const repeatedAudit = JSON.parse(
+      runMemberNamesCli(["audit", "--database", path]).stdout,
+    );
     expect(repeatedAudit.catalogFingerprint).toBe(report.catalogFingerprint);
     const database = createDatabase(path);
     try {
@@ -140,9 +98,12 @@ it("keeps audit read-only, reports collisions, and stages across process reopen 
 });
 
 it("refuses stale names or statuses, duplicate/unknown mappings, invalid names and unresolved collisions without staging", async () => {
-  const { directory, path, first, second } = await fixture();
+  const { directory, path, first, second } =
+    await createMemberNameRolloutFixture();
   try {
-    const report = JSON.parse(cli(["audit", "--database", path]).stdout);
+    const report = JSON.parse(
+      runMemberNamesCli(["audit", "--database", path]).stdout,
+    );
     const assignmentPath = join(directory, "choices.json");
     const choices = [
       { memberId: first, displayName: "John M" },
@@ -166,7 +127,7 @@ it("refuses stale names or statuses, duplicate/unknown mappings, invalid names a
     ];
     for (const input of invalidInputs) {
       writeFileSync(assignmentPath, JSON.stringify(input));
-      const result = cli([
+      const result = runMemberNamesCli([
         "stage",
         "--database",
         path,
@@ -191,8 +152,13 @@ it("refuses stale names or statuses, duplicate/unknown mappings, invalid names a
         }),
       );
       expect(
-        cli(["stage", "--database", path, "--assignments", assignmentPath])
-          .status,
+        runMemberNamesCli([
+          "stage",
+          "--database",
+          path,
+          "--assignments",
+          assignmentPath,
+        ]).status,
       ).toBe(1);
     }
     const database = new SQLite(path);
@@ -209,18 +175,13 @@ it("refuses stale names or statuses, duplicate/unknown mappings, invalid names a
   }
 });
 
-it("fails missing unattended arguments promptly with usage and recovery advice", () => {
-  const result = cli(["stage"]);
-  expect(result.status).toBe(1);
-  expect(result.stdout).toBe("");
-  expect(result.stderr).toContain("Usage:");
-  expect(result.stderr).toContain("\n  ⚠️");
-});
-
 it("revalidates a staged snapshot before migration and rolls back on late migration failure", async () => {
-  const { directory, path, first, second } = await fixture();
+  const { directory, path, first, second } =
+    await createMemberNameRolloutFixture();
   try {
-    const report = JSON.parse(cli(["audit", "--database", path]).stdout);
+    const report = JSON.parse(
+      runMemberNamesCli(["audit", "--database", path]).stdout,
+    );
     const assignmentPath = join(directory, "choices.json");
     writeFileSync(
       assignmentPath,
@@ -233,8 +194,13 @@ it("revalidates a staged snapshot before migration and rolls back on late migrat
       }),
     );
     expect(
-      cli(["stage", "--database", path, "--assignments", assignmentPath])
-        .status,
+      runMemberNamesCli([
+        "stage",
+        "--database",
+        path,
+        "--assignments",
+        assignmentPath,
+      ]).status,
     ).toBe(0);
     const database = createDatabase(path);
     try {
@@ -321,145 +287,14 @@ it("revalidates a staged snapshot before migration and rolls back on late migrat
   }
 });
 
-function terminalSession(keys: string[], prompts: string[]) {
-  const python = `import os, pty, select, subprocess, sys, time, json
-master, slave = pty.openpty()
-os.set_blocking(master,False)
-def session():
- os.setsid()
- import fcntl, termios
- fcntl.ioctl(slave,termios.TIOCSCTTY,0)
-process = subprocess.Popen([sys.argv[1],sys.argv[2]],stdin=slave,stdout=subprocess.PIPE,stderr=subprocess.PIPE,preexec_fn=session)
-os.close(slave)
-transcript=b""
-try:
- for prompt, keys in zip(json.loads(sys.argv[3]),json.loads(sys.argv[4])):
-  segment=b""
-  deadline=time.monotonic()+5
-  while prompt.encode() not in segment and time.monotonic()<deadline:
-   if select.select([master],[],[],0.05)[0]:
-    try:
-     data=os.read(master,65536)
-     transcript+=data
-     segment+=data
-    except OSError: break
-  if prompt.encode() not in segment: raise RuntimeError('Missing prompt '+prompt+' '+repr(transcript))
-  os.write(master,keys.encode())
- deadline=time.monotonic()+5
- while process.poll() is None and time.monotonic()<deadline:
-  if select.select([master],[],[],0.05)[0]:
-   try: transcript+=os.read(master,65536)
-   except OSError: break
- try:
-  out,err=process.communicate(timeout=1)
- except subprocess.TimeoutExpired:
-  process.kill()
-  process.wait(timeout=1)
-  raise RuntimeError(repr(transcript))
-  raise RuntimeError(repr(transcript)+' '+repr(out)+' '+repr(err))
- print(json.dumps({'status':process.returncode,'stdout':out.decode(),'stderr':err.decode(),'terminal':transcript.decode()}))
-finally:
- if process.poll() is None: process.kill()
- os.close(master)
-`;
-  const result = spawnSync(
-    "python3",
-    [
-      "-c",
-      python,
-      process.execPath,
-      script,
-      JSON.stringify(prompts),
-      JSON.stringify(keys),
-    ],
-    {
-      encoding: "utf8",
-      env: { ...process.env, NO_COLOR: "1" },
-      timeout: 15000,
-    },
-  );
-  expect(result.status, result.stderr).toBe(0);
-  return JSON.parse(result.stdout);
-}
-
-it("offers the bare-command action wizard with j/k and arrow navigation and clean cancellation", () => {
-  const result = terminalSession(
-    ["j", "k", "\u001b[B", "\u001b[A", "\u0003"],
-    [
-      "Member name rollout",
-      "> Stage assignments",
-      "> Audit names",
-      "> Stage assignments",
-      "> Audit names",
-    ],
-  );
-  expect(result.status).toBe(130);
-  expect(result.stdout).toBe("");
-  expect(result.stderr).toContain("Cancelled");
-  expect(result.terminal).toContain("> Audit names");
-  expect(result.terminal).toContain("Stage assignments");
-});
-
-it("asks all stage wizard values and cancels before any catalog access", () => {
-  const result = terminalSession(
-    ["j\r", "/does/not/exist\r", "/no/choices.json\r", "\r"],
-    [
-      "Member name rollout",
-      "Existing catalog path",
-      "Assignments JSON file",
-      "Are all application processes stopped?",
-    ],
-  );
-  expect(result.status).toBe(130);
-  expect(result.stdout).toBe("");
-  expect(result.stderr).not.toContain("Validating");
-});
-
-it("cancels promptly on Ctrl-C and EOF without side effects", () => {
-  for (const key of ["\u0003", "\u0004"]) {
-    const result = terminalSession([key], ["Member name rollout"]);
-    expect(result.status).toBe(130);
-    expect(result.stdout).toBe("");
-  }
-});
-
-it("keeps the full wizard plain with NO_COLOR while completing an offline stage", async () => {
-  const { directory, path, first, second } = await fixture();
-  try {
-    const report = JSON.parse(cli(["audit", "--database", path]).stdout);
-    const assignmentsPath = join(directory, "operator choices.json");
-    writeFileSync(
-      assignmentsPath,
-      JSON.stringify({
-        catalogFingerprint: report.catalogFingerprint,
-        assignments: [
-          { memberId: first, displayName: "John M" },
-          { memberId: second, displayName: "John R" },
-        ],
-      }),
-    );
-    const result = terminalSession(
-      ["j\r", `${path}\r`, `${assignmentsPath}\r`, "j\r"],
-      [
-        "Member name rollout",
-        "Existing catalog path",
-        "Assignments JSON file",
-        "Are all application processes stopped?",
-      ],
-    );
-    expect(result.status, result.stderr).toBe(0);
-    expect(JSON.parse(result.stdout).staged).toBe(2);
-    expect(result.terminal).not.toContain("\u001b[");
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
 it("refuses stage on a contended write lock without creating backup or staging", async () => {
-  const { directory, path, first, second } = await fixture();
+  const { directory, path, first, second } =
+    await createMemberNameRolloutFixture();
   const lock = new SQLite(path);
   try {
-    const report = JSON.parse(cli(["audit", "--database", path]).stdout);
+    const report = JSON.parse(
+      runMemberNamesCli(["audit", "--database", path]).stdout,
+    );
     const assignmentsPath = join(directory, "choices.json");
     writeFileSync(
       assignmentsPath,
@@ -473,7 +308,7 @@ it("refuses stage on a contended write lock without creating backup or staging",
     );
     const backupsBefore = readdirSync(join(directory, "backups"));
     lock.exec("begin immediate");
-    const result = cli([
+    const result = runMemberNamesCli([
       "stage",
       "--database",
       path,

@@ -1,7 +1,3 @@
-import { Stack } from "@mantine/core";
-import { IconMail } from "@tabler/icons-react";
-import { useState, type ReactNode } from "react";
-import type { NotifyPreferences } from "@memory-shoebox/shared";
 import { NotifyBulkButtons } from "@/surfaces/Account/NotifyBulkButtons";
 import { NotifySwitches } from "@/surfaces/Account/NotifySwitches";
 import { NOTIFY_ALL, NOTIFY_NONE } from "@/surfaces/Account/notifyKinds";
@@ -10,6 +6,10 @@ import { Sheet } from "@/system/Chrome/Sheet";
 import { SheetHead } from "@/system/Chrome/SheetHead";
 import { ICON_PROPS } from "@/system/icons";
 import { Prose } from "@/system/typography/Prose";
+import { Stack } from "@mantine/core";
+import type { NotifyPreferences } from "@memory-shoebox/shared";
+import { IconMail } from "@tabler/icons-react";
+import { useState, type ReactNode } from "react";
 
 /**
  * Props for the Email sheet: the five switches and nothing they do not need.
@@ -38,7 +38,8 @@ type Props = {
 /**
  * A switch per kind of email, each writing the moment it is flipped.
  *
- * There is no additional bulk switch: "Turn them all off" and "Turn them back on"
+ * There is no additional bulk switch: "Turn them all off" and "Turn them
+ * back on"
  * are each one save of the same five booleans as any single flip.
  */
 export function EmailSheet({
@@ -84,7 +85,7 @@ export function EmailSheet({
         {error === undefined || tagError ? null : (
           <Prose role="alert">{error}</Prose>
         )}
-        <Banner icon={<IconMail {...ICON_PROPS} />}>
+        <Banner icon=<IconMail {...ICON_PROPS} />>
           <b>Sign-in codes are not on this list.</b> They still arrive when
           notifications are switched off.
         </Banner>

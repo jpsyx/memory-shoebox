@@ -1,13 +1,13 @@
+import type { CommentTagFailure } from "@/api/comments/comments";
 import { CommentTagInputField } from "@/system/CommentTagInputField/CommentTagInputField";
 import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
-import type { CommentTagFailure } from "@/api/comments/comments";
-import type { ReactNode } from "react";
-import type { CommentDto } from "@memory-shoebox/shared";
 import { agoLabel } from "@/system/labelHelpers/labelHelpers";
-import { useCommentEditorDraft } from "../useCommentEditing";
-import { CommentEditorActions } from "./CommentEditorActions/CommentEditorActions";
 import classes from "@/system/system.module.css";
+import type { CommentDto } from "@memory-shoebox/shared";
+import type { ReactNode } from "react";
+import { useCommentEditorDraft } from "../useCommentEditing";
 import editorClasses from "./CommentEditor.module.css";
+import { CommentEditorActions } from "./CommentEditorActions/CommentEditorActions";
 type Props = {
   comment: CommentDto;
   itemId: string;
@@ -16,7 +16,9 @@ type Props = {
   onSave: (draft: CommentDraft, onSaved: (comment: CommentDto) => void) => void;
   onCancel: () => void;
 };
-/** Edits the author's words and references, keeping newer edits after a save. */
+/**
+ * Edits the author's words and references, keeping newer edits after a save.
+ */
 export function CommentEditor(props: Readonly<Props>): ReactNode {
   const { comment, itemId, tagFailure, isSaving, onCancel } = props;
   const { draft, setDraft, fieldRef, save, canSave } =

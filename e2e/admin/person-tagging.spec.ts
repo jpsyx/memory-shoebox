@@ -1,4 +1,4 @@
-import { test, expect } from "./admin.fixtures.ts";
+import { expect, test } from "./admin.fixtures.ts";
 
 /** The drawer accepts a tag only through an explicit selection. */
 test("typing then leaving the field or drawer never creates a person", async ({
@@ -118,6 +118,12 @@ test("keeps an ad-hoc person and a member with the same name distinct", async ({
   page,
   catalog,
 }) => {
+  // This disposable fixture uses a live clock and an older fixed seed date.
+  await catalog.database
+    .updateTable("sessions")
+    .set({ expires_at: new Date(Date.now() + 86_400_000).toISOString() })
+    .where("id", "=", catalog.admin.sessionId)
+    .execute();
   await page.goto(`/api/evidence/session/admin?to=/items/${catalog.itemId}`);
   expect(
     (
@@ -143,16 +149,20 @@ test("keeps an ad-hoc person and a member with the same name distinct", async ({
   await page.getByRole("button", { name: "+ Photo-tag someone" }).click();
   await page.getByRole("combobox", { name: "Who is in it" }).fill("Pablo");
   await expect(page.getByRole("option", { name: /Pablo/ })).toHaveCount(2);
-  await page
-    .getByRole("option", { name: "Pablo none yet", exact: true })
-    .click();
-  await expect(page.getByRole("button", { name: "Untag Pablo" })).toHaveCount(
-    2,
-  );
-  await page.getByRole("button", { name: "Untag Pablo" }).first().click();
-  await expect(page.getByRole("button", { name: "Untag Pablo" })).toHaveCount(
-    1,
-  );
+  await page.getByRole("option", { name: "Pablo", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Untag Pablo", exact: true }),
+  ).toBeVisible();
+  const adHoc = page.getByRole("button", {
+    name: "Untag Pablo (not a member)",
+    exact: true,
+  });
+  await expect(adHoc).toBeVisible();
+  await adHoc.click();
+  await expect(adHoc).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Untag Pablo", exact: true }),
+  ).toBeVisible();
   await expect
     .poll(async () => {
       return catalog.database

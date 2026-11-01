@@ -4,7 +4,10 @@ import type {
 } from "../schemaIntrospectionHelpers.ts";
 import { indexColumns } from "./indexColumns.ts";
 
-/** The tables migration 'identity and access' creates, as `Database` names them. */
+/**
+ * The tables migration 'identity and access' creates, as `Database` names
+ * them.
+ */
 type IdentityAndAccessTable =
   | "member_name_claims"
   | "members"
@@ -17,7 +20,10 @@ type IdentityAndAccessTable =
   | "visibility_rules"
   | "visibility_rule_subjects";
 
-/** Every foreign key on a identity and access table. See `EXPECTED_FOREIGN_KEYS`. */
+/**
+ * Every foreign key on a identity and access table. See
+ * `EXPECTED_FOREIGN_KEYS`.
+ */
 export const IDENTITY_AND_ACCESS_FOREIGN_KEYS: Record<
   IdentityAndAccessTable,
   ForeignKeyInfo[]
@@ -30,7 +36,8 @@ export const IDENTITY_AND_ACCESS_FOREIGN_KEYS: Record<
       onDelete: "RESTRICT",
     },
   ],
-  // Current avatar rows cannot be deleted while the member still points at them.
+  // Current avatar rows cannot be deleted while the member still points at
+  // them.
   members: [
     {
       column: "avatar_id",
@@ -126,7 +133,10 @@ export const IDENTITY_AND_ACCESS_FOREIGN_KEYS: Record<
   ],
 };
 
-/** Every declared index on a identity and access table. See `EXPECTED_INDEXES`. */
+/**
+ * Every declared index on a identity and access table. See
+ * `EXPECTED_INDEXES`.
+ */
 export const IDENTITY_AND_ACCESS_INDEXES: Record<
   IdentityAndAccessTable,
   IndexInfo[]

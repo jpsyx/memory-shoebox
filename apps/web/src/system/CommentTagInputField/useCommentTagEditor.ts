@@ -1,23 +1,23 @@
+import { commentTagCandidatesQueryOptions } from "@/api/commentTagCandidates/commentTagCandidates";
+import { getFailedCommentTagsFromDraft } from "@/api/comments/comments";
 import { useCombobox } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import {
   useEffect,
-  useState,
   useRef,
+  useState,
+  type KeyboardEvent,
   type RefObject,
   type TextareaHTMLAttributes,
-  type KeyboardEvent,
 } from "react";
-import { commentTagCandidatesQueryOptions } from "@/api/commentTagCandidates/commentTagCandidates";
-import { getFailedCommentTagsFromDraft } from "@/api/comments/comments";
 import {
   getCommentTagQueryFromSelection,
   makeCommentDraftFromMemberSelection,
   type CommentDraft,
 } from "../commentDraftHelpers/commentDraftHelpers";
-import { useCommentDraftHistory } from "./useCommentDraftHistory";
-import { onCommentTagInputKeyDown } from "./commentTagKeyboard";
 import type { CommentTagInputOptions } from "./CommentTagInputField.types";
+import { onCommentTagInputKeyDown } from "./commentTagKeyboard";
+import { useCommentDraftHistory } from "./useCommentDraftHistory";
 type Editor = ReturnType<typeof useCommentTagQuery> &
   ReturnType<typeof _getEditingHandlers> & {
     composing: RefObject<boolean>;
@@ -32,7 +32,10 @@ type Editor = ReturnType<typeof useCommentTagQuery> &
       | "onCompositionEnd"
     >;
   };
-/** Coordinates the explicit picker and local text history without write ownership. */
+/**
+ * Coordinates the explicit picker and local text history without write
+ * ownership.
+ */
 export function useCommentTagEditor(
   props: Readonly<CommentTagInputOptions>,
 ): Editor {

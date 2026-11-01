@@ -29,10 +29,12 @@ export async function reserveMemberAvatar(
         .select(["avatar_id", "status"])
         .where("id", "=", options.memberId)
         .executeTakeFirst();
-      if (member === undefined || member.status !== "active")
+      if (member === undefined || member.status !== "active") {
         throw ApiError.notFound("member_not_found");
-      if (member.avatar_id !== body.expectedAvatarId)
+      }
+      if (member.avatar_id !== body.expectedAvatarId) {
         throw ApiError.conflict({ code: "avatar_changed" });
+      }
       const avatarId = createId();
       const expiresAt = new Date(
         Date.parse(options.now) + 600000,

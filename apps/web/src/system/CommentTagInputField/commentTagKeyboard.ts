@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { useCombobox } from "@mantine/core";
+
 type Options = {
   event: KeyboardEvent<HTMLTextAreaElement>;
   composing: boolean;
@@ -11,32 +12,7 @@ type Options = {
   submit: () => void;
   hasMembers: boolean;
 };
-/** Gives native editing, member selection and submission distinct keys. */
-export function onCommentTagInputKeyDown(options: Readonly<Options>): void {
-  const { event, composing, isOpen, close, undo, submit } = options;
-  if (composing || event.nativeEvent.isComposing || event.keyCode === 229) {
-    return;
-  }
-  const shortcut = event.metaKey || event.ctrlKey;
-  if (
-    shortcut &&
-    (event.key.toLowerCase() === "z" || event.key.toLowerCase() === "y")
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-    undo(event.shiftKey || event.key.toLowerCase() === "y");
-    close();
-    return;
-  }
-  if (isOpen && _onPickerKey(options)) {
-    return;
-  }
-  if (event.key === "Enter" && shortcut) {
-    event.preventDefault();
-    event.stopPropagation();
-    submit();
-  }
-}
+
 function _onPickerKey({
   event,
   close,
@@ -76,4 +52,36 @@ function _onPickerKey({
     return true;
   }
   return false;
+}
+
+/** Gives native editing, member selection and submission distinct keys. */
+export function onCommentTagInputKeyDown(options: Readonly<Options>): void {
+  const { event, composing, isOpen, close, undo, submit } = options;
+  if (composing || event.nativeEvent.isComposing || event.keyCode === 229) {
+    return;
+  }
+  const shortcut = event.metaKey || event.ctrlKey;
+  if (
+    shortcut &&
+    (event.key.toLowerCase() === "z" || event.key.toLowerCase() === "y")
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    undo(event.shiftKey || event.key.toLowerCase() === "y");
+    close();
+    return;
+  }
+  if (event.repeat && event.key === "Enter" && (shortcut || isOpen)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  if (isOpen && _onPickerKey(options)) {
+    return;
+  }
+  if (event.key === "Enter" && shortcut) {
+    event.preventDefault();
+    event.stopPropagation();
+    submit();
+  }
 }

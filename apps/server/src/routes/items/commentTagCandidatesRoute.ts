@@ -4,11 +4,14 @@ import {
   type CommentTagCandidatesResponse,
 } from "@memory-shoebox/shared";
 import type { FastifyRequest } from "fastify";
-import { readCommentTagCandidates } from "../../commentTags/readCommentTagCandidates.ts";
+import { readCommentTagCandidates } from "../../commentTags/commentTagCandidateHelpers.ts";
 import { requireViewer } from "../../http/requestContextHelpers.ts";
 import { getVisibleItemOr404 } from "../../items/getVisibleItemOr404.ts";
 
-/** Lists selectable account references only after authorizing the caller's item access. */
+/**
+ * Lists selectable account references only after authorizing the caller's
+ * item access.
+ */
 export async function getCommentTagCandidates(
   request: FastifyRequest,
 ): Promise<CommentTagCandidatesResponse> {

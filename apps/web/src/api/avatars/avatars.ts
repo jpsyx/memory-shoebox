@@ -1,3 +1,10 @@
+import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
+import {
+  capturePrivateAuthority,
+  getAuthorityFromAccount,
+  isPrivateAuthorityCurrent,
+  reconcileAccountFields,
+} from "@/api/me/privateQueryHelpers";
 import {
   meResponseSchema,
   readMemberAvatarResponseSchema,
@@ -7,13 +14,6 @@ import {
   type MeResponse,
 } from "@memory-shoebox/shared";
 import type { QueryClient } from "@tanstack/react-query";
-import { apiFetch, jsonInit } from "@/api/clientHelpers/clientHelpers";
-import {
-  capturePrivateAuthority,
-  getAuthorityFromAccount,
-  isPrivateAuthorityCurrent,
-  reconcileAccountFields,
-} from "@/api/me/privateQueryHelpers";
 
 type SaveOptions = {
   client: QueryClient;
@@ -34,7 +34,10 @@ type PublicationOwner = {
 type Publication = { owner: PublicationOwner; sequence: number };
 const PUBLICATIONS = new WeakMap<QueryClient, PublicationOwner>();
 
-/** One original authority/publication lifetime, retained across version reads. */
+/**
+ * One original authority/publication lifetime, retained across version
+ * reads.
+ */
 export type AvatarWriteContext = {
   authority: ReturnType<typeof capturePrivateAuthority>;
   publication: Publication;

@@ -1,13 +1,4 @@
 import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
   ITEM_ID,
   makeComment,
   makeVideoDetail,
@@ -21,6 +12,15 @@ import {
   respondWithItem,
 } from "@/testing/itemHarnessHelpers";
 import { makeHold } from "@/testing/itemWriteTestHelpers";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
@@ -276,6 +276,11 @@ describe("video conversation interactions", () => {
       isComposing: true,
     });
     fireEvent.keyDown(field, { key: "Enter", ctrlKey: true, repeat: true });
+    await act(async () => {
+      await new Promise<void>((fulfill) => {
+        setTimeout(fulfill, 0);
+      });
+    });
     expect(field).toHaveValue("First\nSecond");
     expect(
       getRecordedCountFromLine(`POST /api/items/${ITEM_ID}/comments`),

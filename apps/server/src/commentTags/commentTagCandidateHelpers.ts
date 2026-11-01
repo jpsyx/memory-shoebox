@@ -38,7 +38,10 @@ async function _canMemberSeeItem(
   return visible !== undefined;
 }
 
-/** Reads current active, named members through the item's real visibility predicate. */
+/**
+ * Reads current active, named members through the item's real visibility
+ * predicate.
+ */
 export async function readEligibleCommentTagMembers(
   options: Readonly<{
     database: DatabaseExecutor;
@@ -46,23 +49,29 @@ export async function readEligibleCommentTagMembers(
     memberIds?: readonly string[];
   }>,
 ): Promise<EligibleMember[]> {
-  if (options.memberIds?.length === 0) return [];
+  if (options.memberIds?.length === 0) {
+    return [];
+  }
   let query = options.database
     .selectFrom("members")
     .select(["id as memberId", "display_name as displayName", "role"])
     .where("status", "=", "active")
     .where("profile_completed_at", "is not", null)
     .where("display_name", "is not", null);
-  if (options.memberIds !== undefined)
+  if (options.memberIds !== undefined) {
     query = query.where("id", "in", options.memberIds);
+  }
   const eligible: EligibleMember[] = [];
   for (const member of await query.execute()) {
-    if (!member.displayName?.trim()) continue;
-    if (await _canMemberSeeItem(options, member))
+    if (!member.displayName?.trim()) {
+      continue;
+    }
+    if (await _canMemberSeeItem(options, member)) {
       eligible.push({
         memberId: member.memberId,
         displayName: member.displayName,
       });
+    }
   }
   return eligible;
 }
@@ -98,7 +107,10 @@ function _getMatchesFromMembers(
     });
 }
 
-/** Searches authorized candidates with N1 keys and deterministic code-unit ordering. */
+/**
+ * Searches authorized candidates with N1 keys and deterministic code-unit
+ * ordering.
+ */
 export async function readCommentTagCandidates(
   options: Readonly<{
     database: DatabaseExecutor;

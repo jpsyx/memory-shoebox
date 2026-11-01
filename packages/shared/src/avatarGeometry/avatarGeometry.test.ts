@@ -16,3 +16,13 @@ it("uses the same floored odd-dimension fractional zoom square and clamps edges"
     }),
   ).toEqual({ left: 68, top: 0, width: 33, height: 33 });
 });
+
+it("keeps a one-pixel extraction at maximum zoom on small images", () => {
+  expect(
+    getExtractionFromAvatarCrop({
+      width: 4,
+      height: 4,
+      crop: { centerX: 1, centerY: 1, zoom: 8 },
+    }),
+  ).toEqual({ left: 3, top: 3, width: 1, height: 1 });
+});

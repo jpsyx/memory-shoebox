@@ -29,7 +29,10 @@ export type PersonSelections = {
   onPersonChoice: (selection: PersonSelection) => void;
 };
 
-/** Position-based selections preserve distinct identities with the same raw name. */
+/**
+ * Position-based selections preserve distinct identities with the same raw
+ * name.
+ */
 export function usePersonSelections(): PersonSelections {
   const [names, setNames] = useState<string[]>([]);
   const [personIds, setPersonIds] = useState<Record<string, string>>({});

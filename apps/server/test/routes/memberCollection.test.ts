@@ -1,97 +1,29 @@
 import {
   burstFramesResponseSchema,
   filterFacetsResponseSchema,
-  timelineResponseSchema,
   timelineRailResponseSchema,
-  memberCollectionResponseSchema,
 } from "@memory-shoebox/shared";
 import { expect, it } from "vitest";
 import { CompiledQuery } from "kysely";
 import { createId } from "../../src/db/createId.ts";
 import {
-  makeTimelineFilterFromQuery,
   makeSelectionExpressionFromFilter,
+  makeTimelineFilterFromQuery,
 } from "../../src/archive/selectionFilterHelpers.ts";
 import { makeMemberCollectionFixture } from "../helpers/memberCollectionFixture.ts";
 import { makeViewer } from "../helpers/makeViewer.ts";
-import { NOW } from "../helpers/seedHelpers/seedHelpers.ts";
-
-type Fixture = Awaited<ReturnType<typeof makeMemberCollectionFixture>>;
-function _selection(member: string) {
-  return { tags: [], people: [], member };
-}
-async function _readTimeline(
-  fixture: Readonly<Fixture>,
-  query = `member=${fixture.memberId}`,
-) {
-  const response = await fixture.get(`timeline?${query}`);
-  expect(response.statusCode).toBe(200);
-  return timelineResponseSchema.parse(response.json());
-}
-function _getItemIdsFromTimeline(
-  body: Readonly<Awaited<ReturnType<typeof _readTimeline>>>,
-) {
-  return body.days.flatMap((day) => {
-    return day.items.map((item) => {
-      return item.itemId;
-    });
-  });
-}
-async function _readSeenIds(fixture: Readonly<Fixture>) {
-  const rows = await fixture.database
-    .selectFrom("item_views")
-    .select("item_id")
-    .where("member_id", "=", fixture.reader.memberId)
-    .execute();
-  return rows
-    .map((row) => {
-      return row.item_id;
-    })
-    .sort();
-}
-async function _readSelectedIds(fixture: Readonly<Fixture>) {
-  const responses = await Promise.all(
-    fixture.itemIds.map(async (itemId) => {
-      const response = await fixture.post("media/position", {
-        itemId,
-        selection: _selection(fixture.memberId),
-      });
-      expect(response.statusCode).toBe(200);
-      return response.json() === null ? [] : [itemId];
-    }),
-  );
-  return responses.flat();
-}
-async function _insertPublishedAvatar(fixture: Readonly<Fixture>) {
-  const avatarId = createId();
-  await fixture.database
-    .insertInto("member_avatar_uploads")
-    .values({
-      id: avatarId,
-      member_id: fixture.memberId,
-      storage_key: `avatars/${fixture.memberId}/${avatarId}.webp`,
-      expected_avatar_id: null,
-      crop_json: JSON.stringify({ centerX: 0.5, centerY: 0.5, zoom: 1 }),
-      content_type: "image/webp",
-      declared_byte_size: 1024,
-      output_byte_size: 100,
-      state: "published",
-      expires_at: NOW,
-      created_at: NOW,
-    })
-    .execute();
-  await fixture.database
-    .updateTable("members")
-    .set({ avatar_id: avatarId })
-    .where("id", "=", fixture.memberId)
-    .execute();
-  return avatarId;
-}
+import {
+  getItemIdsFromTimeline,
+  getSelectionFromMemberId,
+  readMemberTimeline,
+  readSeenIds,
+  readSelectedIds,
+} from "./memberCollectionTestHelpers.ts";
 
 // Removing member selection or bypassing visibility must fail these real reads.
 it("counts visible uploads and linked photo tags once, with matching burst cover and video", async () => {
   const fixture = await makeMemberCollectionFixture();
-  const body = await _readTimeline(fixture);
+  const body = await readMemberTimeline(fixture);
   const burst = body.days[0]!.items.find((item) => {
     return item.burst !== null;
   })!;
@@ -103,12 +35,12 @@ it("counts visible uploads and linked photo tags once, with matching burst cover
   ).toEqual([3, 1]);
   expect(burst.burst!.visibleFrameCount).toBe(2);
   expect(burst.burst!.coverItemId).toBe(fixture.itemIds[0]);
-  expect(_getItemIdsFromTimeline(body)).toEqual([
+  expect(getItemIdsFromTimeline(body)).toEqual([
     fixture.itemIds[1],
     fixture.itemIds[0],
     fixture.itemIds[3],
   ]);
-  const page = await _readTimeline(
+  const page = await readMemberTimeline(
     fixture,
     `member=${fixture.memberId}&limit=1`,
   );
@@ -163,20 +95,23 @@ it("narrows facets by the member union without matching an ad-hoc namesake", asy
 
 it("preserves pure person filters and intersects member with extra filters", async () => {
   const fixture = await makeMemberCollectionFixture();
-  const personOnly = await _readTimeline(fixture, `people=${fixture.personId}`);
+  const personOnly = await readMemberTimeline(
+    fixture,
+    `people=${fixture.personId}`,
+  );
   expect(personOnly.resultCount).toBe(2);
-  expect(_getItemIdsFromTimeline(personOnly).sort()).toEqual(
+  expect(getItemIdsFromTimeline(personOnly).sort()).toEqual(
     [fixture.itemIds[1], fixture.itemIds[2]].sort(),
   );
-  const intersected = await _readTimeline(
+  const intersected = await readMemberTimeline(
     fixture,
     `member=${fixture.memberId}&people=${fixture.personId}&tags=${fixture.tagId}&from=2026-09-27&until=2026-09-27`,
   );
   expect(intersected.resultCount).toBe(2);
-  expect(_getItemIdsFromTimeline(intersected).sort()).toEqual(
+  expect(getItemIdsFromTimeline(intersected).sort()).toEqual(
     [fixture.itemIds[1], fixture.itemIds[2]].sort(),
   );
-  const emptyDate = await _readTimeline(
+  const emptyDate = await readMemberTimeline(
     fixture,
     `member=${fixture.memberId}&from=2026-09-28`,
   );
@@ -186,20 +121,20 @@ it("preserves pure person filters and intersects member with extra filters", asy
 
 it("retains member selection in the archive attachment picker", async () => {
   const fixture = await makeMemberCollectionFixture();
-  const picker = await _readTimeline(
+  const picker = await readMemberTimeline(
     fixture,
     `member=${fixture.memberId}&attachedToMilestoneId=${fixture.milestoneId}&excludeAttached=true`,
   );
   expect(picker.resultCount).toBe(3);
-  expect(_getItemIdsFromTimeline(picker).sort()).toEqual(
+  expect(getItemIdsFromTimeline(picker).sort()).toEqual(
     fixture.expectedIds.slice(1).sort(),
   );
-  const attached = await _readTimeline(
+  const attached = await readMemberTimeline(
     fixture,
     `member=${fixture.memberId}&attachedToMilestoneId=${fixture.milestoneId}`,
   );
   expect(attached.resultCount).toBe(1);
-  expect(_getItemIdsFromTimeline(attached)).toEqual([fixture.itemIds[0]]);
+  expect(getItemIdsFromTimeline(attached)).toEqual([fixture.itemIds[0]]);
 });
 
 it("filters burst frames and seen writes before expanding stacks", async () => {
@@ -217,7 +152,7 @@ it("filters burst frames and seen writes before expanding stacks", async () => {
     [fixture.itemIds[0], 1],
     [fixture.itemIds[2], 2],
   ]);
-  expect(await _readSeenIds(fixture)).toEqual(
+  expect(await readSeenIds(fixture)).toEqual(
     [fixture.itemIds[0], fixture.itemIds[2]].sort(),
   );
   const seenResponse = await fixture.post("items/seen", {
@@ -225,12 +160,12 @@ it("filters burst frames and seen writes before expanding stacks", async () => {
     burstIds: [],
   });
   expect(seenResponse.statusCode).toBe(204);
-  expect(await _readSeenIds(fixture)).toEqual([...fixture.expectedIds].sort());
+  expect(await readSeenIds(fixture)).toEqual([...fixture.expectedIds].sort());
 });
 
 it("ranks every matching frame and denies hidden/out-of-selection positions", async () => {
   const fixture = await makeMemberCollectionFixture();
-  const selection = _selection(fixture.memberId);
+  const selection = getSelectionFromMemberId(fixture.memberId);
   const positions = await Promise.all(
     fixture.expectedIds.map((itemId) => {
       return fixture.post("media/position", { itemId, selection });
@@ -267,7 +202,7 @@ it("follows collection neighbors and keeps preview authorization independent", a
   const fixture = await makeMemberCollectionFixture();
   const neighbors = await fixture.post("media/neighbors", {
     itemId: fixture.itemIds[1],
-    selection: _selection(fixture.memberId),
+    selection: getSelectionFromMemberId(fixture.memberId),
     direction: "next",
   });
   expect(neighbors.statusCode).toBe(200);
@@ -291,7 +226,7 @@ it("follows collection neighbors and keeps preview authorization independent", a
 
 it("bulk edits actual selected IDs and rejects hidden additions atomically", async () => {
   const fixture = await makeMemberCollectionFixture();
-  const itemIds = await _readSelectedIds(fixture);
+  const itemIds = await readSelectedIds(fixture);
   expect(itemIds).toEqual(fixture.expectedIds);
   const response = await fixture.post("items/bulk-edit", {
     action: "tags",
@@ -327,70 +262,10 @@ it("bulk edits actual selected IDs and rejects hidden additions atomically", asy
   ).toEqual([]);
 });
 
-it("returns only retained public identity including removed accounts", async () => {
-  const fixture = await makeMemberCollectionFixture();
-  const response = await fixture.get(`member-collections/${fixture.memberId}`);
-  expect(response.statusCode).toBe(200);
-  expect(memberCollectionResponseSchema.parse(response.json())).toEqual({
-    member: {
-      memberId: fixture.memberId,
-      displayName: "Jorge",
-      avatar: null,
-    },
-  });
-  await fixture.database
-    .updateTable("members")
-    .set({ status: "removed" })
-    .where("id", "=", fixture.memberId)
-    .execute();
-  expect(
-    (await fixture.get(`member-collections/${fixture.memberId}`)).json(),
-  ).toEqual(response.json());
-  expect((await _readTimeline(fixture)).resultCount).toBe(4);
-});
-
-it("hydrates the public identity avatar through the existing private signing pipeline", async () => {
-  const fixture = await makeMemberCollectionFixture();
-  const avatarId = await _insertPublishedAvatar(fixture);
-  const response = await fixture.get(`member-collections/${fixture.memberId}`);
-  const member = memberCollectionResponseSchema.parse(response.json()).member!;
-  expect(member.avatar?.avatarId).toBe(avatarId);
-  expect(member.avatar?.url).toContain(
-    encodeURIComponent(`avatars/${fixture.memberId}/${avatarId}.webp`),
-  );
-  expect(member.avatar?.issuedAt).toBe(NOW);
-  expect(member.avatar?.expiresAt).toBe(
-    new Date(Date.parse(NOW) + 3600000).toISOString(),
-  );
-  expect(Object.keys(response.json().member).sort()).toEqual([
-    "avatar",
-    "displayName",
-    "memberId",
-  ]);
-});
-
-it("authenticates the identity endpoint and represents unknown accounts as null", async () => {
-  const fixture = await makeMemberCollectionFixture();
-  expect(
-    (await fixture.get(`member-collections/${createId()}`)).json(),
-  ).toEqual({ member: null });
-  expect((await fixture.get("member-collections/not-a-uuid")).statusCode).toBe(
-    400,
-  );
-  expect(
-    (
-      await fixture.app.inject({
-        method: "GET",
-        url: `/api/member-collections/${fixture.memberId}`,
-      })
-    ).statusCode,
-  ).toBe(401);
-});
-
 it("returns zero for unknown members without hidden IDs or counts", async () => {
   const fixture = await makeMemberCollectionFixture();
   const unknown = createId();
-  const body = await _readTimeline(fixture, `member=${unknown}`);
+  const body = await readMemberTimeline(fixture, `member=${unknown}`);
   expect(body.days).toEqual([]);
   expect(body.resultCount).toBe(0);
   expect(
@@ -407,7 +282,7 @@ it("returns zero for unknown members without hidden IDs or counts", async () => 
     (
       await fixture.post("media/position", {
         itemId: fixture.itemIds[0],
-        selection: _selection(unknown),
+        selection: getSelectionFromMemberId(unknown),
       })
     ).json(),
   ).toBeNull();

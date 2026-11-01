@@ -1,9 +1,9 @@
-import { hasSameCommentDraftOccurrences } from "../commentDraftHelpers/commentTagProvenance";
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import {
   makeCommentDraftFromEdit,
   type CommentDraft,
 } from "../commentDraftHelpers/commentDraftHelpers";
+import { hasSameCommentDraftOccurrences } from "../commentDraftHelpers/commentTagProvenance";
 type Selection = { start: number; end: number };
 type Snapshot = Selection & { draft: CommentDraft };
 type Options = {
@@ -181,7 +181,8 @@ function _getReplacementFromBodies(
   body: string,
   changed: string,
 ): Selection & { text: string } {
-  // Only infer the changed interval, never identity from a name or its spelling.
+  // Only infer the changed interval, never identity from a name or its
+  // spelling.
   const commonStart =
     Array.from(
       { length: Math.min(body.length, changed.length) },

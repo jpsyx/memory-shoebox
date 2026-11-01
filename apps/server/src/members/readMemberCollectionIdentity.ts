@@ -3,7 +3,10 @@ import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 
-/** Reads a retained account's public identity without exposing account metadata. */
+/**
+ * Reads a retained account's public identity without exposing account
+ * metadata.
+ */
 export async function readMemberCollectionIdentity(
   options: Readonly<{
     database: DatabaseExecutor;

@@ -1,4 +1,11 @@
 import {
+  capturePrivateAuthority,
+  isPrivateAuthorityCurrent,
+  subscribePrivateRetirement,
+  type PrivateAuthority,
+} from "@/api/me/privateQueryHelpers";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import {
   createContext,
   useContext,
   useEffect,
@@ -7,19 +14,15 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import {
-  capturePrivateAuthority,
-  isPrivateAuthorityCurrent,
-  subscribePrivateRetirement,
-  type PrivateAuthority,
-} from "@/api/me/privateQueryHelpers";
 import {
   createConversationJourney,
   type ConversationJourney,
 } from "../conversationJourneyHelpers/conversationJourneyHelpers";
 
-/** One optional context so isolated conversation consumers can own local drafts. */
+/**
+ * One optional context so isolated conversation consumers can own local
+ * drafts.
+ */
 export const ConversationJourneyContext = createContext<
   ConversationJourney | undefined
 >(undefined);
@@ -77,7 +80,10 @@ function _makeJourneyFromAuthority(
     return isPrivateAuthorityCurrent(client, ticket);
   });
 }
-/** Retains user drafts above routes, fenced to one real private session lifetime. */
+/**
+ * Retains user drafts above routes, fenced to one real private session
+ * lifetime.
+ */
 export function ConversationJourneyProvider({
   children,
 }: Readonly<{ children: ReactNode }>): ReactNode {
@@ -113,7 +119,10 @@ function _subscribeNothing(): () => void {
 function _emptySnapshot(): number {
   return 0;
 }
-/** Uses the session owner when present, otherwise a single local editor owner. */
+/**
+ * Uses the session owner when present, otherwise a single local editor
+ * owner.
+ */
 export function useConversationDraftOwner(): ConversationJourney {
   const journey = useConversationJourney();
   const [local] = useState(createConversationJourney);

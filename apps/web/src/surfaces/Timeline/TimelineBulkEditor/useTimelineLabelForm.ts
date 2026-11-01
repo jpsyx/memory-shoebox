@@ -42,7 +42,9 @@ function _getPeopleFromNames(
 ): PersonInput[] {
   return options.names.map((name, index) => {
     const personId = options.choices[String(index)];
-    if (personId) return { personId };
+    if (personId) {
+      return { personId };
+    }
     const matches = options.entries.filter((entry) => {
       return (
         !entry.person.isMember &&
@@ -109,7 +111,9 @@ function _submitLabels(
   }
 }
 
-/** Maintains additive labels and the explicit choice for duplicate person names. */
+/**
+ * Maintains additive labels and explicit choice for duplicate person names.
+ */
 export function useTimelineLabelForm(props: Readonly<Options>): LabelForm {
   const form = usePersonSelections();
   const directories = useLabelDirectories(props.kind);

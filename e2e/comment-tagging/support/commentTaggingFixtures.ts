@@ -1,8 +1,8 @@
 import {
   test as base,
   expect,
-  type Page,
   type Locator,
+  type Page,
   type Response,
 } from "@playwright/test";
 import {
@@ -82,7 +82,10 @@ export async function selectTag(
   await expect(field).toBeFocused();
 }
 
-/** Wait for the actual application response before inspecting persisted state. */
+/**
+ * Wait for the actual application response before inspecting persisted
+ * state.
+ */
 export async function submitComment(
   page: Page,
   field: Locator,

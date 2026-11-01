@@ -1,9 +1,9 @@
 import {
-  test,
   expect,
-  signIn,
   selectTag,
+  signIn,
   submitComment,
+  test,
 } from "./support/commentTaggingFixtures.ts";
 
 test("typed text stays plain; selected repeated and self tags persist with one recorded target email", async ({
@@ -194,7 +194,7 @@ test("captured tag email href survives real sign-in and profile completion witho
   catalog,
 }) => {
   const { startSecureCommentTaggingProxy } =
-    await import("./support/runCommentTaggingServer.ts");
+    await import("./support/startSecureCommentTaggingProxy.ts");
   const secure = await startSecureCommentTaggingProxy(catalog);
   const secureCatalog = { ...catalog, origin: secure.origin };
   try {

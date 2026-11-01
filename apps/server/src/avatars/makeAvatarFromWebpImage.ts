@@ -1,5 +1,5 @@
-import sharp, { type Sharp, type OutputInfo, type Raw } from "sharp";
 import type { getExtractionFromAvatarCrop } from "@memory-shoebox/shared";
+import sharp, { type OutputInfo, type Raw, type Sharp } from "sharp";
 
 type Square = ReturnType<typeof getExtractionFromAvatarCrop>;
 type Geometry = { width: number; height: number; square: Square };
@@ -107,7 +107,8 @@ function _makeOrientedAvatarFromSquare(
   square: Readonly<{ data: Buffer; info: OutputInfo }>,
   orientation: number,
 ): Promise<Buffer> {
-  // Explicit Sharp flop precedes rotation; EXIF's mirrored cases account for it.
+  // Explicit Sharp flop precedes rotation; EXIF's mirrored cases account for
+  // it.
   const angles = [0, 0, 0, 180, 180, 270, 90, 90, 270];
   return sharp(square.data, { raw: _getRawInputFromOutput(square.info) })
     .flop([2, 4, 5, 7].includes(orientation))

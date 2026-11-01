@@ -4,7 +4,7 @@ export function getExtractionFromAvatarCrop(
   options: Readonly<{ width: number; height: number; crop: AvatarCrop }>,
 ): { left: number; top: number; width: number; height: number } {
   const { width, height, crop } = options;
-  const side = Math.floor(Math.min(width, height) / crop.zoom);
+  const side = Math.max(1, Math.floor(Math.min(width, height) / crop.zoom));
   return {
     left: Math.max(
       0,

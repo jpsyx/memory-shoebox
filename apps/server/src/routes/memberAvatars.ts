@@ -4,18 +4,18 @@ import {
   removeAvatarRequestSchema,
   reserveAvatarRequestSchema,
 } from "@memory-shoebox/shared";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { AVATAR_BYTE_LIMIT } from "../avatars/makeAvatarImageFromBytes.ts";
+import { removeMemberAvatar } from "../avatars/memberAvatarWriteHelpers.ts";
+import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
+import { reserveMemberAvatar } from "../avatars/reserveMemberAvatar.ts";
+import {
+  retireMemberAvatarUpload,
+  uploadMemberAvatar,
+} from "../avatars/uploadMemberAvatar.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { RATE_LIMIT_RULES } from "../http/rateLimit/rateLimit.constants.ts";
-import { AVATAR_BYTE_LIMIT } from "../avatars/makeAvatarImageFromBytes.ts";
-import {
-  uploadMemberAvatar,
-  retireMemberAvatarUpload,
-} from "../avatars/uploadMemberAvatar.ts";
-import type { FastifyInstance, FastifyRequest } from "fastify";
 import { requireViewer } from "../http/requestContextHelpers.ts";
-import { reserveMemberAvatar } from "../avatars/reserveMemberAvatar.ts";
-import { removeMemberAvatar } from "../avatars/publishMemberAvatar.ts";
-import { readMemberAvatars } from "../avatars/readMemberAvatars.ts";
 import { getMeDtoFromMemberId } from "../members/getMeDtoFromMemberId.ts";
 import { readShellSettings } from "../settings/readShellSettings.ts";
 
@@ -71,7 +71,10 @@ function _registerRenewalRoute(app: FastifyInstance): void {
   });
 }
 
-/** Registers private own-avatar reservation/removal and authenticated renewal reads. */
+/**
+ * Registers private own-avatar reservation/removal and authenticated renewal
+ * reads.
+ */
 export async function memberAvatarRoutes(app: FastifyInstance): Promise<void> {
   _registerReservationRoute(app);
   _registerRemovalRoute(app);

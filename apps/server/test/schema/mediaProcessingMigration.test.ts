@@ -31,7 +31,8 @@ async function _openHistoricalCatalog(): Promise<HistoricalCatalog> {
     await database.destroy();
     rmSync(directory, { recursive: true, force: true });
   });
-  // Bound this historical migration test so later identity upgrades cannot change its fixtures.
+  // Bound this historical migration test so later identity upgrades cannot
+  // change its fixtures.
   const sources = Object.fromEntries(
     Object.entries(await getMigrationSourcesFromFiles()).filter(([name]) => {
       return name < "0019";

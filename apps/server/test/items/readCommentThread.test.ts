@@ -1,10 +1,10 @@
-import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { describe, expect, it } from "vitest";
+import { readMemberRefs } from "../../src/archive/readMemberRefs.ts";
 import { createDatabase } from "../../src/db/client.ts";
 import { createId } from "../../src/db/createId.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
 import { readCommentThread } from "../../src/items/readCommentThread.ts";
-import { readMemberRefs } from "../../src/archive/readMemberRefs.ts";
+import { createFakeB2Client } from "../helpers/createFakeB2Client/createFakeB2Client.ts";
 import { makeQueryCountingDatabaseFromDatabase } from "../helpers/makeQueryCountingDatabaseFromDatabase.ts";
 import {
   insertComment,
@@ -277,7 +277,8 @@ describe("readCommentThread's query plan", () => {
     const largeQueries = large.getQueryCount();
 
     // The comments, then every reaction on all of them in one
-    // `comment_id IN (...)`, and one occurrence batch: three queries at any size.
+    // `comment_id IN (...)`, and one occurrence batch: three queries at any
+    // size.
     expect(smallQueries).toBe(3);
     expect(largeQueries).toBe(smallQueries);
     expect(largeThread).toHaveLength(12);

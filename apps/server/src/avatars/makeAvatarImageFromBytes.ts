@@ -9,14 +9,25 @@ import { ApiError } from "../http/ApiError.ts";
 
 /** The only accepted original byte budget, checked before Sharp sees input. */
 export const AVATAR_BYTE_LIMIT = 10 * 1024 * 1024;
+
 const PIXEL_LIMIT = 50_000_000;
-// Match the existing isolated media recipes: no retained pixels or parallel tiles.
+
+// Match the existing isolated media recipes: no retained pixels or parallel
+// tiles.
 sharp.concurrency(1);
+
 sharp.cache(false);
+
 const FORMATS: Readonly<Record<string, string>> = {
   "image/jpeg": "jpeg",
   "image/png": "png",
   "image/webp": "webp",
+};
+
+type AvatarImageInput = {
+  bytes: Uint8Array;
+  contentType: string;
+  crop: AvatarCrop;
 };
 
 function _invalidImage(): ApiError {
@@ -27,13 +38,62 @@ function _invalidImage(): ApiError {
   });
 }
 
-type AvatarImageInput = {
-  bytes: Uint8Array;
-  contentType: string;
-  crop: AvatarCrop;
-};
+function _getOrientedDimensionsFromMetadata(
+  metadata: Metadata,
+  options: { bytes: Uint8Array; contentType: string },
+): { width: number; height: number } {
+  if (
+    metadata.format !== FORMATS[options.contentType] ||
+    (metadata.pages ?? 1) !== 1 ||
+    (metadata.format === "png" && _hasPngAnimation(options.bytes)) ||
+    !metadata.width ||
+    !metadata.height
+  ) {
+    throw _invalidImage();
+  }
+  const swapsAxes = (metadata.orientation ?? 1) >= 5;
+  const width = swapsAxes ? metadata.height : metadata.width;
+  const height = swapsAxes ? metadata.width : metadata.height;
 
-/** Decodes one bounded still image, orients/crops it and strips all metadata. */
+  return { width, height };
+}
+
+// libvips exposes only APNG's default still, so page count alone is
+// insufficient.
+// Walk chunk boundaries, never search compressed data for an animation marker.
+function _hasPngAnimation(bytes: Uint8Array): boolean {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let offset = 8;
+  while (offset + 12 <= bytes.byteLength) {
+    const length = view.getUint32(offset);
+    const type = view.getUint32(offset + 4);
+    if (offset + length + 12 > bytes.byteLength) {
+      throw _invalidImage();
+    }
+    if (type === 0x6163544c) {
+      return true;
+    } // acTL
+    if (type === 0x49454e44) {
+      return false;
+    } // IEND
+    offset += length + 12;
+  }
+  throw _invalidImage();
+}
+
+function _assertByteLimit(bytes: Uint8Array): void {
+  if (bytes.byteLength > AVATAR_BYTE_LIMIT) {
+    throw new ApiError({
+      statusCode: 413,
+      code: "avatar_too_large",
+      message: "Choose a photo smaller than 10 MB.",
+    });
+  }
+}
+
+/**
+ * Decodes one bounded still image, orients/crops it and strips all metadata.
+ */
 export async function makeAvatarImageFromBytes(
   options: Readonly<AvatarImageInput>,
 ): Promise<Uint8Array> {
@@ -74,57 +134,5 @@ export async function makeAvatarImageFromBytes(
       .toBuffer();
   } catch {
     throw _invalidImage();
-  }
-}
-
-function _getOrientedDimensionsFromMetadata(
-  metadata: Metadata,
-  options: { bytes: Uint8Array; contentType: string },
-): { width: number; height: number } {
-  if (
-    metadata.format !== FORMATS[options.contentType] ||
-    (metadata.pages ?? 1) !== 1 ||
-    (metadata.format === "png" && _hasPngAnimation(options.bytes)) ||
-    !metadata.width ||
-    !metadata.height
-  ) {
-    throw _invalidImage();
-  }
-  const swapsAxes = (metadata.orientation ?? 1) >= 5;
-  const width = swapsAxes ? metadata.height : metadata.width;
-  const height = swapsAxes ? metadata.width : metadata.height;
-
-  return { width, height };
-}
-
-// libvips exposes only APNG's default still, so page count alone is insufficient.
-// Walk chunk boundaries, never search compressed data for an animation marker.
-function _hasPngAnimation(bytes: Uint8Array): boolean {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let offset = 8;
-  while (offset + 12 <= bytes.byteLength) {
-    const length = view.getUint32(offset);
-    const type = view.getUint32(offset + 4);
-    if (offset + length + 12 > bytes.byteLength) {
-      throw _invalidImage();
-    }
-    if (type === 0x6163544c) {
-      return true;
-    } // acTL
-    if (type === 0x49454e44) {
-      return false;
-    } // IEND
-    offset += length + 12;
-  }
-  throw _invalidImage();
-}
-
-function _assertByteLimit(bytes: Uint8Array): void {
-  if (bytes.byteLength > AVATAR_BYTE_LIMIT) {
-    throw new ApiError({
-      statusCode: 413,
-      code: "avatar_too_large",
-      message: "Choose a photo smaller than 10 MB.",
-    });
   }
 }

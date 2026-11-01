@@ -1,24 +1,25 @@
-import { describe, expect, it } from "vitest";
 import { sql } from "kysely";
+import { describe, expect, it } from "vitest";
 import { createDatabase } from "../../src/db/client.ts";
-import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import { migrateToLatest } from "../../src/db/migrate.ts";
+import { getMigrationSourcesFromFiles } from "../../src/db/migrationSources.ts";
 import {
-  insertItem,
-  insertMember,
-  insertUploadSession,
-  NOW,
   insertComment,
+  insertItem,
+  insertItemTag,
+  insertMember,
   insertRendition,
   insertTag,
-  insertItemTag,
+  insertUploadSession,
+  NOW,
 } from "../helpers/seedHelpers/seedHelpers.ts";
 
 describe("checksum migration", () => {
   it("preserves populated items including existing duplicates and adds indexed lookup", async () => {
     const database = createDatabase(":memory:");
     try {
-      // Bound this historical migration test so later identity upgrades cannot change its fixtures.
+      // Bound this historical migration test so later identity upgrades
+      // cannot change its fixtures.
       const sources = Object.fromEntries(
         Object.entries(await getMigrationSourcesFromFiles()).filter(
           ([name]) => {

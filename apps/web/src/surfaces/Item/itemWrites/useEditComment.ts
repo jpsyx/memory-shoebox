@@ -1,22 +1,14 @@
+import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
+import {
+  getCommentTagFailuresFromError,
+  updateComment,
+  type CommentTagFailure,
+} from "@/api/comments/comments";
 import {
   capturePrivateAuthority,
   isPrivateAuthorityCurrent,
   type PrivateAuthority,
 } from "@/api/me/privateQueryHelpers";
-import type { Query } from "@tanstack/react-query";
-import type { CommentDto } from "@memory-shoebox/shared";
-import { ApiRequestError } from "@/api/clientHelpers/clientHelpers";
-import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
-import {
-  useIsMutating,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
-  updateComment,
-  getCommentTagFailuresFromError,
-  type CommentTagFailure,
-} from "@/api/comments/comments";
 import { itemWriteFailure } from "@/surfaces/Item/itemCopyHelpers/itemCopyHelpers";
 import { makeItemDetailFromSavedComment } from "@/surfaces/Item/itemWrites/itemCacheHelpers/itemCacheHelpers";
 import {
@@ -24,6 +16,14 @@ import {
   refetchItemWhenRefused,
 } from "@/surfaces/Item/itemWrites/itemWriteHelpers/itemWriteHelpers";
 import { useUpdateCachedItem } from "@/surfaces/Item/itemWrites/useUpdateCachedItem";
+import type { CommentDraft } from "@/system/commentDraftHelpers/commentDraftHelpers";
+import type { CommentDto } from "@memory-shoebox/shared";
+import type { Query } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 type Submission = CommentDraft & {
   onSaved: (comment: CommentDto) => void;
@@ -73,14 +73,17 @@ export function useEditComment(
   const mutation = useMutation({
     mutationKey,
     scope: makeWriteScopeFromItemId(itemId),
-    mutationFn: (body: Submission) => {
+    mutationFn: async (body: Submission) => {
+      if (!isCurrent(body)) {
+        return undefined;
+      }
       return updateComment({
         commentId,
         body: { body: body.body, commentTags: body.commentTags },
       });
     },
     onSuccess: (comment, submission) => {
-      if (!isCurrent(submission)) {
+      if (!comment || !isCurrent(submission)) {
         return;
       }
       updateCachedItem((detail) => {

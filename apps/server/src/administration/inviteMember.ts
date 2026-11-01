@@ -116,8 +116,12 @@ function _getSuggestionPatchFromRestoration(
   }>,
 ): { suggested_display_name?: string | null } {
   const { body, hasClaim, isComplete } = options;
-  if (body.displayName === undefined) return {};
-  if (hasClaim && isComplete) return { suggested_display_name: null };
+  if (body.displayName === undefined) {
+    return {};
+  }
+  if (hasClaim && isComplete) {
+    return { suggested_display_name: null };
+  }
   return {
     suggested_display_name:
       hasClaim && body.displayName !== null
@@ -141,10 +145,11 @@ async function _restoreInvitedMember(
     .where("member_id", "=", existing.id)
     .executeTakeFirst();
   if (claim && body.displayName !== undefined) {
-    if (body.displayName === null)
+    if (body.displayName === null) {
       throw ApiError.invalidRequest({
         displayName: ["A claimed name cannot be cleared."],
       });
+    }
     await claimMemberName({
       transaction,
       memberId: existing.id,

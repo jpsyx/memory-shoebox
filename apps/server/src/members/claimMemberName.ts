@@ -1,8 +1,8 @@
-import { sql } from "kysely";
 import {
   accountNameSchema,
   makeAccountNameKeyFromName,
 } from "@memory-shoebox/shared";
+import { sql } from "kysely";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import { ApiError } from "../http/ApiError.ts";
 import { syncMemberPerson } from "./syncMemberPerson.ts";
@@ -45,16 +45,20 @@ async function _claimNameKey(options: ClaimOptions): Promise<void> {
   }
 }
 
-/** Claim a permanent name and synchronize identity inside the caller's immediate transaction. */
+/**
+ * Claim a permanent name and synchronize identity inside the caller's
+ * immediate transaction.
+ */
 export async function claimMemberName(options: ClaimOptions): Promise<void> {
   const { transaction, memberId, now } = options;
   const parsed = accountNameSchema.safeParse(options.displayName);
-  if (!parsed.success)
+  if (!parsed.success) {
     throw ApiError.invalidRequest({
       displayName: parsed.error.issues.map((issue) => {
         return issue.message;
       }),
     });
+  }
   await _claimNameKey({ ...options, displayName: parsed.data });
   await transaction
     .updateTable("members")

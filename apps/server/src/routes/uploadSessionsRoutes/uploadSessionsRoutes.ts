@@ -1,17 +1,17 @@
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { requireViewer } from "../../http/requestContextHelpers.ts";
 import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
-import { patchUploadFileBurst } from "./patchUploadFileBurst.ts";
-import type { FastifyInstance, FastifyRequest } from "fastify";
-import { deleteUploadSession } from "./deleteUploadSession.ts";
 import { deleteUploadFiles } from "./deleteUploadFiles.ts";
+import { deleteUploadSession } from "./deleteUploadSession.ts";
+import { patchUploadFileBurst } from "./patchUploadFileBurst.ts";
+import { patchUploadManifest } from "./patchUploadManifest.ts";
 import { postUploadFileComplete } from "./postUploadFileComplete.ts";
-import { postUploadSessionCommit } from "./postUploadSessionCommit.ts";
-import { postUploadSession } from "./postUploadSession.ts";
 import { postUploadFilePresign } from "./postUploadFilePresign.ts";
+import { postUploadFileRetry } from "./postUploadFileRetry.ts";
+import { postUploadSession } from "./postUploadSession.ts";
+import { postUploadSessionCommit } from "./postUploadSessionCommit.ts";
 import { getCurrentUploadSession } from "./readUploadSessionRoutes/getCurrentUploadSession.ts";
 import { getUploadSession } from "./readUploadSessionRoutes/getUploadSession.ts";
-import { postUploadFileRetry } from "./postUploadFileRetry.ts";
-import { patchUploadManifest } from "./patchUploadManifest.ts";
 import { deleteUploadEdit } from "./uploadPlanRouteHelpers/deleteUploadEdit.ts";
 import { patchUploadVisibility } from "./uploadPlanRouteHelpers/patchUploadVisibility.ts";
 import { postUploadEdit } from "./uploadPlanRouteHelpers/postUploadEdit.ts";
@@ -28,7 +28,10 @@ const UPLOAD_ROUTE_OPTIONS = {
   config: { rateLimit: ["uploadSessionPerSession"] },
 } as const;
 
-/** Guard upload mutations while reads and whole-session cancellation remain available. */
+/**
+ * Guard upload mutations while reads and whole-session cancellation remain
+ * available.
+ */
 async function _requireUploadProfile(request: FastifyRequest): Promise<void> {
   requireCompleteProfile(requireViewer(request));
 }

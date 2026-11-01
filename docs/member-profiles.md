@@ -253,7 +253,8 @@ initials will appear instead, with Keep photo focused initially.
 
 The browser uses decoded, orientation-aware image dimensions. Preview and server
 processing share one pure integer floor/clamp extraction helper, including odd
-dimensions and fractional zoom. Local file checks reject unsupported types and
+dimensions and fractional zoom, with a minimum one-pixel extraction for small
+accepted images. Local file checks reject unsupported types and
 the 10 MiB limit before decoding; the server remains the binary validation
 boundary. Replacing, cancelling or unmounting a selection revokes its object URL.
 Failed saves keep the current photo, selected file and crop for retry. A stale
@@ -274,7 +275,10 @@ waiting for a discarded photo draft.
 Name, notification and avatar responses reconcile only the fields each write
 owns. Private continuations capture the account query identity, member/role and
 retirement generation; cache clear, account replacement and private retirement
-invalidate them. A per-lifetime avatar publication order also prevents late
+invalidate them. Name/completion and notification intent capture that authority
+before asynchronous preparation and recheck it before queued HTTP dispatch.
+Notification cancellation also rechecks before changing optimistic state.
+A per-lifetime avatar publication order also prevents late
 success responses from restoring a superseded photo, including a newer removal
 that returns the pointer to its original null value. An old upload cannot continue from reservation to PUT or
 publish after retirement. Avatar writes cancel preceding account/bootstrap reads
@@ -286,8 +290,10 @@ with empty alt text and falls back to initials without a layout change. Existing
 comment authors and reply/composer identities use 30px. Save/removal reconciles
 matching member references throughout the current cache. Failed/expired signed
 sources share one private renewal attempt per immutable avatar ID and lifetime;
-a failed renewal does not loop. A held renewal can update only references still
-pointing at the expected ID, so removing/replacing an image cannot restore it.
+a failed renewal does not loop. A fresh ordinary read with a new URL for the
+same immutable ID supersedes obsolete local renewal state. A held renewal can
+update only references still pointing at the expected ID, so removing/replacing
+an image cannot restore it.
 
 ## Avatar processing budget
 

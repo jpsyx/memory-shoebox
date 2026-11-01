@@ -1,12 +1,15 @@
-import { useRouter } from "@tanstack/react-router";
+import { makeMemberCollectionHrefFromMemberId } from "@/api/memberCollections/memberCollections";
 import { useConversationJourney } from "@/session/ConversationJourneyProvider/ConversationJourneyProvider";
 import { isSameTabActivation } from "@/session/conversationJourneyHelpers/conversationJourneyHelpers";
 import { getConversationReturnFromLink } from "@/session/conversationJourneyHelpers/conversationReturnHelpers";
-import type { ReactNode } from "react";
 import type { CommentTag } from "@memory-shoebox/shared";
-import { makeMemberCollectionHrefFromMemberId } from "@/api/memberCollections/memberCollections";
+import { useRouter } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import classes from "./CommentTagText.module.css";
-/** Renders stored references as native links with the posted snapshot wording. */
+/**
+ * Renders stored references as native links with the posted snapshot
+ * wording.
+ */
 export function CommentTagText({
   body,
   commentTags,

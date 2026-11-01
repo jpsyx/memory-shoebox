@@ -1,8 +1,3 @@
-import { validateCommentTags } from "../../commentTags/validateCommentTags.ts";
-import { replaceCommentTags } from "../../commentTags/replaceCommentTags.ts";
-import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
-import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
-import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   createCommentRequestSchema,
   itemIdParamsSchema,
@@ -10,7 +5,11 @@ import {
   type CommentTag,
   type CreateCommentRequest,
 } from "@memory-shoebox/shared";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { readMemberRefs } from "../../archive/readMemberRefs.ts";
+import type { B2Client } from "../../b2/createB2Client/createB2Client.types.ts";
+import { replaceCommentTags } from "../../commentTags/commentTagPersistenceHelpers.ts";
+import { validateCommentTags } from "../../commentTags/validateCommentTags.ts";
 import { createId } from "../../db/createId.ts";
 import { runInImmediateTransaction } from "../../db/runInImmediateTransaction.ts";
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
@@ -18,7 +17,6 @@ import {
   requireViewer,
   type Viewer,
 } from "../../http/requestContextHelpers.ts";
-import { reconcileCommentTagEmails } from "../../items/reconcileCommentTagEmails.ts";
 import {
   getCommentAnchorFromRequest,
   type CommentAnchor,
@@ -28,6 +26,8 @@ import {
   type VisibleItem,
 } from "../../items/getVisibleItemOr404.ts";
 import { makeEmptyReactionSummary } from "../../items/readReactionSummaries.ts";
+import { reconcileCommentTagEmails } from "../../items/reconcileCommentTagEmails.ts";
+import { requireCompleteProfile } from "../../members/requireCompleteProfile.ts";
 
 type WriteCommentOptions = {
   database: DatabaseExecutor;
@@ -80,7 +80,10 @@ async function _insertCommentAndQueueMail(
   });
 }
 
-/** Validates and writes the comment, occurrences and ordinary mail under one write lock. */
+/**
+ * Validates and writes the comment, occurrences and ordinary mail under one
+ * write lock.
+ */
 async function _writeCommentAndQueueItsMail(
   options: Readonly<WriteCommentOptions>,
 ): Promise<CommentAnchor & { commentTags: CommentTag[] }> {

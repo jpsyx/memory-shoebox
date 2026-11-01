@@ -1,7 +1,7 @@
+import type { CommentTagFailure } from "@/api/comments/comments";
 import { Button } from "@mantine/core";
 import type { MemberRef } from "@memory-shoebox/shared";
 import type { ReactNode } from "react";
-import type { CommentTagFailure } from "@/api/comments/comments";
 import {
   makeCommentDraftFromEdit,
   type CommentDraft,
@@ -14,7 +14,10 @@ type Props = {
   member?: MemberRef;
   onChange: (value: CommentDraft, caret: number) => void;
 };
-/** One refused occurrence, with explicit repair choices that retain the words. */
+/**
+ * One refused occurrence, with explicit repair choices that retain the
+ * words.
+ */
 export function CommentTagCorrection(props: Readonly<Props>): ReactNode {
   const { failure, member } = props;
   const actions = _getCorrectionActions(props);

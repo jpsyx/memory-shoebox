@@ -1,4 +1,3 @@
-import { createContext, useContext, type ReactNode } from "react";
 import {
   ConversationJourneyContext,
   useConversationDraftOwner,
@@ -9,6 +8,7 @@ import {
   type ConversationDraft,
   type ConversationJourney,
 } from "@/session/conversationJourneyHelpers/conversationJourneyHelpers";
+import { createContext, useContext, type ReactNode } from "react";
 /** Main-composer values owned by the signed-in conversation session. */
 export type ItemCommentDraftValue = ConversationDraft;
 type DraftUpdate = Partial<Omit<ItemCommentDraftValue, "revision">>;
@@ -21,7 +21,10 @@ type DraftMemory = {
 const DraftMemoryContext = createContext<ConversationJourney | undefined>(
   undefined,
 );
-/** Adapts existing main composers to the one session owner; standalone fallback. */
+/**
+ * Adapts existing main composers to the one session owner; standalone
+ * fallback.
+ */
 export function ItemCommentDraftProvider({
   children,
 }: Readonly<{ children: ReactNode }>): ReactNode {

@@ -1,3 +1,15 @@
+import { getRecordedRequests, stubFetch } from "@/testing/fetchStubHelpers";
+import {
+  ITEM_ID,
+  makeComment,
+  makeItemDetail,
+  SIGNED_IN,
+} from "@/testing/itemFixtureHelpers";
+import {
+  makeHold,
+  makeQueryClientFromItemDetail,
+  waitForWritesToSettle,
+} from "@/testing/itemWriteTestHelpers";
 import { MantineProvider } from "@mantine/core";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -9,18 +21,6 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  makeComment,
-  makeItemDetail,
-  ITEM_ID,
-  SIGNED_IN,
-} from "@/testing/itemFixtureHelpers";
-import {
-  makeHold,
-  makeQueryClientFromItemDetail,
-  waitForWritesToSettle,
-} from "@/testing/itemWriteTestHelpers";
-import { stubFetch, getRecordedRequests } from "@/testing/fetchStubHelpers";
 import { ItemComment } from "./ItemComment";
 const comment = makeComment({
   author: SIGNED_IN,
@@ -309,7 +309,8 @@ it.each(["append", "shift", "replace"])(
       await user.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
       expect(field).toHaveValue(newer);
     }
-    // The member's current eligible directory no longer contains the saved name.
+    // The member's current eligible directory no longer contains the saved
+    // name.
     stubFetch({
       [`PATCH /api/comments/${comment.commentId}`]: {
         status: 200,

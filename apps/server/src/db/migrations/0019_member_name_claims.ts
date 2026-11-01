@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { sql, type Kysely } from "kysely";
+import { createHash } from "node:crypto";
 import { uuidv7 } from "uuidv7";
 import type { Database } from "../types/db.types.ts";
 
@@ -35,7 +35,9 @@ export type MemberNameAssignments = Readonly<{
 
 /** Frozen validation and display normalization for migration 0019. */
 export function makeLegacyDisplayNameFromName(name: string): string | null {
-  if (/[@\r\n\v\f\u0085\u2028\u2029\p{Cf}]/u.test(name)) return null;
+  if (/[@\r\n\v\f\u0085\u2028\u2029\p{Cf}]/u.test(name)) {
+    return null;
+  }
   const displayName = name.normalize("NFC").trim().replace(/\s+/gu, " ");
   return displayName.length > 0 && displayName.length <= 80
     ? displayName
@@ -93,8 +95,9 @@ function _getRolloutRows(
   });
   const counts = new Map<string, number>();
   names.forEach((name) => {
-    if (name)
+    if (name) {
       counts.set(name.toLowerCase(), (counts.get(name.toLowerCase()) ?? 0) + 1);
+    }
   });
   return members.map((member, index) => {
     const name = names[index] ?? null;
@@ -113,7 +116,10 @@ function _getRolloutRows(
   });
 }
 
-/** Frozen fingerprint: member identity, linked names, and applied migration history only. */
+/**
+ * Frozen fingerprint: member identity, linked names, and applied migration
+ * history only.
+ */
 export async function getLegacyRolloutFromDatabase(
   database: Kysely<Database>,
 ): Promise<MemberNameRollout> {
@@ -185,8 +191,9 @@ export function getFinalNamesFromRollout(
       }
       const name = choices.get(row.memberId) ?? row.proposedName;
       const key = name.toLowerCase();
-      if (keys.has(key))
+      if (keys.has(key)) {
         throw new Error("Unresolved name collision in assignments.");
+      }
       keys.add(key);
       return [row.memberId, name];
     }),
@@ -201,15 +208,18 @@ async function _getFinalNames(
     await sql`select name from sqlite_master where type='table' and name='member_name_rollout_assignments'`.execute(
       database,
     );
-  if (tables.rows.length === 0)
+  if (tables.rows.length === 0) {
     return getFinalNamesFromRollout(rollout, {
       catalogFingerprint: rollout.catalogFingerprint,
       assignments: [],
     });
+  }
   const staged = await sql<{
     payload: string;
   }>`select payload from member_name_rollout_assignments`.execute(database);
-  if (staged.rows.length !== 1) throw new Error("Invalid staged assignments.");
+  if (staged.rows.length !== 1) {
+    throw new Error("Invalid staged assignments.");
+  }
   return getFinalNamesFromRollout(rollout, JSON.parse(staged.rows[0]!.payload));
 }
 
@@ -255,7 +265,7 @@ async function _syncLegacyPerson(
     .set({ display_name: displayName })
     .where("member_id", "=", member.id)
     .executeTakeFirst();
-  if (Number(updated.numUpdatedRows) === 0 && member.status === "active")
+  if (Number(updated.numUpdatedRows) === 0 && member.status === "active") {
     await database
       .insertInto("people")
       .values({
@@ -267,9 +277,13 @@ async function _syncLegacyPerson(
         created_at: member.created_at,
       })
       .execute();
+  }
 }
 
-/** Atomically import legacy names and consume durable offline staging. Runner owns transaction. */
+/**
+ * Atomically import legacy names and consume durable offline staging. Runner
+ * owns transaction.
+ */
 export async function up(database: Kysely<Database>): Promise<void> {
   const finalNames = await _getFinalNames(database);
   const members = await _getMembers(database);

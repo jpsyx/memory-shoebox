@@ -1,5 +1,5 @@
-import { readCommentTags } from "../commentTags/replaceCommentTags.ts";
 import type { CommentDto, MemberRef } from "@memory-shoebox/shared";
+import { readCommentTags } from "../commentTags/commentTagPersistenceHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
 import {
@@ -19,7 +19,8 @@ import {
  *
  * **Three queries whatever the thread's size**: the comments on
  * `comments (item_id, created_at)`, then every reaction on all of them in one
- * `comment_id IN (...)` through `readCommentReactionRows`, then all occurrences in one batch. One query per
+ * `comment_id IN (...)` through `readCommentReactionRows`, then all
+ * occurrences in one batch. One query per
  * comment is the N+1 the data model calls out by name.
  *
  * `canEdit` is authorship alone and `canDelete` is authorship or admin
