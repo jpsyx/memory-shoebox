@@ -318,9 +318,7 @@ it("keeps focus and restores the saved tag value with a nearby failure", async (
   expect(toggle.closest("[data-notify-kind]")).toContainElement(
     screen.getByRole("alert"),
   );
-  expect(screen.getByRole("alert")).toHaveTextContent(
-    "Couldn't change that email preference. Try again.",
-  );
+  expect(screen.getByRole("alert")).toHaveTextContent("Failed");
 });
 
 it.each([false, true])(

@@ -88,14 +88,16 @@ async function _convertUnattemptedMail(
       trigger_kind, trigger_id, created_at, idempotency_key, 'pending'
     from outbound_emails where state='queued' and kind in ('upload_session','comment')
       and attempts=0 and sender_snapshot_json is null and provider_message_id is null
-      and provider_request_id is null and last_error_code is null
+      and provider_request_id is null
+      and (last_error_code is null or last_error_code in ('provider_unconfigured','from_address_unset'))
       and to_member_id is not null and length(trigger_id)>0
       and ((kind='upload_session' and trigger_kind='upload_session') or (kind='comment' and trigger_kind='comment'))
   `.execute(database);
   await sql`update outbound_emails set state='cancelled'
     where state='queued' and kind in ('upload_session','comment')
       and attempts=0 and sender_snapshot_json is null and provider_message_id is null
-      and provider_request_id is null and last_error_code is null
+      and provider_request_id is null
+      and (last_error_code is null or last_error_code in ('provider_unconfigured','from_address_unset'))
   `.execute(database);
 }
 

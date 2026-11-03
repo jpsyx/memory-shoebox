@@ -74,7 +74,8 @@ Daily-to-Immediate does not revoke an already included batch; Off does.
 
 Immediately before provider handoff, the batch freezes its exact HTML, text,
 subject, recipient, sender, idempotency key, and contributing source/item manifest.
-Retries reuse that request. Ordinary text or sender-setting edits cannot change
+Retries perform their final eligibility check in an immediate transaction and
+reuse that request. Ordinary text or sender-setting edits cannot change
 it. If any contributing content, including overflow counts, becomes inaccessible,
 deleted, untagged, or opted out, the retry is cancelled instead of rewritten.
 A provider-accepted email cannot be recalled. The existing stranded-`sending`

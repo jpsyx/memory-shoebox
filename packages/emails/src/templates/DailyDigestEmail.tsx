@@ -69,7 +69,7 @@ function UploadSection({
       <Heading as="h2">New photos/videos</Heading>
       <Text
         style={EMAIL_PARAGRAPH_STYLE}
-      >{`${section.totalVisibleItems} photos/videos in ${section.totalEvents} uploads`}</Text>
+      >{`${section.totalVisibleItems} photos/videos in ${section.totalEvents} ${section.totalEvents === 1 ? "upload" : "uploads"}`}</Text>
       {section.entries.map((entry) => {
         return (
           <Text key={entry.sourceId} style={EMAIL_PARAGRAPH_STYLE}>

@@ -1,6 +1,6 @@
 # Daily email digests
 
-Status: approved; native implementation in progress.
+Status: approved and implemented on `feat/daily-digests`; deployment is separate.
 
 ## 1. Intent and scope
 

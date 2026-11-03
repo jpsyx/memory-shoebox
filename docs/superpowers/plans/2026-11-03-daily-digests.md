@@ -1,6 +1,10 @@
 # Daily Email Digests Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+**Execution:** Native implementation completed. See the
+[implementation and verification record](2026-11-03-daily-digests-verification.md)
+for actual checks, review corrections, and documented substitutions.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Track each step with a checkbox.
 
 **Goal:** Offer Off, Immediate, and Daily digest for uploads, comments/replies,
 and comment tags, with the requested defaults applied to new and existing members.
@@ -29,7 +33,7 @@ mail worker delivers with additional privacy and stable-retry checks.
   web imports omit extensions. Follow `docs/rules/` and the naming checklist.
 - No em dashes, no generated skill-directory edits, and no unrelated refactoring.
 - All mail tests use local fake/recording services. Local servers use
-  `NODE_ENV=development ENABLE_FAKE_EMAIL=true`.
+  `NODE_ENV=development` and `ENABLE_FAKE_EMAIL=true`.
 - Work only in the existing `feat/daily-digests` worktree. Do not push, merge,
   deploy, or alter production settings as part of this plan.
 

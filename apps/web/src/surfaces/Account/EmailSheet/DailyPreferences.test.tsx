@@ -37,3 +37,35 @@ it("offers three frequencies and saves a daily choice", async () => {
     screen.queryByRole("option", { name: /weekly/i }),
   ).not.toBeInTheDocument();
 });
+
+it("keeps reload guidance visible beside a rejected comment-tag save", async () => {
+  const notify = {
+    onUpload: "daily",
+    onComment: "daily",
+    onCommentTag: "immediate",
+    onRemoval: true,
+  } as const;
+  const onSave = vi.fn();
+  const view = (error?: string) => {
+    return (
+      <MantineProvider>
+        <EmailSheet
+          notify={notify}
+          timezone="UTC"
+          error={error}
+          isSaving={false}
+          onSave={onSave}
+        />
+      </MantineProvider>
+    );
+  };
+  const { rerender } = render(view());
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: "Comment tags" }),
+    "daily",
+  );
+  rerender(view("Email settings have changed. Reload the page and try again."));
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Email settings have changed. Reload the page and try again.",
+  );
+});

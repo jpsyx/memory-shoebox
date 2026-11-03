@@ -46,10 +46,7 @@ export function EmailSheet({
   focusCommentTag,
 }: Readonly<Props>): ReactNode {
   const [wasTagChanged, setWasTagChanged] = useState(false);
-  const tagError =
-    wasTagChanged && error
-      ? "Couldn't change that email preference. Try again."
-      : undefined;
+  const tagError = wasTagChanged ? error : undefined;
   const someOn = Object.values(notify).some((value) => {
     return value !== false && value !== "off";
   });

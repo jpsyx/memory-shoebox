@@ -34,6 +34,8 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
     for (const [id, kind, state, attempts] of [
       ["upload", "upload_session", "queued", 0],
       ["comment", "comment", "queued", 0],
+      ["deferred-provider", "comment", "queued", 0],
+      ["deferred-sender", "upload_session", "queued", 0],
       ["tag", "comment_tag", "queued", 0],
       ["retry", "comment", "queued", 1],
       ["sent", "comment", "sent", 1],
@@ -46,6 +48,12 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
         database,
       );
     }
+    await sql`update outbound_emails set last_error_code='provider_unconfigured' where id='deferred-provider'`.execute(
+      database,
+    );
+    await sql`update outbound_emails set last_error_code='from_address_unset' where id='deferred-sender'`.execute(
+      database,
+    );
     await migrateToLatest(database);
     const member = (
       await sql<
@@ -84,6 +92,8 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
       ).rows,
     ).toEqual([
       { deduplication_key: "comment" },
+      { deduplication_key: "deferred-provider" },
+      { deduplication_key: "deferred-sender" },
       { deduplication_key: "upload" },
     ]);
     expect(
@@ -95,6 +105,8 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
     ).toEqual([
       { id: "cancelled", state: "cancelled" },
       { id: "comment", state: "cancelled" },
+      { id: "deferred-provider", state: "cancelled" },
+      { id: "deferred-sender", state: "cancelled" },
       { id: "failed", state: "failed" },
       { id: "retry", state: "queued" },
       { id: "sending", state: "sending" },

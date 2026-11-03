@@ -432,3 +432,162 @@ it("uses new timezone settings for pending events but preserves prepared batch d
     await context.database.destroy();
   }
 });
+
+it("rechecks retry membership atomically after an interleaved removal", async () => {
+  const context = await _fixture();
+  try {
+    const { database, memberId } = context;
+    await runDailyDigests({ database, now: NOW });
+    const sender = {
+      send: vi.fn(async () => {
+        throw new Error("provider timeout");
+      }),
+    };
+    await runMailQueueOnce({ database, sender, now: NOW });
+    const memberQuery = database.selectFrom("members").selectAll();
+    const prototype = Object.getPrototypeOf(memberQuery) as typeof memberQuery;
+    const executeTakeFirst = prototype.executeTakeFirst;
+    let shouldRemove = true;
+    vi.spyOn(prototype, "executeTakeFirst").mockImplementation(
+      async function (this: typeof memberQuery) {
+        const result = await executeTakeFirst.call(this);
+        if (
+          shouldRemove &&
+          this.compile().sql.startsWith('select * from "members"')
+        ) {
+          shouldRemove = false;
+          await database
+            .updateTable("members")
+            .set({ status: "removed" })
+            .where("id", "=", memberId)
+            .execute();
+        }
+        return result;
+      },
+    );
+    await runMailQueueOnce({
+      database,
+      sender,
+      now: "2026-11-03T10:02:00.000Z",
+    });
+    expect(shouldRemove).toBe(false);
+    expect(sender.send).toHaveBeenCalledOnce();
+    expect(
+      (
+        await database
+          .selectFrom("outbound_emails")
+          .select("state")
+          .executeTakeFirstOrThrow()
+      ).state,
+    ).toBe("cancelled");
+  } finally {
+    vi.restoreAllMocks();
+    await context.database.destroy();
+  }
+});
+
+it.each([
+  [
+    "Asia/Kathmandu",
+    "2026-11-02T18:14:59.999Z",
+    "2026-11-02T18:15:00.000Z",
+    "2026-11-03T03:15:00.000Z",
+    "2026-11-02",
+  ],
+  [
+    "America/Santiago",
+    "2026-09-06T03:59:59.999Z",
+    "2026-09-06T04:00:00.000Z",
+    "2026-09-06T12:00:00.000Z",
+    "2026-09-05",
+  ],
+])(
+  "selects overdue events across the actual midnight boundary in %s",
+  async (timezone, beforeMidnight, dayStart, now, expectedDay) => {
+    const context = await _fixture(2);
+    try {
+      const { database, eventIds } = context;
+      await insertInstanceSetting(database, {
+        key: "shoebox.timezone",
+        value: timezone!,
+      });
+      await database
+        .updateTable("notification_digest_events")
+        .set({ occurred_at: beforeMidnight! })
+        .where("id", "=", eventIds[0]!)
+        .execute();
+      await database
+        .updateTable("notification_digest_events")
+        .set({ occurred_at: dayStart! })
+        .where("id", "=", eventIds[1]!)
+        .execute();
+      await runDailyDigests({ database, now: now! });
+      const payload = JSON.parse(
+        (
+          await database
+            .selectFrom("outbound_emails")
+            .select("payload_json")
+            .executeTakeFirstOrThrow()
+        ).payload_json,
+      );
+      expect(payload.comments.totalEvents).toBe(1);
+      expect(payload.periodStart).toBe(expectedDay);
+      expect(
+        await database
+          .selectFrom("notification_digest_events")
+          .select("id")
+          .where("state", "=", "pending")
+          .execute(),
+      ).toEqual([{ id: eventIds[1] }]);
+    } finally {
+      await context.database.destroy();
+    }
+  },
+);
+
+it("retains a frozen request and does not reclaim a sending row after provider intent", async () => {
+  const context = await _fixture();
+  try {
+    const { database } = context;
+    await runDailyDigests({ database, now: NOW });
+    const sender = {
+      send: vi.fn(async () => {
+        throw new Error("ambiguous result");
+      }),
+    };
+    await runMailQueueOnce({ database, sender, now: NOW });
+    const batch = await database
+      .selectFrom("notification_digest_batches")
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    expect(batch.provider_attempted_at).toBe(NOW);
+    expect(batch.delivery_snapshot_json).not.toBeNull();
+    // Model the durable state of a process lost between intent and finalization.
+    await database
+      .updateTable("outbound_emails")
+      .set({ state: "sending", attempts: 0, next_attempt_at: null })
+      .execute();
+    const stranded = await database
+      .selectFrom("outbound_emails")
+      .selectAll()
+      .executeTakeFirstOrThrow();
+    await runDailyDigests({ database, now: "2026-11-04T10:00:00.000Z" });
+    await runMailQueueOnce({
+      database,
+      sender,
+      now: "2026-11-04T10:00:00.000Z",
+    });
+    expect(sender.send).toHaveBeenCalledOnce();
+    expect(
+      await database.selectFrom("outbound_emails").selectAll().execute(),
+    ).toEqual([stranded]);
+    expect(
+      await database
+        .selectFrom("notification_digest_batches")
+        .selectAll()
+        .execute(),
+    ).toEqual([batch]);
+  } finally {
+    await context.database.destroy();
+  }
+});

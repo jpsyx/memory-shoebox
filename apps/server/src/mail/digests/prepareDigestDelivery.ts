@@ -47,17 +47,46 @@ function _manifest(events: readonly EligibleDigestEvent[]): string {
   );
 }
 
-async function _cancel({
-  context,
-  row,
-}: DeliveryOptions): Promise<DigestDeliveryPreparation> {
-  await context.database
+async function _cancel(
+  options: DeliveryOptions,
+  executor: DatabaseExecutor = options.context.database,
+): Promise<DigestDeliveryPreparation> {
+  await executor
     .updateTable("outbound_emails")
     .set({ state: "cancelled" })
-    .where("id", "=", row.id)
+    .where("id", "=", options.row.id)
     .where("state", "=", "sending")
     .execute();
   return { state: "cancelled" };
+}
+
+async function _prepareFrozenRetry(
+  options: DeliveryOptions,
+  batch: Batch,
+  eventIds: readonly string[],
+): Promise<DigestDeliveryPreparation> {
+  return runInImmediateTransaction({
+    database: options.context.database,
+    callback: async (executor) => {
+      const current = await readEligibleDigestEvents({
+        executor,
+        memberId: batch.member_id,
+        eventIds,
+        mode: "delivery",
+      });
+      if (
+        current.eligible.length === 0 ||
+        batch.eligibility_snapshot_json !== _manifest(current.eligible) ||
+        batch.delivery_snapshot_json === null
+      ) {
+        return _cancel(options, executor);
+      }
+      return {
+        state: "ready",
+        request: requestSchema.parse(JSON.parse(batch.delivery_snapshot_json)),
+      };
+    },
+  });
 }
 
 async function _freeze(
@@ -178,16 +207,7 @@ export async function prepareDigestDelivery(
     return _cancel(options);
   }
   if (batch.provider_attempted_at !== null) {
-    if (
-      batch.eligibility_snapshot_json !== _manifest(current.eligible) ||
-      batch.delivery_snapshot_json === null
-    ) {
-      return _cancel(options);
-    }
-    return {
-      state: "ready",
-      request: requestSchema.parse(JSON.parse(batch.delivery_snapshot_json)),
-    };
+    return _prepareFrozenRetry(options, batch, eventIds);
   }
   return _renderAndFreeze(options, batch, eventIds, current.eligible);
 }
