@@ -1,3 +1,8 @@
+import { dailyDigestEmail } from "@memory-shoebox/emails";
+import {
+  dailyDigestEmailPayloadSchema,
+  type DailyDigestEmailPayload,
+} from "@memory-shoebox/shared";
 import {
   RemovalRequestEmailTemplate,
   RemovalReminderEmailTemplate,
@@ -39,6 +44,7 @@ import type { ZodType } from "zod";
  * copy that renders it.
  */
 export type EmailPayloadExtras = {
+  daily_digest: Omit<DailyDigestEmailPayload, keyof EmailCommon>;
   invitation: Omit<InvitationEmailPayload, keyof EmailCommon>;
   removal_request: Omit<RemovalRequestEmailPayload, keyof EmailCommon>;
   removal_reminder: Omit<RemovalReminderEmailPayload, keyof EmailCommon>;
@@ -80,6 +86,7 @@ type EmailTemplateRegistry = {
  * it rather than a convention asking for it.
  */
 export const EMAIL_TEMPLATES = {
+  daily_digest: dailyDigestEmail,
   invitation: invitationEmail,
   removal_request: RemovalRequestEmailTemplate,
   removal_reminder: RemovalReminderEmailTemplate,
@@ -125,6 +132,10 @@ function _createRenderer<Payload extends EmailCommon>(options: {
  * outcome that branch was always written for.
  */
 export const EMAIL_RENDERERS = {
+  daily_digest: _createRenderer({
+    template: dailyDigestEmail,
+    schema: dailyDigestEmailPayloadSchema,
+  }),
   invitation: _createRenderer({
     template: invitationEmail,
     schema: invitationEmailPayloadSchema,

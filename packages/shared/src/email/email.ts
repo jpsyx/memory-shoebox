@@ -28,6 +28,7 @@ type AddUploadSessionAgreementIssuesOptions = {
  * `0007_operations_and_audit.ts`, so the two can be read side by side.
  */
 export const OUTBOUND_EMAIL_KINDS = [
+  "daily_digest",
   "sign_in_code",
   "invitation",
   "upload_session",
@@ -76,6 +77,7 @@ export type OutboundEmailState = (typeof OUTBOUND_EMAIL_STATES)[number];
  * the trigger can be deleted and the mail record must outlive it.
  */
 export const outboundEmailTriggerKindSchema = z.enum([
+  "daily_digest",
   "sign_in_code",
   "invitation",
   "upload_session",

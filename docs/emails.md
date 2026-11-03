@@ -360,3 +360,12 @@ snapshot can differ from edits made after scheduling.
 Comment-tag HTML/plain text and captured-link arrival are covered by the local
 [acceptance suite](superpowers/verification/2026-10-31-comment-tagging.md), using a
 recording service. No real recipient/provider delivery is used for verification.
+
+## Daily digest template
+
+`DailyDigestEmail` combines upload, comment/reply, and comment-tag sections. Empty
+sections are omitted. Its shared payload bounds each section to 20 displayed
+entries and comment excerpts to 200 Unicode code points, while retaining the
+complete visible totals. HTML escapes user text; plain text includes the same
+application and preference destinations. The scheduler supplies the actual
+activity date range, including catch-up after downtime.

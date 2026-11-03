@@ -28,3 +28,7 @@ export {
   InvitationEmail,
   invitationEmail,
 } from "./templates/InvitationEmail.tsx";
+export {
+  DailyDigestEmail,
+  dailyDigestEmail,
+} from "./templates/DailyDigestEmail.tsx";
