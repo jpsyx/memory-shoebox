@@ -228,8 +228,12 @@ moments and video-comment reactions.
 - Whether a member can deliberately and revocably share something outside the
   circle.
 - ~~How notifications are delivered.~~ Settled: **email only**, never push, and
-  switchable per kind by each member. Sign-in codes are the exception and
-  cannot be switched off.
+  configurable per kind by each member. New photos/videos and Comments and
+  replies default to Daily digest; Comment tags default to Immediate. Each
+  offers Off, Immediate, or Daily digest, with one combined email around 9 a.m.
+  in the Shoebox timezone. There is no weekly activity digest. Removal emails
+  retain their existing setting. Sign-in codes cannot be switched off. See
+  [daily digests](daily-digests.md).
 - ~~The data model.~~ Settled in [tech-specs/data-models.md](prds/2026-09-27-memory-shoebox/tech-specs/data-models.md): every
   table, key, cascade and index, derived from the eighteen mocked surfaces
   rather than guessed at in advance. Not built yet, but no longer undecided.

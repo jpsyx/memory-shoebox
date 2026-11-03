@@ -50,9 +50,9 @@ describe("getMeDtoFromMemberId", () => {
       email: "rosa@example.com",
       display_name: null,
       role: "viewer",
-      notify_on_upload: 1,
-      notify_on_comment: 0,
-      notify_on_reply: 1,
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "off",
+
       notify_on_removal: 0,
       joined_at: NOW,
       last_signed_in_at: NOW,
@@ -73,11 +73,11 @@ describe("getMeDtoFromMemberId", () => {
       email: "rosa@example.com",
       role: "viewer",
       notify: {
-        onUpload: true,
-        onComment: false,
-        onReply: true,
+        onUpload: "immediate" as const,
+        onComment: "off" as const,
+
         onRemoval: false,
-        onCommentTag: true,
+        onCommentTag: "immediate" as const,
       },
       joinedAt: NOW,
       lastSignedInAt: NOW,

@@ -38,7 +38,7 @@ it.each([
             ...oldAccount,
             me: {
               ...oldAccount.me,
-              notify: { ...oldAccount.me.notify, onUpload: false },
+              notify: { ...oldAccount.me.notify, onUpload: "off" as const },
             },
           };
     const client = new QueryClient({

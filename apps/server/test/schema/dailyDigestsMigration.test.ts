@@ -11,7 +11,9 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
     const sources = await getMigrationSourcesFromFiles();
     await migrateToLatest(database, {
       sources: Object.fromEntries(
-        Object.entries(sources).filter(([name]) => name < "0022"),
+        Object.entries(sources).filter(([name]) => {
+          return name < "0022";
+        }),
       ),
     });
     const memberId = await insertMember(database, {
@@ -21,6 +23,14 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
       notify_on_comment_tag: 0,
       notify_on_removal: 0,
     });
+    for (const status of ["invited", "removed"]) {
+      await insertMember(database, {
+        status,
+        notify_on_upload: 0,
+        notify_on_comment: 0,
+        notify_on_comment_tag: 0,
+      });
+    }
     for (const [id, kind, state, attempts] of [
       ["upload", "upload_session", "queued", 0],
       ["comment", "comment", "queued", 0],
@@ -28,6 +38,9 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
       ["retry", "comment", "queued", 1],
       ["sent", "comment", "sent", 1],
       ["sending", "comment", "sending", 0],
+      ["failed", "comment", "failed", 0],
+      ["suppressed", "comment", "suppressed", 0],
+      ["cancelled", "comment", "cancelled", 0],
     ] as const) {
       await sql`insert into outbound_emails (id,kind,to_address,to_member_id,subject,payload_json,trigger_kind,trigger_id,idempotency_key,state,attempts,send_after,created_at) values (${id},${kind},'delivered@resend.dev',${memberId},'Subject','{}',${kind === "upload_session" ? "upload_session" : "comment"},${id},${id},${state},${attempts},${NOW},${NOW})`.execute(
         database,
@@ -47,6 +60,24 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
     expect(member.notify_on_removal).toBe(0);
     expect(
       (
+        await database
+          .selectFrom("members")
+          .select([
+            "notify_upload_frequency",
+            "notify_comment_frequency",
+            "notify_comment_tag_frequency",
+          ])
+          .execute()
+      ).every((row) => {
+        return (
+          row.notify_upload_frequency === "daily" &&
+          row.notify_comment_frequency === "daily" &&
+          row.notify_comment_tag_frequency === "immediate"
+        );
+      }),
+    ).toBe(true);
+    expect(
+      (
         await sql`select deduplication_key from notification_digest_events order by deduplication_key`.execute(
           database,
         )
@@ -62,10 +93,13 @@ it("resets existing opt-outs once and moves only unattempted activity into diges
         )
       ).rows,
     ).toEqual([
+      { id: "cancelled", state: "cancelled" },
       { id: "comment", state: "cancelled" },
+      { id: "failed", state: "failed" },
       { id: "retry", state: "queued" },
       { id: "sending", state: "sending" },
       { id: "sent", state: "sent" },
+      { id: "suppressed", state: "suppressed" },
       { id: "tag", state: "queued" },
       { id: "upload", state: "cancelled" },
     ]);

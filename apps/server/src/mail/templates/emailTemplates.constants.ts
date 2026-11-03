@@ -1,9 +1,7 @@
-import { dailyDigestEmail } from "@memory-shoebox/emails";
 import {
-  dailyDigestEmailPayloadSchema,
-  type DailyDigestEmailPayload,
-} from "@memory-shoebox/shared";
-import {
+  type EmailTemplate,
+  type RenderedEmail,
+  dailyDigestEmail,
   RemovalRequestEmailTemplate,
   RemovalReminderEmailTemplate,
   RemovalResolvedEmailTemplate,
@@ -14,6 +12,8 @@ import {
   uploadSessionEmail,
 } from "@memory-shoebox/emails";
 import {
+  dailyDigestEmailPayloadSchema,
+  type DailyDigestEmailPayload,
   removalRequestEmailPayloadSchema,
   removalReminderEmailPayloadSchema,
   removalResolvedEmailPayloadSchema,
@@ -32,7 +32,6 @@ import {
   type SignInCodeEmailPayload,
   type UploadSessionEmailPayload,
 } from "@memory-shoebox/shared";
-import type { EmailTemplate, RenderedEmail } from "@memory-shoebox/emails";
 import type { ZodType } from "zod";
 
 /**

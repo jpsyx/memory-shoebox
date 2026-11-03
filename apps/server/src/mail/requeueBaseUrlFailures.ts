@@ -1,6 +1,9 @@
+import { rerouteFailedActivity } from "./digests/rerouteFailedActivity.ts";
+import { recoverDigestEmail } from "./digests/recoverDigestEmail.ts";
 import type { z } from "zod";
 import {
   emailCommonSchema,
+  dailyDigestEmailPayloadSchema,
   invitationEmailPayloadSchema,
   uploadSessionEmailPayloadSchema,
   commentEmailPayloadSchema,
@@ -14,6 +17,7 @@ import type { OutboundEmailsTable } from "../db/types/operations.types.ts";
 
 type RetainedKind = Exclude<OutboundEmailsTable["kind"], "sign_in_code">;
 const PAYLOAD_SCHEMAS = {
+  daily_digest: dailyDigestEmailPayloadSchema,
   invitation: invitationEmailPayloadSchema,
   upload_session: uploadSessionEmailPayloadSchema,
   comment: commentEmailPayloadSchema,
@@ -176,6 +180,14 @@ function _hasValidRetainedCommonLinks(
     emailCommonSchema.shape.preferencesUrl.safeParse(preferencesUrl).success
   );
 }
+function _isAttemptedActivity(row: OutboundEmailsTable): boolean {
+  return (
+    ["upload_session", "comment", "comment_tag"].includes(row.kind) &&
+    (row.attempts > 0 ||
+      row.sender_snapshot_json !== null ||
+      row.provider_message_id !== null)
+  );
+}
 function _makeRepairedPayloadFromRow(
   options: Readonly<{ row: OutboundEmailsTable; baseUrl: string }>,
 ): string | undefined {
@@ -190,6 +202,11 @@ function _makeRepairedPayloadFromRow(
       Array.isArray(decoded)
     ) {
       return undefined;
+    }
+    if (_isAttemptedActivity(options.row)) {
+      return PAYLOAD_SCHEMAS[options.row.kind].safeParse(decoded).success
+        ? options.row.payload_json
+        : undefined;
     }
     const payload = { ...decoded } as Record<string, unknown>;
     if (!_hasValidRetainedCommonLinks(payload)) {
@@ -224,7 +241,7 @@ async function _requeueRetainedRow(
     .set({
       state: "queued",
       payload_json: payloadJson,
-      attempts: 0,
+      attempts: _isAttemptedActivity(row) ? row.attempts : 0,
       next_attempt_at: null,
       last_error_code: null,
       last_error_message: null,
@@ -257,14 +274,23 @@ export async function requeueBaseUrlFailures(
     .execute();
   let requeuedCount = 0;
   for (const row of rows) {
+    if (row.kind === "daily_digest") {
+      if (await recoverDigestEmail({ ...options, row })) {
+        requeuedCount += 1;
+      }
+      continue;
+    }
+    if (!(await _hasTrigger({ ...options, row }))) {
+      continue;
+    }
     const payloadJson = _makeRepairedPayloadFromRow({
       row,
       baseUrl: options.baseUrl,
     });
-    if (
-      payloadJson === undefined ||
-      !(await _hasTrigger({ ...options, row }))
-    ) {
+    if (payloadJson === undefined) {
+      continue;
+    }
+    if (await rerouteFailedActivity({ ...options, row })) {
       continue;
     }
     await _requeueRetainedRow({ ...options, row, payloadJson });

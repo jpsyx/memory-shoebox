@@ -203,3 +203,12 @@ Existing read/publication ordering guards continue to reject old responses.
 Member-global `lastSignedInAt` remains informational: another device signing in
 must not retire this tab. This adds no polling or broadcast mechanism; replacement
 is detected when a server account response is observed.
+
+## Activity notification preferences
+
+Account reads and writes share three strict `off | immediate | daily` fields
+(`onUpload`, `onComment`, `onCommentTag`) and boolean `onRemoval`. Comments and
+replies use one setting. Defaults are Daily, Daily, Immediate, and removal enabled.
+Preference saves cancel affected pending digest events in the same transaction.
+Legacy boolean and `onReply` writes fail validation without changing preferences.
+See [daily digests](daily-digests.md).

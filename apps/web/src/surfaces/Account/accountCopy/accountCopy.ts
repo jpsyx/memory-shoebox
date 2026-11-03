@@ -32,6 +32,12 @@ export function accountFailure(error: unknown): string {
     ) {
       return profileNameFailure(error);
     }
+    if (
+      error.code === "invalid_request" &&
+      error.details?.fieldErrors?.notify !== undefined
+    ) {
+      return "Email settings have changed. Reload the page and try again.";
+    }
     if (error.code === "session_not_found") {
       return "That device had already gone.";
     }

@@ -74,11 +74,11 @@ describe("createSession", () => {
           email: "abuela@example.com",
           role: "viewer",
           notify: {
-            onUpload: true,
-            onComment: true,
-            onReply: true,
+            onUpload: "daily" as const,
+            onComment: "daily" as const,
+
             onRemoval: true,
-            onCommentTag: true,
+            onCommentTag: "immediate" as const,
           },
           joinedAt: "2026-09-28T10:00:00.000Z",
           lastSignedInAt: "2026-09-28T10:00:00.000Z",

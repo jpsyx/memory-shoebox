@@ -317,7 +317,7 @@ rather than a different page.
 the root `beforeLoad` seeds from the current bootstrap and the account surface reads. The app
 guard narrows the root's account result without fetching a second account.
 There is no separate "session" fetch: the account response already carries the member,
-their role, their four notification switches and the three instance settings
+their role, their three email frequencies and removal switch and the three instance settings
 the shell draws with, so a reload has the same values a fresh sign-in does.
 
 Account and anonymous public settings reads have 30-second freshness. One root
@@ -573,9 +573,9 @@ narrows them, so "6 of 10 people" never reads as somebody having been removed.
 
 **Surface 9, My account.** Three kinds of write, and they are deliberately not
 the same. The name has a button, so a round trip is expected and the answer is
-written to the cache when it lands. The four notification switches write
+written to the cache when it lands. The three notification frequency selectors and removal switch write
 optimistically: the cache moves in `onMutate`, before the request goes out,
-and rolls back in `onError`, because a switch that waits for a round trip does
+and rolls back in `onError`, because a control that waits for a round trip does
 nothing when it is tapped and gets tapped again. Signing a device out is a
 plain mutation that invalidates the device list.
 
@@ -1945,3 +1945,13 @@ GB, using the existing 1024-based upload convention. Labels use at most one
 decimal, suppress trailing zeroes and promote a rounded 1024 to the next unit.
 Confirmed and total values select units independently, for example `850 MB of
 1.5 GB confirmed up`. Progress ratios and completion still use exact byte counts.
+
+## Email frequency settings
+
+The Email sheet offers Off, Immediate, and Daily digest for New photos/videos,
+Comments and replies, and Comment tags. Defaults are Daily, Daily, and Immediate.
+The removal switch stays separate. Native selects support keyboard and mobile
+use; tag-email links focus the tags selector. Saves retain optimistic rollback
+and serialized writes. Help explains the 9 a.m. Shoebox timezone schedule, empty
+days, and cancellation of pending summaries on frequency changes. Bulk buttons
+restore the defaults or turn every category off. See [daily digests](daily-digests.md).

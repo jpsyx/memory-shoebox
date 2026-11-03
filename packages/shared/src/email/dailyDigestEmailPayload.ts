@@ -6,7 +6,9 @@ const commentEntrySchema = z.object({
   sourceId: z.string(),
   itemId: z.string(),
   authorDisplayName: z.string(),
-  excerpt: z.string().refine((value) => Array.from(value).length <= 200),
+  excerpt: z.string().refine((value) => {
+    return Array.from(value).length <= 200;
+  }),
   url: signedUrlSchema,
 });
 const commentSectionSchema = z
@@ -14,7 +16,9 @@ const commentSectionSchema = z
     totalEvents: z.number().int().nonnegative(),
     entries: z.array(commentEntrySchema).max(20),
   })
-  .refine((section) => section.entries.length <= section.totalEvents);
+  .refine((section) => {
+    return section.entries.length <= section.totalEvents;
+  });
 const uploadSectionSchema = z
   .object({
     totalEvents: z.number().int().nonnegative(),
@@ -30,7 +34,9 @@ const uploadSectionSchema = z
       )
       .max(20),
   })
-  .refine((section) => section.entries.length <= section.totalEvents);
+  .refine((section) => {
+    return section.entries.length <= section.totalEvents;
+  });
 
 /** A bounded combined digest with only recipient-visible activity. */
 export const dailyDigestEmailPayloadSchema = emailCommonSchema
@@ -42,14 +48,17 @@ export const dailyDigestEmailPayloadSchema = emailCommonSchema
     comments: commentSectionSchema,
     commentTags: commentSectionSchema,
   })
-  .refine(
-    (payload) =>
+  .refine((payload) => {
+    return (
       payload.uploads.totalEvents +
         payload.comments.totalEvents +
         payload.commentTags.totalEvents >
-      0,
-  )
-  .refine((payload) => payload.periodStart <= payload.periodEnd);
+      0
+    );
+  })
+  .refine((payload) => {
+    return payload.periodStart <= payload.periodEnd;
+  });
 /** Frozen summary used by the pure email renderer. */
 export type DailyDigestEmailPayload = z.infer<
   typeof dailyDigestEmailPayloadSchema

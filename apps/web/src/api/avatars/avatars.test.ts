@@ -153,7 +153,7 @@ it("keeps newer name, notification and completion fields when a held avatar resp
     return expect(fetcher).toHaveBeenCalledTimes(2);
   });
   const newer = createMeResponse({ displayName: "John M" });
-  newer.me.notify.onComment = false;
+  newer.me.notify.onComment = "off";
   client.setQueryData(["me"], newer);
   held.resolve(
     Response.json({
@@ -167,7 +167,7 @@ it("keeps newer name, notification and completion fields when a held avatar resp
   ).toMatchObject({
     member: { displayName: "John M", avatar },
     profileComplete: true,
-    notify: { onComment: false },
+    notify: { onComment: "off" as const },
   });
 });
 

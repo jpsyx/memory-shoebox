@@ -139,10 +139,9 @@ The server decides the variant in
 transaction as the comment insert: a message is never queued for a comment
 that did not land, and the comment never lands without its message. A
 recipient is included once, at their strongest relationship to the item,
-uploader before commenter, and that relationship picks which preference
-governs their copy: `members.notify_on_comment` for the uploader,
-`members.notify_on_reply` for a prior commenter. There is no threading; a
-"reply" is another top-level comment on the same item. The author never hears
+uploader before commenter, and both relationships use `members.notify_comment_frequency`. Immediate
+queues this individual template; Daily records a digest event. Video replies
+use the same preference as top-level comments. The author never hears
 about their own comment; a removed member keeps their comments and stops
 getting mail; and a recipient who can no longer see the item is dropped,
 because the message carries a link to it, under the same predicate every read
@@ -203,7 +202,7 @@ The server decides who gets one in
 `apps/server/src/upload/enqueueUploadSessionEmails.ts`, inside the transaction
 where the settle latch fired, so the message goes out once per batch and never
 for one that did not settle. The uploader is never a recipient, and neither is
-anybody with `members.notify_on_upload` off or anybody not yet `active`.
+anybody with `members.notify_upload_frequency` set to Off or anybody not yet `active`.
 
 ## Where the plain text comes from
 
@@ -369,3 +368,7 @@ entries and comment excerpts to 200 Unicode code points, while retaining the
 complete visible totals. HTML escapes user text; plain text includes the same
 application and preference destinations. The scheduler supplies the actual
 activity date range, including catch-up after downtime.
+
+Daily preparation and delivery recheck current source visibility. Exact provider
+requests freeze on first handoff, with unsafe retries cancelled. The full
+frequency and migration behavior is documented in [daily digests](daily-digests.md).

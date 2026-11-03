@@ -30,11 +30,11 @@ function _expectCreatedAdminResponse(
       joinedAt: NOW,
       lastSignedInAt: NOW,
       notify: {
-        onUpload: true,
-        onComment: true,
-        onReply: true,
+        onUpload: "daily" as const,
+        onComment: "daily" as const,
+
         onRemoval: true,
-        onCommentTag: true,
+        onCommentTag: "immediate" as const,
       },
     },
     isFirstSignIn: true,

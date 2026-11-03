@@ -144,7 +144,11 @@ describe("upload-abandon-sweep", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const rosaId = await insertMember(database, { display_name: "Rosa" });
+    const rosaId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Rosa",
+    });
     const { sessionId } = await insertAbandonedBatch(context);
 
     const summary = await runUploadAbandonSweep({ database, b2, now: NOW });

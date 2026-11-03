@@ -258,6 +258,19 @@ async function _cancelCommentThreadEmails(
     })
     .execute();
   await transaction
+    .updateTable("notification_digest_events")
+    .set({ state: "cancelled" })
+    .where("state", "=", "pending")
+    .where("source_kind", "=", "comment")
+    .where(
+      "source_id",
+      "in",
+      deletedComments.map((comment) => {
+        return comment.id;
+      }),
+    )
+    .execute();
+  await transaction
     .updateTable("outbound_emails")
     .set({ state: "cancelled" })
     .where("trigger_kind", "=", "comment")

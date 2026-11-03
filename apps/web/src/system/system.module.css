@@ -1559,6 +1559,10 @@
   padding-inline-start: calc(3.375rem + 0.625rem);
 }
 
+.notifyRow:not([data-notify-kind="onRemoval"]) .notifyNote {
+  padding-inline-start: 0;
+}
+
 /* ----------------------------------------------------------- who is here */
 
 /*

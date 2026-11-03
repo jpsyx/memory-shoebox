@@ -1,6 +1,6 @@
 # Daily email digests
 
-Status: proposed written spec, following approval of the in-chat design.
+Status: approved; native implementation in progress.
 
 ## 1. Intent and scope
 
@@ -274,7 +274,6 @@ handoff. A reviewed spec alone does not complete the feature.
 
 ## 10. Workflow handoff
 
-The in-chat design is approved. This written spec needs review before the
-superpowers writing-plans stage. After written-spec approval, write the
-implementation plan and obtain its required execution-method selection. Product
-code and database migrations have not been changed at this stage.
+The design, written spec, and implementation plan are approved. The user selected
+native implementation. Development and verification happen in the isolated
+`feat/daily-digests` worktree; deployment is not part of this work.

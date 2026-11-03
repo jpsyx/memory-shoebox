@@ -2,7 +2,7 @@ import type { CommentTag } from "@memory-shoebox/shared";
 import { readEligibleCommentTagMembers } from "../commentTags/commentTagCandidateHelpers.ts";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
-import { enqueueEmail } from "../mail/enqueueEmail/enqueueEmail.ts";
+import { scheduleActivityNotification } from "../mail/scheduleActivityNotification.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
 import { enqueueCommentEmails } from "./enqueueCommentEmails.ts";
 import type { VisibleItem } from "./getVisibleItemOr404.ts";
@@ -39,6 +39,16 @@ async function _cancelRemovedRecipients(options: Options): Promise<void> {
     query = query.where("to_member_id", "not in", memberIds);
   }
   await query.execute();
+  let digestQuery = options.transaction
+    .updateTable("notification_digest_events")
+    .set({ state: "cancelled" })
+    .where("category", "=", "comment_tag")
+    .where("source_id", "=", options.commentId)
+    .where("state", "=", "pending");
+  if (memberIds.length > 0) {
+    digestQuery = digestQuery.where("member_id", "not in", memberIds);
+  }
+  await digestQuery.execute();
 }
 
 async function _getRecipientsFromTags(options: Options) {
@@ -77,7 +87,7 @@ async function _getRecipientsFromTags(options: Options) {
         return member.memberId;
       }),
     )
-    .where("notify_on_comment_tag", "=", 1)
+    .where("notify_comment_tag_frequency", "!=", "off")
     .execute();
 }
 
@@ -119,7 +129,7 @@ async function _scheduleRecipient(
   if (Number(inserted.numInsertedOrUpdatedRows) === 0) {
     return;
   }
-  await enqueueEmail({
+  await scheduleActivityNotification({
     executor: options.transaction,
     now: options.now,
     input: {

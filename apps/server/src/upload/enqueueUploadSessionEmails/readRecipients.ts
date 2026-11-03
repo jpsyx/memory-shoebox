@@ -45,7 +45,7 @@ async function _readRuleDayCounts(options: {
  * Query 2: every active member who wants upload mail, minus the uploader.
  *
  * The actor is excluded by id here, before the intersection, and so is
- * anybody with `notify_on_upload = 0`. An invited member who has not signed
+ * anybody with upload notifications set to Off. An invited member who has not signed
  * in yet is not `active`, and their invitation is already doing this job.
  */
 async function _readCandidates(options: {
@@ -61,7 +61,7 @@ async function _readCandidates(options: {
       "members.role as role",
     ])
     .where("members.status", "=", "active")
-    .where("members.notify_on_upload", "=", 1)
+    .where("members.notify_upload_frequency", "!=", "off")
     .where("members.id", "!=", options.uploadedBy)
     .execute();
 

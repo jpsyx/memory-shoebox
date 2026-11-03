@@ -39,8 +39,14 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database, { display_name: "Papá" });
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Papá",
+    });
     const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
       display_name: "Abuela Rosa",
     });
     const itemId = await insertItem(database, { uploadedBy: uploaderId });
@@ -74,11 +80,19 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database);
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const priorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
       display_name: "Tía Marisol",
     });
-    const authorId = await insertMember(database);
+    const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const itemId = await insertItem(database, { uploadedBy: uploaderId });
     await insertComment(database, { itemId, authorMemberId: priorId });
     await insertComment(database, { itemId, authorMemberId: authorId });
@@ -116,8 +130,14 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database);
-    const authorId = await insertMember(database);
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
+    const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const itemId = await insertItem(database, { uploadedBy: uploaderId });
     await insertComment(database, { itemId, authorMemberId: uploaderId });
 
@@ -149,9 +169,18 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database, { notify_on_comment: 0 });
-    const priorId = await insertMember(database, { notify_on_reply: 0 });
-    const authorId = await insertMember(database);
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "off",
+    });
+    const priorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "off",
+    });
+    const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const itemId = await insertItem(database, { uploadedBy: uploaderId });
     await insertComment(database, { itemId, authorMemberId: priorId });
 
@@ -180,9 +209,18 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database);
-    const priorId = await insertMember(database);
-    const authorId = await insertMember(database);
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
+    const priorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
+    const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const restrictedRuleId = await insertVisibilityRule(database, {
       mode: "only",
     });
@@ -233,8 +271,14 @@ describe("enqueueCommentEmails", () => {
       key: "public.base_url",
       value: "https://shoebox.example.com",
     });
-    const uploaderId = await insertMember(database);
-    const authorId = await insertMember(database);
+    const uploaderId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
+    const authorId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const itemId = await insertItem(database, { uploadedBy: uploaderId });
     const commentId = createId();
     const enqueue = async () => {

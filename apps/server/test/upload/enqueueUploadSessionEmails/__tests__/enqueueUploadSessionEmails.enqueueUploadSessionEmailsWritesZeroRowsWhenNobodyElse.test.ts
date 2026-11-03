@@ -18,7 +18,10 @@ import {
 describe("enqueueUploadSessionEmails", () => {
   it("writes zero rows when nobody else can see any of it", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    await insertMember(database);
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     const onlyMeId = await insertVisibilityRule(database, { mode: "only" });
     await insertVisibilityRuleSubject(database, {
       ruleId: onlyMeId,
@@ -50,7 +53,10 @@ describe("enqueueUploadSessionEmails", () => {
 
   it("links the earliest of two equally busy days, and names the narrowest milestone on the last day", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    await insertMember(database);
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     await insertMilestone(database, {
       name: "Mateo's first week",
       startsOn: "2026-09-14",
@@ -100,7 +106,10 @@ describe("enqueueUploadSessionEmails", () => {
 
   it("names the milestone on the last day when only the last day has one", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    await insertMember(database);
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     await insertMilestone(database, {
       name: "Mateo's first steps",
       startsOn: "2026-09-16",

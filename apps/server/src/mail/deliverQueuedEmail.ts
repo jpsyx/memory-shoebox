@@ -1,3 +1,4 @@
+import { prepareDigestDelivery } from "./digests/prepareDigestDelivery.ts";
 import { checkCommentTagDelivery } from "./checkCommentTagDelivery.ts";
 import { z } from "zod";
 import type {
@@ -148,7 +149,10 @@ export async function deliverQueuedEmail(
 
   try {
     // The renderer validates the stored payload before rendering.
-    const rendered = await render(JSON.parse(row.payload_json));
+    const rendered =
+      row.kind === "daily_digest"
+        ? { html: "", text: "" }
+        : await render(JSON.parse(row.payload_json));
     // A replacement may have committed while this row was rendering.
     if (!(await _isStillSending({ context, row }))) {
       return "skipped";
@@ -160,14 +164,25 @@ export async function deliverQueuedEmail(
     if (await _cancelIneligibleTag({ context, row })) {
       return "skipped";
     }
-    const result = await sender.send({
-      from: identity.from,
-      to: row.to_address,
-      subject: row.subject,
-      html: rendered.html,
-      text: rendered.text,
-      idempotencyKey: row.idempotency_key,
-    });
+    const preparation =
+      row.kind === "daily_digest"
+        ? await prepareDigestDelivery({ context, row, from: identity.from })
+        : {
+            state: "ready" as const,
+            request: {
+              from: identity.from,
+              to: row.to_address,
+              subject: row.subject,
+              html: rendered.html,
+              text: rendered.text,
+              idempotencyKey: row.idempotency_key,
+            },
+          };
+    if (preparation.state !== "ready") {
+      return preparation.state === "deferred" ? "deferred" : "skipped";
+    }
+    const request = preparation.request;
+    const result = await sender.send(request);
     await finalizeQueuedEmail({
       context,
       id: row.id,

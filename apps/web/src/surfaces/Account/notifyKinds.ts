@@ -1,39 +1,28 @@
 import type { NotifyPreferences } from "@memory-shoebox/shared";
 
-/** One switch, and the sentence that says what turning it off stops. */
+/** One email category and its explanatory copy. */
 export type NotifyKind = Readonly<{
   key: keyof NotifyPreferences;
   label: string;
   note: string;
 }>;
 
-/**
- * The five switches, each carrying the sentence that says what it stops.
- *
- * One switch was easier to build and worse to live with: the member who wants
- * the daily upload mail but not the comment threads had exactly one move, and
- * it was to turn the whole thing off and stop coming back.
- */
+/** Activity frequency controls and the separate removal switch. */
 export const NOTIFY_KINDS: readonly NotifyKind[] = [
   {
     key: "onUpload",
-    label: "Somebody puts photographs up",
-    note: "One email for the whole batch, however many it was, saying how many of them you can see.",
+    label: "New photos/videos",
+    note: "New photo and video uploads you can see.",
   },
   {
     key: "onComment",
-    label: "Somebody writes on something of yours",
-    note: "Only things you uploaded.",
+    label: "Comments and replies",
+    note: "Comments on your uploads and conversations you joined.",
   },
   {
     key: "onCommentTag",
-    label: "Somebody tags you in a comment",
-    note: "An email when someone uses @ to get your attention.",
-  },
-  {
-    key: "onReply",
-    label: "Somebody writes on something you wrote on",
-    note: "Replies to conversations you joined.",
+    label: "Comment tags",
+    note: "When someone uses @ to get your attention.",
   },
   {
     key: "onRemoval",
@@ -42,20 +31,18 @@ export const NOTIFY_KINDS: readonly NotifyKind[] = [
   },
 ];
 
-/** Every switch off, which is what the button sends. */
+/** All email categories off, which is what the bulk button sends. */
 export const NOTIFY_NONE: NotifyPreferences = {
-  onUpload: false,
-  onComment: false,
-  onReply: false,
+  onUpload: "off",
+  onComment: "off",
   onRemoval: false,
-  onCommentTag: false,
+  onCommentTag: "off",
 };
 
-/** Every switch on, which is what turning them back on sends. */
+/** The requested defaults restored by the bulk enable button. */
 export const NOTIFY_ALL: NotifyPreferences = {
-  onUpload: true,
-  onComment: true,
-  onReply: true,
+  onUpload: "daily",
+  onComment: "daily",
   onRemoval: true,
-  onCommentTag: true,
+  onCommentTag: "immediate",
 };

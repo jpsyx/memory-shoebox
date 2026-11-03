@@ -121,33 +121,33 @@ test("the name can be corrected with the keyboard alone", async ({
  * and mints its own code.
  */
 test.describe("the keyboard, on the two controls that are neither", () => {
-  test("a switch can be flipped with the keyboard alone", async ({
+  test("a frequency can be changed with the keyboard alone", async ({
     adminPage,
   }) => {
     await adminPage.goto("/account");
     await expect(adminPage.getByLabel(NAME_LABEL)).toBeVisible();
 
     const firstSwitch = adminPage.getByLabel(NOTIFY_LABELS[0]);
-    await expect(firstSwitch).toBeChecked();
+    await expect(firstSwitch).toHaveValue("daily");
 
     await _tabInFromTheTop(adminPage);
     await _tabUntilFocused({ page: adminPage, target: firstSwitch });
 
-    // Space, which is the key a checkbox answers to, and the only one: a
-    // switch that moved on Enter instead would be a switch a keyboard user
-    // could reach and not work.
+    // Native select typeahead chooses Immediate with the keyboard.
     await writeAndWaitForTheAnswer({
       page: adminPage,
       write: async () => {
-        await adminPage.keyboard.press("Space");
+        await adminPage.keyboard.press("i");
       },
     });
-    await expect(firstSwitch).not.toBeChecked();
+    await expect(firstSwitch).toHaveValue("immediate");
 
     // Reloaded, so what is asserted is what the server stored rather than
     // what the optimistic write put on screen.
     await adminPage.reload();
-    await expect(adminPage.getByLabel(NOTIFY_LABELS[0])).not.toBeChecked();
+    await expect(adminPage.getByLabel(NOTIFY_LABELS[0])).toHaveValue(
+      "immediate",
+    );
   });
 
   test("a device can be signed out with the keyboard alone", async ({

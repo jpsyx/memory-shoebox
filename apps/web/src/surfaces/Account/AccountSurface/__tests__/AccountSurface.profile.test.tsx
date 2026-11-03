@@ -48,8 +48,9 @@ describe("surface 9", () => {
     respondWith();
     renderAccount();
 
-    await user.click(
-      await screen.findByLabelText("Somebody puts photographs up"),
+    await user.selectOptions(
+      await screen.findByLabelText("New photos/videos"),
+      "off",
     );
 
     await waitFor(() => {
@@ -58,11 +59,11 @@ describe("surface 9", () => {
       ).toEqual([
         {
           notify: {
-            onUpload: false,
-            onComment: true,
-            onReply: true,
+            onUpload: "off" as const,
+            onComment: "daily" as const,
+
             onRemoval: true,
-            onCommentTag: true,
+            onCommentTag: "immediate" as const,
           },
         },
       ]);
@@ -86,13 +87,11 @@ describe("surface 9", () => {
     });
     renderAccount();
 
-    const aSwitch = await screen.findByLabelText(
-      "Somebody puts photographs up",
-    );
-    expect(aSwitch).toBeChecked();
-    await user.click(aSwitch);
+    const aSwitch = await screen.findByLabelText("New photos/videos");
+    expect(aSwitch).toHaveValue("daily");
+    await user.selectOptions(aSwitch, "off");
 
-    expect(aSwitch).not.toBeChecked();
+    expect(aSwitch).toHaveValue("off");
     letThePatchLand();
   });
 
@@ -106,15 +105,13 @@ describe("surface 9", () => {
     });
     renderAccount();
 
-    const aSwitch = await screen.findByLabelText(
-      "Somebody puts photographs up",
-    );
-    await user.click(aSwitch);
+    const aSwitch = await screen.findByLabelText("New photos/videos");
+    await user.selectOptions(aSwitch, "off");
 
     expect(
       await screen.findByText("That did not save. Try again."),
     ).toBeVisible();
-    expect(aSwitch).toBeChecked();
+    expect(aSwitch).toHaveValue("daily");
   });
 
   // Every answer to `PATCH /api/me` is the whole `MeResponse`, so two saves
@@ -132,7 +129,7 @@ describe("surface 9", () => {
     await user.clear(field);
     await user.type(field, "Abuela");
     await user.click(screen.getByRole("button", { name: "Save your name" }));
-    await user.click(screen.getByLabelText("Somebody puts photographs up"));
+    await user.selectOptions(screen.getByLabelText("New photos/videos"), "off");
 
     // Out of order, which is the whole point: the switch's answer is
     // released first, before the name save it was started after.
@@ -145,17 +142,13 @@ describe("surface 9", () => {
     // have landed would pass on the losing answer on its way past.
     expect(await screen.findByText("Name saved.")).toBeVisible();
     await waitFor(() => {
-      expect(
-        screen.getByLabelText("Somebody puts photographs up"),
-      ).toBeEnabled();
+      expect(screen.getByLabelText("New photos/videos")).toBeEnabled();
     });
 
     expect(countCallsTo({ method: "PATCH", path: "/api/me" })).toBe(2);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Abuela, in My Shoebox.",
     );
-    expect(
-      screen.getByLabelText("Somebody puts photographs up"),
-    ).not.toBeChecked();
+    expect(screen.getByLabelText("New photos/videos")).toHaveValue("off");
   });
 });

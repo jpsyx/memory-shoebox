@@ -104,7 +104,7 @@ it.each([
       if (change === "preference") {
         await database
           .updateTable("members")
-          .set({ notify_on_comment_tag: 0 })
+          .set({ notify_comment_tag_frequency: "off" })
           .where("id", "=", memberId)
           .execute();
       }
@@ -173,7 +173,7 @@ it("rechecks an opted-out recipient on every provider retry", async () => {
     expect(send).toHaveBeenCalledTimes(1);
     await fixture.database
       .updateTable("members")
-      .set({ notify_on_comment_tag: 0 })
+      .set({ notify_comment_tag_frequency: "off" })
       .where("id", "=", fixture.memberId)
       .execute();
     await runMailQueueOnce({
@@ -215,7 +215,7 @@ it("delivers an eligible current tag through the recording sender", async () => 
 it("checks a preference revoked by the sender-freezing write", async () => {
   const fixture = await _fixture();
   try {
-    await sql`create trigger revoke_during_freeze after update of sender_snapshot_json on outbound_emails begin update members set notify_on_comment_tag = 0 where id = new.to_member_id; end`.execute(
+    await sql`create trigger revoke_during_freeze after update of sender_snapshot_json on outbound_emails begin update members set notify_comment_tag_frequency = 'off' where id = new.to_member_id; end`.execute(
       fixture.database,
     );
     await runMailQueueOnce({

@@ -586,21 +586,11 @@ shape would only give the two paths different failure modes.
 ```ts
 type MemberRole = "viewer" | "uploader" | "admin";
 
-/**
- * The four switches on My account. Four boolean columns on `members`, not
- * settings rows (Decision 16).
- */
+/** Three activity frequencies plus the independent removal preference. */
 type NotifyPreferences = {
-  /** Somebody puts photographs up. One email per batch. */
-  onUpload: boolean;
-  /** Somebody comments on something they uploaded. */
-  onComment: boolean;
-  /** Somebody comments on something they commented on. */
-  onReply: boolean;
-  /**
-   * Somebody asks for a photograph to come down. Stored for every role; only
-   * admins and uploaders are ever sent one.
-   */
+  onUpload: "off" | "immediate" | "daily";
+  onComment: "off" | "immediate" | "daily";
+  onCommentTag: "off" | "immediate" | "daily";
   onRemoval: boolean;
 };
 
@@ -768,3 +758,12 @@ merge and are marked as such rather than re-decided.
    number. The count in that sentence is viewer-filtered and belongs to the
    timeline slice's own response, which is also where it cannot accidentally be
    taken from a seed.
+
+## Daily-frequency contract update
+
+Both account responses and complete preference updates use the shape above.
+Comments and replies share `onComment`; there is no `onReply`. Legacy boolean
+activity fields and missing categories are rejected with `400 invalid_request`.
+Defaults and pending-event cancellation are specified in
+[Activity email frequencies](../../../../daily-digests.md). This supersedes the
+original boolean preference descriptions in this design record.

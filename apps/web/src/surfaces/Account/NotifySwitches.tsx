@@ -4,7 +4,7 @@ import type { NotifyPreferences } from "@memory-shoebox/shared";
 import { NotifyRow } from "@/surfaces/Account/NotifyRow";
 import { NOTIFY_KINDS } from "@/surfaces/Account/notifyKinds";
 
-/** Props for the five switches: the server's answer, and where a flip goes. */
+/** Saved preferences and the action for changing one category. */
 type Props = {
   notify: NotifyPreferences;
   isSaving: boolean;
@@ -14,7 +14,7 @@ type Props = {
 };
 
 /**
- * The five switches, stacked, each write sending the whole `notify` with one
+ * The category controls, each write sending the whole `notify` with one
  * key changed. Lifted out of `EmailSheet` alongside `NotifyRow`, so the sheet
  * itself reads as its sections rather than as the loop that fills one of them.
  */
@@ -34,7 +34,7 @@ export function NotifySwitches({
             shouldFocus={kind.key === "onCommentTag" && focusCommentTag}
             error={kind.key === "onCommentTag" ? tagError : undefined}
             kind={kind}
-            checked={notify[kind.key]}
+            value={notify[kind.key]}
             disabled={isSaving}
             onChange={(checked) => {
               onSave({ ...notify, [kind.key]: checked });

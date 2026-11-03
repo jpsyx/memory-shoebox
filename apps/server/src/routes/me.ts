@@ -1,3 +1,4 @@
+import { cancelPendingDigestPreferences } from "../mail/digests/cancelPendingDigestPreferences.ts";
 import { runInImmediateTransaction } from "../db/runInImmediateTransaction.ts";
 import { claimMemberName } from "../members/claimMemberName.ts";
 import type { FastifyInstance } from "fastify";
@@ -21,18 +22,14 @@ function _makeMemberPatchFromBody(
   body: UpdateMeRequest,
 ): Updateable<Database["members"]> {
   return {
-    // Original four, or none: "turn them all off" is a client convenience that
-    // sends four booleans, not an API feature (Decision 16).
+    // Bulk actions send the same three frequencies and removal boolean.
     ...(body.notify === undefined
       ? {}
       : {
-          notify_on_upload: body.notify.onUpload ? 1 : 0,
-          notify_on_comment: body.notify.onComment ? 1 : 0,
-          notify_on_reply: body.notify.onReply ? 1 : 0,
+          notify_upload_frequency: body.notify.onUpload,
+          notify_comment_frequency: body.notify.onComment,
+          notify_comment_tag_frequency: body.notify.onCommentTag,
           notify_on_removal: body.notify.onRemoval ? 1 : 0,
-          ...(body.notify.onCommentTag === undefined
-            ? {}
-            : { notify_on_comment_tag: body.notify.onCommentTag ? 1 : 0 }),
         }),
   };
 }
@@ -76,6 +73,13 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
               .set(patch)
               .where("id", "=", viewer.memberId)
               .execute();
+          }
+          if (body.notify !== undefined) {
+            await cancelPendingDigestPreferences({
+              executor: transaction,
+              memberId: viewer.memberId,
+              notify: body.notify,
+            });
           }
           if (body.displayName !== undefined) {
             await claimMemberName({

@@ -443,3 +443,12 @@ other archive transfer and media-worker isolation boundaries are unchanged.
 See [member profiles](member-profiles.md#avatar-processing-budget), the
 [local resource evidence](superpowers/verification/2026-10-31-comment-tagging.md#v2-avatar-resource-boundary),
 and [rollout/recovery](comment-tagging-rollout.md) before release.
+
+## Activity email aggregation
+
+The shared account contract exposes three activity frequency enums and a removal
+boolean. Feature transactions record source-referenced digest events; a minute
+job aggregates them into the existing outbox at the Shoebox-local daily boundary.
+Delivery rechecks private sources and freezes provider requests on first attempt.
+No additional process or external scheduler is needed. See
+[daily digests](daily-digests.md) for boundaries, migration, and retry invariants.

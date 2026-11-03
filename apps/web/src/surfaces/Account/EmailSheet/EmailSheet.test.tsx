@@ -18,23 +18,23 @@ function _inTheme(node: ReactNode): ReactNode {
 }
 
 const ALL_ON: NotifyPreferences = {
-  onUpload: true,
-  onComment: true,
-  onReply: true,
+  onUpload: "daily" as const,
+  onComment: "daily" as const,
+
   onRemoval: true,
-  onCommentTag: true,
+  onCommentTag: "immediate" as const,
 };
 
 const ALL_OFF: NotifyPreferences = {
-  onUpload: false,
-  onComment: false,
-  onReply: false,
+  onUpload: "off" as const,
+  onComment: "off" as const,
+
   onRemoval: false,
-  onCommentTag: false,
+  onCommentTag: "off" as const,
 };
 
 describe("the Email sheet", () => {
-  it("sends all five switches when one is flipped", async () => {
+  it("sends all preferences when one frequency changes", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
 
@@ -49,16 +49,17 @@ describe("the Email sheet", () => {
       ),
     );
 
-    await user.click(
-      screen.getByLabelText("Somebody writes on something you wrote on"),
+    await user.selectOptions(
+      screen.getByLabelText("Comments and replies"),
+      "off",
     );
 
     expect(onSave).toHaveBeenCalledWith({
-      onUpload: true,
-      onComment: true,
-      onReply: false,
+      onUpload: "daily" as const,
+      onComment: "off" as const,
+
       onRemoval: true,
-      onCommentTag: true,
+      onCommentTag: "immediate" as const,
     });
   });
 
@@ -87,7 +88,7 @@ describe("the Email sheet", () => {
     const { rerender } = render(
       _inTheme(
         <EmailSheet
-          notify={{ ...ALL_OFF, onUpload: true }}
+          notify={{ ...ALL_OFF, onUpload: "daily" as const }}
           onSave={onSave}
           isSaving={false}
           error={undefined}
@@ -217,13 +218,20 @@ describe("the Email sheet", () => {
       ),
     );
 
-    await user.click(screen.getByLabelText("Somebody puts photographs up"));
-    await user.click(
-      screen.getByLabelText("Somebody writes on something of yours"),
+    await user.selectOptions(screen.getByLabelText("New photos/videos"), "off");
+    await user.selectOptions(
+      screen.getByLabelText("Comments and replies"),
+      "off",
     );
 
-    expect(onSave).toHaveBeenNthCalledWith(1, { ...ALL_ON, onUpload: false });
-    expect(onSave).toHaveBeenNthCalledWith(2, { ...ALL_ON, onComment: false });
+    expect(onSave).toHaveBeenNthCalledWith(1, {
+      ...ALL_ON,
+      onUpload: "off" as const,
+    });
+    expect(onSave).toHaveBeenNthCalledWith(2, {
+      ...ALL_ON,
+      onComment: "off" as const,
+    });
   });
 });
 
@@ -241,15 +249,19 @@ it("offers the independent tag switch, explains the off state, and focuses its e
       />,
     ),
   );
-  const toggle = screen.getByLabelText("Somebody tags you in a comment");
-  expect(screen.getAllByRole("switch")).toHaveLength(5);
+  const toggle = screen.getByLabelText("Comment tags");
+  expect(screen.getAllByRole("combobox")).toHaveLength(3);
+  expect(screen.getAllByRole("switch")).toHaveLength(1);
   expect(toggle).toHaveFocus();
-  await user.click(toggle);
-  expect(onSave).toHaveBeenCalledWith({ ...ALL_ON, onCommentTag: false });
+  await user.selectOptions(toggle, "off");
+  expect(onSave).toHaveBeenCalledWith({
+    ...ALL_ON,
+    onCommentTag: "off" as const,
+  });
   rerender(
     _inTheme(
       <EmailSheet
-        notify={{ ...ALL_ON, onCommentTag: false }}
+        notify={{ ...ALL_ON, onCommentTag: "off" as const }}
         onSave={onSave}
         isSaving={false}
         error={undefined}
@@ -262,7 +274,7 @@ it("offers the independent tag switch, explains the off state, and focuses its e
       /You may still receive emails about your uploads or conversations/,
     ),
   ).toBeVisible();
-  await user.click(screen.getByLabelText("Somebody puts photographs up"));
+  await user.selectOptions(screen.getByLabelText("New photos/videos"), "off");
   rerender(
     _inTheme(
       <EmailSheet
@@ -274,7 +286,7 @@ it("offers the independent tag switch, explains the off state, and focuses its e
       />,
     ),
   );
-  expect(screen.getByLabelText("Somebody puts photographs up")).toHaveFocus();
+  expect(screen.getByLabelText("New photos/videos")).toHaveFocus();
 });
 
 it("keeps focus and restores the saved tag value with a nearby failure", async () => {
@@ -289,8 +301,8 @@ it("keeps focus and restores the saved tag value with a nearby failure", async (
       />,
     ),
   );
-  const toggle = screen.getByLabelText("Somebody tags you in a comment");
-  await user.click(toggle);
+  const toggle = screen.getByLabelText("Comment tags");
+  await user.selectOptions(toggle, "off");
   rerender(
     _inTheme(
       <EmailSheet
@@ -301,7 +313,7 @@ it("keeps focus and restores the saved tag value with a nearby failure", async (
       />,
     ),
   );
-  expect(toggle).toBeChecked();
+  expect(toggle).toHaveValue("immediate");
   expect(toggle).toHaveFocus();
   expect(toggle.closest("[data-notify-kind]")).toContainElement(
     screen.getByRole("alert"),
@@ -329,8 +341,8 @@ it.each([false, true])(
       );
     };
     const { rerender } = render(view(false));
-    const toggle = screen.getByLabelText("Somebody tags you in a comment");
-    await userEvent.setup().click(toggle);
+    const toggle = screen.getByLabelText("Comment tags");
+    await userEvent.setup().selectOptions(toggle, "off");
     rerender(view(true));
     expect(toggle).toBeDisabled();
     // Chromium blurs a newly disabled input; jsdom does not model that step.
@@ -344,7 +356,7 @@ it.each([false, true])(
       otherControl.focus();
     }
     rerender(view(false, "Failed"));
-    expect(toggle).toBeChecked();
+    expect(toggle).toHaveValue("immediate");
     expect(hasMovedFocus ? otherControl : toggle).toHaveFocus();
   },
 );

@@ -14,10 +14,10 @@ export type MembersTable = {
   suggested_display_name: string | null;
   role: string;
   status: string;
-  notify_on_upload: number;
+  notify_on_upload: Generated<number>;
   notify_on_comment_tag: Generated<number>;
-  notify_on_comment: number;
-  notify_on_reply: number;
+  notify_on_comment: Generated<number>;
+  notify_on_reply: Generated<number>;
   notify_on_removal: number;
   joined_at: string | null;
   last_signed_in_at: string | null;
