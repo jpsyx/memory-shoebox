@@ -1,3 +1,4 @@
+import * as migration0022DailyDigests from "./0022_daily_digests.ts";
 import * as migration0021CommentTags from "./0021_comment_tags.ts";
 import * as migration0020MemberAvatars from "./0020_member_avatars.ts";
 import * as migration0019MemberNameClaims from "./0019_member_name_claims.ts";
@@ -33,6 +34,7 @@ import * as migration0010VideoConversations from "./0010_video_conversations.ts"
  * already shipped: deployed databases have recorded it as applied.
  */
 export const migrations: Record<string, Migration> = {
+  "0022_daily_digests": migration0022DailyDigests,
   "0001_identity_and_access": migration0001IdentityAndAccess,
   "0002_visibility": migration0002Visibility,
   "0003_archive": migration0003Archive,

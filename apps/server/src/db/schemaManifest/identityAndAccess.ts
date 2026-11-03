@@ -32,6 +32,22 @@ export const IDENTITY_AND_ACCESS_MANIFEST = {
     created_at: { isNullable: false, type: "TEXT", defaultValue: null },
   },
   members: {
+    notify_upload_frequency: {
+      isNullable: false,
+      type: "TEXT",
+      defaultValue: "'daily'",
+    },
+    notify_comment_frequency: {
+      isNullable: false,
+      type: "TEXT",
+      defaultValue: "'daily'",
+    },
+    notify_comment_tag_frequency: {
+      isNullable: false,
+      type: "TEXT",
+      defaultValue: "'immediate'",
+    },
+
     notify_on_comment_tag: {
       isNullable: false,
       type: "INTEGER",

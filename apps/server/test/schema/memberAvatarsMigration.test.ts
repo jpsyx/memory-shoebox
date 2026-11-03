@@ -36,7 +36,7 @@ it("preserves populated 0019 member, claim, and session history while adding emp
     await migrateToLatest(database);
     const upgraded = await database.selectFrom("members").selectAll().execute();
     expect(
-      upgraded.map(({ avatar_id, notify_on_comment_tag, ...member }) => {
+      upgraded.map(({ avatar_id, notify_on_comment_tag, notify_upload_frequency, notify_comment_frequency, notify_comment_tag_frequency, ...member }) => {
         return member;
       }),
     ).toEqual(members.rows);

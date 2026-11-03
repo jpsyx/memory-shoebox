@@ -206,3 +206,15 @@ and outbox kind. The [rollout guide](comment-tagging-rollout.md) records the
 pre-stage backup choice, original owner/group/mode restoration, and actual
 matching-old-release rehearsal. Retain the pre-stage backup for old code; the
 migrator backup after staging can contain the rollout staging table.
+
+## Daily digest preferences
+
+Migration `0022_daily_digests` adds frequency columns and pending digest events
+and batches. Existing members, including opt-outs, receive daily uploads and
+comments plus immediate tags once; removal preferences are preserved. The old
+boolean columns are retained for history and will no longer govern activity mail
+after the application routing is updated. Never-attempted queued upload/comment
+mail moves to pending events. Attempted, ambiguous, sent, and tag mail keeps its
+existing delivery identity. Source IDs outlive deleted content, and batch uniqueness
+prevents preparation twice for the same member and local send date. The normal
+backup, atomic-upgrade, and offline-restore procedures above apply.
