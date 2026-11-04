@@ -190,6 +190,11 @@ describe("video comment replies", () => {
   });
 
   it("keeps existing notification recipients and inherits the parent's moment in mail", async () => {
+    await context.database
+      .updateTable("members")
+      .set({ notify_comment_frequency: "immediate" })
+      .where("id", "=", author.memberId)
+      .execute();
     await insertInstanceSetting(context.database, {
       key: "public.base_url",
       value: "https://shoebox.example.com",

@@ -15,11 +15,11 @@ afterEach(() => {
 it("opens and focuses the explicit email preference without changing it", async () => {
   respondWith();
   renderAccount("/account?email=comment-tag");
-  const toggle = await screen.findByLabelText("Somebody tags you in a comment");
+  const toggle = await screen.findByLabelText("Comment tags");
   await waitFor(() => {
     expect(toggle).toHaveFocus();
   });
-  expect(toggle).toBeChecked();
+  expect(toggle).toHaveValue("immediate");
   const requests = vi.mocked(fetch).mock.calls;
   expect(
     requests.some(([, init]) => {
@@ -31,7 +31,7 @@ it("opens and focuses the explicit email preference without changing it", async 
 it("ignores arbitrary preference targets", async () => {
   respondWith();
   const router = renderAccount("/account?email=https%3A%2F%2Fevil.example");
-  const toggle = await screen.findByLabelText("Somebody tags you in a comment");
+  const toggle = await screen.findByLabelText("Comment tags");
   expect(toggle).not.toHaveFocus();
   expect(router.state.matches.at(-1)?.search).toHaveProperty(
     "email",
@@ -60,9 +60,9 @@ it("rolls back a failed tag preference save and retains focus at the affected ro
     },
   });
   renderAccount("/account?email=comment-tag");
-  const toggle = await screen.findByLabelText("Somebody tags you in a comment");
-  await userEvent.setup().click(toggle);
-  await screen.findByText("Couldn't change that email preference. Try again.");
-  expect(toggle).toBeChecked();
+  const toggle = await screen.findByLabelText("Comment tags");
+  await userEvent.setup().selectOptions(toggle, "off");
+  await screen.findByText("That did not save. Try again.");
+  expect(toggle).toHaveValue("immediate");
   expect(toggle).toHaveFocus();
 });

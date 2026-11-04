@@ -107,7 +107,7 @@ it("keeps notification intent owned before asynchronous cancellation", async () 
     memberId: "019f0000-0000-7000-8000-000000000999",
     sessionId: "019f0000-0000-7000-8000-000000000998",
   });
-  const oldIntent = { ...replacement.me.notify, onCommentTag: false };
+  const oldIntent = { ...replacement.me.notify, onCommentTag: "off" as const };
   stubFetch({
     "PATCH /api/me": {
       status: 200,

@@ -72,9 +72,9 @@ export const SAVE_YOUR_NAME = "Save your name";
 
 /** The four switches, by the label each one carries on screen. */
 export const NOTIFY_LABELS = [
-  "Somebody puts photographs up",
-  "Somebody writes on something of yours",
-  "Somebody writes on something you wrote on",
+  "New photos/videos",
+  "Comments and replies",
+  "Comment tags",
   "Somebody asks for a photograph to come down",
 ] as const;
 

@@ -20,7 +20,7 @@ export async function checkCommentTagDelivery(
     .select("comments.item_id as itemId")
     .where("comments.id", "=", row.trigger_id)
     .where("members.id", "=", row.to_member_id)
-    .where("members.notify_on_comment_tag", "=", 1)
+    .where("members.notify_comment_tag_frequency", "!=", "off")
     .where("comments.author_member_id", "!=", row.to_member_id)
     .executeTakeFirst();
   if (current === undefined) {

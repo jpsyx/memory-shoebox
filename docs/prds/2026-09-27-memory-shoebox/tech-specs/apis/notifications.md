@@ -1544,3 +1544,19 @@ that `GET /api/items/:itemId/viewers` deliberately does not carry them.
     `{ <resourceKey>, nextCursor }` and stays that way: the redundancy of
     repeating a constant per row costs nothing, and one exception to an
     envelope is how a contract ends up with four.
+
+## Activity frequency update
+
+The original immediate activity recipes above now run through
+`scheduleActivityNotification`. Off produces nothing; Immediate queues the
+individual recipe; Daily records a pending source reference. Uploads use
+`notify_upload_frequency`, both generic comment relationships use
+`notify_comment_frequency`, and tags use `notify_comment_tag_frequency`.
+The old activity boolean suppression recipes are historical and superseded.
+
+`daily_digest` uses trigger kind `daily_digest`, trigger ID equal to its batch ID,
+and idempotency key `daily-digest:<memberId>:<localSendDate>`. The minute job
+prepares one combined message around 9 a.m. in the Shoebox timezone. Defaults,
+privacy, recovery, and cancellation are defined in
+[Activity email frequencies](../../../../daily-digests.md). Weekly removal
+reminders and all non-activity messages retain their existing behavior.

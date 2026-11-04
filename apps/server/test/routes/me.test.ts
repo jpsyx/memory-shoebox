@@ -43,11 +43,11 @@ describe("GET /api/me", () => {
         email: "abuela@example.com",
         role: "viewer",
         notify: {
-          onUpload: true,
-          onComment: true,
-          onReply: true,
+          onUpload: "daily" as const,
+          onComment: "daily" as const,
+
           onRemoval: true,
-          onCommentTag: true,
+          onCommentTag: "immediate" as const,
         },
         joinedAt: NOW,
         lastSignedInAt: NOW,
@@ -118,7 +118,7 @@ describe("PATCH /api/me", () => {
     await close();
   });
 
-  it("turns all four switches off in one request", async () => {
+  it("turns all email categories off in one request", async () => {
     const { app, database, close } = await createTestApp();
     const { cookie, memberId } = await insertSignedInMember({ database });
 
@@ -128,27 +128,31 @@ describe("PATCH /api/me", () => {
       headers: { cookie },
       payload: {
         notify: {
-          onUpload: false,
-          onComment: false,
-          onReply: false,
+          onUpload: "off" as const,
+          onComment: "off" as const,
+
           onRemoval: false,
+          onCommentTag: "off",
         },
       },
     });
 
     expect(response.json().me.notify).toEqual({
-      onUpload: false,
-      onComment: false,
-      onReply: false,
+      onUpload: "off" as const,
+      onComment: "off" as const,
+
       onRemoval: false,
-      onCommentTag: true,
+      onCommentTag: "off" as const,
     });
     const row = await database
       .selectFrom("members")
-      .select(["notify_on_upload", "notify_on_removal"])
+      .select(["notify_upload_frequency", "notify_on_removal"])
       .where("id", "=", memberId)
       .executeTakeFirstOrThrow();
-    expect(row).toEqual({ notify_on_upload: 0, notify_on_removal: 0 });
+    expect(row).toEqual({
+      notify_upload_frequency: "off",
+      notify_on_removal: 0,
+    });
     await close();
   });
 
@@ -160,7 +164,7 @@ describe("PATCH /api/me", () => {
       method: "PATCH",
       url: "/api/me",
       headers: { cookie },
-      payload: { notify: { onUpload: false } },
+      payload: { notify: { onUpload: "off" as const } },
     });
 
     expect(response.statusCode).toBe(400);
@@ -266,7 +270,7 @@ describe("PATCH /api/me", () => {
   });
 });
 
-it("stores tag preferences and preserves them through legacy four-switch PATCH", async () => {
+it("stores tag preferences and rejects incomplete legacy PATCH", async () => {
   const { app, database, close } = await createTestApp({
     clock: () => {
       return new Date(NOW);
@@ -275,33 +279,32 @@ it("stores tag preferences and preserves them through legacy four-switch PATCH",
   try {
     const { cookie } = await insertSignedInMember({ database });
     const notify = {
-      onUpload: true,
-      onComment: false,
-      onReply: true,
+      onUpload: "daily" as const,
+      onComment: "off" as const,
+
       onRemoval: false,
     };
     const changed = await app.inject({
       method: "PATCH",
       url: "/api/me",
       headers: { cookie },
-      payload: { notify: { ...notify, onCommentTag: false } },
+      payload: { notify: { ...notify, onCommentTag: "off" as const } },
     });
     expect(changed.statusCode).toBe(200);
-    expect(changed.json().me.notify.onCommentTag).toBe(false);
+    expect(changed.json().me.notify.onCommentTag).toBe("off");
     const legacy = await app.inject({
       method: "PATCH",
       url: "/api/me",
       headers: { cookie },
       payload: { notify },
     });
-    expect(legacy.statusCode).toBe(200);
-    expect(legacy.json().me.notify.onCommentTag).toBe(false);
+    expect(legacy.statusCode).toBe(400);
     const read = await app.inject({
       method: "GET",
       url: "/api/me",
       headers: { cookie },
     });
-    expect(read.json().me.notify.onCommentTag).toBe(false);
+    expect(read.json().me.notify.onCommentTag).toBe("off");
   } finally {
     await close();
   }

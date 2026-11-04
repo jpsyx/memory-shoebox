@@ -1,3 +1,4 @@
+import { createDailyDigestsJob } from "./createDailyDigestsJob.ts";
 import { runAvatarReservationSweep } from "./runAvatarReservationSweep.ts";
 import type { Kysely } from "kysely";
 import type { B2Client } from "../b2/createB2Client/createB2Client.types.ts";
@@ -48,6 +49,7 @@ export function createJobRegistry(deps: {
   };
 
   return [
+    createDailyDigestsJob({ database: deps.database, clock }),
     {
       name: "avatar-reservation-sweep",
       intervalMs: ONE_HOUR_MS,

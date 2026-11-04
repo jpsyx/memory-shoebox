@@ -87,7 +87,9 @@ describe("updateMeRequestSchema", () => {
 
   it("requires all four switches when notify is present", () => {
     expect(() => {
-      return updateMeRequestSchema.parse({ notify: { onUpload: false } });
+      return updateMeRequestSchema.parse({
+        notify: { onUpload: "off" as const },
+      });
     }).toThrow();
   });
 });
@@ -102,11 +104,11 @@ describe("meDtoSchema", () => {
       email: "abuela@example.com",
       role: "viewer",
       notify: {
-        onUpload: true,
-        onComment: true,
-        onReply: true,
+        onUpload: "daily" as const,
+        onComment: "daily" as const,
+
         onRemoval: true,
-        onCommentTag: true,
+        onCommentTag: "immediate" as const,
       },
       joinedAt: "2026-09-27T10:00:00.000Z",
       lastSignedInAt: "2026-09-27T10:00:00.000Z",
@@ -134,19 +136,20 @@ describe("listMySessionsResponseSchema", () => {
   });
 });
 
-it("requires the new preference on reads while preserving legacy PATCH omission", () => {
+it("requires all frequency preferences on reads and writes", () => {
   const legacy = {
-    onUpload: true,
-    onComment: false,
-    onReply: true,
+    onUpload: "daily" as const,
+    onComment: "off" as const,
+
     onRemoval: false,
   };
   expect(notifyPreferencesSchema.safeParse(legacy).success).toBe(false);
-  expect(updateMeRequestSchema.parse({ notify: legacy }).notify).toEqual(
-    legacy,
+  expect(updateMeRequestSchema.safeParse({ notify: legacy }).success).toBe(
+    false,
   );
   expect(
-    updateMeRequestSchema.parse({ notify: { ...legacy, onCommentTag: false } })
-      .notify?.onCommentTag,
-  ).toBe(false);
+    updateMeRequestSchema.parse({
+      notify: { ...legacy, onCommentTag: "off" as const },
+    }).notify?.onCommentTag,
+  ).toBe("off");
 });

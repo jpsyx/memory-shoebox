@@ -1,3 +1,4 @@
+import { notificationFrequencySchema } from "./notificationFrequency.ts";
 import { z } from "zod";
 import { collectionSchema } from "./collectionSchema.ts";
 import { idSchema, memberRefSchema, timestampSchema } from "./dtos.ts";
@@ -55,32 +56,17 @@ export const MEMBER_STATUSES = ["invited", "active", "removed"] as const;
 /** One of the three states a `members` row may hold. */
 export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 
-/**
- * The five switches on My account. Boolean columns on `members`, not
- * settings rows (Decision 16).
- *
- * Reads always include all five. PATCH preserves legacy four-switch writes.
- */
-export const notifyPreferencesSchema = z.object({
-  /** Somebody puts photographs up. One email per batch. */
-  onUpload: z.boolean(),
-  /** Somebody comments on something they uploaded. */
-  onComment: z.boolean(),
-  /** Somebody comments on something they commented on. */
-  onReply: z.boolean(),
-  /** Stored for every role; only admins and uploaders are ever sent one. */
+/** Activity frequency preferences and the separate removal switch. */
+export const notifyPreferencesSchema = z.strictObject({
+  onUpload: notificationFrequencySchema,
+  onComment: notificationFrequencySchema,
+  onCommentTag: notificationFrequencySchema,
   onRemoval: z.boolean(),
-  /** Somebody selects this member in a comment. */
-  onCommentTag: z.boolean(),
 });
-
-/** The five switches on My account. */
+/** Current member notification preferences. */
 export type NotifyPreferences = z.infer<typeof notifyPreferencesSchema>;
-
-/** The original four switches remain required; legacy PATCH omits only tags. */
-export const updateNotifyPreferencesSchema = notifyPreferencesSchema.extend({
-  onCommentTag: z.boolean().optional(),
-});
+/** Strict writes prevent stale boolean clients from overwriting frequencies. */
+export const updateNotifyPreferencesSchema = notifyPreferencesSchema;
 
 /**
  * The signed-in member's own account.

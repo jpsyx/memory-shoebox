@@ -2015,3 +2015,25 @@ gaps) without collapsing a whole morning of casual shooting.
 are now doing the job they were added for: they record which configuration
 produced each burst, so changing either number re-derives the automatic
 groupings without touching anybody's manual one.
+
+## Daily digest storage update (migration 0022)
+
+The current activity preference authority is `members.notify_upload_frequency`,
+`notify_comment_frequency`, and `notify_comment_tag_frequency`, constrained to
+`off | immediate | daily`, defaulting to `daily`, `daily`, and `immediate`.
+All members receive these values once on upgrade, including old opt-outs.
+The older upload/comment/reply/tag boolean columns described above are retained
+as inert history and are no longer read or written by runtime code.
+`notify_on_removal` remains authoritative for removal mail.
+
+`notification_digest_events` stores recipient, category, source kind/ID, UTC
+occurrence time, unique deduplication key, state, and optional batch ID. Included
+state requires batch ownership. Source references deliberately have no cascading
+foreign key, so deletion can cancel pending events without losing history.
+
+`notification_digest_batches` stores member, local send date, timezone/cutoff,
+preparation time, and outbox ID, plus frozen provider request and eligibility
+manifest. `(member_id, send_date)` is unique. Events restrict batch deletion;
+removing an outbox history row sets its batch link null. The outbox supports
+`daily_digest` as kind and trigger kind. See
+[Activity email frequencies](../../../daily-digests.md) for lifecycle behavior.

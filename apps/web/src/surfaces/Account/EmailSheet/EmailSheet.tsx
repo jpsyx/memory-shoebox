@@ -12,22 +12,11 @@ import { IconMail } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
 
 /**
- * Props for the Email sheet: the five switches and nothing they do not need.
- *
- * `notify` is not local state: it is the server's own answer, and this
- * component reads `checked` straight off
- * `notify` on every render. Local state only locates a failed write.
- *
- * **The caller must update the cache optimistically, the instant a switch is
- * flipped, and roll it back on error.** This component cannot do that itself:
- * it has nothing to optimistically update, only `notify`, which it does not
- * own. Decision 4's rule that a switch must never look flipped while unsaved
- * is about refusing a separate Save button for switches, not about a lag on
- * every toggle: flipping the switch is the action, so it has to move the
- * instant it is flipped, and only the caller, which owns the mutation and the
- * query cache, can make that true.
+ * Email preferences read directly from the caller's optimistic account cache.
+ * Saves are immediate and roll back on failure; local state locates that error.
  */
 type Props = {
+  timezone?: string;
   notify: NotifyPreferences;
   onSave: (notify: NotifyPreferences) => void;
   isSaving: boolean;
@@ -35,14 +24,21 @@ type Props = {
   focusCommentTag?: boolean;
 };
 
-/**
- * A switch per kind of email, each writing the moment it is flipped.
- *
- * There is no additional bulk switch: "Turn them all off" and "Turn them
- * back on"
- * are each one save of the same five booleans as any single flip.
- */
+function DigestScheduleNote({
+  timezone,
+}: Readonly<{ timezone: string }>): ReactNode {
+  return (
+    <Prose>
+      Daily digests arrive around 9 a.m. ({timezone}). Empty days send no email.
+      Immediate emails are queued as activity happens. Changing frequency
+      applies to new activity; leaving Daily discards pending digest activity.
+    </Prose>
+  );
+}
+
+/** Frequency controls save immediately; bulk actions use the same preferences. */
 export function EmailSheet({
+  timezone = "UTC",
   notify,
   onSave,
   isSaving,
@@ -50,16 +46,16 @@ export function EmailSheet({
   focusCommentTag,
 }: Readonly<Props>): ReactNode {
   const [wasTagChanged, setWasTagChanged] = useState(false);
-  const tagError =
-    wasTagChanged && error
-      ? "Couldn't change that email preference. Try again."
-      : undefined;
-  const someOn = Object.values(notify).includes(true);
+  const tagError = wasTagChanged ? error : undefined;
+  const someOn = Object.values(notify).some((value) => {
+    return value !== false && value !== "off";
+  });
 
   return (
     <Sheet wide label="Email">
       <SheetHead title="Email" />
       <Stack gap="md">
+        <DigestScheduleNote timezone={timezone} />
         <NotifySwitches
           notify={notify}
           isSaving={isSaving}

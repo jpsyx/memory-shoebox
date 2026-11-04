@@ -57,7 +57,7 @@ The contract modules are:
   are subsets of it: `ShellSettings`, the three resolved values the app shell
   needs as it renders, and `PublicSettingsResponse` with the
   `PUBLIC_SETTING_KEYS` allow-list behind the one anonymous read.
-- `email/`: the outbound mail contract: the seven kinds, the `EmailCommon`
+- `email/`: the outbound mail contract: the nine kinds, the `EmailCommon`
   block every payload carries, the enqueue input, and `MailQueueHealth`.
   Removal payloads snapshot exactly the request, reminder, and resolution
   facts described by notifications sections 5-9. `removal_resolved` is
@@ -371,13 +371,13 @@ Creates default omitted occurrences to `[]`; updates preserve omission so the
 server can distinguish legacy edits from explicit removal. Plain `@name` text
 never creates a reference. See [comment tagging](comment-tagging.md).
 
-`NotifyPreferences.onCommentTag` is required in responses. The update-specific
-preference schema requires the original four booleans and allows only the new
-field to be omitted. An older four-switch PATCH preserves the stored tag
-preference; it does not reset it to the default. The persisted preference defaults
-on for existing and newly created members.
+`NotifyPreferences` now requires three frequency enums (`onUpload`, `onComment`,
+`onCommentTag`) and boolean `onRemoval`. The strict update schema rejects old
+boolean activity choices, omitted categories, and obsolete `onReply` instead of
+silently overwriting frequency settings. The earlier tag rollout's four-switch
+compatibility is superseded by this coordinated contract change.
 
-The [rollout compatibility record](comment-tagging-rollout.md#compatibility-to-retain)
-keeps legacy creates plain, rejects omission on an already-tagged edit, and
-preserves the new preference when an older four-switch client saves. The shared
-full-resolution crop helper remains unchanged by the bounded server decoder.
+`notificationFrequencySchema` accepts only `off`, `immediate`, and `daily`.
+`dailyDigestEmailPayloadSchema` adds bounded category sections, accessible totals,
+calendar date range, and authenticated links to the shared mail contract.
+See [daily digests](daily-digests.md) for defaults and lifecycle behavior.

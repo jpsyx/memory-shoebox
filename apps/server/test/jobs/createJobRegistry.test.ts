@@ -47,6 +47,7 @@ describe("createJobRegistry", () => {
         return [job.name, job.intervalMs];
       }),
     ).toEqual([
+      ["daily-digests", 60_000],
       ["avatar-reservation-sweep", 3_600_000],
       ["session-sweep", 3_600_000],
       ["invitation-lapse", 3_600_000],

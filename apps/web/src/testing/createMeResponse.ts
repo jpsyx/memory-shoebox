@@ -43,11 +43,11 @@ export function createMeResponse(
       email,
       role,
       notify: {
-        onUpload: true,
-        onComment: true,
-        onReply: true,
+        onUpload: "daily" as const,
+        onComment: "daily" as const,
+
         onRemoval: true,
-        onCommentTag: true,
+        onCommentTag: "immediate" as const,
       },
       joinedAt,
       lastSignedInAt: "2026-09-28T10:00:00.000Z",

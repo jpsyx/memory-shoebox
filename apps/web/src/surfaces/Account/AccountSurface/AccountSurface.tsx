@@ -72,6 +72,7 @@ export function AccountSurface(): ReactNode {
             error={savingName.error}
           />
           <EmailSheet
+            timezone={account.settings.timezone}
             focusCommentTag={email === "comment-tag"}
             notify={account.me.notify}
             onSave={savingNotify.save}

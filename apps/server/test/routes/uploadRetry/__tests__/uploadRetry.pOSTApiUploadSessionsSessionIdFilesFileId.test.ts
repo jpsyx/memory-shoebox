@@ -100,7 +100,11 @@ describe("POST /api/upload-sessions/:sessionId/files/:fileId/retry", () => {
       value: "https://shoebox.example",
     });
     // Somebody who can see the batch and wants to hear about it.
-    await insertMember(database, { display_name: "Tía Inés" });
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Tía Inés",
+    });
     const landed = await seedFile({ position: 1 });
     const dropped = await seedFile({ position: 2 });
 

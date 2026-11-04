@@ -15,9 +15,10 @@ async function _fixture(tagMail = 1, genericMail = 1) {
     member: { display_name: "Author" },
   });
   const recipientId = await insertMember(context.database, {
+    notify_upload_frequency: "immediate",
     display_name: "Ana",
-    notify_on_comment_tag: tagMail,
-    notify_on_comment: genericMail,
+    notify_comment_tag_frequency: tagMail ? "immediate" : "off",
+    notify_comment_frequency: genericMail ? "immediate" : "off",
   });
   const itemId = await insertItem(context.database, {
     uploadedBy: recipientId,
@@ -236,6 +237,104 @@ it("uses canonical links when the configured origin has a trailing slash", async
       itemUrl: `https://shoebox.example/items/${fixture.itemId}?comment=${created.commentId}`,
       preferencesUrl: "https://shoebox.example/account?email=comment-tag",
     });
+  } finally {
+    await fixture.close();
+  }
+});
+
+it("cancels pending daily parent and reply events when the thread is deleted", async () => {
+  const fixture = await _fixture();
+  try {
+    await fixture.database
+      .updateTable("members")
+      .set({
+        notify_comment_frequency: "daily",
+        notify_comment_tag_frequency: "daily",
+      })
+      .where("id", "=", fixture.recipientId)
+      .execute();
+    const parent = (await fixture.post(fixture.payload)).json();
+    await fixture.post({ body: "Reply", parentCommentId: parent.commentId });
+    expect(
+      await fixture.database
+        .selectFrom("notification_digest_events")
+        .selectAll()
+        .execute(),
+    ).toHaveLength(2);
+    await fixture.app.inject({
+      method: "DELETE",
+      url: `/api/comments/${parent.commentId}`,
+      headers: { cookie: fixture.author.cookie },
+    });
+    const events = await fixture.database
+      .selectFrom("notification_digest_events")
+      .select("state")
+      .execute();
+    expect(events).toEqual([{ state: "cancelled" }, { state: "cancelled" }]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+it.each(["off", "immediate", "daily"] as const)(
+  "arbitrates each generic frequency against %s tag delivery",
+  async (tagFrequency) => {
+    const fixture = await _fixture();
+    try {
+      for (const genericFrequency of ["off", "immediate", "daily"] as const) {
+        await fixture.database
+          .updateTable("members")
+          .set({
+            notify_comment_frequency: genericFrequency,
+            notify_comment_tag_frequency: tagFrequency,
+          })
+          .where("id", "=", fixture.recipientId)
+          .execute();
+        const commentId = (await fixture.post(fixture.payload)).json()
+          .commentId;
+        const outbox = await fixture.database
+          .selectFrom("outbound_emails")
+          .selectAll()
+          .where("trigger_id", "=", commentId)
+          .execute();
+        const events = await fixture.database
+          .selectFrom("notification_digest_events")
+          .selectAll()
+          .where("source_id", "=", commentId)
+          .execute();
+        const selected =
+          tagFrequency === "off" ? genericFrequency : tagFrequency;
+        expect(outbox).toHaveLength(selected === "immediate" ? 1 : 0);
+        expect(events).toHaveLength(selected === "daily" ? 1 : 0);
+        if (selected !== "off") {
+          expect(outbox[0]?.kind ?? events[0]?.category).toBe(
+            tagFrequency === "off" ? "comment" : "comment_tag",
+          );
+        }
+      }
+    } finally {
+      await fixture.close();
+    }
+  },
+);
+
+it("never resurrects a daily tag after removal and re-addition", async () => {
+  const fixture = await _fixture();
+  try {
+    await fixture.database
+      .updateTable("members")
+      .set({ notify_comment_tag_frequency: "daily" })
+      .where("id", "=", fixture.recipientId)
+      .execute();
+    const commentId = (await fixture.post(fixture.payload)).json().commentId;
+    await fixture.patch(commentId, { body: "No tags", commentTags: [] });
+    await fixture.patch(commentId, fixture.payload);
+    expect(
+      await fixture.database
+        .selectFrom("notification_digest_events")
+        .select("state")
+        .execute(),
+    ).toEqual([{ state: "cancelled" }]);
   } finally {
     await fixture.close();
   }

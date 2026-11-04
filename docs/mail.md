@@ -1,6 +1,6 @@
 # Outbound mail (`apps/server/src/mail`)
 
-Memory Shoebox sends eight kinds of transactional message, and one of them is
+Memory Shoebox sends nine kinds of transactional message, and one of them is
 how anybody gets in at all: the six-digit sign-in code. So the mail path is
 built around a failure that is not hypothetical. A self-hosted instance spends
 its first hour with no Resend key and no sending address, and the family it
@@ -625,3 +625,18 @@ The [rollout and compatibility guide](comment-tagging-rollout.md#compatibility-t
 requires no retroactive tag mail. The local populated migration rehearsal preserved
 queued rows and repeated startup did not duplicate scheduling or mail. Production
 provider sends are not part of acceptance.
+
+## Daily activity digests
+
+The activity scheduler routes uploads, comments/replies, and tags to Immediate
+outbox delivery or durable pending events according to each member's frequency.
+The `daily-digests` minute job prepares one combined message after 9 a.m. local
+time, using a unique member/date batch and current source eligibility. Existing
+queue suppression, retry, configuration health, and sender behavior still apply.
+
+The digest delivery helper rechecks all contributing sources before handoff and
+freezes the complete provider request for retries. Unsafe retries cancel; a
+render-time eligibility race defers without consuming an attempt. Base-URL
+recovery repairs the original digest row; individual failures route through the
+current frequency, preserving already-attempted identities. See
+[daily digests](daily-digests.md) for migration, cancellation, and storage details.

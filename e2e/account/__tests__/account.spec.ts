@@ -46,47 +46,42 @@ test("a name typed here is the name the family sees", async ({
   await expect(page.getByRole("link", { name: "Abuela Rosa" })).toBeVisible();
 });
 
-test("a switch stays where it was left, and all four can go at once", async ({
+test("email frequencies persist and bulk actions restore the new defaults", async ({
   accountPage: page,
 }) => {
-  const firstSwitch = page.getByLabel(NOTIFY_LABELS[0]);
-  await expect(firstSwitch).toBeChecked();
+  const upload = page.getByLabel(NOTIFY_LABELS[0]);
+  await expect(upload).toHaveValue("daily");
   await writeAndWaitForTheAnswer({
     page,
     write: async () => {
-      // `click` rather than `uncheck`. `uncheck` reads the control's state
-      // back the instant the click is done and fails if it has not moved
-      // yet, and this one moves a tick late: the surface writes the switch
-      // optimistically inside `onMutate`, which first awaits
-      // `cancelQueries`. That is a microtask, invisible to a person and
-      // fatal to an assertion with no retry in it. The `expect` below is the
-      // same check with Playwright's own waiting behind it.
-      await firstSwitch.click();
+      await upload.selectOption("immediate");
     },
   });
-  await expect(firstSwitch).not.toBeChecked();
-
   await page.reload();
-  await expect(page.getByLabel(NOTIFY_LABELS[0])).not.toBeChecked();
-  // The other three are untouched: one flip sends all four, so a bug that
-  // sent the wrong four would look identical until this is asserted.
-  await expect(page.getByLabel(NOTIFY_LABELS[1])).toBeChecked();
-
+  await expect(page.getByLabel(NOTIFY_LABELS[0])).toHaveValue("immediate");
+  await expect(page.getByLabel(NOTIFY_LABELS[1])).toHaveValue("daily");
+  await expect(page.getByLabel(NOTIFY_LABELS[2])).toHaveValue("immediate");
   await writeAndWaitForTheAnswer({
     page,
     write: async () => {
       await page.getByRole("button", { name: TURN_THEM_ALL_OFF }).click();
     },
   });
-
   await page.reload();
-  for (const label of NOTIFY_LABELS) {
-    await expect(page.getByLabel(label)).not.toBeChecked();
-  }
-  // With nothing left on, the one thing to offer is the way back.
-  await expect(
-    page.getByRole("button", { name: TURN_THEM_BACK_ON }),
-  ).toBeVisible();
+  for (const label of NOTIFY_LABELS.slice(0, 3))
+    await expect(page.getByLabel(label)).toHaveValue("off");
+  await expect(page.getByLabel(NOTIFY_LABELS[3])).not.toBeChecked();
+  await writeAndWaitForTheAnswer({
+    page,
+    write: async () => {
+      await page.getByRole("button", { name: TURN_THEM_BACK_ON }).click();
+    },
+  });
+  await page.reload();
+  await expect(page.getByLabel(NOTIFY_LABELS[0])).toHaveValue("daily");
+  await expect(page.getByLabel(NOTIFY_LABELS[1])).toHaveValue("daily");
+  await expect(page.getByLabel(NOTIFY_LABELS[2])).toHaveValue("immediate");
+  await expect(page.getByLabel(NOTIFY_LABELS[3])).toBeChecked();
 });
 
 test("an admin is offered all five doors, and every one of them opens", async ({

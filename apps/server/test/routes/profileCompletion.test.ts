@@ -225,10 +225,11 @@ it("rolls back claims, completion and preferences when person synchronization fa
     payload: {
       displayName: "Rollback Name",
       notify: {
-        onUpload: false,
-        onComment: false,
-        onReply: false,
+        onUpload: "off" as const,
+        onComment: "off" as const,
+
         onRemoval: false,
+        onCommentTag: "off",
       },
     },
   });
@@ -243,13 +244,17 @@ it("rolls back claims, completion and preferences when person synchronization fa
   expect(
     await database
       .selectFrom("members")
-      .select(["display_name", "profile_completed_at", "notify_on_upload"])
+      .select([
+        "display_name",
+        "profile_completed_at",
+        "notify_upload_frequency",
+      ])
       .where("id", "=", member.memberId)
       .executeTakeFirstOrThrow(),
   ).toEqual({
     display_name: null,
     profile_completed_at: null,
-    notify_on_upload: 1,
+    notify_upload_frequency: "daily",
   });
   await close();
 });

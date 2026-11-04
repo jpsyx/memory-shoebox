@@ -5,7 +5,7 @@ import {
 } from "@memory-shoebox/shared";
 import type { DatabaseExecutor } from "../db/types/db.types.ts";
 import type { Viewer } from "../http/requestContextHelpers.ts";
-import { enqueueEmail } from "../mail/enqueueEmail/enqueueEmail.ts";
+import { scheduleActivityNotification } from "../mail/scheduleActivityNotification.ts";
 import { getDisplayNameFromMember } from "../members/getDisplayNameFromMember.ts";
 import { getMemberRoleFromStoredValue } from "../members/getMemberRoleFromStoredValue.ts";
 import { readInstanceSettings } from "../settings/readInstanceSettings.ts";
@@ -19,8 +19,8 @@ type CandidateRow = {
   storedDisplayName: string | null;
   role: MemberRole;
   status: MemberStatus;
-  notifyOnComment: number;
-  notifyOnReply: number;
+  notifyOnComment: string;
+  notifyOnReply: string;
 };
 
 /**
@@ -75,8 +75,8 @@ async function _readCandidates(options: {
       "members.display_name as storedDisplayName",
       "members.role as role",
       "members.status as status",
-      "members.notify_on_comment as notifyOnComment",
-      "members.notify_on_reply as notifyOnReply",
+      "members.notify_comment_frequency as notifyOnComment",
+      "members.notify_comment_frequency as notifyOnReply",
     ])
     .where("members.id", "!=", options.authorMemberId)
     .where((eb) => {
@@ -189,13 +189,13 @@ function _makeRecipientFromCandidate(options: {
     }),
     relation,
     // Chosen by their strongest relationship to the item: the uploader's
-    // copy is governed by `notify_on_comment`, a prior commenter's by
-    // `notify_on_reply`. Both top-level comments and video replies keep
+    // copy and a prior commenter's copy share the comment frequency.
+    // Both top-level comments and video replies keep
     // the existing item-wide notification recipients.
     wantsIt:
       relation === "uploader"
-        ? options.candidate.notifyOnComment === 1
-        : options.candidate.notifyOnReply === 1,
+        ? options.candidate.notifyOnComment !== "off"
+        : options.candidate.notifyOnReply !== "off",
     candidate: options.candidate,
   };
 }
@@ -256,7 +256,7 @@ async function _enqueueCommentEmailForRecipient(options: {
     return;
   }
 
-  await enqueueEmail({
+  await scheduleActivityNotification({
     executor: options.transaction,
     now: context.now,
     input: {
@@ -289,7 +289,7 @@ async function _enqueueCommentEmailForRecipient(options: {
  * queued for a comment that did not land, and the comment never lands
  * without its message.
  *
- * It does not throw on a mail problem: `enqueueEmail` writes a `failed` row
+ * It does not throw on a mail problem: `scheduleActivityNotification` writes a `failed` row
  * when `public.base_url` is unset rather than failing the transaction the
  * comment is in.
  *

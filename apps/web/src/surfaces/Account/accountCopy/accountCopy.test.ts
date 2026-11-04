@@ -71,3 +71,15 @@ describe("accountFailure", () => {
     }
   });
 });
+
+it("asks a stale email-settings client to reload", () => {
+  expect(
+    accountFailure(
+      _refusal({
+        status: 400,
+        code: "invalid_request",
+        details: { fieldErrors: { notify: ["Expected frequency"] } },
+      }),
+    ),
+  ).toBe("Email settings have changed. Reload the page and try again.");
+});

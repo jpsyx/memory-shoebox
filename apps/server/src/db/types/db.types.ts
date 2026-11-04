@@ -1,4 +1,8 @@
 import type {
+  NotificationDigestEventsTable,
+  NotificationDigestBatchesTable,
+} from "./digests.types.ts";
+import type {
   MediaProcessingJobsTable,
   MediaProcessingOutputsTable,
   MediaProcessingDiscoveryTable,
@@ -62,6 +66,9 @@ import type {
  * every query against it.
  */
 export type Database = {
+  notification_digest_events: NotificationDigestEventsTable;
+  notification_digest_batches: NotificationDigestBatchesTable;
+
   media_processing_jobs: MediaProcessingJobsTable;
   media_processing_outputs: MediaProcessingOutputsTable;
   media_processing_discovery: MediaProcessingDiscoveryTable;

@@ -57,8 +57,16 @@ export async function createContext(): Promise<{
     key: "public.base_url",
     value: "https://shoebox.example.com",
   });
-  const uploaderId = await insertMember(database, { display_name: "Papá" });
-  const rosaId = await insertMember(database, { display_name: "Rosa" });
+  const uploaderId = await insertMember(database, {
+    notify_upload_frequency: "immediate",
+    notify_comment_frequency: "immediate",
+    display_name: "Papá",
+  });
+  const rosaId = await insertMember(database, {
+    notify_upload_frequency: "immediate",
+    notify_comment_frequency: "immediate",
+    display_name: "Rosa",
+  });
   return { database, uploaderId, rosaId };
 }
 

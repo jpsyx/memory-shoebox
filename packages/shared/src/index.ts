@@ -630,3 +630,5 @@ export {
   type CommentTagCandidatesQuery,
   type CommentTagCandidatesResponse,
 } from "./commentTags/commentTags.ts";
+export * from "./notificationFrequency.ts";
+export * from "./email/dailyDigestEmailPayload.ts";

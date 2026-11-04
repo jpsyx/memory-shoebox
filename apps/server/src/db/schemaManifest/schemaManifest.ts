@@ -1,3 +1,4 @@
+import { DIGESTS_MANIFEST } from "./digests.ts";
 import type { Database } from "../types/db.types.ts";
 import { CATALOG_MANIFEST } from "./catalog.ts";
 import { IDENTITY_AND_ACCESS_MANIFEST } from "./identityAndAccess.ts";
@@ -51,6 +52,7 @@ import { UPLOAD_MANIFEST } from "./upload.ts";
  * column mistake still fails at the column rather than as one error here.
  */
 export const SCHEMA_MANIFEST = {
+  ...DIGESTS_MANIFEST,
   ...IDENTITY_AND_ACCESS_MANIFEST,
   ...CATALOG_MANIFEST,
   ...MODERATION_MANIFEST,

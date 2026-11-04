@@ -6,6 +6,8 @@ import { indexColumns } from "./indexColumns.ts";
 
 /** The tables migration 'operations' creates, as `Database` names them. */
 type OperationsTable =
+  | "notification_digest_events"
+  | "notification_digest_batches"
   | "comment_tag_notifications"
   | "media_processing_jobs"
   | "media_processing_outputs"
@@ -23,6 +25,34 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
   OperationsTable,
   ForeignKeyInfo[]
 > = {
+  notification_digest_events: [
+    {
+      column: "batch_id",
+      referencesTable: "notification_digest_batches",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+  ],
+  notification_digest_batches: [
+    {
+      column: "member_id",
+      referencesTable: "members",
+      referencesColumn: "id",
+      onDelete: "RESTRICT",
+    },
+    {
+      column: "outbound_email_id",
+      referencesTable: "outbound_emails",
+      referencesColumn: "id",
+      onDelete: "SET NULL",
+    },
+  ],
   comment_tag_notifications: [
     {
       column: "comment_id",
@@ -134,6 +164,30 @@ export const OPERATIONS_FOREIGN_KEYS: Record<
 
 /** Every declared index on a operations table. See `EXPECTED_INDEXES`. */
 export const OPERATIONS_INDEXES: Record<OperationsTable, IndexInfo[]> = {
+  notification_digest_events: [
+    {
+      name: "digest_events_batch",
+      columns: indexColumns("batch_id"),
+      isUnique: false,
+    },
+    {
+      name: "digest_events_pending",
+      columns: indexColumns("member_id", "state", "occurred_at"),
+      isUnique: false,
+    },
+    {
+      name: "digest_events_source",
+      columns: indexColumns("source_kind", "source_id", "category"),
+      isUnique: false,
+    },
+  ],
+  notification_digest_batches: [
+    {
+      name: "digest_batches_email",
+      columns: indexColumns("outbound_email_id"),
+      isUnique: false,
+    },
+  ],
   comment_tag_notifications: [
     {
       name: "comment_tag_notifications_member",
@@ -301,6 +355,8 @@ export const OPERATIONS_UNIQUE_CONSTRAINTS: Record<
   OperationsTable,
   string[][]
 > = {
+  notification_digest_events: [["deduplication_key"]],
+  notification_digest_batches: [["member_id", "send_date"]],
   comment_tag_notifications: [],
   media_processing_jobs: [["item_id", "source_rendition_id", "recipe"]],
   media_processing_outputs: [["storage_key"]],

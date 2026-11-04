@@ -2,7 +2,7 @@ import { getDayBandAssignmentsFromMilestoneSpans } from "../../milestones/getDay
 
 import type { DatabaseExecutor } from "../../db/types/db.types.ts";
 
-import { enqueueEmail } from "../../mail/enqueueEmail/enqueueEmail.ts";
+import { scheduleActivityNotification } from "../../mail/scheduleActivityNotification.ts";
 
 import { getDisplayNameFromMember } from "../../members/getDisplayNameFromMember.ts";
 
@@ -89,7 +89,7 @@ export async function enqueueUploadSessionEmailForRecipient(
 ): Promise<void> {
   const { candidate, figures } = options.recipient;
   const { context } = options;
-  await enqueueEmail({
+  await scheduleActivityNotification({
     executor: options.transaction,
     now: context.now,
     input: {

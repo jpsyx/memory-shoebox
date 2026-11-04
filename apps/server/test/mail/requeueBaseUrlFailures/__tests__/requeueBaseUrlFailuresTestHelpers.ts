@@ -52,7 +52,12 @@ export async function createRequeueBaseUrlFailuresFixture(): Promise<RequeueFixt
     },
   });
   const { database } = context;
-  await insertMember(database, { id: ADMIN.memberId, role: "admin" });
+  await insertMember(database, {
+    id: ADMIN.memberId,
+    role: "admin",
+    notify_upload_frequency: "immediate",
+    notify_comment_frequency: "immediate",
+  });
   const itemId = await insertItem(database, { uploadedBy: ADMIN.memberId });
   const commentId = await insertComment(database, {
     itemId,
@@ -109,6 +114,7 @@ export async function insertFailure(
     trigger_id: options.triggerId,
     subject: "Frozen subject",
     to_address: "frozen@example.com",
+    to_member_id: ADMIN.memberId,
     state: "failed",
     last_error_code: "base_url_unset",
     last_error_message: "No links",

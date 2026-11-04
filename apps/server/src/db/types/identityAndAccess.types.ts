@@ -2,6 +2,10 @@ import type { Generated } from "kysely";
 
 /** One invited address, for the life of the Shoebox. Never hard-deleted. */
 export type MembersTable = {
+  notify_upload_frequency: Generated<"off" | "immediate" | "daily">;
+  notify_comment_frequency: Generated<"off" | "immediate" | "daily">;
+  notify_comment_tag_frequency: Generated<"off" | "immediate" | "daily">;
+
   avatar_id: string | null;
   id: string;
   email: string;
@@ -10,10 +14,10 @@ export type MembersTable = {
   suggested_display_name: string | null;
   role: string;
   status: string;
-  notify_on_upload: number;
+  notify_on_upload: Generated<number>;
   notify_on_comment_tag: Generated<number>;
-  notify_on_comment: number;
-  notify_on_reply: number;
+  notify_on_comment: Generated<number>;
+  notify_on_reply: Generated<number>;
   notify_on_removal: number;
   joined_at: string | null;
   last_signed_in_at: string | null;

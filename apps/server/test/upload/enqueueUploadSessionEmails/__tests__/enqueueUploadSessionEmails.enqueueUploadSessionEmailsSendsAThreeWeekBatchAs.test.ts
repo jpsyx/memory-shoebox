@@ -20,7 +20,11 @@ import {
 describe("enqueueUploadSessionEmails", () => {
   it("sends a three-week batch as one email per recipient, not one per day", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    const rosaId = await insertMember(database, { display_name: "Rosa" });
+    const rosaId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Rosa",
+    });
     await insertBatchItems({
       database: database,
       options: {
@@ -80,9 +84,21 @@ describe("enqueueUploadSessionEmails", () => {
 
   it("gives each recipient their own count, and an admin the whole batch", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    const abuelaId = await insertMember(database, { display_name: "Abuela" });
-    const inesId = await insertMember(database, { display_name: "Inés" });
-    const adminId = await insertMember(database, { role: "admin" });
+    const abuelaId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Abuela",
+    });
+    const inesId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Inés",
+    });
+    const adminId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      role: "admin",
+    });
     const cousinsId = await insertGroup(database, { name: "Cousins" });
     await insertGroupMember(database, { groupId: cousinsId, memberId: inesId });
     const cousinsOnlyId = await insertVisibilityRule(database, {
@@ -144,9 +160,21 @@ describe("enqueueUploadSessionEmails", () => {
 
   it("computes each recipient's days from what they can see, never from the whole batch", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    const abuelaId = await insertMember(database, { display_name: "Abuela" });
-    const inesId = await insertMember(database, { display_name: "Inés" });
-    const adminId = await insertMember(database, { role: "admin" });
+    const abuelaId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Abuela",
+    });
+    const inesId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      display_name: "Inés",
+    });
+    const adminId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      role: "admin",
+    });
     const cousinsId = await insertGroup(database, { name: "Cousins" });
     await insertGroupMember(database, { groupId: cousinsId, memberId: inesId });
     const notCousinsId = await insertVisibilityRule(database, {
@@ -281,10 +309,26 @@ describe("enqueueUploadSessionEmails", () => {
 
   it("sends nothing to notify_on_upload = 0, or to an invited or removed member", async () => {
     const { database, uploaderId, sessionId } = await createUploadTestContext();
-    await insertMember(database, { notify_on_upload: 0 });
-    await insertMember(database, { status: "invited", joined_at: null });
-    await insertMember(database, { status: "removed", removed_at: NOW });
-    const rosaId = await insertMember(database);
+    await insertMember(database, {
+      notify_comment_frequency: "immediate",
+      notify_upload_frequency: "off",
+    });
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      status: "invited",
+      joined_at: null,
+    });
+    await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+      status: "removed",
+      removed_at: NOW,
+    });
+    const rosaId = await insertMember(database, {
+      notify_upload_frequency: "immediate",
+      notify_comment_frequency: "immediate",
+    });
     await insertBatchItems({
       database: database,
       options: {
